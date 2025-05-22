@@ -1,25 +1,17 @@
 <script>
-	import {
-		Label,
-		Input,
-		Button,
-		Listgroup,
-		ListgroupItem,
-		Spinner,
-		Alert,
-		Toast
-	} from 'flowbite-svelte';
-	import { CirclePlusSolid, TrashBinSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+	import { Label, Input, Button, Alert, Toast } from 'flowbite-svelte';
+	import { CirclePlusSolid, CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 	import { onMount } from 'svelte';
 	import { dateTimeString } from '$lib/helpers.js';
 	import { api } from '$lib/api-client.js';
 	import { fade } from 'svelte/transition';
+	import PlayersList from '../../components/PlayersList.svelte';
 
 	let { data } = $props();
 	const date = data.date;
 	let players = $state([]);
+	let playerLimit = $state(18);
 	let playerName = $state('');
-	let isLoading = $state(false);
 	let error = $state('');
 
 	const registrationOpenDate = $derived.by(() => {
@@ -42,16 +34,27 @@
 	});
 
 	onMount(async () => {
-		isLoading = true;
 		try {
 			players = await api.get('players', date);
+			playerLimit = await api.get('players/limit', date);
 		} catch (ex) {
 			console.error('Error fetching players:', ex);
 			setError('Failed to load players. Please try again.');
-		} finally {
-			isLoading = false;
 		}
 	});
+	async function setPlayerLimit(event) {
+		event.preventDefault();
+		try {
+			if (playerLimit !== null) {
+				await api.post('players/limit', date, { playerLimit });
+			} else {
+				setError(`Player limit isn't set.`);
+			}
+		} catch (ex) {
+			console.error('Error limiting players:', ex);
+			setError('Failed to set player limit. Please try again.');
+		}
+	}
 
 	async function addPlayer(event) {
 		event.preventDefault();
@@ -59,6 +62,7 @@
 			if (playerName && !players.includes(playerName)) {
 				await api.post('players', date, { playerName });
 				players.push(playerName);
+				playerName = '';
 			} else {
 				setError(`Player ${playerName} already added.`);
 			}
@@ -68,10 +72,10 @@
 		}
 	}
 
-	async function removePlayer(index) {
+	async function removePlayer(playerName) {
 		try {
-			const playerName = players[index];
-			if (playerName) {
+			const index = players.indexOf(playerName);
+			if (playerName && index !== -1) {
 				await api.remove('players', date, { playerName });
 				players.splice(index, 1);
 			}
@@ -88,6 +92,24 @@
 </script>
 
 <div class="flex flex-col gap-2">
+	<Label for="player-limit">Player limit</Label>
+	<form class="flex gap-2" onsubmit={async (event) => await setPlayerLimit(event)}>
+		<Input
+			bind:value={playerLimit}
+			id="player-limit"
+			name="player-limit"
+			type="number"
+			step={1}
+			min={0}
+			placeholder=""
+			wrapperClass="w-full"
+			required
+			disabled={!canModifyList}
+		/>
+		<Button type="submit" disabled={!canModifyList}>
+			<CheckCircleSolid class="me-2 h-4 w-4" /> Set</Button
+		>
+	</form>
 	<Label for="player-name">Add a player to the list</Label>
 	<form class="flex gap-2" onsubmit={async (event) => await addPlayer(event)}>
 		<Input
@@ -117,25 +139,20 @@
 		>
 	{/if}
 
-	<span class="block text-sm font-medium text-gray-700 rtl:text-right dark:text-gray-200"
-		>Players</span
-	>
-	<Listgroup class="w-full">
-		{#each players as player, i (i)}
-			<ListgroupItem class="flex gap-2"
-				><span class="text-xl">{i + 1}. {player}</span><Button
-					size="xs"
-					class="ms-auto"
-					type="button"
-					onclick={async () => await removePlayer(i)}
-					disabled={!canModifyList}><TrashBinSolid class="me-2 h-3 w-3" />Remove</Button
-				></ListgroupItem
-			>
-		{/each}
-	</Listgroup>
-	{#if isLoading}
-		<Spinner />
-	{/if}
+	<div class="grid grid-cols-2 gap-2">
+		<PlayersList
+			label="Players"
+			players={players.filter((p, i) => i < playerLimit)}
+			{canModifyList}
+			onremove={removePlayer}
+		/>
+		<PlayersList
+			label="Waiting list"
+			players={players.filter((p, i) => i >= playerLimit)}
+			{canModifyList}
+			onremove={removePlayer}
+		/>
+	</div>
 </div>
 
 <Toast
