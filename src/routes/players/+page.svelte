@@ -4,7 +4,7 @@
 	import { onMount } from 'svelte';
 	import { dateTimeString } from '$lib/helpers.js';
 	import { api } from '$lib/api-client.js';
-	import { fade } from 'svelte/transition';
+	import { setError } from '$lib/stores/error.js';
 	import PlayersList from '../../components/PlayersList.svelte';
 
 	let { data } = $props();
@@ -12,7 +12,6 @@
 	let players = $state([]);
 	let playerLimit = $state(18);
 	let playerName = $state('');
-	let error = $state('');
 
 	const registrationOpenDate = $derived.by(() => {
 		const limit = new Date(date);
@@ -59,9 +58,9 @@
 	async function addPlayer(event) {
 		event.preventDefault();
 		try {
-			if (playerName && !players.includes(playerName)) {
-				await api.post('players', date, { playerName });
-				players.push(playerName);
+			if (playerName && !players.includes(playerName.trim())) {
+				await api.post('players', date, { playerName: playerName.trim() });
+				players.push(playerName.trim());
 				playerName = '';
 			} else {
 				setError(`Player ${playerName} already added.`);
@@ -83,11 +82,6 @@
 			console.error('Error removing player:', ex);
 			setError('Failed to remove player. Please try again.');
 		}
-	}
-
-	function setError(err) {
-		error = err;
-		setTimeout(() => (error = ''), 5000);
 	}
 </script>
 
@@ -154,11 +148,3 @@
 		/>
 	</div>
 </div>
-
-<Toast
-	toastStatus={!!error}
-	transition={fade}
-	color="red"
-	class="border-primary-400 flex items-center border"
-	position="top-right">{#snippet icon()}<ExclamationCircleSolid />{/snippet}{error}</Toast
->

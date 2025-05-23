@@ -14,10 +14,13 @@
 		Navbar,
 		NavBrand,
 		Datepicker,
-		Alert
+		Alert,
+		Toast
 	} from 'flowbite-svelte';
 	import { page } from '$app/state';
+	import { error } from '$lib/stores/error.js';
 	import { dateString, isSaturday } from '$lib/helpers.js';
+	import { fade } from 'svelte/transition';
 
 	let { data, children } = $props();
 	let activeUrl = $derived(`${page.url.pathname}${page.url.search}`);
@@ -76,4 +79,12 @@
 			></RectangleListSolid>
 		</BottomNavItem>
 	</BottomNav>
+
+	<Toast
+		toastStatus={!!$error}
+		transition={fade}
+		color="red"
+		class="border-primary-400 flex items-center border"
+		position="top-right">{#snippet icon()}<ExclamationCircleSolid />{/snippet}{$error}</Toast
+	>
 </main>
