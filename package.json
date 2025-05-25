@@ -1,7 +1,9 @@
 {
 	"name": "pirates-footy-roster",
 	"private": true,
-	"version": "0.0.1",
+	"version": "1.0.0",
+	"description": "A SvelteKit application for managing a social football roster.",
+	"author": "Veli Gebrev",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -17,6 +19,7 @@
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-auto": "^6.0.0",
+		"@sveltejs/adapter-node": "^5.2.12",
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/forms": "^0.5.9",
