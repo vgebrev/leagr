@@ -22,6 +22,14 @@ async function get(key, date) {
 	}
 }
 
+/**
+ * Sets a value in the JSON file for a given key and date.
+ * @param key
+ * @param date
+ * @param value
+ * @param {[]|{}|number}defaultValue
+ * @returns {Promise<boolean>}
+ */
 async function set(key, date, value, defaultValue = []) {
 	const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
 	if (!filename) {

@@ -15,10 +15,12 @@
 		NavBrand,
 		Datepicker,
 		Alert,
-		Toast
+		Toast,
+		Spinner
 	} from 'flowbite-svelte';
 	import { page } from '$app/state';
 	import { error } from '$lib/stores/error.js';
+	import { isLoading } from '$lib/stores/loading.js';
 	import { dateString, isSaturday } from '$lib/helpers.js';
 	import { fade } from 'svelte/transition';
 
@@ -40,7 +42,10 @@
 			<i class="fa fa-skull"></i>
 			<span class="ml-2 text-xl font-semibold whitespace-nowrap">Pirates Footy Organiser</span>
 		</NavBrand>
-		<DarkMode class="ml-auto" />
+		<div class="ml-auto flex items-center gap-2">
+			{#if $isLoading}<Spinner size="6" />{/if}
+			<DarkMode />
+		</div>
 	</Navbar>
 
 	<div class="flex-1 overflow-y-auto">

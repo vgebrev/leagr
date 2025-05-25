@@ -1,14 +1,16 @@
 <script>
-	import { Label, Input, Button, Alert, Toast } from 'flowbite-svelte';
+	import { Label, Input, Button, Alert } from 'flowbite-svelte';
 	import { CirclePlusSolid, CheckCircleSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 	import { onMount } from 'svelte';
 	import { dateTimeString } from '$lib/helpers.js';
 	import { api } from '$lib/api-client.js';
 	import { setError } from '$lib/stores/error.js';
+	import { isLoading } from '$lib/stores/loading.js';
 	import PlayersList from '../../components/PlayersList.svelte';
 
 	let { data } = $props();
 	const date = data.date;
+
 	let players = $state([]);
 	let playerLimit = $state(18);
 	let playerName = $state('');
@@ -34,16 +36,20 @@
 
 	onMount(async () => {
 		try {
+			$isLoading = true;
 			players = await api.get('players', date);
 			playerLimit = await api.get('players/limit', date);
 		} catch (ex) {
 			console.error('Error fetching players:', ex);
 			setError('Failed to load players. Please try again.');
+		} finally {
+			$isLoading = false;
 		}
 	});
 	async function setPlayerLimit(event) {
 		event.preventDefault();
 		try {
+			$isLoading = true;
 			if (playerLimit !== null) {
 				await api.post('players/limit', date, { playerLimit });
 			} else {
@@ -52,12 +58,15 @@
 		} catch (ex) {
 			console.error('Error limiting players:', ex);
 			setError('Failed to set player limit. Please try again.');
+		} finally {
+			$isLoading = false;
 		}
 	}
 
 	async function addPlayer(event) {
 		event.preventDefault();
 		try {
+			$isLoading = true;
 			if (playerName && !players.includes(playerName.trim())) {
 				await api.post('players', date, { playerName: playerName.trim() });
 				players.push(playerName.trim());
@@ -68,11 +77,14 @@
 		} catch (ex) {
 			console.error('Error adding player:', ex);
 			setError('Failed to add player. Please try again.');
+		} finally {
+			$isLoading = false;
 		}
 	}
 
 	async function removePlayer(playerName) {
 		try {
+			$isLoading = true;
 			const index = players.indexOf(playerName);
 			if (playerName && index !== -1) {
 				await api.remove('players', date, { playerName });
@@ -81,6 +93,8 @@
 		} catch (ex) {
 			console.error('Error removing player:', ex);
 			setError('Failed to remove player. Please try again.');
+		} finally {
+			$isLoading = false;
 		}
 	}
 </script>
@@ -122,13 +136,13 @@
 	</form>
 	{#if new Date() < registrationOpenDate}
 		<Alert class="flex items-center border"
-			><ExclamationCircleSolid />You can add players for this day after
+			><ExclamationCircleSolid />You can't add players for this day before
 			{dateTimeString(registrationOpenDate)}</Alert
 		>
 	{/if}
 	{#if new Date() >= registrationCloseDate}
 		<Alert class="flex items-center border"
-			><ExclamationCircleSolid />You can add players for this day until
+			><ExclamationCircleSolid />You can't add players for this day after
 			{dateTimeString(registrationCloseDate)}</Alert
 		>
 	{/if}
