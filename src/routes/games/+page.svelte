@@ -128,6 +128,12 @@
 	});
 </script>
 
+{#if teamNames.length === 0}
+	<Alert class="flex items-center border"
+		><ExclamationCircleSolid />Make some teams before scheduling games.</Alert
+	>
+{/if}
+
 <Button onclick={async () => await scheduleGames(false)} disabled={teamNames.length === 0}
 	><CalendarMonthSolid class="me-2 h-4 w-4" /> Schedule Games</Button
 >

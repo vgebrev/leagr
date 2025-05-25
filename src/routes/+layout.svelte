@@ -36,6 +36,9 @@
 	}
 </script>
 
+<svelte:head>
+	<title>Pirates Footy Organiser</title>
+</svelte:head>
 <main class="flex h-screen flex-col overflow-hidden">
 	<Navbar class="z-10 shrink-0">
 		<NavBrand href="/?date={date}">

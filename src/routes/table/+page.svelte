@@ -110,10 +110,10 @@
 			<TableHeadCell class="px-1 py-1.5 text-center">W</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">D</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">L</TableHeadCell>
+			<TableHeadCell class="px-1 py-1.5 text-center text-black dark:text-white">Pts</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">GF</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">GA</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">GD</TableHeadCell>
-			<TableHeadCell class="px-1 py-1.5 text-center">Pts</TableHeadCell>
 		</TableHead>
 		<TableBody>
 			{#each standings as team, index (index)}
@@ -138,6 +138,9 @@
 					<TableBodyCell class="px-1 py-1.5 text-center">
 						{team.losses}
 					</TableBodyCell>
+					<TableBodyCell class="px-1 py-1.5 text-center font-bold text-black dark:text-white">
+						{team.points}
+					</TableBodyCell>
 					<TableBodyCell class="px-1 py-1.5 text-center">
 						{team.goalsFor}
 					</TableBodyCell>
@@ -146,9 +149,6 @@
 					</TableBodyCell>
 					<TableBodyCell class="px-1 py-1.5 text-center">
 						{team.goalsFor - team.goalsAgainst}
-					</TableBodyCell>
-					<TableBodyCell class="px-1 py-1.5 text-center font-bold">
-						{team.points}
 					</TableBodyCell>
 				</TableBodyRow>
 			{/each}
