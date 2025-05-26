@@ -4,7 +4,8 @@
 		UsersGroupSolid,
 		CalendarMonthSolid,
 		RectangleListSolid,
-		ExclamationCircleSolid
+		ExclamationCircleSolid,
+		AdjustmentsHorizontalSolid
 	} from 'flowbite-svelte-icons';
 	import '../app.css';
 	import {
@@ -21,6 +22,7 @@
 	import { page } from '$app/state';
 	import { error } from '$lib/stores/error.js';
 	import { isLoading } from '$lib/stores/loading.js';
+	import { settings } from '$lib/stores/settings.js';
 	import { dateString, isSaturday } from '$lib/helpers.js';
 	import { fade } from 'svelte/transition';
 
@@ -30,6 +32,7 @@
 	let date = $derived(dateString(selectedDate));
 	let isSelectedSaturday = $derived.by(() => isSaturday(selectedDate));
 
+	$settings = data.settings;
 	function dateChanged(newDate) {
 		const date = dateString(newDate);
 		window.location.href = `${page.url.pathname}?date=${date}`;
@@ -39,7 +42,7 @@
 <svelte:head>
 	<title>Pirates Footy Organiser</title>
 </svelte:head>
-<main class="flex h-screen flex-col overflow-hidden">
+<main class="flex h-[100dvh] flex-col overflow-hidden">
 	<Navbar class="z-10 shrink-0">
 		<NavBrand href="/?date={date}">
 			<i class="fa fa-skull"></i>
@@ -47,11 +50,15 @@
 		</NavBrand>
 		<div class="ml-auto flex items-center gap-2">
 			{#if $isLoading}<Spinner size="6" />{/if}
-			<DarkMode />
+			<a
+				class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-400 dark:hover:bg-gray-700"
+				href={`/settings?date=${date}`}><AdjustmentsHorizontalSolid /></a
+			>
+			<DarkMode color="alternative" />
 		</div>
 	</Navbar>
 
-	<div class="flex-1 overflow-y-auto">
+	<div class="flex-1 overflow-y-auto pb-[4rem]">
 		<div
 			class="container mx-auto flex flex-col justify-between gap-2 p-2 md:w-2/3 lg:w-1/2 xl:w-1/3"
 		>
@@ -70,7 +77,7 @@
 		</div>
 	</div>
 
-	<BottomNav {activeUrl} position="static" innerClass="grid-cols-4" class="z-10 shrink-0">
+	<BottomNav {activeUrl} position="fixed" innerClass="grid-cols-4" class="z-10 shrink-0">
 		<BottomNavItem btnName="Players" href="/players?date={date}">
 			<UserSolid class="group-hover:text-primary-600 dark:group-hover:text-primary-500"></UserSolid>
 		</BottomNavItem>

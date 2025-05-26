@@ -102,7 +102,7 @@
 </script>
 
 {#if standings.length > 0}
-	<Table class="w-full text-xs">
+	<Table class="w-full text-xs" shadow>
 		<TableHead>
 			<TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
 			<TableHeadCell class="px-1 py-1.5 text-center">Team</TableHeadCell>

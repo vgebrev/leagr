@@ -5,15 +5,18 @@
 	import { api } from '$lib/api-client.js';
 	import { setError } from '$lib/stores/error.js';
 	import { isLoading } from '$lib/stores/loading.js';
+	import { settings } from '$lib/stores/settings.js';
 	import { nouns } from '$lib/nouns.js';
 	import { teamColours } from '$lib/helpers.js';
 	import TeamTable from '../../components/TeamTable.svelte';
 
 	let { data } = $props();
 	const date = data.date;
+
 	let players = $state([]);
-	let playerLimit = $state(18);
-	let teamConfig = $derived.by(() => calculateTeamConfig(Math.min(players.length, playerLimit)));
+	let teamConfig = $derived.by(() =>
+		calculateTeamConfig(Math.min(players.length, $settings.playerLimit))
+	);
 	let selectedTeamConfig = $state(null);
 	let waitingList = $state([]);
 	let teams = $state({});
@@ -52,8 +55,8 @@
 		$isLoading = true;
 		const restoreTeams = { ...teams };
 		const restoreWaitingList = [...waitingList];
-		const eligiblePlayers = players.slice(0, playerLimit);
-		waitingList = players.slice(playerLimit);
+		const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
+		waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
 		teams = {};
 		const teamSizes = selectedTeamConfig.teamSizes;
 		const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
@@ -104,7 +107,6 @@
 		try {
 			$isLoading = true;
 			players = await api.get('players', date);
-			playerLimit = await api.get('players/limit', date);
 			const teamData = await api.get('teams', date);
 			teams = teamData.teams || {};
 			waitingList = teamData.waitingList || [];
@@ -121,9 +123,9 @@
 	<div class="flex gap-2 text-nowrap">
 		<span>Players:</span>
 		<span>{players.length} available.</span>
-		<span>{Math.min(players.length, playerLimit)} eligible.</span>
-		{#if players.length > playerLimit}
-			<span>{players.length - playerLimit} waiting list.</span>
+		<span>{Math.min(players.length, $settings.playerLimit)} eligible.</span>
+		{#if players.length > $settings.playerLimit}
+			<span>{players.length - $settings.playerLimit} waiting list.</span>
 		{/if}
 	</div>
 	<Label>Choose team options</Label>
@@ -145,8 +147,10 @@
 			>
 		{/if}
 	</div>
-	<Button onclick={async () => await generateTeams(false)} disabled={!selectedTeamConfig}
-		><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button
+	<Button
+		onclick={async () => await generateTeams(false)}
+		disabled={(!$settings.canRegenerateTeams && Object.keys(teams).length > 0) ||
+			!selectedTeamConfig}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button
 	>
 	{#if confirmRegenerate}
 		<Alert class="flex items-center border"

@@ -1,7 +1,11 @@
 import { dateString } from '$lib/helpers.js';
 
-export const load = ({ url }) => {
+export const load = async ({ url, fetch }) => {
+	const date = url.searchParams.get('date') || dateString(new Date());
+	const res = await fetch(`/api/settings?date=${date}`);
+	const settings = await res.json();
 	return {
-		date: url.searchParams.get('date') || dateString(new Date())
+		date,
+		settings
 	};
 };

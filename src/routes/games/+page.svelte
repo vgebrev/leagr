@@ -5,6 +5,7 @@
 	import { api } from '$lib/api-client.js';
 	import { setError } from '$lib/stores/error.js';
 	import { isLoading } from '$lib/stores/loading.js';
+	import { settings } from '$lib/stores/settings.js';
 	import TeamBadge from '../../components/TeamBadge.svelte';
 	import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
@@ -134,7 +135,9 @@
 	>
 {/if}
 
-<Button onclick={async () => await scheduleGames(false)} disabled={teamNames.length === 0}
+<Button
+	onclick={async () => await scheduleGames(false)}
+	disabled={(!$settings.canResetSchedule && schedule.length > 0) || teamNames.length === 0}
 	><CalendarMonthSolid class="me-2 h-4 w-4" /> Schedule Games</Button
 >
 {#if confirmRegenerate}
@@ -175,7 +178,7 @@
 	{/each}
 </div>
 {#if schedule.length > 0}
-	<Button disabled={Object.keys(teams).length === 0} onclick={addMoreGames}>
+	<Button disabled={teamNames.length === 0} onclick={addMoreGames}>
 		<CirclePlusSolid class="me-2 h-4 w-4"></CirclePlusSolid> Add More Games</Button
 	>
 {/if}
