@@ -36,7 +36,7 @@
                                 <span class="flex gap-2 italic"
                                     ><ExclamationCircleSolid /> Empty</span>
                             {/if}
-                            {#if onremove}
+                            {#if onremove && player}
                                 <Button
                                     size="sm"
                                     class="ms-auto p-0"
