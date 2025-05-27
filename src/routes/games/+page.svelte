@@ -140,7 +140,7 @@
     ><CalendarMonthSolid class="me-2 h-4 w-4" /> Schedule Games</Button>
 {#if confirmRegenerate}
     <Alert class="flex items-center border"
-        ><ExclamationCircleSolid />Games have already been schedule. Are you sure you want to reset
+        ><ExclamationCircleSolid />Games have already been scheduled. Are you sure you want to reset
         the schedule?
         <Button
             size="sm"
