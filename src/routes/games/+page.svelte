@@ -13,7 +13,7 @@
     const date = data.date;
     let schedule = $state([]);
     let teams = $state({});
-    let teamNames = $derived(Object.keys(teams));
+    let teamNames = $derived(Object.keys(teams || {}));
     let confirmRegenerate = $derived(false);
 
     function generateRoundRobinRounds(teams) {
