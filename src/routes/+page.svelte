@@ -43,7 +43,7 @@
         ><span
             >5. Check out the <Button
                 color="alternative"
-                href="/games?date={data.date}"
+                href="/table?date={data.date}"
                 size="xs"
                 ><RectangleListSolid class="me-2 h-4 w-4"></RectangleListSolid>Table</Button> after the
             games.</span>
