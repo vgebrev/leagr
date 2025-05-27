@@ -1,20 +1,25 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <link rel="icon" href="%sveltekit.assets%/favicon.svg" type="image/svg+xml" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <script>
-      (function () {
-        const saved = localStorage.getItem('theme') || 'system';
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const shouldDark = saved === 'dark' || (saved === 'system' && prefersDark);
-        if (shouldDark) document.documentElement.classList.add('dark');
-      })();
-    </script>
-    %sveltekit.head%
-  </head>
-  <body data-sveltekit-preload-data="hover">
-    <div style="display: contents">%sveltekit.body%</div>
-  </body>
+    <head>
+        <meta charset="utf-8" />
+        <link
+            rel="icon"
+            href="%sveltekit.assets%/favicon.svg"
+            type="image/svg+xml" />
+        <meta
+            name="viewport"
+            content="width=device-width, initial-scale=1" />
+        <script>
+            (function () {
+                const saved = localStorage.getItem('theme') || 'system';
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const shouldDark = saved === 'dark' || (saved === 'system' && prefersDark);
+                if (shouldDark) document.documentElement.classList.add('dark');
+            })();
+        </script>
+        %sveltekit.head%
+    </head>
+    <body data-sveltekit-preload-data="hover">
+        <div style="display: contents">%sveltekit.body%</div>
+    </body>
 </html>
