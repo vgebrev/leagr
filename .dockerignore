@@ -1,0 +1,12 @@
+.gitignore
+.git
+.idea
+data
+node_modules
+.dockerignore
+.svelte-kit
+.prettierrc
+.prettierignore
+Dockerfile
+*.tar
+deploy.ps1
