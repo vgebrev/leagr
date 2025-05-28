@@ -51,8 +51,8 @@
         try {
             $isLoading = true;
             if (playerName && !players.includes(playerName.trim())) {
-                await api.post('players', date, { playerName: playerName.trim() });
-                players.push(playerName.trim());
+                players = await api.post('players', date, { playerName: playerName.trim() });
+                //players.push(playerName.trim());
                 playerName = '';
             } else {
                 setError(`Player ${playerName} already added.`);
@@ -70,8 +70,8 @@
             $isLoading = true;
             const index = players.indexOf(playerName);
             if (playerName && index !== -1) {
-                await api.remove('players', date, { playerName });
-                players.splice(index, 1);
+                players = await api.remove('players', date, { playerName });
+                //players.splice(index, 1);
             }
         } catch (ex) {
             console.error('Error removing player:', ex);

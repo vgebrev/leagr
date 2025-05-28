@@ -20,7 +20,8 @@ async function post(key, date, value) {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.ok;
+
+    return await response.json();
 }
 
 async function remove(key, date, value) {
@@ -35,7 +36,7 @@ async function remove(key, date, value) {
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
-    return response.ok;
+    return await response.json();
 }
 
 export const api = {

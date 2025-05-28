@@ -20,7 +20,7 @@
         try {
             $isLoading = true;
             storedSettings.playerLimit = storedSettings.playerLimit || 24;
-            await api.post('settings', date, storedSettings);
+            storedSettings = await api.post('settings', date, storedSettings);
             $settings = storedSettings;
         } catch (ex) {
             console.error('Error limiting players:', ex);

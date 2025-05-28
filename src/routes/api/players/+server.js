@@ -14,7 +14,7 @@ export const POST = async ({ request, url }) => {
         return error(400, 'Invalid request body');
     }
     const result = await data.set('players', date, body.playerName);
-    return result ? json({ success: result }) : error(500, 'Failed to add player');
+    return result ? json(result) : error(500, 'Failed to add player');
 };
 
 export const DELETE = async ({ request, url }) => {
@@ -24,5 +24,5 @@ export const DELETE = async ({ request, url }) => {
         return error(400, 'Invalid request body');
     }
     const result = await data.remove('players', date, body.playerName);
-    return result ? json({ success: result }) : error(500, 'Failed to remove player');
+    return result ? json(result) : error(500, 'Failed to remove player');
 };

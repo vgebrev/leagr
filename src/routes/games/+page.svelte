@@ -73,7 +73,7 @@
         try {
             $isLoading = true;
             schedule = generateFullRoundRobinSchedule(teamNames);
-            await api.post('games', date, { rounds: schedule });
+            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
             confirmRegenerate = false;
         } catch (ex) {
             console.error(ex);
@@ -89,7 +89,7 @@
         try {
             $isLoading = true;
             schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames));
-            await api.post('games', date, { rounds: schedule });
+            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
         } catch (ex) {
             console.error(ex);
             setError('Failed to add more games. Please try again.');
@@ -103,7 +103,7 @@
         const restoreSchedule = schedule;
         try {
             $isLoading = true;
-            await api.post('games', date, { rounds: schedule });
+            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
         } catch (ex) {
             console.error(ex);
             setError('Failed to add more games. Please try again.');

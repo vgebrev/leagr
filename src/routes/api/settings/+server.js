@@ -20,5 +20,5 @@ export const POST = async ({ request, url }) => {
         return error(400, 'Invalid request body');
     }
     const result = await data.set('settings', date, body, defaultSettings);
-    return result ? json({ success: result }) : error(500, 'Failed to set settings');
+    return result ? json(result) : error(500, 'Failed to set settings');
 };

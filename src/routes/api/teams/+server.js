@@ -14,5 +14,5 @@ export const POST = async ({ request, url }) => {
         return error(400, 'Invalid request body');
     }
     const result = await data.set('teams', date, body, {});
-    return result ? json({ success: result }) : error(500, 'Failed to set teams');
+    return result ? json(result) : error(500, 'Failed to set teams');
 };

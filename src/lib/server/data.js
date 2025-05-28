@@ -37,13 +37,13 @@ async function get(key, date) {
  * @param date
  * @param value
  * @param {[]|{}|number}defaultValue
- * @returns {Promise<boolean>}
+ * @returns {Promise}
  */
 async function set(key, date, value, defaultValue = []) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
-        return false;
+        return null;
     }
 
     const filePath = path.join(dataPath, `${filename}.json`);
@@ -69,10 +69,10 @@ async function set(key, date, value, defaultValue = []) {
                 jsonData[key] = value;
             }
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-            return true;
+            return jsonData[key];
         } catch (err) {
             console.error('Error writing file: ', err);
-            return false;
+            return null;
         }
     });
 }
@@ -81,7 +81,7 @@ async function remove(key, date, value) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
-        return false;
+        return null;
     }
 
     const filePath = path.join(dataPath, `${filename}.json`);
@@ -97,7 +97,7 @@ async function remove(key, date, value) {
                 console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
             }
             if (!jsonData[key]) {
-                return true;
+                return null;
             }
             if (Array.isArray(jsonData[key])) {
                 jsonData[key] = jsonData[key].filter((item) => item !== value);
@@ -107,10 +107,10 @@ async function remove(key, date, value) {
                 jsonData[key] = null;
             }
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-            return true;
+            return jsonData[key];
         } catch (err) {
             console.error('Error writing file:', err);
-            return false;
+            return null;
         }
     });
 }
