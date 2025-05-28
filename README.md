@@ -2,6 +2,13 @@
 
 A little app to help organise Saturday social 5-a-side footy sessions at Pirates.
 
+Features include:
+- View and manage player availability.
+- Waiting list after a limit is reached.
+- Generate random teams.
+- Schedule matches and track results.
+- Standings table based on match results.
+
 ## Environment Setup
 
 Data is stored as JSON files in the `data` directory. For dev, make sure it exists in the root of the project.
