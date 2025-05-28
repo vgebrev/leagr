@@ -66,7 +66,9 @@
             teams[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
         }
         try {
-            await api.post('teams', date, { teams, waitingList });
+            const teamData = await api.post('teams', date, { teams, waitingList });
+            teams = teamData.teams || {};
+            waitingList = teamData.waitingList || [];
             confirmRegenerate = false;
         } catch (ex) {
             console.error('Error generating teams:', ex);
@@ -92,7 +94,9 @@
             } else {
                 teams[Object.keys(teams)[teamIndex]].push(null);
             }
-            await api.post('teams', date, { teams, waitingList });
+            const teamData = await api.post('teams', date, { teams, waitingList });
+            teams = teamData.teams || {};
+            waitingList = teamData.waitingList || [];
         } catch (ex) {
             console.error('Error removing player:', ex);
             setError('Failed to remove player. Please try again.');
@@ -103,6 +107,41 @@
         }
     }
 
+    async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
+        $isLoading = true;
+        const restoreTeams = { ...teams };
+        const restoreWaitingList = [...waitingList];
+        try {
+            if (teams[Object.keys(teams)[teamIndex]][playerIndex] !== null) {
+                setError('This spot is already filled.');
+                return;
+            }
+            if (waitingList.length > 0) {
+                teams[Object.keys(teams)[teamIndex]][playerIndex] = waitingList.shift();
+            }
+            const teamData = await api.post('teams', date, { teams, waitingList });
+            teams = teamData.teams || {};
+            waitingList = teamData.waitingList || [];
+        } catch (ex) {
+            console.error('Error filling empty spot with a player:', ex);
+            setError('Failed to assign waiting list player to empty spot. Please try again.');
+            teams = restoreTeams;
+            waitingList = restoreWaitingList;
+        } finally {
+            $isLoading = false;
+        }
+    }
+
+    function addNewPlayersToWaitingList() {
+        const newPlayers = players.filter(
+            (player) =>
+                !Object.values(teams).flat().includes(player) && !waitingList.includes(player)
+        );
+        if (newPlayers.length > 0) {
+            waitingList = [...waitingList, ...newPlayers];
+        }
+    }
+
     onMount(async () => {
         try {
             $isLoading = true;
@@ -110,6 +149,7 @@
             const teamData = await api.get('teams', date);
             teams = teamData.teams || {};
             waitingList = teamData.waitingList || [];
+            addNewPlayersToWaitingList();
         } catch (ex) {
             console.error('Error fetching players:', ex);
             setError('Failed to load player data. Please try again.');
@@ -165,6 +205,7 @@
                 {team}
                 {teamName}
                 teamIndex={i}
+                onfillempty={fillEmptySpotFromWaitingList}
                 onremove={removePlayer}
                 {players} />
         {/each}

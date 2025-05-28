@@ -1,9 +1,9 @@
 <script>
     import { Button } from 'flowbite-svelte';
-    import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { capitalize, teamColours, teamStyles } from '$lib/helpers.js';
 
-    let { team, teamIndex, color, teamName, onremove, players } = $props();
+    let { team, teamIndex, color, teamName, onremove, onfillempty, players } = $props();
 
     let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
 
@@ -47,6 +47,7 @@
                                     onclick={() => onremove({ player, teamIndex })}
                                     ><svg
                                         class="h-4 w-4"
+                                        fill="currentColor"
                                         width="20"
                                         height="20"
                                         viewBox="0 0 20 20"
@@ -59,6 +60,17 @@
                                             stroke-linejoin="round"></path
                                         ></svg
                                     ></Button
+                                >{/if}
+                            {#if onfillempty && !player}
+                                <Button
+                                    size="sm"
+                                    class="ms-auto p-0"
+                                    type="button"
+                                    outline={true}
+                                    pill={true}
+                                    color={styles.button}
+                                    onclick={() => onfillempty({ playerIndex: i, teamIndex })}
+                                    ><ArrowLeftOutline class="h-4 w-4" /></Button
                                 >{/if}
                         </div></td>
                 </tr>
