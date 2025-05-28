@@ -1,8 +1,17 @@
 import path from 'path';
 import fs from 'fs/promises';
 import { isObject } from '$lib/helpers.js';
+import { Mutex } from 'async-mutex';
 
 const dataPath = path.join(process.cwd(), 'data');
+const mutexes = new Map();
+
+function getMutex(filename) {
+    if (!mutexes.has(filename)) {
+        mutexes.set(filename, new Mutex());
+    }
+    return mutexes.get(filename);
+}
 
 async function get(key, date) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
@@ -37,32 +46,37 @@ async function set(key, date, value, defaultValue = []) {
         return false;
     }
 
-    try {
-        const filePath = path.join(dataPath, `${filename}.json`);
-        let jsonData = {};
+    const filePath = path.join(dataPath, `${filename}.json`);
+    const mutex = getMutex(filePath);
+
+    return await mutex.runExclusive(async () => {
         try {
-            const file = await fs.readFile(filePath, 'utf-8');
-            jsonData = JSON.parse(file);
-        } catch (ex) {
-            console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
+            let jsonData = {};
+            try {
+                const file = await fs.readFile(filePath, 'utf-8');
+                jsonData = JSON.parse(file);
+            } catch (ex) {
+                console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
+            }
+            if (!jsonData[key]) {
+                jsonData[key] = defaultValue;
+            }
+            if (Array.isArray(jsonData[key])) {
+                jsonData[key].push(value);
+            } else if (isObject(jsonData[key])) {
+                jsonData[key] = { ...(jsonData[key] ?? {}), ...value };
+            } else {
+                jsonData[key] = value;
+            }
+            await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
+            return true;
+        } catch (err) {
+            console.error('Error writing file: ', err);
+            return false;
         }
-        if (!jsonData[key]) {
-            jsonData[key] = defaultValue;
-        }
-        if (Array.isArray(jsonData[key])) {
-            jsonData[key].push(value);
-        } else if (isObject(jsonData[key])) {
-            jsonData[key] = { ...(jsonData[key] ?? {}), ...value };
-        } else {
-            jsonData[key] = value;
-        }
-        await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-        return true;
-    } catch (err) {
-        console.error('Error writing file: ', err);
-        return false;
-    }
+    });
 }
+
 async function remove(key, date, value) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
@@ -70,32 +84,37 @@ async function remove(key, date, value) {
         return false;
     }
 
-    try {
-        const filePath = path.join(dataPath, `${filename}.json`);
-        let jsonData = {};
+    const filePath = path.join(dataPath, `${filename}.json`);
+    const mutex = getMutex(filePath);
+
+    return await mutex.runExclusive(async () => {
         try {
-            const file = await fs.readFile(filePath, 'utf-8');
-            jsonData = JSON.parse(file);
-        } catch (ex) {
-            console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
-        }
-        if (!jsonData[key]) {
+            let jsonData = {};
+            try {
+                const file = await fs.readFile(filePath, 'utf-8');
+                jsonData = JSON.parse(file);
+            } catch (ex) {
+                console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
+            }
+            if (!jsonData[key]) {
+                return true;
+            }
+            if (Array.isArray(jsonData[key])) {
+                jsonData[key] = jsonData[key].filter((item) => item !== value);
+            } else if (isObject(jsonData[key])) {
+                delete jsonData[key][value];
+            } else {
+                jsonData[key] = null;
+            }
+            await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
             return true;
+        } catch (err) {
+            console.error('Error writing file:', err);
+            return false;
         }
-        if (Array.isArray(jsonData[key])) {
-            jsonData[key] = jsonData[key].filter((item) => item !== value);
-        } else if (isObject(jsonData[key])) {
-            delete jsonData[key][value];
-        } else {
-            jsonData[key] = null;
-        }
-        await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-        return true;
-    } catch (err) {
-        console.error('Error writing file:', err);
-        return false;
-    }
+    });
 }
+
 export const data = {
     get,
     set,

@@ -39,6 +39,7 @@
         "vite": "^6.2.6"
     },
     "dependencies": {
+        "async-mutex": "^0.5.0",
         "flowbite": "^3.1.2",
         "flowbite-svelte": "^1.2.7",
         "flowbite-svelte-icons": "^2.1.1"
