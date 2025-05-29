@@ -137,7 +137,7 @@
             (player) =>
                 !Object.values(teams).flat().includes(player) && !waitingList.includes(player)
         );
-        if (newPlayers.length > 0) {
+        if (Object.keys(teams).length > 0 && newPlayers.length > 0) {
             waitingList = [...waitingList, ...newPlayers];
         }
     }
@@ -175,6 +175,7 @@
                 <Radio
                     bind:group={selectedTeamConfig}
                     value={config}
+                    disabled={!$settings.canRegenerateTeams && Object.keys(teams).length > 0}
                     ><div class="items-between flex gap-2">
                         <span class="semi-bold">{config.teams} Teams</span><span
                             >({config.teamSizes} Players)</span>
