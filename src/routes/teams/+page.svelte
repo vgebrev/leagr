@@ -1,18 +1,18 @@
 <script>
     import { Alert, Button, Label, Radio } from 'flowbite-svelte';
-    import { ExclamationCircleSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
+    import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/api-client.js';
     import { setError } from '$lib/stores/error.js';
     import { isLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';
     import { nouns } from '$lib/nouns.js';
-    import { teamColours } from '$lib/helpers.js';
+    import { isDateInPast, teamColours } from '$lib/helpers.js';
     import TeamTable from '../../components/TeamTable.svelte';
 
     let { data } = $props();
     const date = data.date;
-
+    let isPast = $derived(isDateInPast(date));
     let players = $state([]);
     let teamConfig = $derived.by(() =>
         calculateTeamConfig(Math.min(players.length, $settings.playerLimit))
@@ -44,6 +44,10 @@
     }
 
     async function generateTeams(regenerate = false) {
+        if (isPast) {
+            setError('The date is in the past. Teams cannot be changed.');
+            return;
+        }
         if (!selectedTeamConfig) {
             setError('Please choose a team option.');
             return;
@@ -81,6 +85,10 @@
     }
 
     async function removePlayer({ player, teamIndex }) {
+        if (isPast) {
+            setError('The date is in the past. Teams cannot be changed.');
+            return;
+        }
         $isLoading = true;
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
@@ -108,6 +116,10 @@
     }
 
     async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
+        if (isPast) {
+            setError('The date is in the past. Teams cannot be changed.');
+            return;
+        }
         $isLoading = true;
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
@@ -175,7 +187,8 @@
                 <Radio
                     bind:group={selectedTeamConfig}
                     value={config}
-                    disabled={!$settings.canRegenerateTeams && Object.keys(teams).length > 0}
+                    disabled={isPast ||
+                        (!$settings.canRegenerateTeams && Object.keys(teams).length > 0)}
                     ><div class="items-between flex gap-2">
                         <span class="semi-bold">{config.teams} Teams</span><span
                             >({config.teamSizes} Players)</span>
@@ -183,14 +196,19 @@
             </div>
         {/each}
         {#if teamConfig.length === 0}
-            <Alert class="flex items-center border"
-                ><ExclamationCircleSolid />More players are needed to make teams.</Alert>
+            <Alert class="flex items-center border p-2"
+                ><ExclamationCircleSolid />More <Button
+                    color="alternative"
+                    href="/players?date={data.date}"
+                    size="xs"><UserSolid class="me-2 h-4 w-4"></UserSolid>Players</Button> are needed
+                to make teams.</Alert>
         {/if}
     </div>
     <Button
         onclick={async () => await generateTeams(false)}
         disabled={(!$settings.canRegenerateTeams && Object.keys(teams).length > 0) ||
-            !selectedTeamConfig}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
+            !selectedTeamConfig ||
+            isPast}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
     {#if confirmRegenerate}
         <Alert class="flex items-center border"
             ><ExclamationCircleSolid />Teams have already been generated. Are you sure you want to

@@ -27,6 +27,13 @@ export function isSaturday(date) {
     return date.getDay() === 6;
 }
 
+export function isDateInPast(date, hours = 13) {
+    const limit = new Date(date);
+    limit.setDate(limit.getDate());
+    limit.setHours(hours, 0, 0, 0);
+    return limit < new Date();
+}
+
 export function isObject(val) {
     return typeof val === 'object' && val !== null && !Array.isArray(val);
 }

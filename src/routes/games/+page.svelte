@@ -1,6 +1,6 @@
 <script>
     import { Listgroup, ListgroupItem, Input, Button, Alert } from 'flowbite-svelte';
-    import { CalendarMonthSolid } from 'flowbite-svelte-icons';
+    import { CalendarMonthSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/api-client.js';
     import { setError } from '$lib/stores/error.js';
@@ -8,9 +8,11 @@
     import { settings } from '$lib/stores/settings.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { isDateInPast } from '$lib/helpers.js';
 
     let { data } = $props();
     const date = data.date;
+    let isPast = $derived(isDateInPast(date));
     let schedule = $state([]);
     let teams = $state({});
     let teamNames = $derived(Object.keys(teams || {}));
@@ -65,6 +67,10 @@
     }
 
     async function scheduleGames(regenerate = false) {
+        if (isPast) {
+            setError('The date is in the past. Games cannot be changed.');
+            return;
+        }
         if (schedule.length > 0 && !regenerate) {
             confirmRegenerate = true;
             return;
@@ -85,6 +91,10 @@
     }
 
     async function addMoreGames() {
+        if (isPast) {
+            setError('The date is in the past. Games cannot be changed.');
+            return;
+        }
         const restoreSchedule = schedule;
         try {
             $isLoading = true;
@@ -130,14 +140,19 @@
 </script>
 
 {#if teamNames.length === 0}
-    <Alert class="flex items-center border"
-        ><ExclamationCircleSolid />Make some teams before scheduling games.</Alert>
+    <Alert class="flex items-center border p-2"
+        ><ExclamationCircleSolid />Make some <Button
+            color="alternative"
+            href="/teams?date={data.date}"
+            size="xs"><UsersGroupSolid class="me-2 h-4 w-4"></UsersGroupSolid>Teams</Button> before scheduling
+        games.</Alert>
 {/if}
 
 <Button
     onclick={async () => await scheduleGames(false)}
-    disabled={(!$settings.canResetSchedule && schedule.length > 0) || teamNames.length === 0}
-    ><CalendarMonthSolid class="me-2 h-4 w-4" /> Schedule Games</Button>
+    disabled={(!$settings.canResetSchedule && schedule.length > 0) ||
+        teamNames.length === 0 ||
+        isPast}><CalendarMonthSolid class="me-2 h-4 w-4" /> Schedule Games</Button>
 {#if confirmRegenerate}
     <Alert class="flex items-center border"
         ><ExclamationCircleSolid />Games have already been scheduled. Are you sure you want to reset
@@ -164,13 +179,15 @@
                         size="sm"
                         class="mr-auto w-8 text-center md:w-16"
                         bind:value={matchup.homeScore}
-                        onchange={saveScore} />
+                        onchange={saveScore}
+                        disabled={isPast} />
                     <Input
                         type="number"
                         size="sm"
                         class="ml-auto w-8 text-center md:w-16"
                         bind:value={matchup.awayScore}
-                        onchange={saveScore} />
+                        onchange={saveScore}
+                        disabled={isPast} />
                     <TeamBadge
                         className="w-2/5"
                         teamName={matchup.away}
@@ -182,7 +199,7 @@
 </div>
 {#if schedule.length > 0}
     <Button
-        disabled={teamNames.length === 0}
+        disabled={teamNames.length === 0 || isPast}
         onclick={addMoreGames}>
         <CirclePlusSolid class="me-2 h-4 w-4"></CirclePlusSolid> Add More Games</Button>
 {/if}

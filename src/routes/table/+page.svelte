@@ -6,14 +6,15 @@
         TableBody,
         TableBodyRow,
         TableBodyCell,
-        Button
+        Button,
+        Alert
     } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import { api } from '$lib/api-client.js';
     import { setError } from '$lib/stores/error.js';
     import { isLoading } from '$lib/stores/loading.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
-    import { CalendarMonthSolid } from 'flowbite-svelte-icons';
+    import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
     let { data } = $props();
     const date = data.date;
@@ -161,11 +162,12 @@
         </TableBody>
     </Table>
 {:else}
-    <div class="py-2">
+    <Alert class="flex items-center border p-2"
+        ><ExclamationCircleSolid />
         Schedule some <Button
             color="alternative"
             href="/games?date={data.date}"
             size="xs"><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button> and
         enter their scores to see the standings.
-    </div>
+    </Alert>
 {/if}
