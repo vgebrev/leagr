@@ -5,7 +5,8 @@
         CalendarMonthSolid,
         RectangleListSolid,
         ExclamationCircleSolid,
-        AdjustmentsHorizontalSolid
+        AdjustmentsHorizontalSolid,
+        AwardSolid
     } from 'flowbite-svelte-icons';
     import '../app.css';
     import {
@@ -83,7 +84,7 @@
     <BottomNav
         {activeUrl}
         position="fixed"
-        innerClass="grid-cols-4"
+        innerClass="grid-cols-5"
         class="z-10 shrink-0">
         <BottomNavItem
             btnName="Players"
@@ -110,6 +111,12 @@
             <RectangleListSolid
                 class="group-hover:text-primary-600 dark:group-hover:text-primary-500"
             ></RectangleListSolid>
+        </BottomNavItem>
+        <BottomNavItem
+            btnName="Rankings"
+            href="/rankings?date={date}">
+            <AwardSolid class="group-hover:text-primary-600 dark:group-hover:text-primary-500"
+            ></AwardSolid>
         </BottomNavItem>
     </BottomNav>
 
