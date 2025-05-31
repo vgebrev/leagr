@@ -3,6 +3,7 @@
 A little [SvelteKit 5](https://svelte.dev/) web app to help organise Saturday social 5-a-side footy sessions at Pirates.
 
 Features include:
+
 - View and manage player availability.
 - Waiting list after a limit is reached.
 - Generate random teams.
