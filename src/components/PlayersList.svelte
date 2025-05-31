@@ -9,7 +9,7 @@
         >{label}</span>
     <Listgroup class="w-full gap-0">
         {#each players as player, i (i)}
-            <ListgroupItem class="text-md flex gap-2 p-1 ps-2"
+            <ListgroupItem class="flex gap-2 p-1 ps-2"
                 ><span
                     class="max-w-100 overflow-hidden text-nowrap overflow-ellipsis whitespace-nowrap"
                     >{i + 1}. {player}</span
