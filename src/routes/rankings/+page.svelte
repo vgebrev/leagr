@@ -2,6 +2,8 @@
     import {
         Accordion,
         AccordionItem,
+        Alert,
+        Button,
         Listgroup,
         Table,
         TableBody,
@@ -10,7 +12,7 @@
         TableHead,
         TableHeadCell
     } from 'flowbite-svelte';
-    import { InfoCircleOutline } from 'flowbite-svelte-icons';
+    import { InfoCircleOutline, ChartOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { isLoading } from '$lib/stores/loading.js';
     import { setError } from '$lib/stores/error.js';
     import { onMount } from 'svelte';
@@ -29,6 +31,18 @@
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
         'Team Bonus: 2-8pts based on final team position and number of teams'
     ];
+
+    async function updateRankings() {
+        $isLoading = true;
+        try {
+            rankings = await api.post('rankings');
+        } catch (ex) {
+            console.error(ex);
+            setError('Unable to update rankings. Please try again.');
+        } finally {
+            $isLoading = false;
+        }
+    }
 
     onMount(async () => {
         $isLoading = true;
@@ -96,4 +110,10 @@
             {/each}
         </TableBody>
     </Table>
+    <Button onclick={async () => await updateRankings()}
+        ><ChartOutline class="me-2 h-4 w-4" /> Update Rankings</Button>
+    <Alert class="flex items-center border"
+        ><ExclamationCircleSolid /><span
+            >NOTE: Only update rankings after the last match score is recorded.</span
+        ></Alert>
 </div>

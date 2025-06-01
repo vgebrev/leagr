@@ -140,7 +140,7 @@
 </script>
 
 {#if teamNames.length === 0}
-    <Alert class="flex items-center border p-2"
+    <Alert class="flex items-center border py-2"
         ><ExclamationCircleSolid /><span
             >Make some <Button
                 color="alternative"
