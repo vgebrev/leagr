@@ -4,7 +4,8 @@ import { data } from '$lib/server/data.js';
 const defaultSettings = {
     playerLimit: 24,
     canRegenerateTeams: false,
-    canResetSchedule: false
+    canResetSchedule: false,
+    seedTeams: true
 };
 
 export const GET = async ({ url }) => {

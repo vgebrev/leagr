@@ -12,7 +12,8 @@
     let storedSettings = $state({
         playerLimit: 24,
         canRegenerateTeams: false,
-        canResetSchedule: false
+        canResetSchedule: false,
+        seedTeams: true
     });
 
     async function saveSettings(event) {
@@ -68,3 +69,6 @@
 <Toggle
     bind:checked={storedSettings.canResetSchedule}
     onchange={saveSettings}>Allow schedule reset</Toggle>
+<Toggle
+    bind:checked={storedSettings.seedTeams}
+    onchange={saveSettings}>Balance teams using player rankings</Toggle>

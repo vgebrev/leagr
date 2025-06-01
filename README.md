@@ -6,10 +6,10 @@ Features include:
 
 - View and manage player availability.
 - Waiting list after a limit is reached.
-- Generate random teams.
+- Generate random teams, either completely random or using player rankings as seeds.
 - Generate a round-robin home-away match schedule and track results.
 - Standings table based on match results.
-- Player rankings based on team performances.
+- Cumulative player rankings based on team performances.
 
 ## Environment Setup
 

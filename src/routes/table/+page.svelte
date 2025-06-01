@@ -28,7 +28,7 @@
         for (const matchup of matchups) {
             const { home, away, homeScore, awayScore } = matchup;
             if (homeScore === null || awayScore === null || matchup.bye) continue; // Skip unrecorded and bye matches
-            // Initialize teams if needed
+
             for (const team of [home, away]) {
                 if (!table[team]) {
                     table[team] = {
@@ -72,7 +72,6 @@
             }
         }
 
-        // Convert to array and sort
         return Object.values(table).sort((a, b) => {
             if (b.points !== a.points) return b.points - a.points;
             const gdA = a.goalsFor - a.goalsAgainst;

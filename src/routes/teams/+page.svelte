@@ -14,6 +14,7 @@
     const date = data.date;
     let isPast = $derived(isDateInPast(date));
     let players = $state([]);
+    let rankings = $state({});
     let teamConfig = $derived.by(() =>
         calculateTeamConfig(Math.min(players.length, $settings.playerLimit))
     );
@@ -43,6 +44,68 @@
         return config;
     }
 
+    function generateRandomTeams() {
+        const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
+        const waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
+        const teams = {};
+        const teamSizes = selectedTeamConfig.teamSizes;
+        const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
+        for (let i = 0; i < teamSizes.length; i++) {
+            const noun = nouns[Math.floor(Math.random() * nouns.length)];
+            const name = `${teamColours[i]} ${noun}`;
+            teams[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
+        }
+        return { teams, waitingList };
+    }
+
+    function generateSeededTeams() {
+        const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
+        const waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
+
+        const teamSizes = selectedTeamConfig.teamSizes;
+        const numTeams = teamSizes.length;
+        const teams = {};
+
+        const sortedPlayers = [...eligiblePlayers].sort((a, b) => {
+            const playerA = rankings?.players?.[a];
+            const playerB = rankings?.players?.[b];
+            if (playerA?.points || 0 !== playerB?.points || 0) {
+                return (playerB?.points || 0) - (playerA?.points || 0);
+            }
+            return (playerB?.appearances || 0) - (playerA?.appearances || 0);
+        });
+
+        const pots = [];
+        for (let i = 0; i < Math.max(...teamSizes); i++) {
+            pots.push([...sortedPlayers.splice(0, numTeams)]);
+            while (pots[i].length < numTeams) {
+                pots[i].push(null);
+            }
+        }
+        for (let pot of pots) {
+            pot.sort(() => Math.random() - 0.5);
+        }
+
+        for (let i = 0; i < numTeams; i++) {
+            const noun = nouns[Math.floor(Math.random() * nouns.length)];
+            const name = `${teamColours[i]} ${noun}`;
+            teams[name] = [];
+        }
+        const teamNames = Object.keys(teams);
+        for (let i = 0; i < teamNames.length; i++) {
+            const teamName = teamNames[i];
+            const teamSize = Math.max(...teamSizes);
+            for (let j = 0; j < teamSize; j++) {
+                if (pots[j].length > 0) {
+                    const player = pots[j].shift();
+                    if (player) teams[teamName].push(player);
+                }
+            }
+        }
+
+        return { teams, waitingList };
+    }
+
     async function generateTeams(regenerate = false) {
         if (isPast) {
             setError('The date is in the past. Teams cannot be changed.');
@@ -59,16 +122,9 @@
         $isLoading = true;
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
-        const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
-        waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
-        teams = {};
-        const teamSizes = selectedTeamConfig.teamSizes;
-        const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
-        for (let i = 0; i < teamSizes.length; i++) {
-            const noun = nouns[Math.floor(Math.random() * nouns.length)];
-            const name = `${teamColours[i]} ${noun}`;
-            teams[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
-        }
+        ({ teams, waitingList } = $settings.seedTeams
+            ? generateSeededTeams()
+            : generateRandomTeams());
         try {
             const teamData = await api.post('teams', date, { teams, waitingList });
             teams = teamData.teams || {};
@@ -158,6 +214,7 @@
         try {
             $isLoading = true;
             players = await api.get('players', date);
+            rankings = await api.get('rankings');
             const teamData = await api.get('teams', date);
             teams = teamData.teams || {};
             waitingList = teamData.waitingList || [];
