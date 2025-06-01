@@ -7,8 +7,9 @@ Features include:
 - View and manage player availability.
 - Waiting list after a limit is reached.
 - Generate random teams.
-- Generate round robin home-away match schedule and track results.
+- Generate a round-robin home-away match schedule and track results.
 - Standings table based on match results.
+- Player rankings based on team performances.
 
 ## Environment Setup
 

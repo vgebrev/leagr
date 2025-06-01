@@ -2,7 +2,6 @@
     import {
         Accordion,
         AccordionItem,
-        Label,
         Listgroup,
         Table,
         TableBody,
@@ -88,7 +87,10 @@
                         {data.points}
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
-                        {data.points / data.appearances}
+                        {(data.points / data.appearances).toLocaleString('en-US', {
+                            minimumFractionDigits: 0,
+                            maximumFractionDigits: 2
+                        })}
                     </TableBodyCell>
                 </TableBodyRow>
             {/each}

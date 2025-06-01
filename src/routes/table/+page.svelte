@@ -162,7 +162,7 @@
         </TableBody>
     </Table>
 {:else}
-    <Alert class="flex items-center border p-2"
+    <Alert class="flex items-center border py-2"
         ><ExclamationCircleSolid /><span>
             Schedule some <Button
                 color="alternative"

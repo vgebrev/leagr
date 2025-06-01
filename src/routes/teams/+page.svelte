@@ -196,7 +196,7 @@
             </div>
         {/each}
         {#if teamConfig.length === 0}
-            <Alert class="flex items-center border p-2"
+            <Alert class="flex items-center border py-2"
                 ><ExclamationCircleSolid /><span
                     >More <Button
                         color="alternative"
