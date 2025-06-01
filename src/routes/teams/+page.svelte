@@ -197,11 +197,13 @@
         {/each}
         {#if teamConfig.length === 0}
             <Alert class="flex items-center border p-2"
-                ><ExclamationCircleSolid />More <Button
-                    color="alternative"
-                    href="/players?date={data.date}"
-                    size="xs"><UserSolid class="me-2 h-4 w-4"></UserSolid>Players</Button> are needed
-                to make teams.</Alert>
+                ><ExclamationCircleSolid /><span
+                    >More <Button
+                        color="alternative"
+                        href="/players?date={data.date}"
+                        size="xs"><UserSolid class="me-2 h-4 w-4"></UserSolid>Players</Button> are needed
+                    to make teams.</span
+                ></Alert>
         {/if}
     </div>
     <Button
@@ -211,11 +213,12 @@
             isPast}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
     {#if confirmRegenerate}
         <Alert class="flex items-center border"
-            ><ExclamationCircleSolid />Teams have already been generated. Are you sure you want to
-            regenerate them?
-            <Button
-                size="sm"
-                onclick={async () => await generateTeams(true)}>Yes</Button
+            ><ExclamationCircleSolid /><span
+                >Teams have already been generated. Are you sure you want to regenerate them?
+                <Button
+                    size="sm"
+                    onclick={async () => await generateTeams(true)}>Yes</Button
+                ></span
             ></Alert>
     {/if}
     <div class="grid grid-cols-2 gap-2">

@@ -163,11 +163,12 @@
     </Table>
 {:else}
     <Alert class="flex items-center border p-2"
-        ><ExclamationCircleSolid />
-        Schedule some <Button
-            color="alternative"
-            href="/games?date={data.date}"
-            size="xs"><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button> and
-        enter their scores to see the standings.
+        ><ExclamationCircleSolid /><span>
+            Schedule some <Button
+                color="alternative"
+                href="/games?date={data.date}"
+                size="xs"
+                ><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button> and enter
+            their scores to see the standings.</span>
     </Alert>
 {/if}

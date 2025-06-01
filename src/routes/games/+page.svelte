@@ -141,11 +141,13 @@
 
 {#if teamNames.length === 0}
     <Alert class="flex items-center border p-2"
-        ><ExclamationCircleSolid />Make some <Button
-            color="alternative"
-            href="/teams?date={data.date}"
-            size="xs"><UsersGroupSolid class="me-2 h-4 w-4"></UsersGroupSolid>Teams</Button> before scheduling
-        games.</Alert>
+        ><ExclamationCircleSolid /><span
+            >Make some <Button
+                color="alternative"
+                href="/teams?date={data.date}"
+                size="xs"><UsersGroupSolid class="me-2 h-4 w-4"></UsersGroupSolid>Teams</Button> before
+            scheduling games.</span
+        ></Alert>
 {/if}
 
 <Button

@@ -74,8 +74,9 @@
                 onselect={dateChanged}></Datepicker>
             {#if !isSelectedSaturday}
                 <Alert class="flex items-center border"
-                    ><ExclamationCircleSolid />Selected date is not a Saturday. Are you sure you've
-                    got the right date?</Alert>
+                    ><ExclamationCircleSolid /><span
+                        >Selected date is not a Saturday. Are you sure you've got the right date?</span
+                    ></Alert>
             {/if}
             {@render children()}
         </div>
