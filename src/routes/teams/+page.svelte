@@ -180,7 +180,7 @@
             <span>{players.length - $settings.playerLimit} waiting list.</span>
         {/if}
     </div>
-    <Label>Choose team options</Label>
+    <Label>Choose team option</Label>
     <div class="flex w-full flex-col gap-2">
         {#each teamConfig as config, i (i)}
             <div class="rounded-md border p-2">

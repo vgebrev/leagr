@@ -114,6 +114,6 @@
         ><ChartOutline class="me-2 h-4 w-4" /> Update Rankings</Button>
     <Alert class="flex items-center border"
         ><ExclamationCircleSolid /><span
-            >NOTE: Only update rankings after the last match score is recorded.</span
+            >NOTE: Only update rankings after the last game score of the day is recorded.</span
         ></Alert>
 </div>
