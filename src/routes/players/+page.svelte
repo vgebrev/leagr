@@ -14,6 +14,7 @@
 
     let players = $state([]);
     let playerName = $state('');
+    let rankedPlayers = $state([]);
 
     const registrationOpenDate = $derived.by(() => {
         const limit = new Date(date);
@@ -38,6 +39,7 @@
         try {
             $isLoading = true;
             players = await api.get('players', date);
+            rankedPlayers = await api.get('players/ranked');
         } catch (ex) {
             console.error('Error fetching players:', ex);
             setError('Failed to load players. Please try again.');
@@ -52,7 +54,6 @@
             $isLoading = true;
             if (playerName && !players.includes(playerName.trim())) {
                 players = await api.post('players', date, { playerName: playerName.trim() });
-                //players.push(playerName.trim());
                 playerName = '';
             } else {
                 setError(`Player ${playerName} already added.`);
@@ -71,7 +72,6 @@
             const index = players.indexOf(playerName);
             if (playerName && index !== -1) {
                 players = await api.remove('players', date, { playerName });
-                //players.splice(index, 1);
             }
         } catch (ex) {
             console.error('Error removing player:', ex);
@@ -89,18 +89,22 @@
         onsubmit={async (event) => await addPlayer(event)}>
         <Input
             bind:value={playerName}
+            data={rankedPlayers}
+            clearable
             id="player-name"
             name="player-name"
             type="text"
             placeholder="Player Name"
             wrapperClass="w-full"
             required
-            disabled={!canModifyList} />
+            disabled={!canModifyList}
+            autocomplete="off" />
         <Button
             type="submit"
             disabled={!canModifyList}>
             <CirclePlusSolid class="me-2 h-4 w-4"></CirclePlusSolid> Add</Button>
     </form>
+
     {#if new Date() < registrationOpenDate}
         <Alert class="flex items-center border"
             ><ExclamationCircleSolid />You can't add players for this day before

@@ -136,5 +136,6 @@ async function updateRankings() {
 }
 
 export const rankings = {
+    loadRankings,
     updateRankings
 };
