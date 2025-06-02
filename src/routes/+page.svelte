@@ -4,7 +4,8 @@
         UserSolid,
         UsersGroupSolid,
         CalendarMonthSolid,
-        RectangleListSolid
+        RectangleListSolid,
+        AwardSolid
     } from 'flowbite-svelte-icons';
 
     let { data } = $props();
@@ -47,5 +48,13 @@
                 size="xs"
                 ><RectangleListSolid class="me-2 h-4 w-4"></RectangleListSolid>Table</Button> after the
             games.</span>
+    </ListgroupItem>
+    <ListgroupItem
+        ><span
+            >6. After the day is done, we'll update the <Button
+                color="alternative"
+                href="/rankings?date={data.date}"
+                size="xs"><AwardSolid class="me-2 h-4 w-4"></AwardSolid>Rankings</Button> and use them
+            to seed teams for balance (as well as bragging rights).</span>
     </ListgroupItem>
 </Listgroup>
