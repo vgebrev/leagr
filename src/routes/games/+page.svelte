@@ -8,29 +8,36 @@
     import { settings } from '$lib/stores/settings.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { isDateInPast } from '$lib/helpers.js';
+    import { isDateInPast, rotateArray } from '$lib/helpers.js';
 
     let { data } = $props();
     const date = data.date;
     let isPast = $derived(isDateInPast(date));
     let schedule = $state([]);
+    let anchorIndex = $state(0);
     let teams = $state({});
     let teamNames = $derived(Object.keys(teams || {}));
     let confirmRegenerate = $derived(false);
 
-    function generateRoundRobinRounds(teams) {
+    function generateRoundRobinRounds(teams, anchorIndex = 0) {
         const totalTeams = [...teams];
+
         if (totalTeams.length % 2 !== 0) {
-            totalTeams.push(null);
+            totalTeams.push(null); // bye
         }
+
         const n = totalTeams.length;
         const rounds = [];
 
+        const rotatedTeams = rotateArray(totalTeams, anchorIndex);
+
         for (let round = 0; round < n - 1; round++) {
             let matches = [];
+
             for (let i = 0; i < n / 2; i++) {
-                const home = totalTeams[i];
-                const away = totalTeams[n - 1 - i];
+                const home = rotatedTeams[i];
+                const away = rotatedTeams[n - 1 - i];
+
                 if (home !== null && away !== null) {
                     const match =
                         round % 2 === 0
@@ -42,21 +49,24 @@
                     matches.push({ bye: byeTeam });
                 }
             }
+
             if (round % 2 !== 0) {
                 const [first, ...rest] = matches;
                 matches = [...rest, first];
             }
+
             rounds.push(matches);
-            const fixed = totalTeams[0];
-            const rotated = [fixed, ...totalTeams.slice(-1), ...totalTeams.slice(1, -1)];
-            totalTeams.splice(0, totalTeams.length, ...rotated);
+
+            const fixed = rotatedTeams[0];
+            const rotated = [fixed, ...rotatedTeams.slice(-1), ...rotatedTeams.slice(1, -1)];
+            rotatedTeams.splice(0, n, ...rotated);
         }
 
         return rounds;
     }
 
-    function generateFullRoundRobinSchedule(teams) {
-        const firstLeg = generateRoundRobinRounds(teams);
+    function generateFullRoundRobinSchedule(teams, anchorIndex = 0) {
+        const firstLeg = generateRoundRobinRounds(teams, anchorIndex);
         const secondLeg = firstLeg.map((round) =>
             round.map((match) => {
                 if (match.bye) return match;
@@ -78,8 +88,14 @@
         const restoreSchedule = schedule;
         try {
             $isLoading = true;
-            schedule = generateFullRoundRobinSchedule(teamNames);
-            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
+            anchorIndex = Math.floor(Math.random() * teamNames.length);
+            schedule = generateFullRoundRobinSchedule(teamNames, anchorIndex);
+            const scheduleData = await api.post('games', date, {
+                anchorIndex,
+                rounds: schedule
+            });
+            schedule = scheduleData.rounds || [];
+            anchorIndex = scheduleData.anchorIndex || 0;
             confirmRegenerate = false;
         } catch (ex) {
             console.error(ex);
@@ -98,8 +114,8 @@
         const restoreSchedule = schedule;
         try {
             $isLoading = true;
-            schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames));
-            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
+            schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames, anchorIndex));
+            schedule = (await api.post('games', date, { anchorIndex, rounds: schedule })).rounds;
         } catch (ex) {
             console.error(ex);
             setError('Failed to add more games. Please try again.');
@@ -113,7 +129,7 @@
         const restoreSchedule = schedule;
         try {
             $isLoading = true;
-            schedule = (await api.post('games', date, { rounds: schedule })).rounds;
+            schedule = (await api.post('games', date, { anchorIndex, rounds: schedule })).rounds;
         } catch (ex) {
             console.error(ex);
             setError('Failed to add more games. Please try again.');
@@ -130,6 +146,7 @@
             teams = teamData.teams;
             const scheduleData = await api.get('games', date);
             schedule = scheduleData.rounds || [];
+            anchorIndex = scheduleData.anchorIndex || 0;
         } catch (ex) {
             console.error('Error fetching teams:', ex);
             setError('Failed to load team and schedule data. Please try again.');

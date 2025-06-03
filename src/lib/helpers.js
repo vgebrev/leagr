@@ -51,6 +51,12 @@ export function titleCase(str) {
         .join(' ');
 }
 
+export function rotateArray(arr, offset) {
+    const len = arr.length;
+    const shift = offset % len;
+    return arr.slice(shift).concat(arr.slice(0, shift));
+}
+
 export const teamColours = ['blue', 'white', 'orange', 'green'];
 
 export const teamStyles = {
