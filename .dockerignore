@@ -4,7 +4,6 @@
 data
 node_modules
 .dockerignore
-.svelte-kit
 .prettierrc
 .prettierignore
 Dockerfile
