@@ -19,10 +19,21 @@
     import { api } from '$lib/api-client.svelte.js';
 
     let rankings = $state({});
+    let sortBy = $state('points');
     let sortedPlayers = $derived(
         Object.entries(rankings.players ?? {}).sort((a, b) => {
-            if (b[1].points !== a[1].points) return b[1].points - a[1].points;
-            return b[1].appearances - a[1].appearances;
+            if (sortBy === 'points') {
+                if (b[1].points !== a[1].points) return b[1].points - a[1].points;
+                return b[1].appearances - a[1].appearances;
+            } else if (sortBy === 'average') {
+                const avgA = a[1].points / a[1].appearances;
+                const avgB = b[1].points / b[1].appearances;
+                if (avgB !== avgA) return avgB - avgA;
+                if (b[1].points !== a[1].points) return b[1].points - a[1].points;
+                return b[1].appearances - a[1].appearances;
+            } else {
+                return 0; // Default case, no sorting
+            }
         })
     );
 
@@ -78,10 +89,13 @@
             <TableHeadCell class="px-1 py-1.5 font-bold text-black dark:text-white"
                 >Player</TableHeadCell>
             <TableHeadCell class="px-1 py-1.5 text-center">Appearances</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 text-center font-bold text-black dark:text-white"
-                >Points</TableHeadCell>
+            <TableHeadCell
+                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
+                <span onclick={() => (sortBy = 'points')}>Points</span></TableHeadCell>
 
-            <TableHeadCell class="px-1 py-1.5 text-center">Pts/App</TableHeadCell>
+            <TableHeadCell
+                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}
+                ><span onclick={() => (sortBy = 'average')}>Pts/App</span></TableHeadCell>
         </TableHead>
         <TableBody>
             {#each sortedPlayers as [player, data], index (index)}
@@ -97,10 +111,11 @@
                         {data.appearances}
                     </TableBodyCell>
                     <TableBodyCell
-                        class="px-1 py-1.5 text-center font-bold text-black dark:text-white">
+                        class={`px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
                         {data.points}
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center">
+                    <TableBodyCell
+                        class={`px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
                         {(data.points / data.appearances).toLocaleString('en-US', {
                             minimumFractionDigits: 0,
                             maximumFractionDigits: 2
@@ -114,6 +129,6 @@
         ><ChartOutline class="me-2 h-4 w-4" /> Update Rankings</Button>
     <Alert class="flex items-center border"
         ><ExclamationCircleSolid /><span
-            >NOTE: Only update rankings after the last game score of the day is recorded.</span
+            >Only update rankings after the last game score of the day is recorded!</span
         ></Alert>
 </div>
