@@ -26,8 +26,10 @@
     import { settings } from '$lib/stores/settings.js';
     import { dateString, isSaturday } from '$lib/helpers.js';
     import { fade } from 'svelte/transition';
+    import { setApiKey } from '$lib/api-client.svelte.js';
 
     let { data, children } = $props();
+    setApiKey(data.apiKey);
     let activeUrl = $derived(`${page.url.pathname}${page.url.search}`);
     let selectedDate = $derived(new Date(data.date));
     let date = $derived(dateString(selectedDate));

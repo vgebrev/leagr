@@ -2,7 +2,7 @@
     import { Alert, Button, Label, Radio } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/api-client.js';
+    import { api } from '$lib/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
     import { isLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';

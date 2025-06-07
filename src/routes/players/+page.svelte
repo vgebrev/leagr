@@ -3,7 +3,7 @@
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { dateTimeString } from '$lib/helpers.js';
-    import { api } from '$lib/api-client.js';
+    import { api } from '$lib/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
     import { isLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';

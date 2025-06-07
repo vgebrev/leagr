@@ -16,7 +16,7 @@
     import { isLoading } from '$lib/stores/loading.js';
     import { setError } from '$lib/stores/error.js';
     import { onMount } from 'svelte';
-    import { api } from '$lib/api-client.js';
+    import { api } from '$lib/api-client.svelte.js';
 
     let rankings = $state({});
     let sortedPlayers = $derived(

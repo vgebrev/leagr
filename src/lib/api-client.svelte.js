@@ -1,7 +1,12 @@
 const baseUrl = '/api';
+let apiKey = $state('');
+export function setApiKey(key) {
+    apiKey = key;
+}
+
 async function get(key, date) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
-    const response = await fetch(url);
+    const response = await fetch(url, { headers: { 'x-api-key': apiKey } });
     if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -13,7 +18,8 @@ async function post(key, date, value) {
     const response = await fetch(url, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
         },
         body: JSON.stringify(value)
     });
@@ -29,7 +35,8 @@ async function remove(key, date, value) {
     const response = await fetch(url, {
         method: 'DELETE',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
         },
         body: JSON.stringify(value)
     });
