@@ -91,11 +91,23 @@
             <TableHeadCell class="px-1 py-1.5 text-center">Appearances</TableHeadCell>
             <TableHeadCell
                 class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
-                <span onclick={() => (sortBy = 'points')}>Points</span></TableHeadCell>
+                <span
+                    role="button"
+                    aria-label="Sort by points"
+                    tabindex="0"
+                    onkeydown={() => (sortBy = 'points')}
+                    onclick={() => (sortBy = 'points')}>Points</span
+                ></TableHeadCell>
 
             <TableHeadCell
-                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}
-                ><span onclick={() => (sortBy = 'average')}>Pts/App</span></TableHeadCell>
+                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
+                <span
+                    role="button"
+                    aria-label="Sort by points per appearance"
+                    tabindex="0"
+                    onkeydown={() => (sortBy = 'average')}
+                    onclick={() => (sortBy = 'average')}>Pts/App</span
+                ></TableHeadCell>
         </TableHead>
         <TableBody>
             {#each sortedPlayers as [player, data], index (index)}
@@ -111,15 +123,26 @@
                         {data.appearances}
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
-                        {data.points}
+                        class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
+                        <span
+                            role="button"
+                            aria-label="Sort by points"
+                            tabindex="0"
+                            onkeydown={() => (sortBy = 'points')}
+                            onclick={() => (sortBy = 'points')}>{data.points}</span>
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
-                        {(data.points / data.appearances).toLocaleString('en-US', {
-                            minimumFractionDigits: 0,
-                            maximumFractionDigits: 2
-                        })}
+                        class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
+                        <span
+                            role="button"
+                            aria-label="Sort by points per appearance"
+                            tabindex="0"
+                            onkeydown={() => (sortBy = 'average')}
+                            onclick={() => (sortBy = 'average')}>
+                            {(data.points / data.appearances).toLocaleString('en-US', {
+                                minimumFractionDigits: 0,
+                                maximumFractionDigits: 2
+                            })}</span>
                     </TableBodyCell>
                 </TableBodyRow>
             {/each}
