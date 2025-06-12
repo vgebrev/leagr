@@ -24,8 +24,14 @@
     let confirmRegenerate = $state(false);
 
     function calculateTeamConfig(playerCount) {
+        const teamLimits = { min: 2, max: 5 };
+        const playerLimits = { min: 5, max: 7 };
         const config = [];
-        for (let t = 2; t <= 4 && t * 5 <= playerCount; t++) {
+        for (
+            let t = teamLimits.min;
+            t <= teamLimits.max && t * playerLimits.min <= playerCount;
+            t++
+        ) {
             const minPlayers = Math.floor(playerCount / t);
             const extraPlayers = playerCount % t;
             const teamSizes = Array(t).fill(minPlayers);
@@ -34,7 +40,7 @@
                 teamSizes[i]++;
             }
 
-            if (teamSizes.every((size) => size >= 5 && size <= 7)) {
+            if (teamSizes.every((size) => size >= playerLimits.min && size <= playerLimits.max)) {
                 config.push({
                     teams: t,
                     teamSizes: teamSizes

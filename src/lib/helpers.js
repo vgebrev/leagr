@@ -57,7 +57,7 @@ export function rotateArray(arr, offset) {
     return arr.slice(shift).concat(arr.slice(0, shift));
 }
 
-export const teamColours = ['blue', 'white', 'orange', 'green'];
+export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
 export const teamStyles = {
     blue: {
@@ -84,10 +84,16 @@ export const teamStyles = {
         row: 'bg-gray-100',
         button: 'black'
     },
+    black: {
+        text: 'text-gray-100 bg-gray-800',
+        header: 'bg-gray-900 text-white',
+        row: 'bg-gray-700',
+        button: 'white'
+    },
     default: {
         text: 'text-gray-700 dark:text-gray-200',
         header: 'dark:bg-gray-700 bg-gray-200',
-        row: 'border-gray-00',
+        row: 'bg-gray-100 dark:bg-gray-600',
         button: 'primary'
     }
 };
