@@ -13,6 +13,16 @@ function getMutex(filename) {
     return mutexes.get(filename);
 }
 
+function resolvePath(obj, path, defaultValue = {}) {
+    const parts = path.split('.');
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+        if (!current[parts[i]]) current[parts[i]] = defaultValue;
+        current = current[parts[i]];
+    }
+    return { parent: current, key: parts[parts.length - 1] };
+}
+
 async function get(key, date) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
@@ -24,7 +34,8 @@ async function get(key, date) {
         const filePath = path.join(dataPath, `${filename}.json`);
         const file = await fs.readFile(filePath, 'utf-8');
         const data = JSON.parse(file);
-        return data[key];
+        const { parent, key: finalKey } = resolvePath(data, key);
+        return parent[finalKey];
     } catch (err) {
         console.error('Error reading file:', err);
         return null;
@@ -58,15 +69,16 @@ async function set(key, date, value, defaultValue = []) {
             } catch (ex) {
                 console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
             }
-            if (!jsonData[key]) {
-                jsonData[key] = defaultValue;
+            const { parent, key: finalKey } = resolvePath(jsonData, key);
+            if (!parent[finalKey]) {
+                parent[finalKey] = defaultValue;
             }
-            if (Array.isArray(jsonData[key])) {
-                jsonData[key].push(value);
-            } else if (isObject(jsonData[key])) {
-                jsonData[key] = { ...(jsonData[key] ?? {}), ...value };
+            if (Array.isArray(parent[finalKey])) {
+                parent[finalKey].push(value);
+            } else if (isObject(parent[finalKey])) {
+                parent[finalKey] = { ...(parent[finalKey] ?? {}), ...value };
             } else {
-                jsonData[key] = value;
+                parent[finalKey] = value;
             }
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
             return jsonData[key];
@@ -96,18 +108,20 @@ async function remove(key, date, value) {
             } catch (ex) {
                 console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
             }
-            if (!jsonData[key]) {
+
+            const { parent, key: finalKey } = resolvePath(jsonData, key);
+            if (!parent[finalKey]) {
                 return null;
             }
-            if (Array.isArray(jsonData[key])) {
-                jsonData[key] = jsonData[key].filter((item) => item !== value);
+            if (Array.isArray(parent[finalKey])) {
+                parent[finalKey] = parent[finalKey].filter((item) => item !== value);
             } else if (isObject(jsonData[key])) {
-                delete jsonData[key][value];
+                delete parent[finalKey][value];
             } else {
-                jsonData[key] = null;
+                parent[finalKey] = null;
             }
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-            return jsonData[key];
+            return parent[finalKey];
         } catch (err) {
             console.error('Error writing file:', err);
             return null;
