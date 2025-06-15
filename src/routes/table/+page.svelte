@@ -15,12 +15,20 @@
     import { isLoading } from '$lib/stores/loading.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
+    import { isDateInPast, teamColours } from '$lib/helpers.js';
 
     let { data } = $props();
     const date = data.date;
     let schedule = $state([]);
     let teams = $state({});
     let standings = $state([]);
+
+    let winningTeam = $state({
+        name: null,
+        colour: null
+    });
+    let celebrating = $state(false);
 
     function calculateStandings(matchups) {
         const table = {};
@@ -81,6 +89,14 @@
         });
     }
 
+    function celebrate(index) {
+        if (index !== 0 || !isDateInPast(new Date(date))) return;
+        winningTeam.name = standings[index].team;
+        winningTeam.colour =
+            teamColours[Object.keys(teams).indexOf(winningTeam.name) % teamColours.length];
+        celebrating = true;
+    }
+
     onMount(async () => {
         try {
             $isLoading = true;
@@ -91,6 +107,9 @@
             const flatMatches =
                 Array.isArray(schedule) && schedule.every(Array.isArray) ? schedule.flat() : [];
             standings = calculateStandings(flatMatches);
+            if (standings.length > 0) {
+                celebrate(0);
+            }
         } catch (ex) {
             console.error('Error fetching teams:', ex);
             setError('Failed to load team and schedule data. Please try again.');
@@ -124,7 +143,16 @@
                         {index + 1}
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center"
-                        ><div class="flex justify-between">
+                        ><div
+                            class="flex justify-between"
+                            onclick={() => celebrate(index)}
+                            onkeydown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    celebrate(index);
+                                }
+                            }}
+                            tabindex="0"
+                            role="button">
                             <TeamBadge
                                 className="w-full"
                                 teamName={team.team}
@@ -171,3 +199,8 @@
             their scores to see the standings.</span>
     </Alert>
 {/if}
+
+<CelebrationOverlay
+    bind:celebrating
+    teamName={winningTeam.name}
+    teamColour={winningTeam.colour} />

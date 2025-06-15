@@ -64,36 +64,42 @@ export const teamStyles = {
         text: 'text-blue-100 bg-blue-500',
         header: 'bg-blue-600 text-white',
         row: 'bg-blue-500',
-        button: 'white'
+        button: 'white',
+        confetti: ['#2b7fff', '#bedbff']
     },
     orange: {
         text: 'text-orange-100 bg-orange-500',
         header: 'bg-orange-600 text-white',
         row: 'bg-orange-500',
-        button: 'white'
+        button: 'white',
+        confetti: ['#ff6900', '#ffd6a8']
     },
     green: {
         text: 'text-green-100 bg-green-500',
         header: 'bg-green-600 text-white',
         row: 'bg-green-500',
-        button: 'white'
+        button: 'white',
+        confetti: ['#00c951', '#b9f8cf']
     },
     white: {
         text: 'text-gray-800 bg-gray-100',
         header: 'bg-gray-200 text-gray-800',
         row: 'bg-gray-100',
-        button: 'black'
+        button: 'black',
+        confetti: ['#6a7282', '#e5e7eb']
     },
     black: {
         text: 'text-gray-100 bg-gray-800',
         header: 'bg-gray-900 text-white',
         row: 'bg-gray-700',
-        button: 'white'
+        button: 'white',
+        confetti: ['#1c1917', '#79716b']
     },
     default: {
-        text: 'text-gray-700 dark:text-gray-200',
+        text: 'text-gray-700 dark:text-gray-200 dark:bg-gray-700 bg-gray-200',
         header: 'dark:bg-gray-700 bg-gray-200',
         row: 'bg-gray-100 dark:bg-gray-600',
-        button: 'primary'
+        button: 'primary',
+        confetti: ['#6a7282', '#e5e7eb']
     }
 };

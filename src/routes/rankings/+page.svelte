@@ -17,6 +17,7 @@
     import { setError } from '$lib/stores/error.js';
     import { onMount } from 'svelte';
     import { api } from '$lib/api-client.svelte.js';
+    import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
 
     let rankings = $state({});
     let sortBy = $state('points');
@@ -36,7 +37,8 @@
             }
         })
     );
-
+    let celebrating = $state(false);
+    let winner = $state(null);
     let pointsInfo = [
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
@@ -53,6 +55,12 @@
         } finally {
             $isLoading = false;
         }
+    }
+
+    function celebrate(index) {
+        if (index !== 0) return;
+        winner = sortedPlayers[index][0];
+        celebrating = true;
     }
 
     onMount(async () => {
@@ -117,7 +125,11 @@
                     </TableBodyCell>
                     <TableBodyCell
                         class="text-bold px-1 py-1.5 font-bold text-black dark:text-white">
-                        {player}
+                        <span
+                            role="button"
+                            tabindex="0"
+                            onclick={() => celebrate(index)}
+                            onkeydown={() => celebrate(index)}>{player}</span>
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
                         {data.appearances}
@@ -155,3 +167,8 @@
             >Only update rankings after the last game score of the day is recorded!</span
         ></Alert>
 </div>
+<CelebrationOverlay
+    bind:celebrating
+    teamName={winner}
+    teamColour="default"
+    icon="🥇" />
