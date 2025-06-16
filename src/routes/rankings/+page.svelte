@@ -171,4 +171,5 @@
     bind:celebrating
     teamName={winner}
     teamColour="default"
-    icon="🥇" />
+    icon="🥇"
+    confettiColours={['#efb100', '#fff085']} />

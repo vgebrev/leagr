@@ -3,7 +3,13 @@
     import { teamStyles } from '$lib/helpers.js';
     import { fade } from 'svelte/transition';
 
-    let { teamName, teamColour, celebrating = $bindable(), icon = '🏆' } = $props();
+    let {
+        teamName,
+        teamColour,
+        celebrating = $bindable(),
+        icon = '🏆',
+        confettiColours = null
+    } = $props();
 
     export function shootStars() {
         const defaults = {
@@ -41,7 +47,7 @@
     export function fireConfetti(teamColours) {
         const end = Date.now() + 0.5 * 1000;
 
-        const colors = teamColours || ['#999999', '#ffffff'];
+        const colors = confettiColours || teamColours || ['#999999', '#ffffff'];
 
         (function frame() {
             confetti({
