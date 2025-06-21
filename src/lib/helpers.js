@@ -7,6 +7,7 @@ export function dateString(date) {
 }
 
 export function dateTimeString(date) {
+    if (!date) return '';
     const time = date.toLocaleTimeString(undefined, {
         hour: '2-digit',
         minute: '2-digit',
@@ -24,10 +25,12 @@ export function dateTimeString(date) {
 }
 
 export function isSaturday(date) {
+    if (!date) return false;
     return date.getDay() === 6;
 }
 
 export function isDateInPast(date, hours = 13) {
+    if (!date) return false;
     const limit = new Date(date);
     limit.setDate(limit.getDate());
     limit.setHours(hours, 0, 0, 0);

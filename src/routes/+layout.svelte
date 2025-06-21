@@ -6,10 +6,10 @@
     import { settings } from '$lib/stores/settings.js';
     import { dateString } from '$lib/helpers.js';
     import { fade } from 'svelte/transition';
-    import { setApiKey } from '$lib/api-client.svelte.js';
-    import TopNavBar from '../components/TopNavBar.svelte';
-    import BottomNavBar from '../components/BottomNavBar.svelte';
-    import DateSelector from '../components/DateSelector.svelte';
+    import { setApiKey } from '$lib/services/api-client.svelte.js';
+    import TopNavBar from './components/TopNavBar.svelte';
+    import BottomNavBar from './components/BottomNavBar.svelte';
+    import DateSelector from './components/DateSelector.svelte';
 
     let { data, children } = $props();
     setApiKey(data.apiKey);

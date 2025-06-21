@@ -2,9 +2,9 @@
     import { Listgroup, ListgroupItem, Input, Button, Alert } from 'flowbite-svelte';
     import { CalendarMonthSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/api-client.svelte.js';
+    import { api } from '$lib/services/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
-    import { isLoading } from '$lib/stores/loading.js';
+    import { withLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
@@ -86,24 +86,24 @@
             return;
         }
         const restoreSchedule = schedule;
-        try {
-            $isLoading = true;
-            anchorIndex = Math.floor(Math.random() * teamNames.length);
-            schedule = generateFullRoundRobinSchedule(teamNames, anchorIndex);
-            const scheduleData = await api.post('games', date, {
-                anchorIndex,
-                rounds: schedule
-            });
-            schedule = scheduleData.rounds || [];
-            anchorIndex = scheduleData.anchorIndex || 0;
-            confirmRegenerate = false;
-        } catch (ex) {
-            console.error(ex);
-            setError('Failed to generate schedule. Please try again.');
-            schedule = restoreSchedule;
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                anchorIndex = Math.floor(Math.random() * teamNames.length);
+                schedule = generateFullRoundRobinSchedule(teamNames, anchorIndex);
+                const scheduleData = await api.post('games', date, {
+                    anchorIndex,
+                    rounds: schedule
+                });
+                schedule = scheduleData.rounds || [];
+                anchorIndex = scheduleData.anchorIndex || 0;
+                confirmRegenerate = false;
+            },
+            (err) => {
+                console.error(err);
+                setError('Failed to generate schedule. Please try again.');
+                schedule = restoreSchedule;
+            }
+        );
     }
 
     async function addMoreGames() {
@@ -112,47 +112,49 @@
             return;
         }
         const restoreSchedule = schedule;
-        try {
-            $isLoading = true;
-            schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames, anchorIndex));
-            schedule = (await api.post('games', date, { anchorIndex, rounds: schedule })).rounds;
-        } catch (ex) {
-            console.error(ex);
-            setError('Failed to add more games. Please try again.');
-            schedule = restoreSchedule;
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames, anchorIndex));
+                schedule = (await api.post('games', date, { anchorIndex, rounds: schedule }))
+                    .rounds;
+            },
+            (err) => {
+                console.error(err);
+                setError('Failed to add more games. Please try again.');
+                schedule = restoreSchedule;
+            }
+        );
     }
 
     async function saveScore() {
         const restoreSchedule = schedule;
-        try {
-            $isLoading = true;
-            schedule = (await api.post('games', date, { anchorIndex, rounds: schedule })).rounds;
-        } catch (ex) {
-            console.error(ex);
-            setError('Failed to add more games. Please try again.');
-            schedule = restoreSchedule;
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                schedule = (await api.post('games', date, { anchorIndex, rounds: schedule }))
+                    .rounds;
+            },
+            (err) => {
+                console.error(err);
+                setError('Failed to add more games. Please try again.');
+                schedule = restoreSchedule;
+            }
+        );
     }
 
     onMount(async () => {
-        try {
-            $isLoading = true;
-            const teamData = await api.get('teams', date);
-            teams = teamData.teams;
-            const scheduleData = await api.get('games', date);
-            schedule = scheduleData.rounds || [];
-            anchorIndex = scheduleData.anchorIndex || 0;
-        } catch (ex) {
-            console.error('Error fetching teams:', ex);
-            setError('Failed to load team and schedule data. Please try again.');
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                const teamData = await api.get('teams', date);
+                teams = teamData.teams;
+                const scheduleData = await api.get('games', date);
+                schedule = scheduleData.rounds || [];
+                anchorIndex = scheduleData.anchorIndex || 0;
+            },
+            (err) => {
+                console.error('Error fetching teams:', err);
+                setError('Failed to load team and schedule data. Please try again.');
+            }
+        );
     });
 </script>
 

@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import { CheckCircleSolid } from 'flowbite-svelte-icons';
     import { Button, Input, Label, Toggle } from 'flowbite-svelte';
-    import { api } from '$lib/api-client.svelte.js';
+    import { api } from '$lib/services/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
     import { isLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';

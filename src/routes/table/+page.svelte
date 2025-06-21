@@ -10,9 +10,9 @@
         Alert
     } from 'flowbite-svelte';
     import { onMount } from 'svelte';
-    import { api } from '$lib/api-client.svelte.js';
+    import { api } from '$lib/services/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
-    import { isLoading } from '$lib/stores/loading.js';
+    import { withLoading } from '$lib/stores/loading.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
@@ -20,6 +20,7 @@
 
     let { data } = $props();
     const date = data.date;
+
     let schedule = $state([]);
     let teams = $state({});
     let standings = $state([]);
@@ -98,24 +99,24 @@
     }
 
     onMount(async () => {
-        try {
-            $isLoading = true;
-            const teamData = await api.get('teams', date);
-            teams = teamData.teams;
-            const scheduleData = await api.get('games', date);
-            schedule = scheduleData.rounds || [];
-            const flatMatches =
-                Array.isArray(schedule) && schedule.every(Array.isArray) ? schedule.flat() : [];
-            standings = calculateStandings(flatMatches);
-            if (standings.length > 0) {
-                celebrate(0);
+        await withLoading(
+            async () => {
+                const teamData = await api.get('teams', date);
+                teams = teamData.teams;
+                const scheduleData = await api.get('games', date);
+                schedule = scheduleData.rounds || [];
+                const flatMatches =
+                    Array.isArray(schedule) && schedule.every(Array.isArray) ? schedule.flat() : [];
+                standings = calculateStandings(flatMatches);
+                if (standings.length > 0) {
+                    celebrate(0);
+                }
+            },
+            (err) => {
+                console.error('Error fetching teams:', err);
+                setError('Failed to load team and schedule data. Please try again.');
             }
-        } catch (ex) {
-            console.error('Error fetching teams:', ex);
-            setError('Failed to load team and schedule data. Please try again.');
-        } finally {
-            $isLoading = false;
-        }
+        );
     });
 </script>
 

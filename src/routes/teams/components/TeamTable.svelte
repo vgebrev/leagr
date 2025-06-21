@@ -3,7 +3,7 @@
     import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { capitalize, teamColours, teamStyles } from '$lib/helpers.js';
 
-    let { team, teamIndex, color, teamName, onremove, onfillempty, players } = $props();
+    let { team, teamIndex = null, color = null, teamName, onremove = null, onfillempty = null, players } = $props();
 
     let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
 

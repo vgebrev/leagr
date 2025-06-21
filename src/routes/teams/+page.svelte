@@ -2,13 +2,13 @@
     import { Alert, Button, Label, Radio } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/api-client.svelte.js';
+    import { api } from '$lib/services/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
-    import { isLoading } from '$lib/stores/loading.js';
+    import { withLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';
     import { nouns } from '$lib/nouns.js';
     import { isDateInPast, teamColours } from '$lib/helpers.js';
-    import TeamTable from '../../components/TeamTable.svelte';
+    import TeamTable from './components/TeamTable.svelte';
 
     let { data } = $props();
     const date = data.date;
@@ -125,25 +125,26 @@
             confirmRegenerate = true;
             return;
         }
-        $isLoading = true;
+
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
         ({ teams, waitingList } = $settings.seedTeams
             ? generateSeededTeams()
             : generateRandomTeams());
-        try {
-            const teamData = await api.post('teams', date, { teams, waitingList });
-            teams = teamData.teams || {};
-            waitingList = teamData.waitingList || [];
-            confirmRegenerate = false;
-        } catch (ex) {
-            console.error('Error generating teams:', ex);
-            setError('Failed to generate teams. Please try again.');
-            teams = restoreTeams;
-            waitingList = restoreWaitingList;
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                const teamData = await api.post('teams', date, { teams, waitingList });
+                teams = teamData.teams || {};
+                waitingList = teamData.waitingList || [];
+                confirmRegenerate = false;
+            },
+            (err) => {
+                console.error('Error generating teams:', err);
+                setError('Failed to generate teams. Please try again.');
+                teams = restoreTeams;
+                waitingList = restoreWaitingList;
+            }
+        );
     }
 
     async function removePlayer({ player, teamIndex }) {
@@ -151,30 +152,30 @@
             setError('The date is in the past. Teams cannot be changed.');
             return;
         }
-        $isLoading = true;
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
-        try {
-            teams[Object.keys(teams)[teamIndex]] = teams[Object.keys(teams)[teamIndex]].filter(
-                (p) => p !== player
-            );
-            if (waitingList.length > 0) {
-                const nextPlayer = waitingList.shift();
-                teams[Object.keys(teams)[teamIndex]].push(nextPlayer);
-            } else {
-                teams[Object.keys(teams)[teamIndex]].push(null);
+        await withLoading(
+            async () => {
+                teams[Object.keys(teams)[teamIndex]] = teams[Object.keys(teams)[teamIndex]].filter(
+                    (p) => p !== player
+                );
+                if (waitingList.length > 0) {
+                    const nextPlayer = waitingList.shift();
+                    teams[Object.keys(teams)[teamIndex]].push(nextPlayer);
+                } else {
+                    teams[Object.keys(teams)[teamIndex]].push(null);
+                }
+                const teamData = await api.post('teams', date, { teams, waitingList });
+                teams = teamData.teams || {};
+                waitingList = teamData.waitingList || [];
+            },
+            (err) => {
+                console.error('Error removing player:', err);
+                setError('Failed to remove player. Please try again.');
+                teams = restoreTeams;
+                waitingList = restoreWaitingList;
             }
-            const teamData = await api.post('teams', date, { teams, waitingList });
-            teams = teamData.teams || {};
-            waitingList = teamData.waitingList || [];
-        } catch (ex) {
-            console.error('Error removing player:', ex);
-            setError('Failed to remove player. Please try again.');
-            teams = restoreTeams;
-            waitingList = restoreWaitingList;
-        } finally {
-            $isLoading = false;
-        }
+        );
     }
 
     async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
@@ -182,28 +183,28 @@
             setError('The date is in the past. Teams cannot be changed.');
             return;
         }
-        $isLoading = true;
         const restoreTeams = { ...teams };
         const restoreWaitingList = [...waitingList];
-        try {
-            if (teams[Object.keys(teams)[teamIndex]][playerIndex] !== null) {
-                setError('This spot is already filled.');
-                return;
+        await withLoading(
+            async () => {
+                if (teams[Object.keys(teams)[teamIndex]][playerIndex] !== null) {
+                    setError('This spot is already filled.');
+                    return;
+                }
+                if (waitingList.length > 0) {
+                    teams[Object.keys(teams)[teamIndex]][playerIndex] = waitingList.shift();
+                }
+                const teamData = await api.post('teams', date, { teams, waitingList });
+                teams = teamData.teams || {};
+                waitingList = teamData.waitingList || [];
+            },
+            (err) => {
+                console.error('Error filling empty spot with a player:', err);
+                setError('Failed to assign waiting list player to empty spot. Please try again.');
+                teams = restoreTeams;
+                waitingList = restoreWaitingList;
             }
-            if (waitingList.length > 0) {
-                teams[Object.keys(teams)[teamIndex]][playerIndex] = waitingList.shift();
-            }
-            const teamData = await api.post('teams', date, { teams, waitingList });
-            teams = teamData.teams || {};
-            waitingList = teamData.waitingList || [];
-        } catch (ex) {
-            console.error('Error filling empty spot with a player:', ex);
-            setError('Failed to assign waiting list player to empty spot. Please try again.');
-            teams = restoreTeams;
-            waitingList = restoreWaitingList;
-        } finally {
-            $isLoading = false;
-        }
+        );
     }
 
     function addNewPlayersToWaitingList() {
@@ -217,20 +218,20 @@
     }
 
     onMount(async () => {
-        try {
-            $isLoading = true;
-            players = await api.get('players', date);
-            rankings = await api.get('rankings');
-            const teamData = await api.get('teams', date);
-            teams = teamData.teams || {};
-            waitingList = teamData.waitingList || [];
-            addNewPlayersToWaitingList();
-        } catch (ex) {
-            console.error('Error fetching players:', ex);
-            setError('Failed to load player data. Please try again.');
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                players = await api.get('players', date);
+                rankings = await api.get('rankings');
+                const teamData = await api.get('teams', date);
+                teams = teamData.teams || {};
+                waitingList = teamData.waitingList || [];
+                addNewPlayersToWaitingList();
+            },
+            (err) => {
+                console.error('Error fetching players:', err);
+                setError('Failed to load player data. Please try again.');
+            }
+        );
     });
 </script>
 
