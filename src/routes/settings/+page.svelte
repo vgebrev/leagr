@@ -4,7 +4,7 @@
     import { Button, Input, Label, Toggle } from 'flowbite-svelte';
     import { api } from '$lib/services/api-client.svelte.js';
     import { setError } from '$lib/stores/error.js';
-    import { isLoading } from '$lib/stores/loading.js';
+    import { withLoading } from '$lib/stores/loading.js';
     import { settings } from '$lib/stores/settings.js';
 
     let { data } = $props();
@@ -16,32 +16,33 @@
         seedTeams: true
     });
 
+    /** @param {Event} event */
     async function saveSettings(event) {
         event.preventDefault();
-        try {
-            $isLoading = true;
-            storedSettings.playerLimit = storedSettings.playerLimit || 24;
-            storedSettings = await api.post('settings', date, storedSettings);
-            $settings = storedSettings;
-        } catch (ex) {
-            console.error('Error limiting players:', ex);
-            setError('Failed to set settings. Please try again.');
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                storedSettings.playerLimit = storedSettings.playerLimit || 24;
+                storedSettings = await api.post('settings', date, storedSettings);
+                $settings = storedSettings;
+            },
+            (err) => {
+                console.error('Error limiting players:', err);
+                setError('Failed to set settings. Please try again.');
+            }
+        );
     }
 
     onMount(async () => {
-        try {
-            $isLoading = true;
-            storedSettings = await api.get('settings', date);
-            $settings = storedSettings;
-        } catch (ex) {
-            console.error('Error fetching settings:', ex);
-            setError('Failed to load settings. Please try again.');
-        } finally {
-            $isLoading = false;
-        }
+        await withLoading(
+            async () => {
+                storedSettings = await api.get('settings', date);
+                $settings = storedSettings;
+            },
+            (err) => {
+                console.error('Error fetching settings:', err);
+                setError('Failed to load settings. Please try again.');
+            }
+        );
     });
 </script>
 
