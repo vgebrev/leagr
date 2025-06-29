@@ -1,7 +1,7 @@
 <script>
     import { Button } from 'flowbite-svelte';
     import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
-    import { capitalize, teamColours, teamStyles } from '$lib/helpers.js';
+    import { capitalize, teamColours, teamStyles } from '$lib/shared/helpers.js';
 
     let {
         team,

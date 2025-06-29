@@ -1,6 +1,6 @@
 <script>
     import confetti from 'canvas-confetti';
-    import { teamStyles } from '$lib/helpers.js';
+    import { teamStyles } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
     let {

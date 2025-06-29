@@ -1,7 +1,7 @@
 <script>
     import { AdjustmentsHorizontalSolid } from 'flowbite-svelte-icons';
     import { DarkMode, Navbar, NavBrand, Spinner } from 'flowbite-svelte';
-    import { isLoading } from '$lib/stores/loading.js';
+    import { isLoading } from '$lib/client/stores/loading.js';
 
     let { date } = $props();
 </script>

@@ -13,23 +13,26 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { InfoCircleOutline, ChartOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { withLoading } from '$lib/stores/loading.js';
-    import { setError } from '$lib/stores/error.js';
+    import { withLoading } from '$lib/client/stores/loading.js';
+    import { setError } from '$lib/client/stores/error.js';
     import { onMount } from 'svelte';
-    import { api } from '$lib/services/api-client.svelte.js';
+    import { api } from '$lib/client/services/api-client.svelte.js';
     import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
 
     let rankings = $state({});
-    let sortBy = $state('points');
+    let sortBy = $state('rankingPoints'); // Default to ranking points
+
     let sortedPlayers = $derived(
         Object.entries(rankings.players ?? {}).sort((a, b) => {
-            if (sortBy === 'points') {
+            if (sortBy === 'rankingPoints') {
+                if (b[1].rankingPoints !== a[1].rankingPoints)
+                    return b[1].rankingPoints - a[1].rankingPoints;
+                return b[1].points - a[1].points;
+            } else if (sortBy === 'rawAverage') {
+                if (b[1].rawAverage !== a[1].rawAverage) return b[1].rawAverage - a[1].rawAverage;
                 if (b[1].points !== a[1].points) return b[1].points - a[1].points;
                 return b[1].appearances - a[1].appearances;
-            } else if (sortBy === 'average') {
-                const avgA = a[1].points / a[1].appearances;
-                const avgB = b[1].points / b[1].appearances;
-                if (avgB !== avgA) return avgB - avgA;
+            } else if (sortBy === 'points') {
                 if (b[1].points !== a[1].points) return b[1].points - a[1].points;
                 return b[1].appearances - a[1].appearances;
             } else if (sortBy === 'appearances') {
@@ -37,10 +40,11 @@
                     return b[1].appearances - a[1].appearances;
                 return b[1].points - a[1].points;
             } else {
-                return 0; // Default case, no sorting
+                return 0;
             }
         })
     );
+
     let celebrating = $state(false);
     /** @type {string | null} */
     let winner = $state(null);
@@ -48,6 +52,14 @@
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
         'Team Bonus: 2-8pts based on final team position and number of teams'
+    ];
+    let rankingInfo = [
+        'Ranking Points: Your weighted average × max games in league (primary ranking)',
+        'Weighted Average: Your performance adjusted for experience level',
+        'Raw Average: Pure points per appearance (vulnerable to outliers)',
+        'Full confidence earned at ' +
+            Math.round((rankings.rankingMetadata?.confidenceFraction ?? 0.66) * 100) +
+            "% of most experienced player's games"
     ];
 
     async function updateRankings() {
@@ -91,6 +103,15 @@
             <div class="flex flex-col items-center gap-2">
                 <p>Players receive ranking points based on their team performance on the day.</p>
                 <Listgroup items={pointsInfo} />
+                <p class="text-center"><strong>Ranking System:</strong></p>
+                <Listgroup items={rankingInfo} />
+                {#if rankings.rankingMetadata}
+                    <p class="text-center text-xs text-gray-600 dark:text-gray-400">
+                        League Average: {rankings.rankingMetadata.globalAverage} pts/game • Full Confidence:
+                        {rankings.rankingMetadata.confidenceThreshold}+ games • Total Players: {rankings
+                            .rankingMetadata.totalPlayers}
+                    </p>
+                {/if}
                 <p>Rankings are used to seed players and generate balanced teams.</p>
             </div>
         </AccordionItem>
@@ -110,25 +131,34 @@
                     tabindex="0"
                     onkeydown={() => (sortBy = 'appearances')}
                     onclick={() => (sortBy = 'appearances')}>
-                    Appearances
+                    Apps
                 </span></TableHeadCell>
             <TableHeadCell
                 class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'points' ? 'font-bold text-black dark:text-white' : ''}`}>
                 <span
                     role="button"
-                    aria-label="Sort by points"
+                    aria-label="Sort by total points"
                     tabindex="0"
                     onkeydown={() => (sortBy = 'points')}
                     onclick={() => (sortBy = 'points')}>Points</span
                 ></TableHeadCell>
             <TableHeadCell
-                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
+                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'rawAverage' ? 'font-bold text-black dark:text-white' : ''}`}>
                 <span
                     role="button"
-                    aria-label="Sort by points per appearance"
+                    aria-label="Sort by raw average"
                     tabindex="0"
-                    onkeydown={() => (sortBy = 'average')}
-                    onclick={() => (sortBy = 'average')}>Pts/App</span
+                    onkeydown={() => (sortBy = 'rawAverage')}
+                    onclick={() => (sortBy = 'rawAverage')}>Pts/App</span
+                ></TableHeadCell>
+            <TableHeadCell
+                class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'rankingPoints' ? 'font-bold text-black dark:text-white' : ''}`}>
+                <span
+                    role="button"
+                    aria-label="Sort by ranking points"
+                    tabindex="0"
+                    onkeydown={() => (sortBy = 'rankingPoints')}
+                    onclick={() => (sortBy = 'rankingPoints')}>Ranking Pts</span
                 ></TableHeadCell>
         </TableHead>
         <TableBody>
@@ -161,24 +191,32 @@
                         <span
                             class="w-full"
                             role="button"
-                            aria-label="Sort by points"
+                            aria-label="Sort by total points"
                             tabindex="0"
                             onkeydown={() => (sortBy = 'points')}
                             onclick={() => (sortBy = 'points')}>{data.points}</span>
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'average' ? 'font-bold text-black dark:text-white' : ''}`}>
+                        class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'rawAverage' ? 'font-bold text-black dark:text-white' : ''}`}>
                         <span
                             class="w-full"
                             role="button"
-                            aria-label="Sort by points per appearance"
+                            aria-label="Sort by raw average"
                             tabindex="0"
-                            onkeydown={() => (sortBy = 'average')}
-                            onclick={() => (sortBy = 'average')}>
-                            {(data.points / data.appearances).toLocaleString('en-US', {
-                                minimumFractionDigits: 0,
-                                maximumFractionDigits: 2
-                            })}</span>
+                            onkeydown={() => (sortBy = 'rawAverage')}
+                            onclick={() => (sortBy = 'rawAverage')}>
+                            {data.rawAverage}</span>
+                    </TableBodyCell>
+                    <TableBodyCell
+                        class={`cursor-default px-1 py-1.5 text-center ${sortBy === 'rankingPoints' ? 'font-bold text-black dark:text-white' : ''}`}>
+                        <span
+                            class="w-full"
+                            role="button"
+                            aria-label="Sort by ranking points"
+                            tabindex="0"
+                            onkeydown={() => (sortBy = 'rankingPoints')}
+                            onclick={() => (sortBy = 'rankingPoints')}>
+                            {data.rankingPoints}</span>
                     </TableBodyCell>
                 </TableBodyRow>
             {/each}

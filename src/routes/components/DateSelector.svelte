@@ -1,7 +1,7 @@
 <script>
     import { Alert, Datepicker } from 'flowbite-svelte';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { dateString, isSaturday } from '$lib/helpers.js';
+    import { dateString, isSaturday } from '$lib/shared/helpers.js';
     import { page } from '$app/state';
 
     let { selectedDate } = $props();

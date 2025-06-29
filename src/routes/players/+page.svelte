@@ -1,6 +1,6 @@
 <script>
     import { onMount } from 'svelte';
-    import { playersService } from '$lib/services/players.svelte.js';
+    import { playersService } from '$lib/client/services/players.svelte.js';
     import PlayerRegistrationForm from './components/PlayerRegistrationForm.svelte';
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
     import PlayersGrid from './components/PlayersGrid.svelte';
@@ -15,9 +15,10 @@
     /**
      * Add a player to the list.
      * @param {string} name
+     * @param {string} [list='available'] - The list to add the player to, either 'available' or 'waitingList'.
      */
-    async function addPlayer(name) {
-        const success = await playersService.addPlayer(name);
+    async function addPlayer(name, list = 'available') {
+        const success = await playersService.addPlayer(name, list);
         if (success) {
             playerName = '';
         }
@@ -26,9 +27,10 @@
     /**
      * Remove a player from the list.
      * @param {string} name
+     * @param {string} [list='available'] - The list to remove the player from, either 'available' or 'waitingList'.
      */
-    async function removePlayer(name) {
-        await playersService.removePlayer(name);
+    async function removePlayer(name, list = 'available') {
+        await playersService.removePlayer(name, list);
     }
 </script>
 
@@ -44,7 +46,8 @@
         registrationCloseDate={playersService.registrationCloseDate} />
 
     <PlayersGrid
-        players={playersService.players}
+        availablePlayers={playersService.players}
+        waitingList={playersService.waitingList}
         canModifyList={playersService.canModifyList}
         onremove={removePlayer} />
 </div>

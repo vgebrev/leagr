@@ -1,5 +1,5 @@
 import { derived, writable } from 'svelte/store';
-import { setError } from '$lib/stores/error.js';
+import { setError } from '$lib/client/stores/error.js';
 
 export const loadingCount = writable(0);
 export const isLoading = derived(loadingCount, ($loadingCount) => $loadingCount > 0);

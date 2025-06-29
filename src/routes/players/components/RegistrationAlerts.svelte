@@ -1,7 +1,7 @@
 <script>
     import { Alert } from 'flowbite-svelte';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { dateTimeString } from '$lib/helpers.js';
+    import { dateTimeString } from '$lib/shared/helpers.js';
 
     let { registrationOpenDate, registrationCloseDate } = $props();
 

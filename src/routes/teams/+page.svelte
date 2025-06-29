@@ -2,12 +2,12 @@
     import { Alert, Button, Label, Radio } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/services/api-client.svelte.js';
-    import { setError } from '$lib/stores/error.js';
-    import { withLoading } from '$lib/stores/loading.js';
-    import { settings } from '$lib/stores/settings.js';
-    import { nouns } from '$lib/nouns.js';
-    import { isDateInPast, teamColours } from '$lib/helpers.js';
+    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { setError } from '$lib/client/stores/error.js';
+    import { withLoading } from '$lib/client/stores/loading.js';
+    import { settings } from '$lib/client/stores/settings.js';
+    import { nouns } from '$lib/client/nouns.js';
+    import { isDateInPast, teamColours } from '$lib/shared/helpers.js';
     import TeamTable from './components/TeamTable.svelte';
 
     let { data } = $props();

@@ -2,11 +2,11 @@
     import '../app.css';
     import { Toast } from 'flowbite-svelte';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { error } from '$lib/stores/error.js';
-    import { settings } from '$lib/stores/settings.js';
-    import { dateString } from '$lib/helpers.js';
+    import { error } from '$lib/client/stores/error.js';
+    import { settings } from '$lib/client/stores/settings.js';
+    import { dateString } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
-    import { setApiKey } from '$lib/services/api-client.svelte.js';
+    import { setApiKey } from '$lib/client/services/api-client.svelte.js';
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';

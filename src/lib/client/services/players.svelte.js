@@ -1,11 +1,16 @@
-import { api } from '$lib/services/api-client.svelte.js';
-import { setError } from '$lib/stores/error.js';
-import { withLoading } from '$lib/stores/loading.js';
+import { api } from '$lib/client/services/api-client.svelte.js';
+import { setError } from '$lib/client/stores/error.js';
+import { withLoading } from '$lib/client/stores/loading.js';
+import { settings } from '$lib/client/stores/settings.js';
+import { get } from 'svelte/store';
 
 class PlayersService {
     // State
     /** @type {string[]} */
     players = $state([]);
+
+    /** @type {string[]} */
+    waitingList = $state([]);
 
     /** @type {string[]} */
     rankedPlayers = $state([]);
@@ -44,7 +49,9 @@ class PlayersService {
     async loadPlayers(date) {
         await withLoading(async () => {
             this.currentDate = date;
-            this.players = await api.get('players', date);
+            const playerData = await api.get('players', date);
+            this.players = playerData.available || [];
+            this.waitingList = playerData.waitingList || [];
 
             if (this.rankedPlayers.length === 0) {
                 this.rankedPlayers = await api.get('players/ranked');
@@ -55,9 +62,10 @@ class PlayersService {
     /**
      * Add a player to the current date's list
      * @param {string} name - Player name to add
+     * @param {string} [list='available'] - List to add the player to ('available' or 'waitingList')
      * @returns {Promise<boolean>} True if successful
      */
-    async addPlayer(name) {
+    async addPlayer(name, list = 'available') {
         let success = false;
 
         await withLoading(
@@ -69,14 +77,24 @@ class PlayersService {
                     return;
                 }
 
-                if (this.players.includes(trimmedName)) {
+                if (this.players.includes(trimmedName) || this.waitingList.includes(trimmedName)) {
                     setError(`Player ${trimmedName} already added.`);
                     return;
                 }
 
-                this.players = await api.post('players', this.currentDate, {
-                    playerName: trimmedName
+                if (list === 'available' && this.players.length >= get(settings).playerLimit) {
+                    list = 'waitingList';
+                }
+
+                const updatedList = await api.post(`players`, this.currentDate, {
+                    playerName: trimmedName,
+                    list
                 });
+                if (list === 'available') {
+                    this.players = updatedList || [];
+                } else if (list === 'waitingList') {
+                    this.waitingList = updatedList || [];
+                }
                 success = true;
             },
             (error) => {
@@ -91,13 +109,25 @@ class PlayersService {
     /**
      * Remove a player from the current date's list
      * @param {string} playerName - Player name to remove
+     * @param {string} [list='available'] - List to remove the player from ('available' or 'waitingList')
      */
-    async removePlayer(playerName) {
+    async removePlayer(playerName, list = 'available') {
         await withLoading(
             async () => {
-                const index = this.players.indexOf(playerName);
+                const index =
+                    list === 'available'
+                        ? this.players.indexOf(playerName)
+                        : this.waitingList.indexOf(playerName);
                 if (playerName && index !== -1) {
-                    this.players = await api.remove('players', this.currentDate, { playerName });
+                    const updatedList = await api.remove('players', this.currentDate, {
+                        playerName,
+                        list
+                    });
+                    if (list === 'available') {
+                        this.players = updatedList || [];
+                    } else if (list === 'waitingList') {
+                        this.waitingList = updatedList || [];
+                    }
                 }
             },
             (error) => {
@@ -112,6 +142,7 @@ class PlayersService {
      */
     reset() {
         this.players = [];
+        this.waitingList = [];
         this.currentDate = null;
         // Keep rankedPlayers cached
     }

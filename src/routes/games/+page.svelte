@@ -2,13 +2,13 @@
     import { Listgroup, ListgroupItem, Input, Button, Alert } from 'flowbite-svelte';
     import { CalendarMonthSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/services/api-client.svelte.js';
-    import { setError } from '$lib/stores/error.js';
-    import { withLoading } from '$lib/stores/loading.js';
-    import { settings } from '$lib/stores/settings.js';
+    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { setError } from '$lib/client/stores/error.js';
+    import { withLoading } from '$lib/client/stores/loading.js';
+    import { settings } from '$lib/client/stores/settings.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { isDateInPast, rotateArray } from '$lib/helpers.js';
+    import { isDateInPast, rotateArray } from '$lib/shared/helpers.js';
 
     let { data } = $props();
     const date = data.date;

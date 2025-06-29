@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { rankings } from '$lib/server/rankings.js';
 
 export const GET = async () => {
-    const rankingsData = await rankings.loadRankings();
+    const rankingsData = await rankings.loadEnhancedRankings();
     return json(rankingsData);
 };
 

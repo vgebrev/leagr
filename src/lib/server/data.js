@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { isObject } from '$lib/helpers.js';
+import { isObject } from '$lib/shared/helpers.js';
 import { Mutex } from 'async-mutex';
 
 const dataPath = path.join(process.cwd(), 'data');
@@ -81,7 +81,7 @@ async function set(key, date, value, defaultValue = []) {
                 parent[finalKey] = value;
             }
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-            return jsonData[key];
+            return parent[finalKey];
         } catch (err) {
             console.error('Error writing file: ', err);
             return null;

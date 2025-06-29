@@ -1,4 +1,4 @@
-import { dateString } from '$lib/helpers.js';
+import { dateString } from '$lib/shared/helpers.js';
 
 export const load = async ({ url, fetch, data }) => {
     const date = url.searchParams.get('date') || dateString(new Date());

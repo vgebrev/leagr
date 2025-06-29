@@ -1,15 +1,32 @@
 <script>
-    import { Label, Input, Button } from 'flowbite-svelte';
-    import { CirclePlusSolid } from 'flowbite-svelte-icons';
+    import { Label, Input, Button, Dropdown, DropdownItem } from 'flowbite-svelte';
+    import { CirclePlusSolid, ChevronDownOutline, ClockOutline } from 'flowbite-svelte-icons';
 
     let { playerName = $bindable(), rankedPlayers, canModifyList, onadd } = $props();
+
+    let dropdownOpen = $state(false);
+    /** @type {HTMLInputElement} */
+    let input;
 
     /**
      * @param {Event} event
      */
     function handleSubmit(event) {
         event.preventDefault();
-        onadd && onadd(playerName.trim());
+        onadd && onadd(playerName.trim(), 'available');
+    }
+
+    /**
+     * Add player to the waiting list explicitly
+     */
+    function addToWaitingList() {
+        dropdownOpen = false;
+        if (!input.checkValidity()) {
+            input.reportValidity();
+            input.focus();
+            return;
+        }
+        onadd && onadd(playerName.trim(), 'waitingList');
     }
 </script>
 
@@ -18,6 +35,7 @@
     class="flex gap-2"
     onsubmit={handleSubmit}>
     <Input
+        bind:elementRef={input}
         bind:value={playerName}
         data={rankedPlayers}
         clearable
@@ -29,9 +47,32 @@
         required
         disabled={!canModifyList}
         autocomplete="off" />
-    <Button
-        type="submit"
-        disabled={!canModifyList}>
-        <CirclePlusSolid class="me-2 h-4 w-4" /> Add
-    </Button>
+
+    <div class="flex">
+        <Button
+            type="submit"
+            disabled={!canModifyList}
+            class="rounded-r-none border-r-0">
+            <CirclePlusSolid class="me-2 h-4 w-4" /> Add
+        </Button>
+
+        <Button
+            type="button"
+            disabled={!canModifyList}
+            class="rounded-l-none border-l border-gray-300 px-2 dark:border-gray-600"
+            onclick={() => (dropdownOpen = !dropdownOpen)}>
+            <ChevronDownOutline class="h-4 w-4" />
+        </Button>
+
+        <Dropdown
+            bind:isOpen={dropdownOpen}
+            simple>
+            <DropdownItem onclick={addToWaitingList}>
+                <span class="flex items-center">
+                    <ClockOutline class="me-2 h-4 w-4" />
+                    Waiting list
+                </span>
+            </DropdownItem>
+        </Dropdown>
+    </div>
 </form>
