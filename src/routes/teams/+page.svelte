@@ -3,6 +3,7 @@
     import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
+    import { playersService } from '$lib/client/services/players.svelte.js';
     import { setError } from '$lib/client/stores/error.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
@@ -13,13 +14,16 @@
     let { data } = $props();
     const date = data.date;
     let isPast = $derived(isDateInPast(date));
-    let players = $state([]);
+
+    // Use players service for player data
+    let players = $derived(playersService.players);
+    let waitingList = $derived(playersService.waitingList);
+
     let rankings = $state({});
     let teamConfig = $derived.by(() =>
         calculateTeamConfig(Math.min(players.length, $settings.playerLimit))
     );
     let selectedTeamConfig = $state(null);
-    let waitingList = $state([]);
     let teams = $state({});
     let confirmRegenerate = $state(false);
 
@@ -52,35 +56,46 @@
 
     function generateRandomTeams() {
         const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
-        const waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
-        const teams = {};
+        const result = {};
         const teamSizes = selectedTeamConfig.teamSizes;
         const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
+
         for (let i = 0; i < teamSizes.length; i++) {
             const noun = nouns[Math.floor(Math.random() * nouns.length)];
             const name = `${teamColours[i]} ${noun}`;
-            teams[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
+            result[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
         }
-        return { teams, waitingList };
+        return result;
     }
 
     function generateSeededTeams() {
         const eligiblePlayers = players.slice(0, Math.min(players.length, $settings.playerLimit));
-        const waitingList = players.slice(Math.min(players.length, $settings.playerLimit));
-
         const teamSizes = selectedTeamConfig.teamSizes;
         const numTeams = teamSizes.length;
-        const teams = {};
+        const result = {};
 
+        // Sort players by ranking points first, then total points, then appearances
         const sortedPlayers = [...eligiblePlayers].sort((a, b) => {
             const playerA = rankings?.players?.[a];
             const playerB = rankings?.players?.[b];
-            if (playerA?.points || 0 !== playerB?.points || 0) {
+
+            // Primary sort: ranking points (if available)
+            if (playerA?.rankingPoints !== undefined && playerB?.rankingPoints !== undefined) {
+                if (playerA.rankingPoints !== playerB.rankingPoints) {
+                    return playerB.rankingPoints - playerA.rankingPoints;
+                }
+            }
+
+            // Secondary sort: total points
+            if ((playerA?.points || 0) !== (playerB?.points || 0)) {
                 return (playerB?.points || 0) - (playerA?.points || 0);
             }
+
+            // Tertiary sort: appearances
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
 
+        // Create pots for snake draft
         const pots = [];
         for (let i = 0; i < Math.max(...teamSizes); i++) {
             pots.push([...sortedPlayers.splice(0, numTeams)]);
@@ -88,28 +103,33 @@
                 pots[i].push(null);
             }
         }
+
+        // Randomize within each pot to prevent predictable team assignments
         for (let pot of pots) {
             pot.sort(() => Math.random() - 0.5);
         }
 
+        // Create team structure
         for (let i = 0; i < numTeams; i++) {
             const noun = nouns[Math.floor(Math.random() * nouns.length)];
             const name = `${teamColours[i]} ${noun}`;
-            teams[name] = [];
+            result[name] = [];
         }
-        const teamNames = Object.keys(teams);
+
+        // Distribute players from pots to teams
+        const teamNames = Object.keys(result);
         for (let i = 0; i < teamNames.length; i++) {
             const teamName = teamNames[i];
             const teamSize = Math.max(...teamSizes);
             for (let j = 0; j < teamSize; j++) {
-                if (pots[j].length > 0) {
+                if (pots[j] && pots[j].length > 0) {
                     const player = pots[j].shift();
-                    if (player) teams[teamName].push(player);
+                    if (player) result[teamName].push(player);
                 }
             }
         }
 
-        return { teams, waitingList };
+        return result;
     }
 
     async function generateTeams(regenerate = false) {
@@ -127,22 +147,18 @@
         }
 
         const restoreTeams = { ...teams };
-        const restoreWaitingList = [...waitingList];
-        ({ teams, waitingList } = $settings.seedTeams
-            ? generateSeededTeams()
-            : generateRandomTeams());
+
+        teams = $settings.seedTeams ? generateSeededTeams() : generateRandomTeams();
+
         await withLoading(
             async () => {
-                const teamData = await api.post('teams', date, { teams, waitingList });
-                teams = teamData.teams || {};
-                waitingList = teamData.waitingList || [];
+                teams = (await api.post('teams', date, teams)) || {};
                 confirmRegenerate = false;
             },
             (err) => {
                 console.error('Error generating teams:', err);
                 setError('Failed to generate teams. Please try again.');
                 teams = restoreTeams;
-                waitingList = restoreWaitingList;
             }
         );
     }
@@ -153,27 +169,29 @@
             return;
         }
         const restoreTeams = { ...teams };
-        const restoreWaitingList = [...waitingList];
+
         await withLoading(
             async () => {
-                teams[Object.keys(teams)[teamIndex]] = teams[Object.keys(teams)[teamIndex]].filter(
+                const teamNames = Object.keys(teams);
+                teams[teamNames[teamIndex]] = teams[teamNames[teamIndex]].filter(
                     (p) => p !== player
                 );
+
                 if (waitingList.length > 0) {
-                    const nextPlayer = waitingList.shift();
-                    teams[Object.keys(teams)[teamIndex]].push(nextPlayer);
+                    const nextPlayer = waitingList[0];
+                    teams[teamNames[teamIndex]].push(nextPlayer);
+                    // Remove from waiting list via players service
+                    await playersService.removePlayer(nextPlayer, 'waitingList');
                 } else {
-                    teams[Object.keys(teams)[teamIndex]].push(null);
+                    teams[teamNames[teamIndex]].push(null);
                 }
-                const teamData = await api.post('teams', date, { teams, waitingList });
-                teams = teamData.teams || {};
-                waitingList = teamData.waitingList || [];
+
+                teams = (await api.post('teams', date, teams)) || {};
             },
             (err) => {
                 console.error('Error removing player:', err);
                 setError('Failed to remove player. Please try again.');
                 teams = restoreTeams;
-                waitingList = restoreWaitingList;
             }
         );
     }
@@ -184,52 +202,48 @@
             return;
         }
         const restoreTeams = { ...teams };
-        const restoreWaitingList = [...waitingList];
+
         await withLoading(
             async () => {
-                if (teams[Object.keys(teams)[teamIndex]][playerIndex] !== null) {
+                const teamNames = Object.keys(teams);
+                if (teams[teamNames[teamIndex]][playerIndex] !== null) {
                     setError('This spot is already filled.');
                     return;
                 }
                 if (waitingList.length > 0) {
-                    teams[Object.keys(teams)[teamIndex]][playerIndex] = waitingList.shift();
+                    const nextPlayer = waitingList[0];
+                    teams[teamNames[teamIndex]][playerIndex] = nextPlayer;
+                    // Remove from waiting list via players service
+                    await playersService.removePlayer(nextPlayer, 'waitingList');
                 }
-                const teamData = await api.post('teams', date, { teams, waitingList });
-                teams = teamData.teams || {};
-                waitingList = teamData.waitingList || [];
+
+                teams = (await api.post('teams', date, teams)) || {};
             },
             (err) => {
                 console.error('Error filling empty spot with a player:', err);
                 setError('Failed to assign waiting list player to empty spot. Please try again.');
                 teams = restoreTeams;
-                waitingList = restoreWaitingList;
             }
         );
     }
 
-    function addNewPlayersToWaitingList() {
-        const newPlayers = players.filter(
-            (player) =>
-                !Object.values(teams).flat().includes(player) && !waitingList.includes(player)
-        );
-        if (Object.keys(teams).length > 0 && newPlayers.length > 0) {
-            waitingList = [...waitingList, ...newPlayers];
-        }
-    }
+    // Removed functions that are no longer needed since we use players service waiting list
 
     onMount(async () => {
         await withLoading(
             async () => {
-                players = await api.get('players', date);
+                // Load players using the service
+                await playersService.loadPlayers(date);
+
+                // Load rankings with enhanced data
                 rankings = await api.get('rankings');
-                const teamData = await api.get('teams', date);
-                teams = teamData.teams || {};
-                waitingList = teamData.waitingList || [];
-                addNewPlayersToWaitingList();
+
+                // Load existing teams data
+                teams = (await api.get('teams', date)) || {};
             },
             (err) => {
-                console.error('Error fetching players:', err);
-                setError('Failed to load player data. Please try again.');
+                console.error('Error fetching data:', err);
+                setError('Failed to load data. Please try again.');
             }
         );
     });
@@ -241,9 +255,23 @@
         <span>{players.length} available.</span>
         <span>{Math.min(players.length, $settings.playerLimit)} eligible.</span>
         {#if players.length > $settings.playerLimit}
-            <span>{players.length - $settings.playerLimit} waiting list.</span>
+            <span>{players.length - $settings.playerLimit} excess.</span>
+        {/if}
+        {#if waitingList.length > 0}
+            <span>{waitingList.length} on waiting list.</span>
         {/if}
     </div>
+
+    {#if waitingList.length > 0}
+        <Alert class="flex items-center border py-2">
+            <ExclamationCircleSolid />
+            <span>
+                {waitingList.length} player{waitingList.length === 1 ? '' : 's'}
+                on waiting list: {waitingList.join(', ')}
+            </span>
+        </Alert>
+    {/if}
+
     <Label>Choose team option</Label>
     <div class="flex w-full flex-col gap-2">
         {#each teamConfig as config, i (i)}
@@ -255,7 +283,7 @@
                         (!$settings.canRegenerateTeams && Object.keys(teams).length > 0)}
                     ><div class="items-between flex gap-2">
                         <span class="semi-bold">{config.teams} Teams</span><span
-                            >({config.teamSizes} Players)</span>
+                            >({config.teamSizes.join(', ')} Players)</span>
                     </div></Radio>
             </div>
         {/each}
@@ -293,14 +321,14 @@
                 teamIndex={i}
                 onfillempty={fillEmptySpotFromWaitingList}
                 onremove={removePlayer}
-                {players} />
+                players={[...players, ...waitingList]} />
         {/each}
         {#if waitingList?.length > 0}
             <TeamTable
                 team={waitingList}
                 color="gray"
                 teamName="Waiting List"
-                {players} />
+                players={[...players, ...waitingList]} />
         {/if}
     </div>
 </div>

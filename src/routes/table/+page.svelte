@@ -101,8 +101,7 @@
     onMount(async () => {
         await withLoading(
             async () => {
-                const teamData = await api.get('teams', date);
-                teams = teamData.teams;
+                teams = (await api.get('teams', date)) || {};
                 const scheduleData = await api.get('games', date);
                 schedule = scheduleData.rounds || [];
                 const flatMatches =

@@ -48,9 +48,10 @@ async function get(key, date) {
  * @param date
  * @param value
  * @param {[]|{}|number}defaultValue
+ * @param {boolean} [overwrite=false] - Whether to overwrite the existing value if it exists (true), or merge/add to it (false).
  * @returns {Promise}
  */
-async function set(key, date, value, defaultValue = []) {
+async function set(key, date, value, defaultValue = [], overwrite = false) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
@@ -76,7 +77,9 @@ async function set(key, date, value, defaultValue = []) {
             if (Array.isArray(parent[finalKey])) {
                 parent[finalKey].push(value);
             } else if (isObject(parent[finalKey])) {
-                parent[finalKey] = { ...(parent[finalKey] ?? {}), ...value };
+                parent[finalKey] = overwrite
+                    ? { ...value }
+                    : { ...(parent[finalKey] ?? {}), ...value };
             } else {
                 parent[finalKey] = value;
             }

@@ -13,6 +13,6 @@ export const POST = async ({ request, url }) => {
     if (!body) {
         return error(400, 'Invalid request body');
     }
-    const result = await data.set('teams', date, body, {});
+    const result = await data.set('teams', date, body, {}, true);
     return result ? json(result) : error(500, 'Failed to set teams');
 };

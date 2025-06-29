@@ -216,7 +216,7 @@ async function updateRankings() {
         const raw = await fs.readFile(path.join(dataPath, file), 'utf-8');
         const { teams, games } = JSON.parse(raw);
 
-        const teamEntries = Object.entries(teams?.teams ?? {});
+        const teamEntries = Object.entries(teams ?? {});
         const rounds = games?.rounds ?? [];
         if (!teamEntries.length || !rounds.length) continue;
 
