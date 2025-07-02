@@ -54,12 +54,11 @@
         'Team Bonus: 2-8pts based on final team position and number of teams'
     ];
     let rankingInfo = [
-        'Ranking Points: Your weighted average × max games in league (primary ranking)',
-        'Weighted Average: Your performance adjusted for experience level',
-        'Raw Average: Pure points per appearance (vulnerable to outliers)',
-        'Full confidence earned at ' +
-            Math.round((rankings.rankingMetadata?.confidenceFraction ?? 0.66) * 100) +
-            "% of most experienced player's games"
+        "Apps: How many times you've played",
+        'Points: Your total score from all appearances as described above',
+        'Pts/App: Your average score per appearance',
+        'Ranking Pts: Your skill level adjusted for experience - this is what we use to make fair teams',
+        'How Ranking Points Work: Your average gets adjusted based on experience. New players get pulled toward the league minimum until they play enough games for full confidence. Then we multiply by the max games played to get your ranking points.'
     ];
 
     async function updateRankings() {
@@ -106,7 +105,7 @@
                 <p class="text-center"><strong>Ranking System:</strong></p>
                 <Listgroup items={rankingInfo} />
                 {#if rankings.rankingMetadata}
-                    <p class="text-center text-xs text-gray-600 dark:text-gray-400">
+                    <p class="text-center text-gray-600 dark:text-gray-400">
                         League Average: {rankings.rankingMetadata.globalAverage} pts/game • Full Confidence:
                         {rankings.rankingMetadata.confidenceThreshold}+ games • Total Players: {rankings
                             .rankingMetadata.totalPlayers}
