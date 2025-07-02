@@ -19,11 +19,9 @@ class TeamsService {
     currentDate = $state(null);
 
     /** @type {boolean} */
-    confirmRegenerate = $state(false);
+    hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
 
-    // Derived state
-    teamNames = $derived(Object.keys(this.teams || {}));
-
+    /** @type {boolean} */
     isPast = $derived.by(() => {
         if (!this.currentDate) return false;
         return isDateInPast(this.currentDate);
@@ -34,6 +32,7 @@ class TeamsService {
         return this.calculateTeamConfig(playerCount);
     });
 
+    /** @type {boolean} */
     canGenerateTeams = $derived.by(() => {
         return (
             !this.isPast &&
@@ -42,11 +41,13 @@ class TeamsService {
     });
 
     #settings = $state(defaultSettings);
+
     constructor() {
         settings.subscribe((settings) => {
             this.#settings = settings;
         });
     }
+
     // Methods
     calculateTeamConfig(playerCount) {
         const teamLimits = { min: 2, max: 5 };
@@ -165,9 +166,8 @@ class TeamsService {
     /**
      * Generate teams using the selected configuration
      * @param {Object} options - Configuration object containing team options
-     * @param {boolean} regenerate - Whether to force regeneration
      */
-    async generateTeams(options, regenerate = false) {
+    async generateTeams(options) {
         if (this.isPast) {
             setError('The date is in the past. Teams cannot be changed.');
             return false;
@@ -178,11 +178,7 @@ class TeamsService {
             return false;
         }
 
-        if (Object.keys(this.teams).length > 0 && !regenerate) {
-            this.confirmRegenerate = true;
-            return false;
-        }
-
+        // Remove confirmRegenerate logic - let component handle it
         const restoreTeams = { ...this.teams };
         let success = false;
 
@@ -193,7 +189,6 @@ class TeamsService {
                     : this.generateRandomTeams(options);
 
                 this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};
-                this.confirmRegenerate = false;
                 success = true;
             },
             (err) => {
@@ -226,11 +221,13 @@ class TeamsService {
                     (p) => p !== player
                 );
 
+                await playersService.removePlayer(player, 'available');
+
                 if (playersService.waitingList.length > 0) {
                     const nextPlayer = playersService.waitingList[0];
                     this.teams[teamNames[teamIndex]].push(nextPlayer);
                     // Remove from waiting list via players service
-                    await playersService.removePlayer(nextPlayer, 'waitingList');
+                    await playersService.movePlayer(nextPlayer, 'waitingList', 'available');
                 } else {
                     this.teams[teamNames[teamIndex]].push(null);
                 }
@@ -270,7 +267,7 @@ class TeamsService {
                     const nextPlayer = playersService.waitingList[0];
                     this.teams[teamNames[teamIndex]][playerIndex] = nextPlayer;
                     // Remove from waiting list via players service
-                    await playersService.removePlayer(nextPlayer, 'waitingList');
+                    await playersService.movePlayer(nextPlayer, 'waitingList', 'available');
                 }
 
                 this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};

@@ -138,13 +138,33 @@ class PlayersService {
     }
 
     /**
+     * Move a player from one list to another
+     * @param {string} playerName
+     * @param {string} fromList - available or waitingList
+     * @param {string} toList - available or waitingList
+     * @returns {Promise<void>}
+     */
+    async movePlayer(playerName, fromList, toList) {
+        if (fromList === toList) return;
+
+        await withLoading(
+            async () => {
+                await this.removePlayer(playerName, fromList);
+                await this.addPlayer(playerName, toList);
+            },
+            (error) => {
+                console.error('Error moving player:', error);
+                setError('Failed to move player. Please try again.');
+            }
+        );
+    }
+    /**
      * Reset the players state
      */
     reset() {
         this.players = [];
         this.waitingList = [];
         this.currentDate = null;
-        // Keep rankedPlayers cached
     }
 }
 

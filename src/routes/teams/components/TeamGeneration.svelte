@@ -2,9 +2,20 @@
     import { Alert, Button, Label, Radio } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupSolid, UserSolid } from 'flowbite-svelte-icons';
 
-    let { teamConfig, date, canGenerateTeams, confirmRegenerate, ongenerate } = $props();
+    let { teamConfig, date, canGenerateTeams, hasExistingTeams, ongenerate } = $props();
 
     let selectedTeamConfig = $state(null);
+    let confirmRegenerate = $state(false);
+
+    async function handleGenerate(regenerate = false) {
+        if (!regenerate && hasExistingTeams) {
+            confirmRegenerate = true;
+            return;
+        }
+
+        await ongenerate(selectedTeamConfig);
+        confirmRegenerate = false;
+    }
 </script>
 
 <Label>Choose team option</Label>
@@ -33,7 +44,7 @@
     {/if}
 </div>
 <Button
-    onclick={async () => await ongenerate(selectedTeamConfig, false)}
+    onclick={() => handleGenerate(false)}
     disabled={!canGenerateTeams}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
 {#if confirmRegenerate}
     <Alert class="flex items-center border"
@@ -41,7 +52,7 @@
             >Teams have already been generated. Are you sure you want to regenerate them?
             <Button
                 size="sm"
-                onclick={async () => await ongenerate(selectedTeamConfig, true)}>Yes</Button
+                onclick={() => handleGenerate(true)}>Yes</Button
             ></span
         ></Alert>
 {/if}
