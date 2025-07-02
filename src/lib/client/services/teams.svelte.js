@@ -2,7 +2,7 @@ import { api } from '$lib/client/services/api-client.svelte.js';
 import { playersService } from '$lib/client/services/players.svelte.js';
 import { setError } from '$lib/client/stores/error.js';
 import { withLoading } from '$lib/client/stores/loading.js';
-import { settings } from '$lib/client/stores/settings.js';
+import { settings, defaultSettings } from '$lib/client/stores/settings.js';
 import { nouns } from '$lib/client/nouns.js';
 import { teamColours, isDateInPast } from '$lib/shared/helpers.js';
 import { get } from 'svelte/store';
@@ -18,9 +18,6 @@ class TeamsService {
     /** @type {string | null} */
     currentDate = $state(null);
 
-    /** @type {Object | null} */
-    selectedTeamConfig = $state(null);
-
     /** @type {boolean} */
     confirmRegenerate = $state(false);
 
@@ -33,18 +30,23 @@ class TeamsService {
     });
 
     teamConfig = $derived.by(() => {
-        const playerCount = Math.min(playersService.players.length, get(settings).playerLimit);
+        const playerCount = Math.min(playersService.players.length, this.#settings.playerLimit);
         return this.calculateTeamConfig(playerCount);
     });
 
     canGenerateTeams = $derived.by(() => {
         return (
             !this.isPast &&
-            this.selectedTeamConfig &&
-            (get(settings).canRegenerateTeams || Object.keys(this.teams).length === 0)
+            (this.#settings.canRegenerateTeams || Object.keys(this.teams).length === 0)
         );
     });
 
+    #settings = $state(defaultSettings);
+    constructor() {
+        settings.subscribe((settings) => {
+            this.#settings = settings;
+        });
+    }
     // Methods
     calculateTeamConfig(playerCount) {
         const teamLimits = { min: 2, max: 5 };
@@ -74,14 +76,14 @@ class TeamsService {
         return config;
     }
 
-    generateRandomTeams() {
+    generateRandomTeams(options) {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, get(settings).playerLimit)
+            Math.min(players.length, this.#settings.playerLimit)
         );
         const teams = {};
-        const teamSizes = this.selectedTeamConfig.teamSizes;
+        const teamSizes = options.teamSizes;
         const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
 
         for (let i = 0; i < teamSizes.length; i++) {
@@ -92,13 +94,13 @@ class TeamsService {
         return teams;
     }
 
-    generateSeededTeams() {
+    generateSeededTeams(options) {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, get(settings).playerLimit)
+            Math.min(players.length, this.#settings.playerLimit)
         );
-        const teamSizes = this.selectedTeamConfig.teamSizes;
+        const teamSizes = options.teamSizes;
         const numTeams = teamSizes.length;
         const teams = {};
 
@@ -162,15 +164,16 @@ class TeamsService {
 
     /**
      * Generate teams using the selected configuration
+     * @param {Object} options - Configuration object containing team options
      * @param {boolean} regenerate - Whether to force regeneration
      */
-    async generateTeams(regenerate = false) {
+    async generateTeams(options, regenerate = false) {
         if (this.isPast) {
             setError('The date is in the past. Teams cannot be changed.');
             return false;
         }
 
-        if (!this.selectedTeamConfig) {
+        if (!options) {
             setError('Please choose a team option.');
             return false;
         }
@@ -185,11 +188,10 @@ class TeamsService {
 
         await withLoading(
             async () => {
-                const newTeams = get(settings).seedTeams
-                    ? this.generateSeededTeams()
-                    : this.generateRandomTeams();
+                this.teams = this.#settings.seedTeams
+                    ? this.generateSeededTeams(options)
+                    : this.generateRandomTeams(options);
 
-                this.teams = newTeams;
                 this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};
                 this.confirmRegenerate = false;
                 success = true;
@@ -313,7 +315,6 @@ class TeamsService {
         this.teams = {};
         this.rankings = {};
         this.currentDate = null;
-        this.selectedTeamConfig = null;
         this.confirmRegenerate = false;
     }
 
