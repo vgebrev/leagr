@@ -110,35 +110,18 @@ class TeamsService {
             const playerA = this.rankings?.players?.[a];
             const playerB = this.rankings?.players?.[b];
 
-            // Primary sort: ranking points (if available)
             if (playerA?.rankingPoints !== undefined && playerB?.rankingPoints !== undefined) {
                 if (playerA.rankingPoints !== playerB.rankingPoints) {
                     return playerB.rankingPoints - playerA.rankingPoints;
                 }
             }
 
-            // Secondary sort: total points
             if ((playerA?.points || 0) !== (playerB?.points || 0)) {
                 return (playerB?.points || 0) - (playerA?.points || 0);
             }
 
-            // Tertiary sort: appearances
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
-
-        // Create pots for snake draft
-        const pots = [];
-        for (let i = 0; i < Math.max(...teamSizes); i++) {
-            pots.push([...sortedPlayers.splice(0, numTeams)]);
-            while (pots[i].length < numTeams) {
-                pots[i].push(null);
-            }
-        }
-
-        // Randomize within each pot to prevent predictable team assignments
-        for (let pot of pots) {
-            pot.sort(() => Math.random() - 0.5);
-        }
 
         // Create team structure
         for (let i = 0; i < numTeams; i++) {
@@ -147,17 +130,49 @@ class TeamsService {
             teams[name] = [];
         }
 
-        // Distribute players from pots to teams
         const teamNames = Object.keys(teams);
-        for (let i = 0; i < teamNames.length; i++) {
-            const teamName = teamNames[i];
-            const teamSize = Math.max(...teamSizes);
-            for (let j = 0; j < teamSize; j++) {
-                if (pots[j] && pots[j].length > 0) {
-                    const player = pots[j].shift();
-                    if (player) teams[teamName].push(player);
+        let playerIndex = 0;
+
+        // Fill teams round by round until all are complete
+        while (
+            teamNames.some((name, i) => teams[name].length < teamSizes[i]) &&
+            playerIndex < sortedPlayers.length
+        ) {
+            // Create a pot of players for this round (double size for variability)
+            const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
+            const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
+
+            // Randomize within the pot
+            currentPot.sort(() => Math.random() - 0.5);
+
+            let potPlayerIndex = 0;
+
+            // Distribute players from this pot to teams that still need players
+            for (
+                let teamIndex = 0;
+                teamIndex < numTeams && potPlayerIndex < currentPot.length;
+                teamIndex++
+            ) {
+                const teamName = teamNames[teamIndex];
+                const currentTeamSize = teams[teamName].length;
+                const targetTeamSize = teamSizes[teamIndex];
+
+                // Skip if team is already full
+                if (currentTeamSize >= targetTeamSize) continue;
+
+                // Determine how many players to assign (1 or 2, but no more than available in pot)
+                const remainingSpots = targetTeamSize - currentTeamSize;
+                const availableInPot = currentPot.length - potPlayerIndex;
+                const playersToAssign = Math.min(2, remainingSpots, availableInPot);
+
+                // Assign players from pot to this team
+                for (let p = 0; p < playersToAssign; p++) {
+                    teams[teamName].push(currentPot[potPlayerIndex++]);
                 }
             }
+
+            // Move to next batch of players
+            playerIndex += potSize;
         }
 
         return teams;
