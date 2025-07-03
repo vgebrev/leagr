@@ -1,7 +1,28 @@
 <script>
-    import { Button, Listgroup, ListgroupItem } from 'flowbite-svelte';
+    import { Button, Listgroup, ListgroupItem, Dropdown, DropdownItem } from 'flowbite-svelte';
+    import {
+        DotsVerticalOutline,
+        TrashBinOutline,
+        ClockOutline,
+        ThumbsUpOutline
+    } from 'flowbite-svelte-icons';
 
-    let { label, players, canModifyList, onremove } = $props();
+    let {
+        label,
+        players,
+        canModifyList,
+        onremove,
+        onmove,
+        sourceList,
+        destinationList,
+        moveLabel,
+        canMoveToOtherList
+    } = $props();
+
+    let dropdownOpen = $derived(players.map(() => false));
+    $effect(() => {
+        dropdownOpen = players.map(() => false);
+    });
 </script>
 
 <div class="flex flex-col gap-2">
@@ -19,24 +40,47 @@
                         class="ms-auto p-0"
                         type="button"
                         outline={true}
-                        pill={true}
-                        onclick={async () => await onremove(player)}
-                        disabled={!canModifyList}
-                        ><svg
-                            class="h-4 w-4"
-                            width="20"
-                            height="20"
-                            viewBox="0 0 20 20"
-                            ><path
-                                d="M10 10l5.09-5.09L10 10l5.09 5.09L10 10zm0 0L4.91 4.91 10 10l-5.09 5.09L10 10z"
-                                stroke="currentColor"
-                                fill="none"
-                                fill-rule="evenodd"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"></path
-                            ></svg
-                        ></Button
-                    >{/if}</ListgroupItem>
+                        color="alternative"
+                        onclick={() => {
+                            dropdownOpen[i] = !dropdownOpen[i];
+                        }}
+                        disabled={!canModifyList}><DotsVerticalOutline class="h-4 w-4" /></Button>
+                    <Dropdown
+                        simple
+                        bind:isOpen={dropdownOpen[i]}>
+                        <DropdownItem
+                            class="w-full font-normal"
+                            onclick={async () => {
+                                await onremove(player);
+                            }}>
+                            <span class="flex items-center">
+                                <TrashBinOutline class="me-2 h-4 w-4" />
+                                Remove
+                            </span>
+                        </DropdownItem>
+                        {#if onmove && sourceList && destinationList}
+                            {@const canMove = canMoveToOtherList
+                                ? canMoveToOtherList(player, sourceList, destinationList)
+                                : true}
+                            <DropdownItem
+                                class="w-full font-normal"
+                                onclick={async () => {
+                                    await onmove(player, sourceList, destinationList);
+                                }}
+                                disabled={!canMove}>
+                                <span class="flex items-center">
+                                    {#if sourceList === 'available'}
+                                        <ClockOutline class="me-2 h-4 w-4" />
+                                    {:else}
+                                        <ThumbsUpOutline class="me-2 h-4 w-4" />
+                                    {/if}
+                                    {moveLabel || 'Move player'}
+                                    <span class="flex items-center"> </span></span
+                                ></DropdownItem>
+                        {/if}
+                    </Dropdown>
+                {/if}
+            </ListgroupItem>
         {/each}
     </Listgroup>
 </div>
