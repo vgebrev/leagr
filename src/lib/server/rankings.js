@@ -183,7 +183,7 @@ function calculateEnhancedRankings(rawRankings) {
     playersArray.sort((a, b) => b[1].rankingPoints - a[1].rankingPoints);
 
     // Add rank positions
-    playersArray.forEach(([name, playerData], index) => {
+    playersArray.forEach(([name], index) => {
         enhancedPlayers[name].rank = index + 1;
     });
 
