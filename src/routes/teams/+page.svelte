@@ -15,10 +15,10 @@
 
     // Use players service for player data
     let waitingList = $derived(playersService.waitingList);
+    let players = $derived(playersService.players);
 
     // Get summary data
     let playerSummary = $derived(teamsService.getPlayerSummary());
-    let allPlayers = $derived(teamsService.getAllPlayers());
 
     async function generateTeams(options) {
         await teamsService.generateTeams(options);
@@ -47,8 +47,8 @@
         ongenerate={generateTeams} />
     <TeamsGrid
         {teams}
+        {players}
         {waitingList}
-        {allPlayers}
         onremove={removePlayer}
         onfillempty={fillEmptySpotFromWaitingList} />
 </div>

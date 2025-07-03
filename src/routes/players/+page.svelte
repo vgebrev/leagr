@@ -32,6 +32,16 @@
     async function removePlayer(name, list = 'available') {
         await playersService.removePlayer(name, list);
     }
+
+    /**
+     * Move a player from one list to another.
+     * @param {string} name
+     * @param {string} fromList - The source list ('available' or 'waitingList')
+     * @param {string} toList - The destination list ('available' or 'waitingList')
+     */
+    async function movePlayer(name, fromList, toList) {
+        await playersService.movePlayer(name, fromList, toList);
+    }
 </script>
 
 <div class="flex flex-col gap-2">
@@ -49,5 +59,6 @@
         availablePlayers={playersService.players}
         waitingList={playersService.waitingList}
         canModifyList={playersService.canModifyList}
-        onremove={removePlayer} />
+        onremove={removePlayer}
+        onmove={movePlayer} />
 </div>
