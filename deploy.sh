@@ -113,7 +113,7 @@ fi
 
 # Step 6: Apply version to package.json
 print_step "Finalizing: writing version $VERSION to package.json..."
-if ! npm version "$VERSION" --no-git-tag-version; then
+if ! npm version "$VERSION"; then
     print_error "Failed to update package.json version"
     exit 1
 fi
