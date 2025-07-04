@@ -1,7 +1,7 @@
 {
     "name": "pirates-footy-roster",
     "private": true,
-    "version": "1.5.0",
+    "version": "1.5.1",
     "description": "A SvelteKit application for managing a social football roster.",
     "author": "Veli Gebrev",
     "type": "module",
