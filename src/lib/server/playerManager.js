@@ -51,7 +51,6 @@ export class PlayerManager {
         if (targetList === 'available') {
             if (players.available.length >= settings.playerLimit) {
                 // Auto-redirect to waiting list when active list is full
-                targetList = 'waitingList';
                 players.waitingList.push(playerName);
             } else {
                 players.available.push(playerName);
