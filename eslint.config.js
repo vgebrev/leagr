@@ -19,7 +19,8 @@ export default [
             globals: { ...globals.browser, ...globals.node }
         },
         rules: {
-            'no-unused-vars': 'error'
+            'no-unused-vars': 'error',
+            'no-console': ['error', { allow: ['warn', 'error'] }]
         }
     },
     {

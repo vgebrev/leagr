@@ -29,13 +29,6 @@
     let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
     const styles = $derived(teamStyles[teamColour] || teamStyles.default);
 
-    // Dynamic button styles to match team colors
-    const buttonStyles = $derived(`
-        color: ${styles.text} !important;
-        border-color: ${styles.text} !important;
-        background-color: transparent !important;
-    `);
-
     // Track dropdown states for each player
     let removeDropdownOpen = $derived(team.map(() => false));
     let fillDropdownOpen = $derived(team.map(() => false));
@@ -49,19 +42,6 @@
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
-
-    // Debug: Log props when this is a player list
-    $effect(() => {
-        if (isPlayerList) {
-            console.log('Player list props:', {
-                teamName,
-                availableTeams,
-                allTeams,
-                hasAvailableTeams: availableTeams && availableTeams.length > 0,
-                hasAllTeams: allTeams && Object.keys(allTeams).length > 0
-            });
-        }
-    });
 
     // Get teams with empty slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
@@ -138,11 +118,10 @@
                                 <!-- Dropdown for unassigned/waiting list players -->
                                 <Button
                                     size="sm"
-                                    class="ms-auto p-0 hover:opacity-80"
+                                    class="ms-auto p-0 {styles.buttonClass}"
                                     type="button"
                                     outline={true}
                                     color="alternative"
-                                    style={buttonStyles}
                                     onclick={() => {
                                         assignDropdownOpen[i] = !assignDropdownOpen[i];
                                     }}><DotsVerticalOutline class="h-4 w-4" /></Button>
@@ -171,11 +150,10 @@
                             {:else if onremove && player}
                                 <Button
                                     size="sm"
-                                    class="ms-auto p-0 hover:opacity-80"
+                                    class="ms-auto p-0 {styles.buttonClass}"
                                     type="button"
                                     outline={true}
                                     color="alternative"
-                                    style={buttonStyles}
                                     onclick={() => {
                                         removeDropdownOpen[i] = !removeDropdownOpen[i];
                                     }}><DotsVerticalOutline class="h-4 w-4" /></Button>
@@ -204,11 +182,10 @@
                                 {#if waitingList.length > 0 || allWaitingPlayers.length > 0}
                                     <Button
                                         size="sm"
-                                        class="ms-auto p-0 hover:opacity-80"
+                                        class="ms-auto p-0 {styles.buttonClass}"
                                         type="button"
                                         outline={true}
                                         color="alternative"
-                                        style={buttonStyles}
                                         onclick={() => {
                                             fillDropdownOpen[i] = !fillDropdownOpen[i];
                                         }}><DotsVerticalOutline class="h-4 w-4" /></Button>
@@ -230,11 +207,10 @@
                                 {:else}
                                     <Button
                                         size="sm"
-                                        class="ms-auto p-0"
+                                        class="ms-auto p-0 {styles.buttonClass} opacity-50"
                                         type="button"
                                         outline={true}
                                         color="alternative"
-                                        style={buttonStyles}
                                         disabled><ArrowLeftOutline class="h-4 w-4" /></Button>
                                 {/if}
                             {/if}
