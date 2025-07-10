@@ -49,7 +49,7 @@
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
-    
+
     // Debug: Log props when this is a player list
     $effect(() => {
         if (isPlayerList) {
@@ -60,7 +60,6 @@
                 hasAvailableTeams: availableTeams && availableTeams.length > 0,
                 hasAllTeams: allTeams && Object.keys(allTeams).length > 0
             });
-            
         }
     });
 

@@ -16,7 +16,8 @@
         event.preventDefault();
         await withLoading(
             async () => {
-                storedSettings.playerLimit = storedSettings.playerLimit || defaultSettings.playerLimit;
+                storedSettings.playerLimit =
+                    storedSettings.playerLimit || defaultSettings.playerLimit;
                 storedSettings = await api.post('settings', date, storedSettings);
                 $settings = storedSettings;
             },
