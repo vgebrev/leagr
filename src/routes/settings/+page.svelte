@@ -5,23 +5,18 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { setError } from '$lib/client/stores/error.js';
     import { withLoading } from '$lib/client/stores/loading.js';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { settings, defaultSettings } from '$lib/client/stores/settings.js';
 
     let { data } = $props();
     const date = data.date;
-    let storedSettings = $state({
-        playerLimit: 24,
-        canRegenerateTeams: false,
-        canResetSchedule: false,
-        seedTeams: true
-    });
+    let storedSettings = $state({ ...defaultSettings });
 
     /** @param {Event} event */
     async function saveSettings(event) {
         event.preventDefault();
         await withLoading(
             async () => {
-                storedSettings.playerLimit = storedSettings.playerLimit || 24;
+                storedSettings.playerLimit = storedSettings.playerLimit || defaultSettings.playerLimit;
                 storedSettings = await api.post('settings', date, storedSettings);
                 $settings = storedSettings;
             },

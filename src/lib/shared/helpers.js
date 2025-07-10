@@ -98,6 +98,20 @@ export const teamStyles = {
         button: 'white',
         confetti: ['#1c1917', '#79716b']
     },
+    red: {
+        text: 'text-red-100 bg-red-500',
+        header: 'bg-red-600 text-white',
+        row: 'bg-red-500',
+        button: 'white',
+        confetti: ['#dc2626', '#fecaca']
+    },
+    gray: {
+        text: 'text-gray-700 dark:text-gray-200 dark:bg-gray-700 bg-gray-200',
+        header: 'dark:bg-gray-700 bg-gray-200',
+        row: 'bg-gray-100 dark:bg-gray-600',
+        button: 'primary',
+        confetti: ['#6a7282', '#e5e7eb']
+    },
     default: {
         text: 'text-gray-700 dark:text-gray-200 dark:bg-gray-700 bg-gray-200',
         header: 'dark:bg-gray-700 bg-gray-200',

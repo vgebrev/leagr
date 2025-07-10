@@ -1,17 +1,11 @@
 import { error, json } from '@sveltejs/kit';
 import { data } from '$lib/server/data.js';
-
-const defaultSettings = {
-    playerLimit: 24,
-    canRegenerateTeams: false,
-    canResetSchedule: false,
-    seedTeams: true
-};
+import { defaultSettings } from '$lib/shared/defaults.js';
 
 export const GET = async ({ url }) => {
     const date = url.searchParams.get('date');
-    const teams = (await data.get('settings', date)) || defaultSettings;
-    return json(teams);
+    const settings = (await data.get('settings', date)) || defaultSettings;
+    return json(settings);
 };
 
 export const POST = async ({ request, url }) => {

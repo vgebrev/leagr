@@ -1,10 +1,5 @@
 import { writable } from 'svelte/store';
+import { defaultSettings } from '$lib/shared/defaults.js';
 
-export const defaultSettings = {
-    playerLimit: 24,
-    canRegenerateTeams: false,
-    canResetSchedule: false,
-    seedTeams: true
-};
-
+export { defaultSettings };
 export const settings = writable(defaultSettings);
