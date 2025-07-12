@@ -46,8 +46,25 @@ async function remove(key, date, value) {
     return await response.json();
 }
 
+async function patch(key, date, value) {
+    const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
+    const response = await fetch(url, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+        },
+        body: JSON.stringify(value)
+    });
+    if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+}
+
 export const api = {
     get,
     post,
-    remove
+    remove,
+    patch
 };

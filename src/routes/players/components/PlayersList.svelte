@@ -47,7 +47,7 @@
                         disabled={!canModifyList}><DotsVerticalOutline class="h-4 w-4" /></Button>
                     <Dropdown
                         simple
-                        bind:isOpen={dropdownOpen[i]}>
+                        isOpen={dropdownOpen[i]}>
                         <DropdownItem
                             class="w-full font-normal"
                             onclick={async () => {

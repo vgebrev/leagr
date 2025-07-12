@@ -82,19 +82,26 @@ class PlayersService {
                     return;
                 }
 
+                const originalList = list;
                 if (list === 'available' && this.players.length >= get(settings).playerLimit) {
                     list = 'waitingList';
                 }
 
-                const updatedList = await api.post(`players`, this.currentDate, {
+                const result = await api.post(`players`, this.currentDate, {
                     playerName: trimmedName,
                     list
                 });
-                if (list === 'available') {
-                    this.players = updatedList || [];
-                } else if (list === 'waitingList') {
-                    this.waitingList = updatedList || [];
+                this.players = result.available || [];
+                this.waitingList = result.waitingList || [];
+
+                // Show notification if player was auto-redirected to waiting list
+                if (
+                    originalList === 'available' &&
+                    (list === 'waitingList' || result.waitingList.includes(trimmedName))
+                ) {
+                    setError(`Player limit reached. ${trimmedName} added to waiting list.`);
                 }
+
                 success = true;
             },
             (error) => {
@@ -119,15 +126,12 @@ class PlayersService {
                         ? this.players.indexOf(playerName)
                         : this.waitingList.indexOf(playerName);
                 if (playerName && index !== -1) {
-                    const updatedList = await api.remove('players', this.currentDate, {
+                    const result = await api.remove('players', this.currentDate, {
                         playerName,
                         list
                     });
-                    if (list === 'available') {
-                        this.players = updatedList || [];
-                    } else if (list === 'waitingList') {
-                        this.waitingList = updatedList || [];
-                    }
+                    this.players = result.available || [];
+                    this.waitingList = result.waitingList || [];
                 }
             },
             (error) => {
@@ -149,8 +153,13 @@ class PlayersService {
 
         await withLoading(
             async () => {
-                await this.removePlayer(playerName, fromList);
-                await this.addPlayer(playerName, toList);
+                const result = await api.patch('players', this.currentDate, {
+                    playerName,
+                    fromList,
+                    toList
+                });
+                this.players = result.available || [];
+                this.waitingList = result.waitingList || [];
             },
             (error) => {
                 console.error('Error moving player:', error);

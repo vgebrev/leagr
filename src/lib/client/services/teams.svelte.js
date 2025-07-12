@@ -40,6 +40,23 @@ class TeamsService {
         );
     });
 
+    /** @type {string[]} */
+    unassignedPlayers = $derived.by(() => {
+        const assignedPlayers = new Set();
+
+        // Collect all players currently assigned to teams
+        Object.values(this.teams).forEach((team) => {
+            team.forEach((player) => {
+                if (player) {
+                    assignedPlayers.add(player);
+                }
+            });
+        });
+
+        // Return available players not assigned to any team
+        return playersService.players.filter((player) => !assignedPlayers.has(player));
+    });
+
     #settings = $state(defaultSettings);
 
     constructor() {
@@ -217,80 +234,154 @@ class TeamsService {
     }
 
     /**
-     * Remove a player from a team
+     * Remove a player from a team with enhanced actions
      * @param {string} player - Player name to remove
      * @param {number} teamIndex - Index of the team
+     * @param {string} action - Action to take: 'waitingList' or 'remove'
      */
-    async removePlayer(player, teamIndex) {
+    async removePlayerFromTeam(player, teamIndex, action = 'waitingList') {
         if (this.isPast) {
             setError('The date is in the past. Teams cannot be changed.');
             return;
         }
 
         const restoreTeams = { ...this.teams };
+        const restorePlayers = { ...playersService.players };
+        const restoreWaitingList = [...playersService.waitingList];
 
         await withLoading(
             async () => {
                 const teamNames = Object.keys(this.teams);
-                this.teams[teamNames[teamIndex]] = this.teams[teamNames[teamIndex]].filter(
-                    (p) => p !== player
-                );
+                const teamName = teamNames[teamIndex];
 
-                await playersService.removePlayer(player, 'available');
+                const result = await api.remove('teams/players', this.currentDate, {
+                    playerName: player,
+                    teamName: teamName,
+                    action: action
+                });
 
-                if (playersService.waitingList.length > 0) {
-                    const nextPlayer = playersService.waitingList[0];
-                    this.teams[teamNames[teamIndex]].push(nextPlayer);
-                    // Remove from waiting list via players service
-                    await playersService.movePlayer(nextPlayer, 'waitingList', 'available');
-                } else {
-                    this.teams[teamNames[teamIndex]].push(null);
+                if (result) {
+                    // Update local state with server response
+                    this.teams = result.teams;
+                    playersService.players = result.players.available;
+                    playersService.waitingList = result.players.waitingList;
                 }
-
-                this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};
             },
             (err) => {
-                console.error('Error removing player:', err);
+                console.error('Error removing player from team:', err);
                 setError('Failed to remove player. Please try again.');
                 this.teams = restoreTeams;
+                playersService.players = restorePlayers;
+                playersService.waitingList = restoreWaitingList;
             }
         );
     }
 
     /**
-     * Fill an empty spot from the waiting list
+     * @deprecated Use removePlayerFromTeam instead
+     */
+    async removePlayer(player, teamIndex) {
+        return this.removePlayerFromTeam(player, teamIndex, 'waitingList');
+    }
+
+    /**
+     * Fill an empty spot from unassigned players (first available player)
      * @param {number} playerIndex - Index of the empty spot
      * @param {number} teamIndex - Index of the team
      */
     async fillEmptySpotFromWaitingList(playerIndex, teamIndex) {
+        if (this.unassignedPlayers.length > 0) {
+            const nextPlayer = this.unassignedPlayers[0];
+            return this.fillEmptySpotWithPlayer(playerIndex, teamIndex, nextPlayer);
+        } else {
+            setError('No unassigned players available.');
+        }
+    }
+
+    /**
+     * Assign a player to a team by team name (finds first empty slot)
+     * @param {string} playerName - Player name to assign
+     * @param {string} teamName - Team name to assign to
+     */
+    async assignPlayerToTeam(playerName, teamName) {
         if (this.isPast) {
             setError('The date is in the past. Teams cannot be changed.');
             return;
         }
 
         const restoreTeams = { ...this.teams };
+        const restorePlayers = [...playersService.players];
+        const restoreWaitingList = [...playersService.waitingList];
+
+        await withLoading(
+            async () => {
+                const result = await api.post('teams/players', this.currentDate, {
+                    playerName: playerName,
+                    teamName: teamName
+                });
+
+                if (result) {
+                    // Update local state with server response
+                    this.teams = result.teams;
+                    playersService.players = result.players.available;
+                    playersService.waitingList = result.players.waitingList;
+                }
+            },
+            (err) => {
+                console.error('Error assigning player to team:', err);
+                setError('Failed to assign player to team. Please try again.');
+                this.teams = restoreTeams;
+                playersService.players = restorePlayers;
+                playersService.waitingList = restoreWaitingList;
+            }
+        );
+    }
+
+    /**
+     * Fill an empty spot with a specific player from the waiting list
+     * @param {number} playerIndex - Index of the empty spot
+     * @param {number} teamIndex - Index of the team
+     * @param {string} selectedPlayer - Player name to move from waiting list
+     */
+    async fillEmptySpotWithPlayer(playerIndex, teamIndex, selectedPlayer) {
+        if (this.isPast) {
+            setError('The date is in the past. Teams cannot be changed.');
+            return;
+        }
+
+        const restoreTeams = { ...this.teams };
+        const restorePlayers = [...playersService.players];
+        const restoreWaitingList = [...playersService.waitingList];
 
         await withLoading(
             async () => {
                 const teamNames = Object.keys(this.teams);
-                if (this.teams[teamNames[teamIndex]][playerIndex] !== null) {
+                const teamName = teamNames[teamIndex];
+
+                if (this.teams[teamName][playerIndex] !== null) {
                     setError('This spot is already filled.');
                     return;
                 }
 
-                if (playersService.waitingList.length > 0) {
-                    const nextPlayer = playersService.waitingList[0];
-                    this.teams[teamNames[teamIndex]][playerIndex] = nextPlayer;
-                    // Remove from waiting list via players service
-                    await playersService.movePlayer(nextPlayer, 'waitingList', 'available');
-                }
+                const result = await api.patch('teams/players', this.currentDate, {
+                    operation: 'fillSlot',
+                    playerName: selectedPlayer,
+                    teamName: teamName
+                });
 
-                this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};
+                if (result) {
+                    // Update local state with server response
+                    this.teams = result.teams;
+                    playersService.players = result.players.available;
+                    playersService.waitingList = result.players.waitingList;
+                }
             },
             (err) => {
-                console.error('Error filling empty spot with a player:', err);
-                setError('Failed to assign waiting list player to empty spot. Please try again.');
+                console.error('Error filling empty spot with specific player:', err);
+                setError('Failed to assign player to empty spot. Please try again.');
                 this.teams = restoreTeams;
+                playersService.players = restorePlayers;
+                playersService.waitingList = restoreWaitingList;
             }
         );
     }

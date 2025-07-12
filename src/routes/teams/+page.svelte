@@ -16,6 +16,7 @@
     // Use players service for player data
     let waitingList = $derived(playersService.waitingList);
     let players = $derived(playersService.players);
+    let unassignedPlayers = $derived(teamsService.unassignedPlayers);
 
     // Get summary data
     let playerSummary = $derived(teamsService.getPlayerSummary());
@@ -24,12 +25,30 @@
         await teamsService.generateTeams(options);
     }
 
-    async function removePlayer({ player, teamIndex }) {
-        await teamsService.removePlayer(player, teamIndex);
+    async function removePlayer({ player, teamIndex, action }) {
+        await teamsService.removePlayerFromTeam(player, teamIndex, action);
     }
 
     async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
         await teamsService.fillEmptySpotFromWaitingList(playerIndex, teamIndex);
+    }
+
+    async function fillEmptySpotWithPlayer(data) {
+        if (data.playerName && data.teamName) {
+            // Direct assignment by team name
+            await teamsService.assignPlayerToTeam(data.playerName, data.teamName);
+        } else {
+            // Legacy slot-based assignment
+            await teamsService.fillEmptySpotWithPlayer(
+                data.playerIndex,
+                data.teamIndex,
+                data.selectedPlayer
+            );
+        }
+    }
+
+    async function removePlayerFromList(playerName, list) {
+        await playersService.removePlayer(playerName, list);
     }
 
     onMount(async () => {
@@ -49,6 +68,9 @@
         {teams}
         {players}
         {waitingList}
+        {unassignedPlayers}
         onremove={removePlayer}
-        onfillempty={fillEmptySpotFromWaitingList} />
+        onfillempty={fillEmptySpotFromWaitingList}
+        onfillemptyWithPlayer={fillEmptySpotWithPlayer}
+        onremoveFromList={removePlayerFromList} />
 </div>

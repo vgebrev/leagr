@@ -17,6 +17,10 @@ export default [
     {
         languageOptions: {
             globals: { ...globals.browser, ...globals.node }
+        },
+        rules: {
+            'no-unused-vars': 'error',
+            'no-console': ['error', { allow: ['warn', 'error'] }]
         }
     },
     {
