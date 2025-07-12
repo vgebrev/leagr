@@ -23,4 +23,5 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 /data/
 /deploy.ps1
+/deploy.sh
 *.tar
