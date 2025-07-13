@@ -35,7 +35,18 @@ function isOriginAllowed(request) {
     if (!allowedOrigin) return true;
     const origin = request.headers.get('origin');
     const referrer = request.headers.get('referer');
-    return allowedOrigin.split(',').some((ao) => origin === ao || referrer?.startsWith(ao));
+    return allowedOrigin.split(',').some((ao) => {
+        const trimmedAo = ao.trim();
+
+        if (trimmedAo.includes('*')) {
+            const pattern = trimmedAo.replace(/\*/g, '.*');
+            const regex = new RegExp(`^${pattern}$`);
+            return (origin && regex.test(origin)) || (referrer && regex.test(referrer));
+        }
+
+        // Original exact match logic
+        return origin === trimmedAo || referrer?.startsWith(trimmedAo);
+    });
 }
 
 function checkApiKey(request) {

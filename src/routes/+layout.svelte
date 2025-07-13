@@ -20,7 +20,7 @@
 </script>
 
 <svelte:head>
-    <title>Pirates Footy Organiser</title>
+    <title>Leagr - Social Football Organiser</title>
 </svelte:head>
 <main class="flex h-[100dvh] flex-col overflow-hidden">
     <TopNavBar {date} />

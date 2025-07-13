@@ -1,6 +1,6 @@
-# Pirates Footy Organiser
+# Leagr
 
-A little [SvelteKit 5](https://svelte.dev/) web app to help organise Saturday social 5-a-side footy sessions at Pirates.
+A little [SvelteKit 5](https://svelte.dev/) web app to help organise Saturday social 5-a-side footy sessions.
 
 Features include:
 
@@ -44,19 +44,19 @@ For production (needs [Docker](https://www.docker.com/)):
 
 - Build a docker image with a production build of the app
 ```bash
-docker build -t pirates-footy-roster:latest
+docker build -t leagr:latest
 ```
 
 - Run the docker container (The app will be available at http://localhost:3000)
 ```bash
 docker run -d \
-  --name pirates-footy-roster \
+  --name leagr \
   --restart unless-stopped \
   -p 3000:3000 \
   -v /path/to/data/on/host:/app/data \
   -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
   -e API_KEY="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-  pirates-footy-roster:latest
+  leagr:latest
 ```
 Expose the app to the internet by configuring your web server or reverse proxy (e.g., Nginx, Apache) to forward requests to port 3000.
 

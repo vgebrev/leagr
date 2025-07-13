@@ -1,5 +1,5 @@
 {
-    "name": "pirates-footy-roster",
+    "name": "leagr",
     "private": true,
     "version": "1.6.0",
     "description": "A SvelteKit application for managing a social football roster.",
