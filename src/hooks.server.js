@@ -35,18 +35,26 @@ function isOriginAllowed(request) {
     if (!allowedOrigin) return true;
     const origin = request.headers.get('origin');
     const referrer = request.headers.get('referer');
-    return allowedOrigin.split(',').some((ao) => {
+    const referrerBase = referrer ? new URL(referrer).origin : null;
+
+    const result = allowedOrigin.split(',').some((ao) => {
         const trimmedAo = ao.trim();
 
         if (trimmedAo.includes('*')) {
             const pattern = trimmedAo.replace(/\*/g, '.*');
             const regex = new RegExp(`^${pattern}$`);
-            return (origin && regex.test(origin)) || (referrer && regex.test(referrer));
+            const matchesOrigin = origin && regex.test(origin);
+            const matchesReferrer = referrerBase && regex.test(referrerBase);
+            return matchesOrigin || matchesReferrer;
         }
 
         // Original exact match logic
-        return origin === trimmedAo || referrer?.startsWith(trimmedAo);
+        const exactOrigin = origin === trimmedAo;
+        const exactReferrer = referrerBase === trimmedAo;
+        return exactOrigin || exactReferrer;
     });
+
+    return result;
 }
 
 function checkApiKey(request) {
