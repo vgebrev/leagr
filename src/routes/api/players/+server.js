@@ -9,7 +9,6 @@ export const GET = async ({ url, locals }) => {
 
     try {
         const data = await createPlayerManager().setDate(date).setLeague(locals.leagueId).getData();
-        console.log('got data', data);
         return json(data.players);
     } catch (err) {
         console.error('Error fetching players:', err);
@@ -54,7 +53,10 @@ export const DELETE = async ({ request, url, locals }) => {
     }
 
     try {
-        const result = await createPlayerManager().setDate(date).removePlayer(body.playerName, body.list);
+        const result = await createPlayerManager()
+            .setDate(date)
+            .setLeague(locals.leagueId)
+            .removePlayer(body.playerName, body.list);
         return json(result);
     } catch (err) {
         console.error('Error removing player:', err);

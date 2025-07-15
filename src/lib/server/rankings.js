@@ -50,13 +50,6 @@ async function saveRankingsUnsafe(rankings, leagueId) {
     await fs.writeFile(getRankingsPath(leagueId), JSON.stringify(rankings, null, 2));
 }
 
-async function saveRankings(rankings, leagueId) {
-    const mutex = getRankingsMutex(leagueId);
-    return await mutex.runExclusive(async () => {
-        await saveRankingsUnsafe(rankings, leagueId);
-    });
-}
-
 function getMatchResults(rounds) {
     const results = [];
     for (const round of rounds) {

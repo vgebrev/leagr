@@ -47,7 +47,10 @@ export const POST = async ({ request, url, locals }) => {
         await data.set('teams', date, body, {}, true, leagueId);
 
         // Then validate and cleanup any inconsistencies
-        const result = await createPlayerManager().setDate(date).setLeague(leagueId).validateAndCleanup();
+        const result = await createPlayerManager()
+            .setDate(date)
+            .setLeague(leagueId)
+            .validateAndCleanup();
 
         return json(result.teams);
     } catch (err) {

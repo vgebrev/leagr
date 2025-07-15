@@ -32,14 +32,7 @@ export class PlayerManager {
             data.get('teams', this.date, this.leagueId),
             data.get('settings', this.date, this.leagueId)
         ]);
-        console.log(
-            `player data for ${this.leagueId} on ${this.data}:`,
-            players,
-            teams,
-            settings,
-            defaultPlayers,
-            defaultSettings
-        );
+
         return {
             players: players || structuredClone(defaultPlayers),
             teams: teams || {},
