@@ -1,22 +1,23 @@
 import { error, json } from '@sveltejs/kit';
-import { playerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
 
-export const GET = async ({ url }) => {
+export const GET = async ({ url, locals }) => {
     const date = url.searchParams.get('date');
     if (!date) {
         return error(400, 'Date parameter is required');
     }
 
     try {
-        const gameData = await playerManager.setDate(date).getData();
-        return json(gameData.players);
+        const data = await createPlayerManager().setDate(date).setLeague(locals.leagueId).getData();
+        console.log('got data', data);
+        return json(data.players);
     } catch (err) {
         console.error('Error fetching players:', err);
         return error(500, 'Failed to fetch players');
     }
 };
 
-export const POST = async ({ request, url }) => {
+export const POST = async ({ request, url, locals }) => {
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -29,7 +30,10 @@ export const POST = async ({ request, url }) => {
     }
 
     try {
-        const result = await playerManager.setDate(date).addPlayer(body.playerName, body.list);
+        const result = await createPlayerManager()
+            .setDate(date)
+            .setLeague(locals.leagueId)
+            .addPlayer(body.playerName, body.list);
         return json(result);
     } catch (err) {
         console.error('Error adding player:', err);
@@ -37,7 +41,7 @@ export const POST = async ({ request, url }) => {
     }
 };
 
-export const DELETE = async ({ request, url }) => {
+export const DELETE = async ({ request, url, locals }) => {
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -50,7 +54,7 @@ export const DELETE = async ({ request, url }) => {
     }
 
     try {
-        const result = await playerManager.setDate(date).removePlayer(body.playerName, body.list);
+        const result = await createPlayerManager().setDate(date).removePlayer(body.playerName, body.list);
         return json(result);
     } catch (err) {
         console.error('Error removing player:', err);
@@ -58,7 +62,7 @@ export const DELETE = async ({ request, url }) => {
     }
 };
 
-export const PATCH = async ({ request, url }) => {
+export const PATCH = async ({ request, url, locals }) => {
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -71,8 +75,9 @@ export const PATCH = async ({ request, url }) => {
     }
 
     try {
-        const result = await playerManager
+        const result = await createPlayerManager()
             .setDate(date)
+            .setLeague(locals.leagueId)
             .movePlayer(body.playerName, body.fromList, body.toList);
         return json(result);
     } catch (err) {

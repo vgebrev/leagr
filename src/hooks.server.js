@@ -1,9 +1,47 @@
+import { getLeagueInfo } from '$lib/server/league.js';
+
 const rateLimitMap = new Map();
 const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX_REQUESTS = 60;
 
 const allowedOrigin = process.env.ALLOWED_ORIGIN || import.meta.env.VITE_ALLOWED_ORIGIN;
 const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
+const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
+
+/**
+ * Extract league identifier from subdomain
+ * @param {string} host - The host header (e.g., "pirates.leagr.local:5173")
+ * @returns {string|null} - The league name or null if no subdomain
+ */
+function extractLeagueId(host) {
+    if (!host || !APP_URL) return null;
+
+    // Remove port if present
+    const hostname = host.split(':')[0];
+
+    // Extract the base domain from APP_URL
+    const appUrl = new URL(APP_URL);
+    const baseDomain = appUrl.hostname;
+
+    // Check for root domain (no league)
+    if (hostname === baseDomain || hostname === 'localhost') {
+        return null;
+    }
+
+    // Split by dots and check if it's a subdomain
+    const parts = hostname.split('.');
+
+    // Check if it's a subdomain of our base domain
+    if (parts.length >= 2) {
+        const domain = parts.slice(1).join('.');
+        if (domain === baseDomain) {
+            return parts[0]; // Return the subdomain as league ID
+        }
+    }
+
+    // If it's not a recognized domain format, return null
+    return null;
+}
 
 const getIp = (event) => {
     const { request } = event;
@@ -66,9 +104,11 @@ function checkApiKey(request) {
 export const handle = async ({ event, resolve }) => {
     const ip = getIp(event);
     const { url, request } = event;
+
     if (checkRateLimit(ip)) {
         return new Response('Too many requests', { status: 429 });
     }
+
     if (request.method === 'OPTIONS') {
         return new Response(null, {
             status: 204,
@@ -81,6 +121,13 @@ export const handle = async ({ event, resolve }) => {
         });
     }
 
+    // Extract league ID from host and load league info
+    const host = request.headers.get('host');
+    const leagueId = extractLeagueId(host);
+    // Add league info to event locals for use in routes
+    event.locals.leagueId = leagueId;
+    event.locals.leagueInfo = getLeagueInfo(leagueId);
+
     if (url.pathname.startsWith('/api/')) {
         if (!isOriginAllowed(request)) {
             return new Response('Forbidden', { status: 403 });
@@ -90,6 +137,7 @@ export const handle = async ({ event, resolve }) => {
             return new Response('Unauthorized', { status: 401 });
         }
     }
+
     const response = await resolve(event);
     response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
     return response;

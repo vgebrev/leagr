@@ -3,7 +3,7 @@
     import { CheckCircleSolid } from 'flowbite-svelte-icons';
     import { Button, Input, Label, Toggle } from 'flowbite-svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setError } from '$lib/client/stores/error.js';
+    import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings, defaultSettings } from '$lib/client/stores/settings.js';
 
@@ -23,7 +23,7 @@
             },
             (err) => {
                 console.error('Error limiting players:', err);
-                setError('Failed to set settings. Please try again.');
+                setNotification('Failed to set settings. Please try again.', 'error');
             }
         );
     }
@@ -36,7 +36,7 @@
             },
             (err) => {
                 console.error('Error fetching settings:', err);
-                setError('Failed to load settings. Please try again.');
+                setNotification('Failed to load settings. Please try again.', 'error');
             }
         );
     });

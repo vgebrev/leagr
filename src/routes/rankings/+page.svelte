@@ -14,7 +14,7 @@
     } from 'flowbite-svelte';
     import { InfoCircleOutline, ChartOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { withLoading } from '$lib/client/stores/loading.js';
-    import { setError } from '$lib/client/stores/error.js';
+    import { setNotification } from '$lib/client/stores/notification.js';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
@@ -68,7 +68,7 @@
             },
             (err) => {
                 console.error(err);
-                setError('Unable to update rankings. Please try again.');
+                setNotification('Unable to update rankings. Please try again.', 'error');
             }
         );
     }
@@ -87,7 +87,7 @@
             },
             (err) => {
                 console.error(err);
-                setError('Unable to load rankings. Please try again.');
+                setNotification('Unable to load rankings. Please try again.', 'error');
             }
         );
     });

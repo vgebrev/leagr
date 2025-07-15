@@ -24,7 +24,30 @@ async function post(key, date, value) {
         body: JSON.stringify(value)
     });
     if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return await response.json();
+}
+
+async function postDirect(endpoint, value) {
+    const url = `${baseUrl}/${endpoint}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+        },
+        body: JSON.stringify(value)
+    });
+    if (!response.ok) {
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
 
     return await response.json();
@@ -65,6 +88,7 @@ async function patch(key, date, value) {
 export const api = {
     get,
     post,
+    postDirect,
     remove,
     patch
 };

@@ -3,7 +3,7 @@
     import { CalendarMonthSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setError } from '$lib/client/stores/error.js';
+    import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
@@ -78,7 +78,7 @@
 
     async function scheduleGames(regenerate = false) {
         if (isPast) {
-            setError('The date is in the past. Games cannot be changed.');
+            setNotification('The date is in the past. Games cannot be changed.', 'warning');
             return;
         }
         if (schedule.length > 0 && !regenerate) {
@@ -100,7 +100,7 @@
             },
             (err) => {
                 console.error(err);
-                setError('Failed to generate schedule. Please try again.');
+                setNotification('Failed to generate schedule. Please try again.', 'error');
                 schedule = restoreSchedule;
             }
         );
@@ -108,7 +108,7 @@
 
     async function addMoreGames() {
         if (isPast) {
-            setError('The date is in the past. Games cannot be changed.');
+            setNotification('The date is in the past. Games cannot be changed.', 'warning');
             return;
         }
         const restoreSchedule = schedule;
@@ -120,7 +120,7 @@
             },
             (err) => {
                 console.error(err);
-                setError('Failed to add more games. Please try again.');
+                setNotification('Failed to add more games. Please try again.', 'error');
                 schedule = restoreSchedule;
             }
         );
@@ -135,7 +135,7 @@
             },
             (err) => {
                 console.error(err);
-                setError('Failed to add more games. Please try again.');
+                setNotification('Failed to save score. Please try again.', 'error');
                 schedule = restoreSchedule;
             }
         );
@@ -151,7 +151,10 @@
             },
             (err) => {
                 console.error('Error fetching teams:', err);
-                setError('Failed to load team and schedule data. Please try again.');
+                setNotification(
+                    'Failed to load team and schedule data. Please try again.',
+                    'error'
+                );
             }
         );
     });

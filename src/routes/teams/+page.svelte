@@ -19,7 +19,7 @@
     let unassignedPlayers = $derived(teamsService.unassignedPlayers);
 
     // Get summary data
-    let playerSummary = $derived(teamsService.getPlayerSummary());
+    let playerSummary = $derived(teamsService.playerSummary);
 
     async function generateTeams(options) {
         await teamsService.generateTeams(options);

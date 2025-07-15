@@ -1,17 +1,34 @@
 import fs from 'fs/promises';
 import path from 'path';
+import { Mutex } from 'async-mutex';
+import { getLeagueDataPath } from './league.js';
 
-const dataPath = path.join(process.cwd(), 'data');
-const rankingsPath = path.join(dataPath, 'rankings.json');
+function getDataPath(leagueId) {
+    return getLeagueDataPath(leagueId);
+}
+
+function getRankingsPath(leagueId) {
+    return path.join(getDataPath(leagueId), 'rankings.json');
+}
+
+const rankingsMutexes = new Map();
+
+function getRankingsMutex(leagueId) {
+    if (!rankingsMutexes.has(leagueId)) {
+        rankingsMutexes.set(leagueId, new Mutex());
+    }
+    return rankingsMutexes.get(leagueId);
+}
+
 const BONUS_MULTIPLIER = 2;
 
 // Hybrid ranking algorithm configuration
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
 const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below threshold
 
-async function loadRankings() {
+async function loadRankingsUnsafe(leagueId) {
     try {
-        const raw = await fs.readFile(rankingsPath, 'utf-8');
+        const raw = await fs.readFile(getRankingsPath(leagueId), 'utf-8');
         return JSON.parse(raw);
     } catch {
         return {
@@ -22,8 +39,22 @@ async function loadRankings() {
     }
 }
 
-async function saveRankings(rankings) {
-    await fs.writeFile(rankingsPath, JSON.stringify(rankings, null, 2));
+async function loadRankings(leagueId) {
+    const mutex = getRankingsMutex(leagueId);
+    return await mutex.runExclusive(async () => {
+        return await loadRankingsUnsafe(leagueId);
+    });
+}
+
+async function saveRankingsUnsafe(rankings, leagueId) {
+    await fs.writeFile(getRankingsPath(leagueId), JSON.stringify(rankings, null, 2));
+}
+
+async function saveRankings(rankings, leagueId) {
+    const mutex = getRankingsMutex(leagueId);
+    return await mutex.runExclusive(async () => {
+        await saveRankingsUnsafe(rankings, leagueId);
+    });
 }
 
 function getMatchResults(rounds) {
@@ -203,62 +234,65 @@ function calculateEnhancedRankings(rawRankings) {
     };
 }
 
-async function updateRankings() {
-    const files = await fs.readdir(dataPath);
-    const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
+async function updateRankings(leagueId) {
+    const mutex = getRankingsMutex(leagueId);
+    return await mutex.runExclusive(async () => {
+        const files = await fs.readdir(getDataPath(leagueId));
+        const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
 
-    const rankings = await loadRankings();
+        const rankings = await loadRankingsUnsafe(leagueId); // Use unsafe version to avoid double-mutex
 
-    for (const file of dateFiles) {
-        const date = file.replace('.json', '');
-        if (rankings.calculatedDates.includes(date)) continue;
+        for (const file of dateFiles) {
+            const date = file.replace('.json', '');
+            if (rankings.calculatedDates.includes(date)) continue;
 
-        const raw = await fs.readFile(path.join(dataPath, file), 'utf-8');
-        const { teams, games } = JSON.parse(raw);
+            const raw = await fs.readFile(path.join(getDataPath(leagueId), file), 'utf-8');
+            const { teams, games } = JSON.parse(raw);
 
-        const teamEntries = Object.entries(teams ?? {});
-        const rounds = games?.rounds ?? [];
-        if (!teamEntries.length || !rounds.length) continue;
+            const teamEntries = Object.entries(teams ?? {});
+            const rounds = games?.rounds ?? [];
+            if (!teamEntries.length || !rounds.length) continue;
 
-        const teamNames = teamEntries.map(([name]) => name);
-        const results = getMatchResults(rounds);
-        const teamStats = getTeamStats(teamNames, results);
-        const standings = getStandings(teamNames, results);
+            const teamNames = teamEntries.map(([name]) => name);
+            const results = getMatchResults(rounds);
+            const teamStats = getTeamStats(teamNames, results);
+            const standings = getStandings(teamNames, results);
 
-        for (const [teamName, players] of teamEntries) {
-            const matchPoints = teamStats[teamName].points;
-            const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
+            for (const [teamName, players] of teamEntries) {
+                const matchPoints = teamStats[teamName].points;
+                const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
 
-            for (const player of players) {
-                if (!player) continue;
+                for (const player of players) {
+                    if (!player) continue;
 
-                if (!rankings.players[player]) {
-                    rankings.players[player] = { points: 0, appearances: 0 };
+                    if (!rankings.players[player]) {
+                        rankings.players[player] = { points: 0, appearances: 0 };
+                    }
+
+                    rankings.players[player].points += 1; // attendance
+                    rankings.players[player].points += matchPoints;
+                    rankings.players[player].points += bonusPoints;
+                    rankings.players[player].appearances += 1;
                 }
-
-                rankings.players[player].points += 1; // attendance
-                rankings.players[player].points += matchPoints;
-                rankings.players[player].points += bonusPoints;
-                rankings.players[player].appearances += 1;
             }
+
+            rankings.calculatedDates.push(date);
+            rankings.lastUpdated = date;
         }
 
-        rankings.calculatedDates.push(date);
-        rankings.lastUpdated = date;
-    }
+        // Apply hybrid ranking algorithm to the raw data
+        const enhancedRankings = calculateEnhancedRankings(rankings);
 
-    // Apply hybrid ranking algorithm to the raw data
-    const enhancedRankings = calculateEnhancedRankings(rankings);
-
-    await saveRankings(enhancedRankings);
-    return enhancedRankings;
+        await saveRankingsUnsafe(enhancedRankings, leagueId); // Use unsafe version to avoid double-mutex
+        return enhancedRankings;
+    });
 }
 
 /**
  * Load rankings and ensure they have enhanced data
  */
-async function loadEnhancedRankings() {
-    const rawRankings = await loadRankings();
+async function loadEnhancedRankings(leagueId) {
+    const rawRankings = await loadRankings(leagueId);
 
     // Check if rankings already have enhanced data
     if (rawRankings.rankingMetadata && rawRankings.players) {
@@ -276,8 +310,8 @@ async function loadEnhancedRankings() {
 /**
  * Get players data suitable for team generation
  */
-async function getPlayersForTeamGeneration() {
-    const enhancedRankings = await loadEnhancedRankings();
+async function getPlayersForTeamGeneration(leagueId) {
+    const enhancedRankings = await loadEnhancedRankings(leagueId);
 
     if (!enhancedRankings.players) {
         return {

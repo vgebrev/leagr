@@ -1,5 +1,5 @@
 import { derived, writable } from 'svelte/store';
-import { setError } from '$lib/client/stores/error.js';
+import { setNotification } from '$lib/client/stores/notification.js';
 
 export const loadingCount = writable(0);
 export const isLoading = derived(loadingCount, ($loadingCount) => $loadingCount > 0);
@@ -29,7 +29,7 @@ export async function withLoading(fn, err) {
             err(ex);
         } else {
             console.error('Error in withLoading:', ex);
-            setError('Something went wrong, please try again.');
+            setNotification('Something went wrong, please try again.', 'error');
         }
     } finally {
         popLoading();

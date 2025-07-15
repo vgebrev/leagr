@@ -2,8 +2,8 @@ import path from 'path';
 import fs from 'fs/promises';
 import { isObject } from '$lib/shared/helpers.js';
 import { Mutex } from 'async-mutex';
+import { getLeagueDataPath } from './league.js';
 
-const dataPath = path.join(process.cwd(), 'data');
 const mutexes = new Map();
 
 function getMutex(filename) {
@@ -23,23 +23,28 @@ function resolvePath(obj, path, defaultValue = {}) {
     return { parent: current, key: parts[parts.length - 1] };
 }
 
-async function get(key, date) {
+async function get(key, date, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
     }
 
-    try {
-        const filePath = path.join(dataPath, `${filename}.json`);
-        const file = await fs.readFile(filePath, 'utf-8');
-        const data = JSON.parse(file);
-        const { parent, key: finalKey } = resolvePath(data, key);
-        return parent[finalKey];
-    } catch (err) {
-        console.error('Error reading file:', err);
-        return null;
-    }
+    const dataPath = getLeagueDataPath(leagueId);
+    const filePath = path.join(dataPath, `${filename}.json`);
+    const mutex = getMutex(filePath);
+
+    return await mutex.runExclusive(async () => {
+        try {
+            const file = await fs.readFile(filePath, 'utf-8');
+            const data = JSON.parse(file);
+            const { parent, key: finalKey } = resolvePath(data, key);
+            return parent[finalKey];
+        } catch (err) {
+            console.error('Error reading file:', err);
+            return null;
+        }
+    });
 }
 
 /**
@@ -49,15 +54,17 @@ async function get(key, date) {
  * @param value
  * @param {[]|{}|number}defaultValue
  * @param {boolean} [overwrite=false] - Whether to overwrite the existing value if it exists (true), or merge/add to it (false).
+ * @param {string|null} [leagueId=null] - The league name (null for default league).
  * @returns {Promise}
  */
-async function set(key, date, value, defaultValue = [], overwrite = false) {
+async function set(key, date, value, defaultValue = [], overwrite = false, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
     }
 
+    const dataPath = getLeagueDataPath(leagueId);
     const filePath = path.join(dataPath, `${filename}.json`);
     const mutex = getMutex(filePath);
 
@@ -92,13 +99,14 @@ async function set(key, date, value, defaultValue = [], overwrite = false) {
     });
 }
 
-async function remove(key, date, value) {
+async function remove(key, date, value, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
     }
 
+    const dataPath = getLeagueDataPath(leagueId);
     const filePath = path.join(dataPath, `${filename}.json`);
     const mutex = getMutex(filePath);
 

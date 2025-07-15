@@ -1,7 +1,12 @@
 import { error, json } from '@sveltejs/kit';
-import { playerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
+import { validateLeagueForAPI } from '$lib/server/league.js';
 
-export const DELETE = async ({ request, url }) => {
+export const DELETE = async ({ request, url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -17,8 +22,9 @@ export const DELETE = async ({ request, url }) => {
     const action = body.action || 'waitingList';
 
     try {
-        const result = await playerManager
+        const result = await createPlayerManager()
             .setDate(date)
+            .setLeague(leagueId)
             .removePlayerFromTeam(body.playerName, body.teamName, action);
         return json(result);
     } catch (err) {
@@ -27,7 +33,12 @@ export const DELETE = async ({ request, url }) => {
     }
 };
 
-export const POST = async ({ request, url }) => {
+export const POST = async ({ request, url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -41,8 +52,9 @@ export const POST = async ({ request, url }) => {
 
     try {
         // Try to assign player to team (works for both available and waiting list players)
-        const result = await playerManager
+        const result = await createPlayerManager()
             .setDate(date)
+            .setLeague(leagueId)
             .fillEmptySlotWithPlayer(body.teamName, body.playerName);
         return json(result);
     } catch (err) {
@@ -51,7 +63,12 @@ export const POST = async ({ request, url }) => {
     }
 };
 
-export const PATCH = async ({ request, url }) => {
+export const PATCH = async ({ request, url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -68,8 +85,9 @@ export const PATCH = async ({ request, url }) => {
                 return error(400, 'playerName and teamName are required for fillSlot operation');
             }
 
-            const result = await playerManager
+            const result = await createPlayerManager()
                 .setDate(date)
+                .setLeague(leagueId)
                 .fillEmptySlotWithPlayer(body.teamName, body.playerName);
             return json(result);
         } else if (operation === 'movePlayerBetweenTeams') {
@@ -81,8 +99,9 @@ export const PATCH = async ({ request, url }) => {
                 );
             }
 
-            const result = await playerManager
+            const result = await createPlayerManager()
                 .setDate(date)
+                .setLeague(leagueId)
                 .movePlayerBetweenTeams(body.playerName, body.fromTeam, body.toTeam);
             return json({ teams: result });
         } else {
@@ -97,7 +116,12 @@ export const PATCH = async ({ request, url }) => {
     }
 };
 
-export const GET = async ({ url }) => {
+export const GET = async ({ url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
     const date = url.searchParams.get('date');
 
     if (!date) {
@@ -105,7 +129,10 @@ export const GET = async ({ url }) => {
     }
 
     try {
-        const availableSlots = await playerManager.setDate(date).getAvailableSlots();
+        const availableSlots = await createPlayerManager()
+            .setDate(date)
+            .setLeague(leagueId)
+            .getAvailableSlots();
         return json({ availableSlots });
     } catch (err) {
         console.error('Error getting available slots:', err);

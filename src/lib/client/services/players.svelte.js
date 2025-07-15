@@ -1,5 +1,5 @@
 import { api } from '$lib/client/services/api-client.svelte.js';
-import { setError } from '$lib/client/stores/error.js';
+import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { get } from 'svelte/store';
@@ -66,6 +66,10 @@ class PlayersService {
      * @returns {Promise<boolean>} True if successful
      */
     async addPlayer(name, list = 'available') {
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return false;
+        }
         let success = false;
 
         await withLoading(
@@ -73,12 +77,12 @@ class PlayersService {
                 const trimmedName = name.trim();
 
                 if (!trimmedName) {
-                    setError('Player name cannot be empty.');
+                    setNotification('Player name cannot be empty.', 'warning');
                     return;
                 }
 
                 if (this.players.includes(trimmedName) || this.waitingList.includes(trimmedName)) {
-                    setError(`Player ${trimmedName} already added.`);
+                    setNotification(`Player ${trimmedName} already added.`, 'warning');
                     return;
                 }
 
@@ -99,14 +103,17 @@ class PlayersService {
                     originalList === 'available' &&
                     (list === 'waitingList' || result.waitingList.includes(trimmedName))
                 ) {
-                    setError(`Player limit reached. ${trimmedName} added to waiting list.`);
+                    setNotification(
+                        `Player limit reached. ${trimmedName} added to waiting list.`,
+                        'info'
+                    );
                 }
 
                 success = true;
             },
             (error) => {
                 console.error('Error adding player:', error);
-                setError('Failed to add player. Please try again.');
+                setNotification('Failed to add player. Please try again.', 'error');
             }
         );
 
@@ -119,6 +126,10 @@ class PlayersService {
      * @param {string} [list='available'] - List to remove the player from ('available' or 'waitingList')
      */
     async removePlayer(playerName, list = 'available') {
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return;
+        }
         await withLoading(
             async () => {
                 const index =
@@ -136,7 +147,7 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error removing player:', error);
-                setError('Failed to remove player. Please try again.');
+                setNotification('Failed to remove player. Please try again.', 'error');
             }
         );
     }
@@ -150,7 +161,10 @@ class PlayersService {
      */
     async movePlayer(playerName, fromList, toList) {
         if (fromList === toList) return;
-
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return;
+        }
         await withLoading(
             async () => {
                 const result = await api.patch('players', this.currentDate, {
@@ -163,7 +177,7 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error moving player:', error);
-                setError('Failed to move player. Please try again.');
+                setNotification('Failed to move player. Please try again.', 'error');
             }
         );
     }

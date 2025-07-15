@@ -1,14 +1,20 @@
 import { error, json } from '@sveltejs/kit';
-import { playerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
+import { validateLeagueForAPI } from '$lib/server/league.js';
 
-export const GET = async ({ url }) => {
+export const GET = async ({ url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
     const date = url.searchParams.get('date');
     if (!date) {
         return error(400, 'Date parameter is required');
     }
 
     try {
-        const gameData = await playerManager.setDate(date).getData();
+        const gameData = await createPlayerManager().setDate(date).setLeague(leagueId).getData();
         return json(gameData.teams);
     } catch (err) {
         console.error('Error fetching teams:', err);
@@ -16,7 +22,12 @@ export const GET = async ({ url }) => {
     }
 };
 
-export const POST = async ({ request, url }) => {
+export const POST = async ({ request, url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
     const date = url.searchParams.get('date');
     const body = await request.json();
 
@@ -33,10 +44,10 @@ export const POST = async ({ request, url }) => {
 
         // Set the teams using the data service (maintain existing functionality)
         const { data } = await import('$lib/server/data.js');
-        await data.set('teams', date, body, {}, true);
+        await data.set('teams', date, body, {}, true, leagueId);
 
         // Then validate and cleanup any inconsistencies
-        const result = await playerManager.setDate(date).validateAndCleanup();
+        const result = await createPlayerManager().setDate(date).setLeague(leagueId).validateAndCleanup();
 
         return json(result.teams);
     } catch (err) {

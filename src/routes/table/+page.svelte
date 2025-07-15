@@ -11,7 +11,7 @@
     } from 'flowbite-svelte';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setError } from '$lib/client/stores/error.js';
+    import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import TeamBadge from '../../components/TeamBadge.svelte';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
@@ -113,7 +113,10 @@
             },
             (err) => {
                 console.error('Error fetching teams:', err);
-                setError('Failed to load team and schedule data. Please try again.');
+                setNotification(
+                    'Failed to load team and schedule data. Please try again.',
+                    'error'
+                );
             }
         );
     });

@@ -4,6 +4,7 @@ import { defaultSettings, defaultPlayers } from '$lib/shared/defaults.js';
 export class PlayerManager {
     constructor() {
         this.date = null;
+        this.leagueId = null;
     }
 
     /**
@@ -15,19 +16,34 @@ export class PlayerManager {
     }
 
     /**
+     * Initialize with league id for operations
+     */
+    setLeague(leagueId) {
+        this.leagueId = leagueId;
+        return this;
+    }
+
+    /**
      * Get current players and teams data
      */
     async getData() {
         const [players, teams, settings] = await Promise.all([
-            data.get('players', this.date),
-            data.get('teams', this.date),
-            data.get('settings', this.date)
+            data.get('players', this.date, this.leagueId),
+            data.get('teams', this.date, this.leagueId),
+            data.get('settings', this.date, this.leagueId)
         ]);
-
+        console.log(
+            `player data for ${this.leagueId} on ${this.data}:`,
+            players,
+            teams,
+            settings,
+            defaultPlayers,
+            defaultSettings
+        );
         return {
-            players: players || defaultPlayers,
+            players: players || structuredClone(defaultPlayers),
             teams: teams || {},
-            settings: settings || defaultSettings
+            settings: settings || structuredClone(defaultSettings)
         };
     }
 
@@ -59,7 +75,14 @@ export class PlayerManager {
             players.waitingList.push(playerName);
         }
 
-        await data.set('players', this.date, players, { available: [], waitingList: [] }, true);
+        await data.set(
+            'players',
+            this.date,
+            players,
+            { available: [], waitingList: [] },
+            true,
+            this.leagueId
+        );
         return players;
     }
 
@@ -76,7 +99,14 @@ export class PlayerManager {
             players.waitingList = players.waitingList.filter((p) => p !== playerName);
         }
 
-        await data.set('players', this.date, players, { available: [], waitingList: [] }, true);
+        await data.set(
+            'players',
+            this.date,
+            players,
+            { available: [], waitingList: [] },
+            true,
+            this.leagueId
+        );
         return players;
     }
 
@@ -112,7 +142,14 @@ export class PlayerManager {
             players.waitingList.push(playerName);
         }
 
-        await data.set('players', this.date, players, { available: [], waitingList: [] }, true);
+        await data.set(
+            'players',
+            this.date,
+            players,
+            { available: [], waitingList: [] },
+            true,
+            this.leagueId
+        );
         return players;
     }
 
@@ -150,8 +187,15 @@ export class PlayerManager {
 
         // Save both players and teams
         await Promise.all([
-            data.set('players', this.date, players, { available: [], waitingList: [] }, true),
-            data.set('teams', this.date, teams, {}, true)
+            data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            ),
+            data.set('teams', this.date, teams, {}, true, this.leagueId)
         ]);
 
         return { players, teams };
@@ -194,8 +238,15 @@ export class PlayerManager {
 
         // Save both players and teams
         await Promise.all([
-            data.set('players', this.date, players, { available: [], waitingList: [] }, true),
-            data.set('teams', this.date, teams, {}, true)
+            data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            ),
+            data.set('teams', this.date, teams, {}, true, this.leagueId)
         ]);
 
         return { players, teams };
@@ -237,8 +288,15 @@ export class PlayerManager {
 
         // Save both players and teams
         await Promise.all([
-            data.set('players', this.date, players, { available: [], waitingList: [] }, true),
-            data.set('teams', this.date, teams, {}, true)
+            data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            ),
+            data.set('teams', this.date, teams, {}, true, this.leagueId)
         ]);
 
         return { players, teams };
@@ -293,7 +351,7 @@ export class PlayerManager {
         teams[fromTeam][fromIndex] = null;
         teams[toTeam][toIndex] = playerName;
 
-        await data.set('teams', this.date, teams, {}, true);
+        await data.set('teams', this.date, teams, {}, true, this.leagueId);
         return teams;
     }
 
@@ -318,7 +376,14 @@ export class PlayerManager {
         players.waitingList = players.waitingList.filter((p) => p !== playerName);
         players.available.push(playerName);
 
-        await data.set('players', this.date, players, { available: [], waitingList: [] }, true);
+        await data.set(
+            'players',
+            this.date,
+            players,
+            { available: [], waitingList: [] },
+            true,
+            this.leagueId
+        );
         return players;
     }
 
@@ -351,12 +416,19 @@ export class PlayerManager {
 
         // Save if changes were made
         if (hasChanges) {
-            await data.set('players', this.date, players, { available: [], waitingList: [] }, true);
+            await data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            );
         }
 
         return { players, teams, hasChanges };
     }
 }
 
-// Export singleton instance
-export const playerManager = new PlayerManager();
+// Export factory function to create new instance per request
+export const createPlayerManager = () => new PlayerManager();

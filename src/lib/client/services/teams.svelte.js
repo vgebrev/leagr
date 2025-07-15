@@ -1,13 +1,14 @@
 import { api } from '$lib/client/services/api-client.svelte.js';
 import { playersService } from '$lib/client/services/players.svelte.js';
-import { setError } from '$lib/client/stores/error.js';
+import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings, defaultSettings } from '$lib/client/stores/settings.js';
 import { nouns } from '$lib/client/nouns.js';
 import { teamColours, isDateInPast } from '$lib/shared/helpers.js';
-import { get } from 'svelte/store';
 
 class TeamsService {
+    #settings = $state(defaultSettings);
+
     // State
     /** @type {Object} */
     teams = $state({});
@@ -20,6 +21,20 @@ class TeamsService {
 
     /** @type {boolean} */
     hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
+
+    /** @type {Object} */
+    playerSummary = $derived.by(() => {
+        const players = playersService.players;
+        const waitingList = playersService.waitingList;
+        const playerLimit = this.#settings.playerLimit;
+
+        return {
+            available: players.length,
+            eligible: Math.min(players.length, playerLimit),
+            excess: Math.max(0, players.length - playerLimit),
+            waitingList: waitingList.length
+        };
+    });
 
     /** @type {boolean} */
     isPast = $derived.by(() => {
@@ -56,8 +71,6 @@ class TeamsService {
         // Return available players not assigned to any team
         return playersService.players.filter((player) => !assignedPlayers.has(player));
     });
-
-    #settings = $state(defaultSettings);
 
     constructor() {
         settings.subscribe((settings) => {
@@ -201,12 +214,12 @@ class TeamsService {
      */
     async generateTeams(options) {
         if (this.isPast) {
-            setError('The date is in the past. Teams cannot be changed.');
+            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
             return false;
         }
 
         if (!options) {
-            setError('Please choose a team option.');
+            setNotification('Please choose a team option.', 'warning');
             return false;
         }
 
@@ -225,7 +238,7 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error generating teams:', err);
-                setError('Failed to generate teams. Please try again.');
+                setNotification('Failed to generate teams. Please try again.', 'error');
                 this.teams = restoreTeams;
             }
         );
@@ -241,7 +254,7 @@ class TeamsService {
      */
     async removePlayerFromTeam(player, teamIndex, action = 'waitingList') {
         if (this.isPast) {
-            setError('The date is in the past. Teams cannot be changed.');
+            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
             return;
         }
 
@@ -269,7 +282,7 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error removing player from team:', err);
-                setError('Failed to remove player. Please try again.');
+                setNotification('Failed to remove player. Please try again.', 'error');
                 this.teams = restoreTeams;
                 playersService.players = restorePlayers;
                 playersService.waitingList = restoreWaitingList;
@@ -294,7 +307,7 @@ class TeamsService {
             const nextPlayer = this.unassignedPlayers[0];
             return this.fillEmptySpotWithPlayer(playerIndex, teamIndex, nextPlayer);
         } else {
-            setError('No unassigned players available.');
+            setNotification('No unassigned players available.', 'info');
         }
     }
 
@@ -305,7 +318,7 @@ class TeamsService {
      */
     async assignPlayerToTeam(playerName, teamName) {
         if (this.isPast) {
-            setError('The date is in the past. Teams cannot be changed.');
+            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
             return;
         }
 
@@ -329,7 +342,7 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error assigning player to team:', err);
-                setError('Failed to assign player to team. Please try again.');
+                setNotification('Failed to assign player to team. Please try again.', 'error');
                 this.teams = restoreTeams;
                 playersService.players = restorePlayers;
                 playersService.waitingList = restoreWaitingList;
@@ -345,7 +358,7 @@ class TeamsService {
      */
     async fillEmptySpotWithPlayer(playerIndex, teamIndex, selectedPlayer) {
         if (this.isPast) {
-            setError('The date is in the past. Teams cannot be changed.');
+            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
             return;
         }
 
@@ -359,7 +372,7 @@ class TeamsService {
                 const teamName = teamNames[teamIndex];
 
                 if (this.teams[teamName][playerIndex] !== null) {
-                    setError('This spot is already filled.');
+                    setNotification('This spot is already filled.', 'warning');
                     return;
                 }
 
@@ -378,7 +391,10 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error filling empty spot with specific player:', err);
-                setError('Failed to assign player to empty spot. Please try again.');
+                setNotification(
+                    'Failed to assign player to empty spot. Please try again.',
+                    'error'
+                );
                 this.teams = restoreTeams;
                 playersService.players = restorePlayers;
                 playersService.waitingList = restoreWaitingList;
@@ -406,7 +422,7 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error fetching teams data:', err);
-                setError('Failed to load teams data. Please try again.');
+                setNotification('Failed to load teams data. Please try again.', 'error');
             }
         );
     }
@@ -426,22 +442,6 @@ class TeamsService {
      */
     getAllPlayers() {
         return [...playersService.players, ...playersService.waitingList];
-    }
-
-    /**
-     * Get summary statistics for display
-     */
-    getPlayerSummary() {
-        const players = playersService.players;
-        const waitingList = playersService.waitingList;
-        const playerLimit = get(settings).playerLimit;
-
-        return {
-            available: players.length,
-            eligible: Math.min(players.length, playerLimit),
-            excess: Math.max(0, players.length - playerLimit),
-            waitingList: waitingList.length
-        };
     }
 }
 
