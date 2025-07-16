@@ -12,8 +12,7 @@ export function getStoredAccessCode(leagueId) {
     if (typeof window === 'undefined') return null;
 
     try {
-        const stored = localStorage.getItem(`${leagueId}/accessCode`);
-        return stored;
+        return localStorage.getItem(`${leagueId}/accessCode`);
     } catch (error) {
         console.error('Error reading access code from localStorage:', error);
         return null;

@@ -1,42 +1,38 @@
 import { json, error } from '@sveltejs/kit';
-import { validateLeagueForAPI, LeagueError } from '$lib/server/league.js';
+import { validateLeagueForAPI } from '$lib/server/league.js';
 
 export async function POST({ request, locals }) {
+    // Validate league exists
+    const { isValid: isLeagueValid } = validateLeagueForAPI(locals);
+    if (!isLeagueValid) {
+        return error(404, 'League not found');
+    }
+
+    // Parse JSON with error handling
+    let requestData;
     try {
-        // Validate league exists
-        const { isValid: isLeagueValid } = validateLeagueForAPI(locals);
-        if (!isLeagueValid) {
-            return error(404, 'League not found');
-        }
-
-        const { accessCode } = await request.json();
-
-        // Validate access code
-        if (!accessCode || typeof accessCode !== 'string') {
-            throw new LeagueError('Access code is required', 400);
-        }
-
-        console.log('Access code check', accessCode, locals.leagueInfo);
-        // Check if access code matches
-        const isValid = accessCode.trim() === locals.leagueInfo.accessCode;
-
-        if (isValid) {
-            return json({
-                success: true,
-                message: 'Authentication successful'
-            });
-        } else {
-            throw new LeagueError('Invalid access code', 401);
-        }
+        requestData = await request.json();
     } catch (err) {
-        console.error('Authentication error:', err);
+        console.error('JSON parse error:', err);
+        return error(400, { message: 'Invalid JSON payload' });
+    }
 
-        // Handle LeagueError with proper status codes
-        if (err instanceof LeagueError) {
-            return error(err.statusCode, { message: err.message });
-        }
+    const { accessCode } = requestData;
 
-        // Handle unexpected errors
-        return error(500, { message: 'Authentication failed' });
+    // Validate access code
+    if (!accessCode || typeof accessCode !== 'string') {
+        return error(400, { message: 'Access code is required' });
+    }
+
+    // Check if access code matches
+    const isValid = accessCode.trim() === locals.leagueInfo.accessCode;
+
+    if (isValid) {
+        return json({
+            success: true,
+            message: 'Authentication successful'
+        });
+    } else {
+        return error(401, { message: 'Invalid access code' });
     }
 }

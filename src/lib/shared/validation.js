@@ -28,9 +28,7 @@ export function isValidSubdomain(subdomain) {
 
     // Check if subdomain contains any disallowed words
     const containsDisallowed = disallowedLeagueNames.some((word) => lowerSubdomain.includes(word));
-    if (containsDisallowed) return false;
-
-    return true;
+    return !containsDisallowed;
 }
 
 /**
