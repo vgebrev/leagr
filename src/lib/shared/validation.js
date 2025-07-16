@@ -1,3 +1,6 @@
+import { reservedLeagueNames } from './reservedLeagueNames.js';
+import { disallowedLeagueNames } from './disallowedLeagueNames.js';
+
 /**
  * Validate if a string is a valid subdomain
  * @param {string} subdomain - The subdomain to validate
@@ -6,12 +9,28 @@
 export function isValidSubdomain(subdomain) {
     if (!subdomain || typeof subdomain !== 'string') return false;
 
-    // Check length (1-63 characters)
-    if (subdomain.length < 1 || subdomain.length > 63) return false;
+    // Check minimum length (3 characters)
+    if (subdomain.length < 3) return false;
+
+    // Check maximum length (63 characters)
+    if (subdomain.length > 63) return false;
 
     // Check pattern: alphanumeric and hyphens, but not starting/ending with hyphen
     const subdomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
-    return subdomainRegex.test(subdomain);
+    if (!subdomainRegex.test(subdomain)) return false;
+
+    // Check against reserved names (case-insensitive)
+    const lowerSubdomain = subdomain.toLowerCase();
+    if (reservedLeagueNames.includes(lowerSubdomain)) return false;
+
+    // Check against disallowed names (case-insensitive)
+    if (disallowedLeagueNames.includes(lowerSubdomain)) return false;
+
+    // Check if subdomain contains any disallowed words
+    const containsDisallowed = disallowedLeagueNames.some((word) => lowerSubdomain.includes(word));
+    if (containsDisallowed) return false;
+
+    return true;
 }
 
 /**

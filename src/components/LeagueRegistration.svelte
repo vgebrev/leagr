@@ -52,7 +52,7 @@
     let subdomainError = $derived.by(() => {
         if (mode === 'new' && subdomain) {
             if (!isValidSubdomain(subdomain)) {
-                return 'Invalid subdomain. Use only letters, numbers, and hyphens.';
+                return 'Invalid league URL. Use only letters, numbers, and hyphens.';
             }
         }
         return '';
@@ -62,7 +62,7 @@
         event.preventDefault();
         // Validate form
         if (!subdomain) {
-            setNotification('Please enter a subdomain for your league', 'warning');
+            setNotification('Please enter an URL for your league', 'warning');
             return;
         }
 
