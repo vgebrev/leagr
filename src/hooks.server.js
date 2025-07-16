@@ -70,29 +70,35 @@ function checkRateLimit(ip) {
 }
 
 function isOriginAllowed(request) {
-    if (!allowedOrigin) return true;
+    if (!allowedOrigin) return { allowed: true, origin: null };
     const origin = request.headers.get('origin');
     const referrer = request.headers.get('referer');
     const referrerBase = referrer ? new URL(referrer).origin : null;
 
-    const result = allowedOrigin.split(',').some((ao) => {
+    for (const ao of allowedOrigin.split(',')) {
         const trimmedAo = ao.trim();
 
         if (trimmedAo.includes('*')) {
             const pattern = trimmedAo.replace(/\*/g, '.*');
             const regex = new RegExp(`^${pattern}$`);
-            const matchesOrigin = origin && regex.test(origin);
-            const matchesReferrer = referrerBase && regex.test(referrerBase);
-            return matchesOrigin || matchesReferrer;
+            if (origin && regex.test(origin)) {
+                return { allowed: true, origin };
+            }
+            if (referrerBase && regex.test(referrerBase)) {
+                return { allowed: true, origin: referrerBase };
+            }
+        } else {
+            // Original exact match logic
+            if (origin === trimmedAo) {
+                return { allowed: true, origin };
+            }
+            if (referrerBase === trimmedAo) {
+                return { allowed: true, origin: referrerBase };
+            }
         }
+    }
 
-        // Original exact match logic
-        const exactOrigin = origin === trimmedAo;
-        const exactReferrer = referrerBase === trimmedAo;
-        return exactOrigin || exactReferrer;
-    });
-
-    return result;
+    return { allowed: false, origin: null };
 }
 
 function checkApiKey(request) {
@@ -110,11 +116,12 @@ export const handle = async ({ event, resolve }) => {
     }
 
     if (request.method === 'OPTIONS') {
+        const { allowed, origin } = isOriginAllowed(request);
         return new Response(null, {
             status: 204,
             headers: {
-                'Access-Control-Allow-Origin': allowedOrigin,
-                'Access-Control-Allow-Methods': 'GET,POST,DELETE,OPTIONS',
+                'Access-Control-Allow-Origin': allowed ? origin || '*' : 'null',
+                'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
                 'Access-Control-Allow-Headers': 'Content-Type,X-API-KEY',
                 'Access-Control-Max-Age': '86400'
             }
@@ -128,8 +135,10 @@ export const handle = async ({ event, resolve }) => {
     event.locals.leagueId = leagueId;
     event.locals.leagueInfo = getLeagueInfo(leagueId);
 
+    const { allowed, origin } = isOriginAllowed(request);
+
     if (url.pathname.startsWith('/api/')) {
-        if (!isOriginAllowed(request)) {
+        if (!allowed) {
             return new Response('Forbidden', { status: 403 });
         }
 
@@ -139,6 +148,6 @@ export const handle = async ({ event, resolve }) => {
     }
 
     const response = await resolve(event);
-    response.headers.set('Access-Control-Allow-Origin', allowedOrigin);
+    response.headers.set('Access-Control-Allow-Origin', allowed ? origin || '*' : 'null');
     return response;
 };
