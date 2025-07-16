@@ -22,17 +22,17 @@
     );
 </script>
 
-{#if $notification && config}
-    <Toast
-        toastStatus={true}
-        transition={fade}
-        color={config.color}
-        class="border-primary-400 flex items-center border"
-        position="top-right">
-        {#snippet icon()}
-            {@const IconComponent = config.icon}
-            <IconComponent class="h-4 w-4" />
-        {/snippet}
-        {$notification.message}
-    </Toast>
-{/if}
+ti
+
+<Toast
+    toastStatus={!!$notification && !!config}
+    transition={fade}
+    color={config?.color || 'red'}
+    class="border-primary-400 flex items-center border"
+    position="top-right">
+    {#snippet icon()}
+        {@const IconComponent = config?.icon || typeConfig.error.icon}
+        <IconComponent class="h-4 w-4" />
+    {/snippet}
+    {$notification?.message || ''}
+</Toast>

@@ -422,7 +422,10 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error fetching teams data:', err);
-                setNotification('Failed to load teams data. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to load teams data. Please try again.',
+                    'error'
+                );
             }
         );
     }

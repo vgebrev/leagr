@@ -112,7 +112,7 @@ export const handle = async ({ event, resolve }) => {
     const { url, request } = event;
 
     if (checkRateLimit(ip)) {
-        return new Response('Too many requests', { status: 429 });
+        return new Response(JSON.stringify({ message: 'Too many requests.' }), { status: 429 });
     }
 
     if (request.method === 'OPTIONS') {
@@ -139,11 +139,35 @@ export const handle = async ({ event, resolve }) => {
 
     if (url.pathname.startsWith('/api/')) {
         if (!allowed) {
-            return new Response('Forbidden', { status: 403 });
+            return new Response(JSON.stringify({ message: 'Forbidden' }), { status: 403 });
         }
 
         if (!checkApiKey(request)) {
-            return new Response('Unauthorized', { status: 401 });
+            return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+        }
+
+        // Check access code for API requests (except public league endpoints)
+        if (!url.pathname.startsWith('/api/leagues/')) {
+            const accessCode = request.headers.get('authorization');
+
+            // Must have league info and access code for protected endpoints
+            if (!event.locals.leagueInfo) {
+                return new Response(JSON.stringify({ message: 'League info missing.' }), {
+                    status: 400
+                });
+            }
+
+            if (!accessCode) {
+                return new Response(JSON.stringify({ message: 'League access code required.' }), {
+                    status: 403
+                });
+            }
+
+            if (accessCode !== event.locals.leagueInfo.accessCode) {
+                return new Response(JSON.stringify({ message: 'Invalid league access code.' }), {
+                    status: 403
+                });
+            }
         }
     }
 

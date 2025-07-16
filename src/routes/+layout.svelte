@@ -2,17 +2,26 @@
     import '../app.css';
     import { settings } from '$lib/client/stores/settings.js';
     import { dateString } from '$lib/shared/helpers.js';
-    import { setApiKey } from '$lib/client/services/api-client.svelte.js';
+    import { setApiKey, setLeagueId } from '$lib/client/services/api-client.svelte.js';
     import { page } from '$app/state';
     import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
     import { onMount } from 'svelte';
+    import { goto, afterNavigate } from '$app/navigation';
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
     import Notification from '../components/Notification.svelte';
+    import {
+        extractAccessCodeFromQuery,
+        storeAccessCode,
+        isAuthenticated,
+        validateAccessCode,
+        removeStoredAccessCode
+    } from '$lib/client/services/auth.js';
 
     let { data, children } = $props();
     setApiKey(data.apiKey);
+    setLeagueId(data.leagueId);
     let selectedDate = $derived(new Date(data.date));
     let date = $derived(dateString(selectedDate));
 
@@ -55,6 +64,52 @@
     // Pages that need the date selector
     const datePages = ['/players', '/teams', '/games', '/table', '/settings'];
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
+
+    // Pages that should be accessible without authentication
+    const publicPages = ['/', '/auth'];
+    let isPublicPage = $derived(publicPages.includes(page.url.pathname));
+
+    // Handle authentication after navigation
+    afterNavigate(async () => {
+        // Only check authentication for league pages (not root domain)
+        if (!data.leagueInfo || isPublicPage) {
+            return;
+        }
+
+        // Check for access code in query params (silent auth)
+        const codeFromQuery = extractAccessCodeFromQuery(page.url.searchParams);
+        if (codeFromQuery) {
+            // Validate the code with server before storing
+            const isValid = await validateAccessCode(codeFromQuery);
+            if (isValid) {
+                storeAccessCode(data.leagueId, codeFromQuery);
+
+                // Remove code from URL and reload the page to refresh with authenticated state
+                const newUrl = new URL(page.url);
+                newUrl.searchParams.delete('code');
+                window.location.href = newUrl.toString();
+                return; // Page will reload
+            } else {
+                // Invalid code in query params, redirect to auth page
+                removeStoredAccessCode(data.leagueId);
+                // Preserve query params except the invalid 'code' parameter
+                const searchParams = new URLSearchParams(page.url.search);
+                searchParams.delete('code');
+                const queryString = searchParams.toString();
+                const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');
+                const redirectUrl = encodeURIComponent(fullUrl);
+                goto(`/auth?redirect=${redirectUrl}`);
+                return;
+            }
+        }
+
+        // Check if user is authenticated (has stored code)
+        const authenticated = isAuthenticated(data.leagueId);
+        if (!authenticated) {
+            const redirectUrl = encodeURIComponent(page.url.pathname + page.url.search);
+            goto(`/auth?redirect=${redirectUrl}`);
+        }
+    });
 </script>
 
 <svelte:head>

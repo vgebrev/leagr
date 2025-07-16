@@ -100,7 +100,10 @@
             },
             (err) => {
                 console.error(err);
-                setNotification('Failed to generate schedule. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to generate schedule. Please try again.',
+                    'error'
+                );
                 schedule = restoreSchedule;
             }
         );
@@ -120,7 +123,10 @@
             },
             (err) => {
                 console.error(err);
-                setNotification('Failed to add more games. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to add more games. Please try again.',
+                    'error'
+                );
                 schedule = restoreSchedule;
             }
         );
@@ -135,7 +141,7 @@
             },
             (err) => {
                 console.error(err);
-                setNotification('Failed to save score. Please try again.', 'error');
+                setNotification(err.message || 'Failed to save score. Please try again.', 'error');
                 schedule = restoreSchedule;
             }
         );
@@ -152,7 +158,7 @@
             (err) => {
                 console.error('Error fetching teams:', err);
                 setNotification(
-                    'Failed to load team and schedule data. Please try again.',
+                    err.message || 'Failed to load team and schedule data. Please try again.',
                     'error'
                 );
             }

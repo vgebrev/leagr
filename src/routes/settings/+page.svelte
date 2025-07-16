@@ -22,8 +22,11 @@
                 $settings = storedSettings;
             },
             (err) => {
-                console.error('Error limiting players:', err);
-                setNotification('Failed to set settings. Please try again.', 'error');
+                console.error('Error saving settings:', err);
+                setNotification(
+                    err.message || 'Failed to set settings. Please try again.',
+                    'error'
+                );
             }
         );
     }
@@ -36,7 +39,10 @@
             },
             (err) => {
                 console.error('Error fetching settings:', err);
-                setNotification('Failed to load settings. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to load settings. Please try again.',
+                    'error'
+                );
             }
         );
     });

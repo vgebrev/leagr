@@ -47,16 +47,24 @@ class PlayersService {
      * @param {string} date - The date to load players for
      */
     async loadPlayers(date) {
-        await withLoading(async () => {
-            this.currentDate = date;
-            const playerData = await api.get('players', date);
-            this.players = playerData.available || [];
-            this.waitingList = playerData.waitingList || [];
+        await withLoading(
+            async () => {
+                this.currentDate = date;
+                const playerData = await api.get('players', date);
+                this.players = playerData.available || [];
+                this.waitingList = playerData.waitingList || [];
 
-            if (this.rankedPlayers.length === 0) {
-                this.rankedPlayers = await api.get('players/ranked');
+                if (this.rankedPlayers.length === 0) {
+                    this.rankedPlayers = await api.get('players/ranked');
+                }
+            },
+            (error) => {
+                setNotification(
+                    error.message || 'Failed to load players. Please try again.',
+                    'error'
+                );
             }
-        });
+        );
     }
 
     /**
@@ -113,7 +121,10 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error adding player:', error);
-                setNotification('Failed to add player. Please try again.', 'error');
+                setNotification(
+                    error.message || 'Failed to add player. Please try again.',
+                    'error'
+                );
             }
         );
 
@@ -147,7 +158,10 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error removing player:', error);
-                setNotification('Failed to remove player. Please try again.', 'error');
+                setNotification(
+                    error.message || 'Failed to remove player. Please try again.',
+                    'error'
+                );
             }
         );
     }
@@ -177,7 +191,10 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error moving player:', error);
-                setNotification('Failed to move player. Please try again.', 'error');
+                setNotification(
+                    error.message || 'Failed to move player. Please try again.',
+                    'error'
+                );
             }
         );
     }

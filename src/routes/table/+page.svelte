@@ -112,9 +112,9 @@
                 }
             },
             (err) => {
-                console.error('Error fetching teams:', err);
+                console.error('Error calculating table:', err);
                 setNotification(
-                    'Failed to load team and schedule data. Please try again.',
+                    err.message || 'Failed to load team and schedule data. Please try again.',
                     'error'
                 );
             }

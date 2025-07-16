@@ -9,8 +9,8 @@ export const load = async ({ locals, url }) => {
     const { leagueId, leagueInfo } = locals;
 
     // If we have no league or a league that doesn't exist,
-    // redirect all routes except home to the home page for registration
-    if (!leagueInfo && url.pathname !== '/') {
+    // redirect all routes except home and auth to the home page for registration
+    if (!leagueInfo && url.pathname !== '/' && url.pathname !== '/auth') {
         throw redirect(302, '/');
     }
 
@@ -20,10 +20,19 @@ export const load = async ({ locals, url }) => {
         ? (await data.get('settings', date, leagueInfo.id)) || defaultSettings
         : defaultSettings;
 
+    // Strip access code from league info before sending to client
+    const clientLeagueInfo = leagueInfo
+        ? {
+              id: leagueInfo.id,
+              name: leagueInfo.name,
+              icon: leagueInfo.icon
+          }
+        : null;
+
     return {
         apiKey: API_KEY,
         leagueId,
-        leagueInfo,
+        leagueInfo: clientLeagueInfo,
         date,
         settings
     };

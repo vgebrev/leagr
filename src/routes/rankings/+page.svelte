@@ -68,7 +68,10 @@
             },
             (err) => {
                 console.error(err);
-                setNotification('Unable to update rankings. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Unable to update rankings. Please try again.',
+                    'error'
+                );
             }
         );
     }
@@ -87,7 +90,10 @@
             },
             (err) => {
                 console.error(err);
-                setNotification('Unable to load rankings. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Unable to load rankings. Please try again.',
+                    'error'
+                );
             }
         );
     });

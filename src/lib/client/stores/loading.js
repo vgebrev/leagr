@@ -29,7 +29,7 @@ export async function withLoading(fn, err) {
             err(ex);
         } else {
             console.error('Error in withLoading:', ex);
-            setNotification('Something went wrong, please try again.', 'error');
+            setNotification(err.message || 'Something went wrong, please try again.', 'error');
         }
     } finally {
         popLoading();
