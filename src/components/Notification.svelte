@@ -22,8 +22,6 @@
     );
 </script>
 
-ti
-
 <Toast
     toastStatus={!!$notification && !!config}
     transition={fade}

@@ -98,9 +98,9 @@
 
                 setNotification('League created successfully! Redirecting...', 'success');
 
-                // Redirect to the new league after a short delay
+                // Redirect to the new league with silent authentication after a short delay
                 setTimeout(() => {
-                    window.location.href = `${urlProtocol}//${subdomain}.${urlHost}`;
+                    window.location.href = `${urlProtocol}//${subdomain}.${urlHost}/?code=${encodeURIComponent(accessCode)}`;
                 }, 2000);
             },
             (err) => {

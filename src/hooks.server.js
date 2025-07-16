@@ -147,7 +147,7 @@ export const handle = async ({ event, resolve }) => {
         }
 
         // Check access code for API requests (except public league endpoints)
-        if (!url.pathname.startsWith('/api/leagues/')) {
+        if (!url.pathname.startsWith('/api/leagues')) {
             const accessCode = request.headers.get('authorization');
 
             // Must have league info and access code for protected endpoints

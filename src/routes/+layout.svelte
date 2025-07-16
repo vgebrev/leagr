@@ -72,11 +72,11 @@
     // Handle authentication after navigation
     afterNavigate(async () => {
         // Only check authentication for league pages (not root domain)
-        if (!data.leagueInfo || isPublicPage) {
+        if (!data.leagueInfo) {
             return;
         }
 
-        // Check for access code in query params (silent auth)
+        // Check for access code in query params (silent auth) - even for public pages
         const codeFromQuery = extractAccessCodeFromQuery(page.url.searchParams);
         if (codeFromQuery) {
             // Validate the code with server before storing
@@ -101,6 +101,11 @@
                 goto(`/auth?redirect=${redirectUrl}`);
                 return;
             }
+        }
+
+        // Skip authentication requirement for public pages
+        if (isPublicPage) {
+            return;
         }
 
         // Check if user is authenticated (has stored code)

@@ -5,7 +5,6 @@
 {#if icon === 'skull'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512">
         <path
@@ -14,7 +13,6 @@
 {:else if icon === 'soccer'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -22,7 +20,6 @@
 {:else if icon === 'crown'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 576 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -30,7 +27,6 @@
 {:else if icon === 'shield'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -38,7 +34,6 @@
 {:else if icon === 'star'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 576 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -46,7 +41,6 @@
 {:else if icon === 'medal'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -54,7 +48,6 @@
 {:else if icon === 'trophy'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 576 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -62,7 +55,6 @@
 {:else if icon === 'smile'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -71,7 +63,6 @@
 {:else if icon === 'hand'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 448 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -79,7 +70,6 @@
 {:else if icon === 'poo'}
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512"
         ><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path
@@ -88,10 +78,15 @@
     <!-- Default soccer icon -->
     <svg
         class={className}
-        fill="currentColor"
         xmlns="http://www.w3.org/2000/svg"
         viewBox="0 0 512 512">
         <path
             d="M177.1 228.6L207.9 320h96.5l30.8-91.4C323.8 220.8 312.8 216 301 216H211c-11.8 0-22.8 4.8-33.9 12.6zM256 0C114.6 0 0 114.6 0 256s114.6 256 256 256s256-114.6 256-256S397.4 0 256 0zM165.7 409.4c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0s9.4 24.6 0 33.9s-24.6 9.4-33.9 0zm81.1-81.1c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9s24.6-9.4 33.9 0s9.4 24.6 0 33.9zm0-163.8c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0s9.4 24.6 0 33.9s-24.6 9.4-33.9 0zm81.1 81.1c-9.4 9.4-24.6 9.4-33.9 0s-9.4-24.6 0-33.9s24.6-9.4 33.9 0s9.4 24.6 0 33.9z" />
     </svg>
 {/if}
+
+<style>
+    svg {
+        fill: currentColor;
+    }
+</style>
