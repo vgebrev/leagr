@@ -5,6 +5,7 @@
     import { setApiKey } from '$lib/client/services/api-client.svelte.js';
     import { page } from '$app/state';
     import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
+    import { onMount } from 'svelte';
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
@@ -23,9 +24,32 @@
         return `Leagr - ${leagueName}`;
     });
 
-    // Generate dynamic favicon based on league icon
+    // Track system theme changes
+    let systemThemeIsDark = $state(false);
+
+    onMount(() => {
+        if (typeof window !== 'undefined' && window.matchMedia) {
+            const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+            // Set initial value
+            systemThemeIsDark = mediaQuery.matches;
+
+            // Listen for changes
+            const handler = (e) => {
+                systemThemeIsDark = e.matches;
+            };
+
+            mediaQuery.addEventListener('change', handler);
+
+            // Cleanup
+            return () => mediaQuery.removeEventListener('change', handler);
+        }
+    });
+
+    // Generate dynamic favicon based on league icon and system theme
     let faviconUrl = $derived.by(() => {
-        return generateFaviconDataUrl(data.leagueInfo?.icon || 'soccer');
+        const theme = systemThemeIsDark ? 'dark' : 'light';
+        return generateFaviconDataUrl(data.leagueInfo?.icon || 'soccer', theme);
     });
 
     // Pages that need the date selector
