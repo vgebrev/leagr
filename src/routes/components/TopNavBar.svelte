@@ -33,10 +33,12 @@
 </script>
 
 <Navbar class="z-10 shrink-0">
-    <NavBrand href="/?date={date}">
+    <NavBrand
+        href="/?date={date}"
+        class="min-w-0 flex-1">
         <LeagueInfo {leagueInfo} />
     </NavBrand>
-    <div class="ml-auto flex items-center gap-2">
+    <div class="flex shrink-0 items-center gap-2">
         {#if $isLoading}<Spinner size="6" />{/if}
         {#if leagueInfo}
             <button
