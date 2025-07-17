@@ -23,7 +23,7 @@
 
         // Prepare share data
         const shareData = {
-            title: leagueInfo?.name ? `${leagueInfo.name} - Leagr` : 'Leagr',
+            title: leagueInfo?.name ? `Leagr - ${leagueInfo.name}` : 'Leagr',
             text: `Join ${leagueInfo?.name || 'our league'} on Leagr`,
             url: url.toString()
         };
@@ -39,7 +39,6 @@
             }
         } else if (result.cancelled) {
             // User cancelled sharing, don't show error
-            return;
         } else {
             setNotification('Failed to share link', 'error');
         }
