@@ -5,7 +5,7 @@
     import { isLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { getStoredAccessCode } from '$lib/client/services/auth.js';
-    import { copyToClipboard } from '$lib/client/services/clipboard.js';
+    import { shareContent } from '$lib/client/services/clipboard.js';
     import LeagueInfo from '../../components/LeagueInfo.svelte';
 
     let { date, leagueInfo } = $props();
@@ -21,13 +21,27 @@
             }
         }
 
-        // Copy URL to clipboard
-        const success = await copyToClipboard(url.toString());
+        // Prepare share data
+        const shareData = {
+            title: leagueInfo?.name ? `${leagueInfo.name} - Leagr` : 'Leagr',
+            text: `Join ${leagueInfo?.name || 'our league'} on Leagr`,
+            url: url.toString()
+        };
 
-        if (success) {
-            setNotification('Link copied to clipboard!', 'success');
+        // Share using native API or fallback to clipboard
+        const result = await shareContent(shareData);
+
+        if (result.success) {
+            if (result.method === 'native') {
+                setNotification('Shared successfully!', 'success');
+            } else {
+                setNotification('Link copied to clipboard!', 'success');
+            }
+        } else if (result.cancelled) {
+            // User cancelled sharing, don't show error
+            return;
         } else {
-            setNotification('Failed to copy link', 'error');
+            setNotification('Failed to share link', 'error');
         }
     }
 </script>

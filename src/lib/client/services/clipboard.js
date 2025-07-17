@@ -1,5 +1,5 @@
 /**
- * Clipboard utilities for copying text to clipboard with fallback support
+ * Clipboard and sharing utilities with native sharing support
  */
 
 /**
@@ -47,4 +47,34 @@ function fallbackCopyToClipboard(text) {
         console.error('Fallback clipboard copy failed:', err);
         return false;
     }
+}
+
+/**
+ * Share content using the native Web Share API or fallback to clipboard
+ * @param {Object} shareData - The data to share
+ * @param {string} shareData.title - The title of the content being shared
+ * @param {string} shareData.text - The text to share
+ * @param {string} shareData.url - The URL to share
+ * @returns {Promise<{success: boolean, method: string}>} Promise with success status and method used
+ */
+export async function shareContent(shareData) {
+    // Check if Web Share API is available and supported
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        try {
+            await navigator.share(shareData);
+            return { success: true, method: 'native' };
+        } catch (error) {
+            // User cancelled sharing or other error
+            if (error.name === 'AbortError') {
+                return { success: false, method: 'native', cancelled: true };
+            }
+            // Fall back to clipboard if sharing fails
+            console.warn('Native sharing failed, falling back to clipboard:', error);
+        }
+    }
+
+    // Fallback to clipboard copying
+    const text = shareData.url || shareData.text;
+    const success = await copyToClipboard(text);
+    return { success, method: 'clipboard' };
 }
