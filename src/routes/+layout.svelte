@@ -29,7 +29,7 @@
 
     // Construct page title with league name
     let pageTitle = $derived.by(() => {
-        const leagueName = data.leagueInfo?.name || 'Social League Organizer';
+        const leagueName = data.leagueInfo?.name || 'Social League Organiser';
         return `Leagr - ${leagueName}`;
     });
 
@@ -66,7 +66,7 @@
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
 
     // Pages that should be accessible without authentication
-    const publicPages = ['/', '/auth'];
+    const publicPages = ['/', '/auth', '/auth/forgot', '/auth/reset'];
     let isPublicPage = $derived(publicPages.includes(page.url.pathname));
 
     // Handle authentication after navigation
@@ -77,29 +77,32 @@
         }
 
         // Check for access code in query params (silent auth) - even for public pages
-        const codeFromQuery = extractAccessCodeFromQuery(page.url.searchParams);
-        if (codeFromQuery) {
-            // Validate the code with server before storing
-            const isValid = await validateAccessCode(codeFromQuery);
-            if (isValid) {
-                storeAccessCode(data.leagueId, codeFromQuery);
+        // Skip this check for reset page as it uses 'code' for reset codes, not access codes
+        if (page.url.pathname !== '/auth/reset') {
+            const codeFromQuery = extractAccessCodeFromQuery(page.url.searchParams);
+            if (codeFromQuery) {
+                // Validate the code with server before storing
+                const isValid = await validateAccessCode(codeFromQuery);
+                if (isValid) {
+                    storeAccessCode(data.leagueId, codeFromQuery);
 
-                // Remove code from URL and reload the page to refresh with authenticated state
-                const newUrl = new URL(page.url);
-                newUrl.searchParams.delete('code');
-                window.location.href = newUrl.toString();
-                return; // Page will reload
-            } else {
-                // Invalid code in query params, redirect to auth page
-                removeStoredAccessCode(data.leagueId);
-                // Preserve query params except the invalid 'code' parameter
-                const searchParams = new URLSearchParams(page.url.search);
-                searchParams.delete('code');
-                const queryString = searchParams.toString();
-                const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');
-                const redirectUrl = encodeURIComponent(fullUrl);
-                goto(`/auth?redirect=${redirectUrl}`);
-                return;
+                    // Remove code from URL and reload the page to refresh with authenticated state
+                    const newUrl = new URL(page.url);
+                    newUrl.searchParams.delete('code');
+                    window.location.href = newUrl.toString();
+                    return; // Page will reload
+                } else {
+                    // Invalid code in query params, redirect to auth page
+                    removeStoredAccessCode(data.leagueId);
+                    // Preserve query params except the invalid 'code' parameter
+                    const searchParams = new URLSearchParams(page.url.search);
+                    searchParams.delete('code');
+                    const queryString = searchParams.toString();
+                    const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');
+                    const redirectUrl = encodeURIComponent(fullUrl);
+                    goto(`/auth?redirect=${redirectUrl}`);
+                    return;
+                }
             }
         }
 

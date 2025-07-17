@@ -1,4 +1,5 @@
 import { getLeagueInfo } from '$lib/server/league.js';
+import { initializeEmailService } from '$lib/server/email.js';
 
 const rateLimitMap = new Map();
 const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute
@@ -7,6 +8,11 @@ const RATE_LIMIT_MAX_REQUESTS = 60;
 const allowedOrigin = process.env.ALLOWED_ORIGIN || import.meta.env.VITE_ALLOWED_ORIGIN;
 const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
 const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
+const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || import.meta.env.VITE_MAILGUN_SENDING_KEY;
+const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || import.meta.env.VITE_MAILGUN_DOMAIN;
+
+// Initialize email service
+initializeEmailService(MAILGUN_API_KEY, MAILGUN_DOMAIN, APP_URL);
 
 /**
  * Extract league identifier from subdomain

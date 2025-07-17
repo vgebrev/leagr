@@ -9,8 +9,9 @@ export const load = async ({ locals, url }) => {
     const { leagueId, leagueInfo } = locals;
 
     // If we have no league or a league that doesn't exist,
-    // redirect all routes except home and auth to the home page for registration
-    if (!leagueInfo && url.pathname !== '/' && url.pathname !== '/auth') {
+    // redirect all routes except home and auth routes to the home page for registration
+    const publicRoutes = ['/', '/auth', '/auth/forgot', '/auth/reset'];
+    if (!leagueInfo && !publicRoutes.includes(url.pathname)) {
         throw redirect(302, '/');
     }
 
@@ -25,7 +26,8 @@ export const load = async ({ locals, url }) => {
         ? {
               id: leagueInfo.id,
               name: leagueInfo.name,
-              icon: leagueInfo.icon
+              icon: leagueInfo.icon,
+              hasOwnerEmail: !!leagueInfo.ownerEmail
           }
         : null;
 

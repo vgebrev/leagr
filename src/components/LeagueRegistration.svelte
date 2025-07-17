@@ -219,7 +219,7 @@
         <Label
             for="ownerEmail"
             class="mb-2 text-sm font-medium text-gray-900 dark:text-white"
-            >Owner Email <span class="text-gray-400">(optional)</span></Label>
+            >Organiser Email <span class="text-gray-400">(optional)</span></Label>
         <Input
             id="ownerEmail"
             type="email"

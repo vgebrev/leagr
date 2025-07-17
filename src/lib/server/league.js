@@ -1,4 +1,4 @@
-import { readFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { isValidSubdomain } from '$lib/shared/validation.js';
@@ -43,6 +43,29 @@ export function getLeagueInfo(leagueId) {
     } catch (error) {
         console.error(`Error reading league info for ${leagueId}:`, error);
         return null;
+    }
+}
+
+/**
+ * Update league info file
+ * @param {string} leagueId - The league identifier
+ * @param {Object} leagueInfo - The updated league info object
+ * @returns {boolean} - Success status
+ */
+export function updateLeagueInfo(leagueId, leagueInfo) {
+    if (!leagueId) {
+        console.error('League ID is required for updating league info');
+        return false;
+    }
+
+    try {
+        const infoPath = join(process.cwd(), 'data', leagueId, 'info.json');
+        const data = JSON.stringify(leagueInfo, null, 2);
+        writeFileSync(infoPath, data, 'utf-8');
+        return true;
+    } catch (error) {
+        console.error(`Error updating league info for ${leagueId}:`, error);
+        return false;
     }
 }
 
@@ -117,6 +140,149 @@ export class LeagueService {
             success: true,
             message: 'League created successfully',
             league: { subdomain, name, icon }
+        };
+    }
+
+    /**
+     * Generate and send a reset code for forgotten access codes
+     * @param {string} leagueId - The league identifier
+     * @param {Object} leagueInfo - The league info object
+     * @param {string} email - The email address to send to
+     * @returns {Promise<Object>} - Success response
+     * @throws {LeagueError} - Validation or operation errors
+     */
+    async generateAccessCodeReset(leagueId, leagueInfo, email) {
+        if (!email || typeof email !== 'string' || !email.trim()) {
+            throw new LeagueError('Email is required', 400);
+        }
+
+        // Check if league has owner email configured
+        if (!leagueInfo.ownerEmail) {
+            throw new LeagueError('No owner email configured for this league', 400);
+        }
+
+        // Check if email matches owner email
+        if (leagueInfo.ownerEmail.toLowerCase() !== email.toLowerCase()) {
+            // Don't throw error for security - just return success
+            return {
+                success: true,
+                message: 'A reset link has been sent to the league organiser email.'
+            };
+        }
+
+        // Generate reset code and set expiry (1 hour from now)
+        const { generateAccessCode } = await import('$lib/shared/validation.js');
+        const resetCode = generateAccessCode();
+        const resetCodeExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+        // Update league info with reset code
+        const updatedLeagueInfo = {
+            ...leagueInfo,
+            resetCode,
+            resetCodeExpiry
+        };
+
+        const updateSuccess = updateLeagueInfo(leagueId, updatedLeagueInfo);
+        if (!updateSuccess) {
+            throw new LeagueError('Failed to generate reset code', 500);
+        }
+
+        // Send the reset email
+        const { sendAccessCodeResetEmail } = await import('$lib/server/email.js');
+        const emailSent = await sendAccessCodeResetEmail(
+            email,
+            leagueId,
+            leagueInfo.name,
+            resetCode
+        );
+
+        if (emailSent) {
+            console.warn(`Reset code generated and email sent for league ${leagueId}`);
+        } else {
+            console.error(`Failed to send reset email for league ${leagueId}`);
+        }
+
+        return {
+            success: true,
+            message: 'A reset link has been sent to the league organiser email.'
+        };
+    }
+
+    /**
+     * Validate a reset code
+     * @param {Object} leagueInfo - The league info object
+     * @param {string} resetCode - The reset code to validate
+     * @returns {Object} - Validation result
+     * @throws {LeagueError} - Validation errors
+     */
+    validateResetCode(leagueInfo, resetCode) {
+        if (!resetCode || typeof resetCode !== 'string' || !resetCode.trim()) {
+            throw new LeagueError('Reset code is required', 400);
+        }
+
+        // Check if reset code exists and is valid
+        if (!leagueInfo.resetCode || !leagueInfo.resetCodeExpiry) {
+            throw new LeagueError('No reset code found', 400);
+        }
+
+        // Check if reset code matches
+        if (leagueInfo.resetCode !== resetCode.trim()) {
+            throw new LeagueError('Invalid reset code', 400);
+        }
+
+        // Check if reset code has expired
+        const now = new Date();
+        const expiryDate = new Date(leagueInfo.resetCodeExpiry);
+
+        if (now > expiryDate) {
+            throw new LeagueError('Reset code has expired', 400);
+        }
+
+        return {
+            success: true,
+            message: 'Reset code is valid'
+        };
+    }
+
+    /**
+     * Reset access code using a valid reset code
+     * @param {string} leagueId - The league identifier
+     * @param {Object} leagueInfo - The league info object
+     * @param {string} resetCode - The reset code for validation
+     * @param {string} newAccessCode - The new access code to set
+     * @returns {Object} - Success response
+     * @throws {LeagueError} - Validation or operation errors
+     */
+    resetAccessCode(leagueId, leagueInfo, resetCode, newAccessCode) {
+        if (!resetCode || typeof resetCode !== 'string' || !resetCode.trim()) {
+            throw new LeagueError('Reset code is required', 400);
+        }
+
+        if (!newAccessCode || typeof newAccessCode !== 'string' || !newAccessCode.trim()) {
+            throw new LeagueError('New access code is required', 400);
+        }
+
+        // Validate reset code first
+        this.validateResetCode(leagueInfo, resetCode);
+
+        // Update league info with new access code and remove reset code
+        const updatedLeagueInfo = {
+            ...leagueInfo,
+            accessCode: newAccessCode.trim(),
+            resetCode: undefined,
+            resetCodeExpiry: undefined
+        };
+
+        const updateSuccess = updateLeagueInfo(leagueId, updatedLeagueInfo);
+        if (!updateSuccess) {
+            throw new LeagueError('Failed to update access code', 500);
+        }
+
+        console.warn(`Access code updated for league ${leagueId}`);
+
+        return {
+            success: true,
+            message: 'Access code updated successfully'
         };
     }
 }

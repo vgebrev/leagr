@@ -43,6 +43,7 @@
         "canvas-confetti": "^1.9.3",
         "flowbite": "^3.1.2",
         "flowbite-svelte": "^1.2.7",
-        "flowbite-svelte-icons": "^2.1.1"
+        "flowbite-svelte-icons": "^2.1.1",
+        "mailgun.js": "^12.0.3"
     }
 }

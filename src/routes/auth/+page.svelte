@@ -91,6 +91,13 @@
     </form>
 
     <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>Need help? Contact the league organizer for the access code.</p>
+        <p>
+            <a
+                href="/auth/forgot"
+                class="text-primary-600 hover:underline">
+                Forgotten access code?
+            </a>
+        </p>
+        <p class="mt-2">Need help? Contact the league organiser for the access code.</p>
     </div>
 </div>
