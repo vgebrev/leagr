@@ -2,9 +2,11 @@ import { api } from '$lib/client/services/api-client.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { get } from 'svelte/store';
+import { defaultSettings } from '$lib/shared/defaults.js';
 
 class PlayersService {
+    #settings = $state(defaultSettings);
+
     // State
     /** @type {string[]} */
     players = $state([]);
@@ -18,28 +20,44 @@ class PlayersService {
     /** @type {string | null} */
     currentDate = $state(null);
 
-    // Derived state - works perfectly in classes!
+    // Derived state
     registrationOpenDate = $derived.by(() => {
         if (!this.currentDate) return null;
+
+        if (!this.#settings.registrationWindow.enabled) return null;
+
+        const [hours, minutes] = this.#settings.registrationWindow.startTime.split(':').map(Number);
         const limit = new Date(this.currentDate);
-        limit.setDate(limit.getDate() - 2);
-        limit.setHours(7, 30, 0, 0);
+        limit.setDate(limit.getDate() + this.#settings.registrationWindow.startDayOffset);
+        limit.setHours(hours, minutes, 0, 0);
         return limit;
     });
 
     registrationCloseDate = $derived.by(() => {
         if (!this.currentDate) return null;
+
+        if (!this.#settings.registrationWindow.enabled) return null;
+
+        const [hours, minutes] = this.#settings.registrationWindow.endTime.split(':').map(Number);
         const limit = new Date(this.currentDate);
-        limit.setDate(limit.getDate());
-        limit.setHours(7, 30, 0, 0);
+        limit.setDate(limit.getDate() + this.#settings.registrationWindow.endDayOffset);
+        limit.setHours(hours, minutes, 0, 0);
         return limit;
     });
 
     canModifyList = $derived.by(() => {
+        if (!this.#settings.registrationWindow.enabled) return true;
+
         if (!this.registrationOpenDate || !this.registrationCloseDate) return false;
         const now = new Date();
         return now >= this.registrationOpenDate && now <= this.registrationCloseDate;
     });
+
+    constructor() {
+        settings.subscribe((settings) => {
+            this.#settings = settings;
+        });
+    }
 
     // Methods
     /**
@@ -95,7 +113,8 @@ class PlayersService {
                 }
 
                 const originalList = list;
-                if (list === 'available' && this.players.length >= get(settings).playerLimit) {
+                const effectivePlayerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+                if (list === 'available' && this.players.length >= effectivePlayerLimit) {
                     list = 'waitingList';
                 }
 

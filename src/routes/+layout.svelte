@@ -10,7 +10,7 @@
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
-    import Notification from '../components/Notification.svelte';
+    import Notification from '$components/Notification.svelte';
     import {
         extractAccessCodeFromQuery,
         storeAccessCode,

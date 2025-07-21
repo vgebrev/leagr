@@ -78,7 +78,7 @@
                 bind:value={accessCode}
                 placeholder="Enter access code"
                 required
-                wrapperClass="w-full font-mono" />
+                classes={{ wrapper: "w-full font-mono" }} />
         </div>
 
         <Button

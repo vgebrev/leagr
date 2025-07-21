@@ -6,7 +6,7 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
-    import TeamBadge from '../../components/TeamBadge.svelte';
+    import TeamBadge from '$components/TeamBadge.svelte';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { isDateInPast, rotateArray } from '$lib/shared/helpers.js';
 

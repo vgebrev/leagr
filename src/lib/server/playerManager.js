@@ -1,5 +1,6 @@
 import { data } from './data.js';
-import { defaultSettings, defaultPlayers } from '$lib/shared/defaults.js';
+import { defaultPlayers } from '$lib/shared/defaults.js';
+import { getConsolidatedSettings } from './settings.js';
 
 export class PlayerManager {
     constructor() {
@@ -27,16 +28,21 @@ export class PlayerManager {
      * Get current players and teams data
      */
     async getData() {
-        const [players, teams, settings] = await Promise.all([
+        const [players, teams, consolidatedSettings] = await Promise.all([
             data.get('players', this.date, this.leagueId),
             data.get('teams', this.date, this.leagueId),
-            data.get('settings', this.date, this.leagueId)
+            getConsolidatedSettings(this.date, this.leagueId)
         ]);
+
+        // Extract effective settings for this date (day overrides take precedence)
+        const effectiveSettings = this.date && consolidatedSettings[this.date] 
+            ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
+            : consolidatedSettings;
 
         return {
             players: players || structuredClone(defaultPlayers),
             teams: teams || {},
-            settings: settings || structuredClone(defaultSettings)
+            settings: effectiveSettings
         };
     }
 

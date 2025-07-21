@@ -24,9 +24,28 @@ export function dateTimeString(date) {
     return `${time}, ${datePart}`;
 }
 
+export function formatDisplayDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    });
+}
+
 export function isSaturday(date) {
     if (!date) return false;
     return date.getDay() === 6;
+}
+
+export function isCompetitionDay(date, competitionDays = [6]) {
+    if (!date) return false;
+    if (!competitionDays || !Array.isArray(competitionDays) || competitionDays.length === 0)
+        return true;
+    return competitionDays.includes(date.getDay());
 }
 
 export function isDateInPast(date, hours = 13) {

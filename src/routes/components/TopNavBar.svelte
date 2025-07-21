@@ -6,7 +6,7 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { getStoredAccessCode } from '$lib/client/services/auth.js';
     import { shareContent } from '$lib/client/services/clipboard.js';
-    import LeagueInfo from '../../components/LeagueInfo.svelte';
+    import LeagueInfo from '$components/LeagueInfo.svelte';
 
     let { date, leagueInfo } = $props();
 

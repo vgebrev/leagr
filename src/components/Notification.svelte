@@ -26,7 +26,7 @@
     toastStatus={!!$notification && !!config}
     transition={fade}
     color={config?.color || 'red'}
-    class="border-primary-400 flex items-center border"
+    class="border-primary-400 bg-white dark:bg-gray-800 flex items-center border shadow-lg z-50"
     position="top-right">
     {#snippet icon()}
         {@const IconComponent = config?.icon || typeConfig.error.icon}

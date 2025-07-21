@@ -17,7 +17,7 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
+    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
 
     let rankings = $state({});
     let sortBy = $state('rankingPoints'); // Default to ranking points
@@ -100,10 +100,8 @@
 </script>
 
 <div class="flex flex-col gap-2">
-    <Accordion
-        class="p-2 text-sm"
-        flush>
-        <AccordionItem>
+    <Accordion flush>
+        <AccordionItem classes={{ button: 'p-2 text-sm', content: 'p-2 text-sm' }}>
             {#snippet header()}<InfoCircleOutline /> Ranking Info{/snippet}
             <div class="flex flex-col items-center gap-2">
                 <p>Players receive ranking points based on their team performance on the day.</p>

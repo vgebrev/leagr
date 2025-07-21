@@ -15,7 +15,7 @@
 <BottomNav
     {activeUrl}
     position="fixed"
-    innerClass="grid-cols-5"
+    classes={{ inner: 'grid-cols-5' }}
     class="z-10 shrink-0">
     <BottomNavItem
         btnName="Players"

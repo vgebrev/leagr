@@ -60,6 +60,7 @@
     <PlayerSummary {playerSummary} />
     <TeamGeneration
         {teamConfig}
+        {playerSummary}
         date={teamsService.currentDate}
         canGenerateTeams={teamsService.canGenerateTeams}
         hasExistingTeams={teamsService.hasExistingTeams}

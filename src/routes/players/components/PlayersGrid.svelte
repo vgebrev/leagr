@@ -1,19 +1,22 @@
 <script>
     import PlayersList from './PlayersList.svelte';
     import { settings } from '$lib/client/stores/settings.js';
-    let { availablePlayers, waitingList, canModifyList, onremove, onmove } = $props();
+    let { availablePlayers, waitingList, canModifyList, onremove, onmove, date } = $props();
 
     function canMoveToOtherList(player, sourceList, destinationList) {
         if (sourceList === 'waitingList' && destinationList === 'available') {
-            return availablePlayers.length < $settings.playerLimit;
+            const effectivePlayerLimit = $settings[date]?.playerLimit || $settings.playerLimit;
+            return availablePlayers.length < effectivePlayerLimit;
         }
         return true;
     }
+    
+    const effectivePlayerLimit = $derived($settings[date]?.playerLimit || $settings.playerLimit);
 </script>
 
 <div class="grid grid-cols-2 gap-2">
     <PlayersList
-        label={`Players (${$settings.playerLimit} max)`}
+        label={`Players (${effectivePlayerLimit} max)`}
         players={availablePlayers}
         {canModifyList}
         onremove={async (name) => await onremove(name, 'available')}

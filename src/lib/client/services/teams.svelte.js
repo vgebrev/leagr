@@ -2,9 +2,10 @@ import { api } from '$lib/client/services/api-client.svelte.js';
 import { playersService } from '$lib/client/services/players.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
-import { settings, defaultSettings } from '$lib/client/stores/settings.js';
+import { settings } from '$lib/client/stores/settings.js';
 import { nouns } from '$lib/client/nouns.js';
 import { teamColours, isDateInPast } from '$lib/shared/helpers.js';
+import { defaultSettings } from '$lib/shared/defaults.js';
 
 class TeamsService {
     #settings = $state(defaultSettings);
@@ -19,6 +20,9 @@ class TeamsService {
     /** @type {string | null} */
     currentDate = $state(null);
 
+    /** @type {Object | null} */
+    leagueInfo = $state(null);
+
     /** @type {boolean} */
     hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
 
@@ -26,7 +30,7 @@ class TeamsService {
     playerSummary = $derived.by(() => {
         const players = playersService.players;
         const waitingList = playersService.waitingList;
-        const playerLimit = this.#settings.playerLimit;
+        const playerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
 
         return {
             available: players.length,
@@ -43,7 +47,8 @@ class TeamsService {
     });
 
     teamConfig = $derived.by(() => {
-        const playerCount = Math.min(playersService.players.length, this.#settings.playerLimit);
+        const effectivePlayerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+        const playerCount = Math.min(playersService.players.length, effectivePlayerLimit);
         return this.calculateTeamConfig(playerCount);
     });
 
@@ -80,8 +85,14 @@ class TeamsService {
 
     // Methods
     calculateTeamConfig(playerCount) {
-        const teamLimits = { min: 2, max: 5 };
-        const playerLimits = { min: 5, max: 7 };
+        const teamLimits = {
+            min: this.#settings.teamGeneration.minTeams,
+            max: this.#settings.teamGeneration.maxTeams
+        };
+        const playerLimits = {
+            min: this.#settings.teamGeneration.minPlayersPerTeam,
+            max: this.#settings.teamGeneration.maxPlayersPerTeam
+        };
         const config = [];
 
         for (
@@ -111,7 +122,7 @@ class TeamsService {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, this.#settings.playerLimit)
+            Math.min(players.length, this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit)
         );
         const teams = {};
         const teamSizes = options.teamSizes;
@@ -129,7 +140,7 @@ class TeamsService {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, this.#settings.playerLimit)
+            Math.min(players.length, this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit)
         );
         const teamSizes = options.teamSizes;
         const numTeams = teamSizes.length;

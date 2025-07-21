@@ -60,5 +60,6 @@
         waitingList={playersService.waitingList}
         canModifyList={playersService.canModifyList}
         onremove={removePlayer}
-        onmove={movePlayer} />
+        onmove={movePlayer}
+        date={data.date} />
 </div>

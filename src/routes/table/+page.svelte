@@ -13,9 +13,9 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
-    import TeamBadge from '../../components/TeamBadge.svelte';
+    import TeamBadge from '$components/TeamBadge.svelte';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import CelebrationOverlay from '../../components/CelebrationOverlay.svelte';
+    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { isDateInPast, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
