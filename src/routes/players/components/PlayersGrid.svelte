@@ -10,7 +10,7 @@
         }
         return true;
     }
-    
+
     const effectivePlayerLimit = $derived($settings[date]?.playerLimit || $settings.playerLimit);
 </script>
 

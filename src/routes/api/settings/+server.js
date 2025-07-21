@@ -24,7 +24,7 @@ export const POST = async ({ request, url, locals }) => {
     if (!body) {
         return error(400, 'Invalid request body');
     }
-    
+
     try {
         const result = await saveConsolidatedSettings(date, leagueId, body);
         return json(result);

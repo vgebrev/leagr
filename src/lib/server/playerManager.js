@@ -35,9 +35,10 @@ export class PlayerManager {
         ]);
 
         // Extract effective settings for this date (day overrides take precedence)
-        const effectiveSettings = this.date && consolidatedSettings[this.date] 
-            ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
-            : consolidatedSettings;
+        const effectiveSettings =
+            this.date && consolidatedSettings[this.date]
+                ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
+                : consolidatedSettings;
 
         return {
             players: players || structuredClone(defaultPlayers),

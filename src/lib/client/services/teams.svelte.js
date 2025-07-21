@@ -30,7 +30,8 @@ class TeamsService {
     playerSummary = $derived.by(() => {
         const players = playersService.players;
         const waitingList = playersService.waitingList;
-        const playerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+        const playerLimit =
+            this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
 
         return {
             available: players.length,
@@ -47,7 +48,8 @@ class TeamsService {
     });
 
     teamConfig = $derived.by(() => {
-        const effectivePlayerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+        const effectivePlayerLimit =
+            this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
         const playerCount = Math.min(playersService.players.length, effectivePlayerLimit);
         return this.calculateTeamConfig(playerCount);
     });
@@ -62,7 +64,7 @@ class TeamsService {
 
     /** @type {string[]} */
     unassignedPlayers = $derived.by(() => {
-        const assignedPlayers = new Set();
+        const assignedPlayers = $state(new Set());
 
         // Collect all players currently assigned to teams
         Object.values(this.teams).forEach((team) => {
@@ -122,7 +124,10 @@ class TeamsService {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit)
+            Math.min(
+                players.length,
+                this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit
+            )
         );
         const teams = {};
         const teamSizes = options.teamSizes;
@@ -140,7 +145,10 @@ class TeamsService {
         const players = playersService.players;
         const eligiblePlayers = players.slice(
             0,
-            Math.min(players.length, this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit)
+            Math.min(
+                players.length,
+                this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit
+            )
         );
         const teamSizes = options.teamSizes;
         const numTeams = teamSizes.length;

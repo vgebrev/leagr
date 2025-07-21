@@ -95,7 +95,7 @@
                     // Invalid code in query params, redirect to auth page
                     removeStoredAccessCode(data.leagueId);
                     // Preserve query params except the invalid 'code' parameter
-                    const searchParams = new URLSearchParams(page.url.search);
+                    const searchParams = $state(new URLSearchParams(page.url.search));
                     searchParams.delete('code');
                     const queryString = searchParams.toString();
                     const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');

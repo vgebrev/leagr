@@ -10,16 +10,16 @@
     import { settings } from '$lib/client/stores/settings.js';
 
     let { data } = $props();
-    
+
     let competitionDaysText = $derived.by(() => {
         const competitionDays = $settings.competitionDays;
         if (!competitionDays || competitionDays.length === 0) {
             return '';
         }
-        
+
         const dayNames = [
             'Sunday',
-            'Monday', 
+            'Monday',
             'Tuesday',
             'Wednesday',
             'Thursday',
@@ -27,7 +27,7 @@
             'Saturday'
         ];
         const days = competitionDays.map((day) => dayNames[day]);
-        
+
         if (days.length === 1) {
             return days[0];
         } else if (days.length === 2) {
@@ -36,7 +36,7 @@
             return `${days.slice(0, -1).join(', ')}, or ${days[days.length - 1]}`;
         }
     });
-    
+
     let datePickText = $derived.by(() => {
         if (competitionDaysText) {
             return `1. Pick a date, most likely a ${competitionDaysText}.`;
@@ -81,15 +81,15 @@
                 color="alternative"
                 href="/table?date={data.date}"
                 size="xs"
-                ><RectangleListSolid class="me-2 h-4 w-4"></RectangleListSolid>Table</Button> after
-            the games.</span>
+                ><RectangleListSolid class="me-2 h-4 w-4"></RectangleListSolid>Table</Button> after the
+            games.</span>
     </ListgroupItem>
     <ListgroupItem
         ><span
             >6. After the day is done, we'll update the <Button
                 color="alternative"
                 href="/rankings?date={data.date}"
-                size="xs"><AwardSolid class="me-2 h-4 w-4"></AwardSolid>Rankings</Button> and use
-            them to seed teams for balance (as well as bragging rights).</span>
+                size="xs"><AwardSolid class="me-2 h-4 w-4"></AwardSolid>Rankings</Button> and use them
+            to seed teams for balance (as well as bragging rights).</span>
     </ListgroupItem>
 </Listgroup>

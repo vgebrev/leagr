@@ -43,7 +43,7 @@
         name="player-name"
         type="text"
         placeholder="Player Name"
-        classes={{ wrapper: "w-full" }}
+        classes={{ wrapper: 'w-full' }}
         required
         disabled={!canModifyList}
         autocomplete="off" />

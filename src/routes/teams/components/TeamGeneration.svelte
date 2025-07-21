@@ -31,7 +31,6 @@
 
         const teamGen = $settings.teamGeneration;
         const maxCapacity = teamGen.maxTeams * teamGen.maxPlayersPerTeam;
-        const effectivePlayerLimit = $settings[date]?.playerLimit || $settings.playerLimit;
 
         return `Player limit exceeds team capacity (${maxCapacity} max). Adjust limits in`;
     });

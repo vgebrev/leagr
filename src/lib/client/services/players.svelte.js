@@ -27,7 +27,7 @@ class PlayersService {
         if (!this.#settings.registrationWindow.enabled) return null;
 
         const [hours, minutes] = this.#settings.registrationWindow.startTime.split(':').map(Number);
-        const limit = new Date(this.currentDate);
+        const limit = $state(new Date(this.currentDate));
         limit.setDate(limit.getDate() + this.#settings.registrationWindow.startDayOffset);
         limit.setHours(hours, minutes, 0, 0);
         return limit;
@@ -39,7 +39,7 @@ class PlayersService {
         if (!this.#settings.registrationWindow.enabled) return null;
 
         const [hours, minutes] = this.#settings.registrationWindow.endTime.split(':').map(Number);
-        const limit = new Date(this.currentDate);
+        const limit = $state(new Date(this.currentDate));
         limit.setDate(limit.getDate() + this.#settings.registrationWindow.endDayOffset);
         limit.setHours(hours, minutes, 0, 0);
         return limit;
@@ -113,7 +113,8 @@ class PlayersService {
                 }
 
                 const originalList = list;
-                const effectivePlayerLimit = this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+                const effectivePlayerLimit =
+                    this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
                 if (list === 'available' && this.players.length >= effectivePlayerLimit) {
                     list = 'waitingList';
                 }
