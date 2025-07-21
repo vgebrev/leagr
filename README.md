@@ -1,9 +1,12 @@
 # Leagr
 
-A little [SvelteKit 5](https://svelte.dev/) web app to help organise Saturday social 5-a-side footy sessions.
+A little [SvelteKit 5](https://svelte.dev/) web app to help organise social 5-a-side leagues.
 
 Features include:
 
+- Subdomain-based league registration.
+- Access-controlled league isolation.
+- [Mailgun](https://www.mailgun.com/) integration for sending email (Access code recovery).
 - View and manage player availability.
 - Waiting list after a limit is reached.
 - Generate random teams, either completely random or using player rankings as seeds.
@@ -33,8 +36,15 @@ The application includes rudimentary security features to prevent abuse:
 #### Semi-public API Key Authentication
 
 - **API_KEY**: Required for all API endpoint access
-- Must be provided via `X-API-KEY` header or `Authorization` header
+- Must be provided via `X-API-KEY` header
 - Example: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
+
+#### Access Code Authorization
+ 
+- Each league has a unique access code
+- To access the league, the access code must be provided in a "code" query parameter, or the user is redirected to a login page
+- Access code must be included in an **Authorization** header of API requests 
+- Access codes can be reset if an organiser/owner email is set up for the league
 
 #### Rate Limiting
 
@@ -61,6 +71,10 @@ docker run -d \
   -v /path/to/data/on/host:/app/data \
   -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
   -e API_KEY="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -e APP_URL="https://your-production-url.com" \
+  -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
+  -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
+  
   leagr:latest
 ```
 
@@ -70,9 +84,13 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 
 - `ALLOWED_ORIGIN`: Comma-separated allowed origins (required for CORS protection)
 - `API_KEY`: Secure API key for endpoint access (required for API authentication)
+- `APP_URL`: The base URL of your application (used for generating links in emails)
+- `MAILGUN_SENDING_KEY`: Mailgun API key for sending emails
+- `MAILGUN_DOMAIN`: Mailgun domain for sending emails
 
 **Notes:**
 
 - Replace `/path/to/data/on/host` with the actual path to the data directory on your host machine
 - Replace `a1b2c3d4-e5f6-7890-abcd-ef1234567890` with a secure, randomly generated API key
-- Replace the allowed origins with your actual domain(s)
+- Replace the allowed origins, app URL with your actual domain(s)
+- Replace Mailgun credentials with your actual Mailgun account details
