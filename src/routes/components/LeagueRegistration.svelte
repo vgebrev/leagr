@@ -11,7 +11,8 @@
 
     let {
         leagueId = null, // null for new league, string for existing subdomain
-        mode = leagueId ? 'existing' : 'new' // 'new' or 'existing'
+        mode = leagueId ? 'existing' : 'new', // 'new' or 'existing'
+        appUrl
     } = $props();
 
     // Form state
@@ -21,17 +22,28 @@
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
 
-    // Dynamic URL parts from current page
+    // Dynamic URL parts from current page  
     let urlProtocol = $derived(page.url.protocol);
     let urlHost = $derived.by(() => {
-        const hostname = page.url.hostname;
-        const port = page.url.port;
-
-        // Extract the base domain (everything after the first subdomain)
-        const parts = hostname.split('.');
-        const baseDomain = parts.length > 2 ? parts.slice(1).join('.') : hostname;
-
-        return port ? `${baseDomain}:${port}` : baseDomain;
+        if (!appUrl) {
+            // Fallback: only extract base domain if we're on a subdomain
+            const hostname = page.url.hostname;
+            const port = page.url.port;
+            
+            // If we have a leagueId, we're on a subdomain and need to extract base domain
+            // If no leagueId, we're on root domain and should use full hostname
+            if (leagueId) {
+                const parts = hostname.split('.');
+                const baseDomain = parts.length > 1 ? parts.slice(1).join('.') : hostname;
+                return port ? `${baseDomain}:${port}` : baseDomain;
+            } else {
+                return port ? `${hostname}:${port}` : hostname;
+            }
+        }
+        
+        // Extract hostname from APP_URL
+        const url = new URL(appUrl);
+        return url.host; // includes port if present
     });
 
     // Available icons

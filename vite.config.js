@@ -7,7 +7,7 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: 5173,
-        allowedHosts: ['localhost', '.leagr.local'],
+        allowedHosts: ['localhost', '.leagr.local', '.leagr.dev.local'],
         watch: {
             ignored: ['**/data/**']
         }

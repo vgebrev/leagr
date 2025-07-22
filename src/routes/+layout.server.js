@@ -4,6 +4,7 @@ import { getConsolidatedSettings } from '$lib/server/settings.js';
 import { dateString } from '$lib/shared/helpers.js';
 
 const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
+const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
 
 export const load = async ({ locals, url }) => {
     const { leagueId, leagueInfo } = locals;
@@ -33,6 +34,7 @@ export const load = async ({ locals, url }) => {
 
     return {
         apiKey: API_KEY,
+        appUrl: APP_URL,
         leagueId,
         leagueInfo: clientLeagueInfo,
         date,
