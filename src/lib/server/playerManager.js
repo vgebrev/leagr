@@ -87,35 +87,62 @@ export class PlayerManager {
     }
 
     /**
-     * Remove player from specified list
+     * Remove player from specified list and from any teams they're assigned to
      */
     async removePlayer(playerName, fromList) {
         const gameData = await this.getData();
-        const { players } = gameData;
+        const { players, teams } = gameData;
 
+        // Remove from specified list
         if (fromList === 'available') {
             players.available = players.available.filter((p) => p !== playerName);
         } else if (fromList === 'waitingList') {
             players.waitingList = players.waitingList.filter((p) => p !== playerName);
         }
 
-        await data.set(
-            'players',
-            this.date,
-            players,
-            { available: [], waitingList: [] },
-            true,
-            this.leagueId
-        );
+        // Also remove from any teams they might be assigned to
+        let teamsModified = false;
+        Object.keys(teams).forEach((teamName) => {
+            const originalTeam = [...teams[teamName]];
+            teams[teamName] = teams[teamName].map((p) => (p === playerName ? null : p));
+            if (JSON.stringify(originalTeam) !== JSON.stringify(teams[teamName])) {
+                teamsModified = true;
+            }
+        });
+
+        // Save both players and teams if teams were modified
+        if (teamsModified) {
+            await Promise.all([
+                data.set(
+                    'players',
+                    this.date,
+                    players,
+                    { available: [], waitingList: [] },
+                    true,
+                    this.leagueId
+                ),
+                data.set('teams', this.date, teams, {}, true, this.leagueId)
+            ]);
+        } else {
+            await data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            );
+        }
+
         return players;
     }
 
     /**
-     * Move player between available and waiting lists
+     * Move player between available and waiting lists, removing from teams if moving to waiting list
      */
     async movePlayer(playerName, fromList, toList) {
         const gameData = await this.getData();
-        const { players, settings } = gameData;
+        const { players, teams, settings } = gameData;
 
         // Validate player exists in source list
         if (fromList === 'available' && !players.available.includes(playerName)) {
@@ -142,14 +169,42 @@ export class PlayerManager {
             players.waitingList.push(playerName);
         }
 
-        await data.set(
-            'players',
-            this.date,
-            players,
-            { available: [], waitingList: [] },
-            true,
-            this.leagueId
-        );
+        // If moving from available to waiting list, also remove from any teams
+        let teamsModified = false;
+        if (fromList === 'available' && toList === 'waitingList') {
+            Object.keys(teams).forEach((teamName) => {
+                const originalTeam = [...teams[teamName]];
+                teams[teamName] = teams[teamName].map((p) => (p === playerName ? null : p));
+                if (JSON.stringify(originalTeam) !== JSON.stringify(teams[teamName])) {
+                    teamsModified = true;
+                }
+            });
+        }
+
+        // Save both players and teams if teams were modified
+        if (teamsModified) {
+            await Promise.all([
+                data.set(
+                    'players',
+                    this.date,
+                    players,
+                    { available: [], waitingList: [] },
+                    true,
+                    this.leagueId
+                ),
+                data.set('teams', this.date, teams, {}, true, this.leagueId)
+            ]);
+        } else {
+            await data.set(
+                'players',
+                this.date,
+                players,
+                { available: [], waitingList: [] },
+                true,
+                this.leagueId
+            );
+        }
+
         return players;
     }
 
