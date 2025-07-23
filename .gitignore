@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 /deploy.ps1
 /deploy.sh
 *.tar
+
+#IIS
+/web.config

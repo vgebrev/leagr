@@ -34,3 +34,17 @@ COPY --from=builder /app/data ./data
 EXPOSE 3000
 
 CMD ["build"]
+
+# --- Stage 3 (Alt): Debug image (node alpine) ---
+#FROM node:24-alpine
+#
+#WORKDIR /app
+#
+#COPY --from=prod-deps /app/node_modules ./node_modules
+#COPY --from=builder /app/build ./build
+#COPY --from=builder /app/package*.json ./
+#COPY --from=builder /app/data ./data
+#
+#EXPOSE 3000
+#
+#CMD ["node", "build"]
