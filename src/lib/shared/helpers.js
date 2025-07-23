@@ -48,10 +48,10 @@ export function isCompetitionDay(date, competitionDays = [6]) {
     return competitionDays.includes(date.getDay());
 }
 
-export function isDateInPast(date, hours = 13) {
+export function isDateInPast(date, hours = 0) {
     if (!date) return false;
     const limit = new Date(date);
-    limit.setDate(limit.getDate());
+    limit.setDate(limit.getDate() + 1); // Add 1 day to check midnight of the following day
     limit.setHours(hours, 0, 0, 0);
     return limit < new Date();
 }
