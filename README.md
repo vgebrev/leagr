@@ -40,10 +40,10 @@ The application includes rudimentary security features to prevent abuse:
 - Example: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
 
 #### Access Code Authorization
- 
+
 - Each league has a unique access code
 - To access the league, the access code must be provided in a "code" query parameter, or the user is redirected to a login page
-- Access code must be included in an **Authorization** header of API requests 
+- Access code must be included in an **Authorization** header of API requests
 - Access codes can be reset if an organiser/owner email is set up for the league
 
 #### Rate Limiting
@@ -74,7 +74,7 @@ docker run -d \
   -e APP_URL="https://your-production-url.com" \
   -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
   -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
-  
+
   leagr:latest
 ```
 

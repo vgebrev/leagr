@@ -7,7 +7,9 @@
 </script>
 
 {#if showRegistration}
-    <LeagueRegistration leagueId={data.leagueId} appUrl={data.appUrl} />
+    <LeagueRegistration
+        leagueId={data.leagueId}
+        appUrl={data.appUrl} />
 {:else}
     <LeagueHomePage {data} />
 {/if}

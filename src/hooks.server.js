@@ -20,12 +20,6 @@ initializeEmailService(MAILGUN_API_KEY, MAILGUN_DOMAIN, APP_URL);
  * @returns {string|null} - The league name or null if no subdomain
  */
 function extractLeagueId(host) {
-    console.log('extractLeagueId debug:', {
-        host,
-        APP_URL,
-        hasAppUrl: !!APP_URL
-    });
-    
     if (!host || !APP_URL) return null;
 
     // Remove port if present
@@ -35,15 +29,8 @@ function extractLeagueId(host) {
     const appUrl = new URL(APP_URL);
     const baseDomain = appUrl.hostname;
 
-    console.log('extractLeagueId parsing:', {
-        hostname,
-        baseDomain,
-        isRootDomain: hostname === baseDomain
-    });
-
     // Check for root domain (no league)
     if (hostname === baseDomain || hostname === 'localhost') {
-        console.log('extractLeagueId: returning null (root domain)');
         return null;
     }
 
@@ -53,21 +40,12 @@ function extractLeagueId(host) {
     // Check if it's a subdomain of our base domain
     if (parts.length >= 2) {
         const domain = parts.slice(1).join('.');
-        console.log('extractLeagueId subdomain check:', {
-            parts,
-            domain,
-            baseDomain,
-            matches: domain === baseDomain
-        });
-        
         if (domain === baseDomain) {
-            console.log('extractLeagueId: returning subdomain:', parts[0]);
             return parts[0]; // Return the subdomain as league ID
         }
     }
 
     // If it's not a recognized domain format, return null
-    console.log('extractLeagueId: returning null (unrecognized format)');
     return null;
 }
 

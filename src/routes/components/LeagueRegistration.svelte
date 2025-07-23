@@ -22,14 +22,14 @@
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
 
-    // Dynamic URL parts from current page  
+    // Dynamic URL parts from current page
     let urlProtocol = $derived(page.url.protocol);
     let urlHost = $derived.by(() => {
         if (!appUrl) {
             // Fallback: only extract base domain if we're on a subdomain
             const hostname = page.url.hostname;
             const port = page.url.port;
-            
+
             // If we have a leagueId, we're on a subdomain and need to extract base domain
             // If no leagueId, we're on root domain and should use full hostname
             if (leagueId) {
@@ -40,7 +40,7 @@
                 return port ? `${hostname}:${port}` : hostname;
             }
         }
-        
+
         // Extract hostname from APP_URL
         const url = new URL(appUrl);
         return url.host; // includes port if present
