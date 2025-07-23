@@ -122,6 +122,18 @@
 
 <svelte:head>
     <title>{pageTitle}</title>
+    <meta name="description" content="Join {data.leagueInfo?.name || 'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content="Join {data.leagueInfo?.name || 'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary" />
+    <meta property="twitter:title" content={pageTitle} />
+    <meta property="twitter:description" content="Join {data.leagueInfo?.name || 'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+    
     <link
         rel="icon"
         href={faviconUrl}
