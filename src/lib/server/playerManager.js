@@ -300,6 +300,10 @@ export class PlayerState {
 }
 
 export class PlayerManager {
+    // Private fields for caching
+    #dataCache = null;
+    #cacheKey = null; // Tracks what data is cached (date-league combination)
+
     constructor() {
         this.date = null;
         this.leagueId = null;
@@ -309,7 +313,10 @@ export class PlayerManager {
      * Initialize with date for operations
      */
     setDate(date) {
-        this.date = date;
+        if (this.date !== date) {
+            this.date = date;
+            this.#invalidateCache();
+        }
         return this;
     }
 
@@ -317,8 +324,33 @@ export class PlayerManager {
      * Initialize with league id for operations
      */
     setLeague(leagueId) {
-        this.leagueId = leagueId;
+        if (this.leagueId !== leagueId) {
+            this.leagueId = leagueId;
+            this.#invalidateCache();
+        }
         return this;
+    }
+
+    /**
+     * Invalidate the data cache when date or league changes
+     */
+    #invalidateCache() {
+        this.#dataCache = null;
+        this.#cacheKey = null;
+    }
+
+    /**
+     * Get current cache key for the date-league combination
+     */
+    #getCacheKey() {
+        return `${this.date}-${this.leagueId}`;
+    }
+
+    /**
+     * Check if cached data is valid for current date-league combination
+     */
+    #isCacheValid() {
+        return this.#dataCache !== null && this.#cacheKey === this.#getCacheKey();
     }
 
     /**
@@ -368,6 +400,8 @@ export class PlayerManager {
         if (operations.length > 0) {
             try {
                 await data.setMany(operations, this.date, this.leagueId);
+                // Invalidate cache after successful save
+                this.#invalidateCache();
             } catch (saveError) {
                 // Log the specific save error for debugging
                 console.error('Failed to save player/team data atomically:', saveError);
@@ -385,9 +419,15 @@ export class PlayerManager {
     }
 
     /**
-     * Get current players and teams data
+     * Get current players and teams data (with caching)
      */
     async getData() {
+        // Return cached data if valid
+        if (this.#isCacheValid()) {
+            return structuredClone(this.#dataCache);
+        }
+
+        // Load fresh data from disk
         const [players, teams, consolidatedSettings] = await Promise.all([
             data.get('players', this.date, this.leagueId),
             data.get('teams', this.date, this.leagueId),
@@ -400,11 +440,17 @@ export class PlayerManager {
                 ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
                 : consolidatedSettings;
 
-        return {
+        const gameData = {
             players: players || structuredClone(defaultPlayers),
             teams: teams || {},
             settings: effectiveSettings
         };
+
+        // Cache the loaded data
+        this.#dataCache = structuredClone(gameData);
+        this.#cacheKey = this.#getCacheKey();
+
+        return gameData;
     }
 
     /**
