@@ -3,6 +3,7 @@ import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
+import { validatePlayerNameForUI } from '$lib/shared/validation.js';
 
 class PlayersService {
     #settings = $state(defaultSettings);
@@ -100,15 +101,21 @@ class PlayersService {
 
         await withLoading(
             async () => {
-                const trimmedName = name.trim();
+                // Validate and sanitize player name
+                const validation = validatePlayerNameForUI(name);
 
-                if (!trimmedName) {
-                    setNotification('Player name cannot be empty.', 'warning');
+                if (!validation.isValid) {
+                    setNotification(validation.errorMessage, 'warning');
                     return;
                 }
 
-                if (this.players.includes(trimmedName) || this.waitingList.includes(trimmedName)) {
-                    setNotification(`Player ${trimmedName} already added.`, 'warning');
+                const sanitizedName = validation.sanitizedName;
+
+                if (
+                    this.players.includes(sanitizedName) ||
+                    this.waitingList.includes(sanitizedName)
+                ) {
+                    setNotification(`Player ${sanitizedName} already added.`, 'warning');
                     return;
                 }
 
@@ -120,7 +127,7 @@ class PlayersService {
                 }
 
                 const result = await api.post(`players`, this.currentDate, {
-                    playerName: trimmedName,
+                    playerName: sanitizedName,
                     list
                 });
                 this.players = result.available || [];
@@ -129,10 +136,10 @@ class PlayersService {
                 // Show notification if player was auto-redirected to waiting list
                 if (
                     originalList === 'available' &&
-                    (list === 'waitingList' || result.waitingList.includes(trimmedName))
+                    (list === 'waitingList' || result.waitingList.includes(sanitizedName))
                 ) {
                     setNotification(
-                        `Player limit reached. ${trimmedName} added to waiting list.`,
+                        `Player limit reached. ${sanitizedName} added to waiting list.`,
                         'info'
                     );
                 }

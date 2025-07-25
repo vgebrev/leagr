@@ -58,6 +58,18 @@ async function get(key, date, leagueId = null) {
  * @returns {Promise}
  */
 async function set(key, date, value, defaultValue = [], overwrite = false, leagueId = null) {
+    const results = await setMany([{ key, value, defaultValue, overwrite }], date, leagueId);
+    return results ? results[key] : null;
+}
+
+/**
+ * Atomically sets multiple values in the JSON file for a given date.
+ * @param {Array<{key: string, value: any, defaultValue?: any, overwrite?: boolean}>} operations - Array of set operations
+ * @param {string} date - The date string (YYYY-MM-DD format)
+ * @param {string|null} [leagueId=null] - The league name (null for default league)
+ * @returns {Promise<Object>} - Object with keys as operation keys and values as the final values
+ */
+async function setMany(operations, date, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
@@ -77,24 +89,37 @@ async function set(key, date, value, defaultValue = [], overwrite = false, leagu
             } catch (ex) {
                 console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
             }
-            const { parent, key: finalKey } = resolvePath(jsonData, key);
-            if (!parent[finalKey]) {
-                parent[finalKey] = defaultValue;
+
+            const results = {};
+
+            // Apply all operations to the in-memory data
+            for (const operation of operations) {
+                const { key, value, defaultValue = [], overwrite = false } = operation;
+                const { parent, key: finalKey } = resolvePath(jsonData, key);
+
+                if (!parent[finalKey]) {
+                    parent[finalKey] = defaultValue;
+                }
+
+                if (Array.isArray(parent[finalKey])) {
+                    parent[finalKey].push(value);
+                } else if (isObject(parent[finalKey])) {
+                    parent[finalKey] = overwrite
+                        ? { ...value }
+                        : { ...(parent[finalKey] ?? {}), ...value };
+                } else {
+                    parent[finalKey] = value;
+                }
+
+                results[key] = parent[finalKey];
             }
-            if (Array.isArray(parent[finalKey])) {
-                parent[finalKey].push(value);
-            } else if (isObject(parent[finalKey])) {
-                parent[finalKey] = overwrite
-                    ? { ...value }
-                    : { ...(parent[finalKey] ?? {}), ...value };
-            } else {
-                parent[finalKey] = value;
-            }
+
+            // Single atomic write for all changes
             await fs.writeFile(filePath, JSON.stringify(jsonData, null, 2));
-            return parent[finalKey];
+            return results;
         } catch (err) {
-            console.error('Error writing file: ', err);
-            return null;
+            console.error('Error writing file in setMany: ', err);
+            throw err; // Re-throw to ensure failures are visible
         }
     });
 }
@@ -143,5 +168,6 @@ async function remove(key, date, value, leagueId = null) {
 export const data = {
     get,
     set,
+    setMany,
     remove
 };

@@ -13,6 +13,292 @@ export class PlayerError extends Error {
     }
 }
 
+/**
+ * Immutable state manager for player-team relationships
+ * Ensures consistency between players (available/waiting) and team assignments
+ */
+export class PlayerState {
+    constructor(players, teams, settings) {
+        this.players = structuredClone(players);
+        this.teams = structuredClone(teams);
+        this.settings = settings;
+    }
+
+    /**
+     * Get player's current location/status
+     * @param {string} playerName
+     * @returns {{ location: 'available'|'waiting'|null, teamName?: string, isAssigned: boolean }}
+     */
+    getPlayerLocation(playerName) {
+        if (this.players.available.includes(playerName)) {
+            // Check if assigned to a team
+            for (const [teamName, roster] of Object.entries(this.teams)) {
+                if (roster.includes(playerName)) {
+                    return { location: 'available', teamName, isAssigned: true };
+                }
+            }
+            return { location: 'available', isAssigned: false };
+        }
+
+        if (this.players.waitingList.includes(playerName)) {
+            return { location: 'waiting', isAssigned: false };
+        }
+
+        return { location: null, isAssigned: false }; // Player not found
+    }
+
+    /**
+     * Validate state consistency
+     * @throws {PlayerError} If state is inconsistent
+     */
+    validateState() {
+        // Check for duplicates between available and waiting
+        const availableSet = new Set(this.players.available);
+
+        for (const player of this.players.waitingList) {
+            if (availableSet.has(player)) {
+                throw new PlayerError(
+                    `Player ${player} exists in both available and waiting lists`,
+                    500
+                );
+            }
+        }
+
+        // Check that all assigned players are in available list
+        const assignedPlayers = new Set();
+        for (const roster of Object.values(this.teams)) {
+            for (const player of roster) {
+                if (player !== null) {
+                    assignedPlayers.add(player);
+                    if (!availableSet.has(player)) {
+                        throw new PlayerError(
+                            `Assigned player ${player} not in available list`,
+                            500
+                        );
+                    }
+                }
+            }
+        }
+
+        // Check player limit
+        if (this.players.available.length > this.settings.playerLimit) {
+            throw new PlayerError(
+                `Available players exceed limit of ${this.settings.playerLimit}`,
+                500
+            );
+        }
+    }
+
+    /**
+     * Add player to appropriate list based on player limit and target
+     * @param {string} playerName
+     * @param {string} targetList - 'auto', 'available', or 'waitingList'
+     * @returns {PlayerState} New state
+     */
+    addPlayer(playerName, targetList = 'auto') {
+        const location = this.getPlayerLocation(playerName);
+        if (location.location) {
+            throw new PlayerError(`Player ${playerName} is already registered.`, 400);
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        // Determine actual target list
+        let actualTarget = targetList;
+        if (targetList === 'auto') {
+            actualTarget =
+                newState.players.available.length >= this.settings.playerLimit
+                    ? 'waitingList'
+                    : 'available';
+        }
+
+        // Add to appropriate list
+        if (actualTarget === 'available') {
+            if (newState.players.available.length >= this.settings.playerLimit) {
+                // Auto-redirect to waiting list
+                newState.players.waitingList.push(playerName);
+            } else {
+                newState.players.available.push(playerName);
+            }
+        } else {
+            newState.players.waitingList.push(playerName);
+        }
+
+        newState.validateState();
+        return newState;
+    }
+
+    /**
+     * Remove player from all lists and teams
+     * @param {string} playerName
+     * @returns {PlayerState} New state
+     */
+    removePlayer(playerName) {
+        const location = this.getPlayerLocation(playerName);
+        if (!location.location) {
+            throw new PlayerError(`Player ${playerName} is not registered.`, 400);
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        // Remove from player lists
+        newState.players.available = newState.players.available.filter((p) => p !== playerName);
+        newState.players.waitingList = newState.players.waitingList.filter((p) => p !== playerName);
+
+        // Remove from all teams
+        for (const teamName of Object.keys(newState.teams)) {
+            newState.teams[teamName] = newState.teams[teamName].map((p) =>
+                p === playerName ? null : p
+            );
+        }
+
+        newState.validateState();
+        return newState;
+    }
+
+    /**
+     * Move player from unassigned/waiting to a specific team
+     * @param {string} playerName
+     * @param {string} teamName
+     * @returns {PlayerState} New state
+     */
+    movePlayerToTeam(playerName, teamName) {
+        const location = this.getPlayerLocation(playerName);
+        if (!location.location) {
+            throw new PlayerError(`Player ${playerName} is not registered.`, 400);
+        }
+
+        if (location.isAssigned) {
+            throw new PlayerError(
+                `Player ${playerName} is already assigned to team ${location.teamName}.`,
+                400
+            );
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        // Check if team exists
+        if (!newState.teams[teamName]) {
+            throw new PlayerError(`Team ${teamName} does not exist.`, 400);
+        }
+
+        // Find empty slot in team
+        const emptySlotIndex = newState.teams[teamName].findIndex((p) => p === null);
+        if (emptySlotIndex === -1) {
+            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
+        }
+
+        // Assign to team
+        newState.teams[teamName][emptySlotIndex] = playerName;
+
+        // Move from waiting to available if needed
+        if (location.location === 'waiting') {
+            newState.players.waitingList = newState.players.waitingList.filter(
+                (p) => p !== playerName
+            );
+
+            // Only add to available if within limit
+            if (newState.players.available.length < this.settings.playerLimit) {
+                newState.players.available.push(playerName);
+            } else {
+                throw new PlayerError(`Player limit of ${this.settings.playerLimit} reached.`, 400);
+            }
+        }
+
+        newState.validateState();
+        return newState;
+    }
+
+    /**
+     * Move player from team to waiting list
+     * @param {string} playerName
+     * @returns {PlayerState} New state
+     */
+    movePlayerToWaiting(playerName) {
+        const location = this.getPlayerLocation(playerName);
+        if (!location.location) {
+            throw new PlayerError(`Player ${playerName} is not registered.`, 400);
+        }
+
+        if (!location.isAssigned) {
+            throw new PlayerError(`Player ${playerName} is not assigned to any team.`, 400);
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        // Remove from team
+        newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
+            p === playerName ? null : p
+        );
+
+        // Move from available to waiting
+        newState.players.available = newState.players.available.filter((p) => p !== playerName);
+        if (!newState.players.waitingList.includes(playerName)) {
+            newState.players.waitingList.push(playerName);
+        }
+
+        newState.validateState();
+        return newState;
+    }
+
+    /**
+     * Move player between available and waiting lists
+     * @param {string} playerName
+     * @param {string} fromList - 'available' or 'waitingList'
+     * @param {string} toList - 'available' or 'waitingList'
+     * @returns {PlayerState} New state
+     */
+    movePlayerBetweenLists(playerName, fromList, toList) {
+        if (fromList === toList) {
+            return this; // No change needed
+        }
+
+        const location = this.getPlayerLocation(playerName);
+        if (!location.location) {
+            throw new PlayerError(`Player ${playerName} is not registered.`, 400);
+        }
+
+        // Validate source list
+        if (fromList === 'available' && location.location !== 'available') {
+            throw new PlayerError(`Player ${playerName} is not in available list.`, 400);
+        }
+        if (fromList === 'waitingList' && location.location !== 'waiting') {
+            throw new PlayerError(`Player ${playerName} is not in waiting list.`, 400);
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        if (toList === 'available') {
+            // Moving to available - check limit
+            if (newState.players.available.length >= this.settings.playerLimit) {
+                throw new PlayerError(`Player limit of ${this.settings.playerLimit} reached.`, 400);
+            }
+
+            newState.players.waitingList = newState.players.waitingList.filter(
+                (p) => p !== playerName
+            );
+            if (!newState.players.available.includes(playerName)) {
+                newState.players.available.push(playerName);
+            }
+        } else {
+            // Moving to waiting - remove from teams if assigned
+            if (location.isAssigned) {
+                newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
+                    p === playerName ? null : p
+                );
+            }
+
+            newState.players.available = newState.players.available.filter((p) => p !== playerName);
+            if (!newState.players.waitingList.includes(playerName)) {
+                newState.players.waitingList.push(playerName);
+            }
+        }
+
+        newState.validateState();
+        return newState;
+    }
+}
+
 export class PlayerManager {
     constructor() {
         this.date = null;
@@ -33,6 +319,69 @@ export class PlayerManager {
     setLeague(leagueId) {
         this.leagueId = leagueId;
         return this;
+    }
+
+    /**
+     * Execute an atomic transaction on player state
+     * @param {function(PlayerState): PlayerState} operation - Function that takes current state and returns new state
+     * @returns {Promise<{players: Object, teams: Object}>} - The updated game data
+     */
+    async executeTransaction(operation) {
+        const gameData = await this.getData();
+        const { players, teams, settings } = gameData;
+
+        // Create current state
+        const currentState = new PlayerState(players, teams, settings);
+
+        // Apply operation to get new state
+        const newState = operation(currentState);
+
+        // Validate the new state
+        newState.validateState();
+
+        // Determine what needs to be saved
+        const playersChanged = JSON.stringify(players) !== JSON.stringify(newState.players);
+        const teamsChanged = JSON.stringify(teams) !== JSON.stringify(newState.teams);
+
+        // Save changes atomically using setMany for true atomicity
+        const operations = [];
+
+        if (playersChanged) {
+            operations.push({
+                key: 'players',
+                value: newState.players,
+                defaultValue: { available: [], waitingList: [] },
+                overwrite: true
+            });
+        }
+
+        if (teamsChanged) {
+            operations.push({
+                key: 'teams',
+                value: newState.teams,
+                defaultValue: {},
+                overwrite: true
+            });
+        }
+
+        // Execute all saves in a single atomic operation
+        if (operations.length > 0) {
+            try {
+                await data.setMany(operations, this.date, this.leagueId);
+            } catch (saveError) {
+                // Log the specific save error for debugging
+                console.error('Failed to save player/team data atomically:', saveError);
+
+                // Re-throw with context about which operation failed during save
+                const errorMessage = `Failed to save changes: ${saveError.message || 'Unknown database error'}`;
+                throw new PlayerError(errorMessage, 500);
+            }
+        }
+
+        return {
+            players: newState.players,
+            teams: newState.teams
+        };
     }
 
     /**
@@ -62,310 +411,87 @@ export class PlayerManager {
      * Add player to available list or waiting list based on player limit
      */
     async addPlayer(playerName, targetList = 'auto') {
-        const gameData = await this.getData();
-        const { players, settings } = gameData;
-
-        // Check for duplicates
-        if (players.available.includes(playerName) || players.waitingList.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is already registered.`, 400);
-        }
-
-        if (targetList === 'auto') {
-            targetList =
-                players.available.length >= settings.playerLimit ? 'waitingList' : 'available';
-        }
-
-        if (targetList === 'available') {
-            if (players.available.length >= settings.playerLimit) {
-                // Auto-redirect to waiting list when active list is full
-                players.waitingList.push(playerName);
-            } else {
-                players.available.push(playerName);
-            }
-        } else if (targetList === 'waitingList') {
-            players.waitingList.push(playerName);
-        }
-
-        await data.set(
-            'players',
-            this.date,
-            players,
-            { available: [], waitingList: [] },
-            true,
-            this.leagueId
+        const result = await this.executeTransaction((state) =>
+            state.addPlayer(playerName, targetList)
         );
-        return players;
+        return result.players;
     }
 
     /**
      * Remove player from specified list and from any teams they're assigned to
      */
-    async removePlayer(playerName, fromList) {
-        const gameData = await this.getData();
-        const { players, teams } = gameData;
-
-        // Remove from specified list
-        if (fromList === 'available') {
-            players.available = players.available.filter((p) => p !== playerName);
-        } else if (fromList === 'waitingList') {
-            players.waitingList = players.waitingList.filter((p) => p !== playerName);
-        }
-
-        // Also remove from any teams they might be assigned to
-        let teamsModified = false;
-        Object.keys(teams).forEach((teamName) => {
-            const originalTeam = [...teams[teamName]];
-            teams[teamName] = teams[teamName].map((p) => (p === playerName ? null : p));
-            if (JSON.stringify(originalTeam) !== JSON.stringify(teams[teamName])) {
-                teamsModified = true;
-            }
-        });
-
-        // Save both players and teams if teams were modified
-        if (teamsModified) {
-            await Promise.all([
-                data.set(
-                    'players',
-                    this.date,
-                    players,
-                    { available: [], waitingList: [] },
-                    true,
-                    this.leagueId
-                ),
-                data.set('teams', this.date, teams, {}, true, this.leagueId)
-            ]);
-        } else {
-            await data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            );
-        }
-
-        return players;
+    async removePlayer(playerName) {
+        const result = await this.executeTransaction((state) => state.removePlayer(playerName));
+        return result.players;
     }
 
     /**
      * Move player between available and waiting lists, removing from teams if moving to waiting list
      */
     async movePlayer(playerName, fromList, toList) {
-        const gameData = await this.getData();
-        const { players, teams, settings } = gameData;
-
-        // Validate player exists in source list
-        if (fromList === 'available' && !players.available.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is not in available list.`, 400);
-        }
-        if (fromList === 'waitingList' && !players.waitingList.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is not in waiting list.`, 400);
-        }
-
-        // Remove from source list
-        if (fromList === 'available') {
-            players.available = players.available.filter((p) => p !== playerName);
-        } else if (fromList === 'waitingList') {
-            players.waitingList = players.waitingList.filter((p) => p !== playerName);
-        }
-
-        // Add to target list
-        if (toList === 'available') {
-            if (players.available.length >= settings.playerLimit) {
-                throw new PlayerError(`Player limit of ${settings.playerLimit} reached.`, 400);
-            }
-            players.available.push(playerName);
-        } else if (toList === 'waitingList') {
-            players.waitingList.push(playerName);
-        }
-
-        // If moving from available to waiting list, also remove from any teams
-        let teamsModified = false;
-        if (fromList === 'available' && toList === 'waitingList') {
-            Object.keys(teams).forEach((teamName) => {
-                const originalTeam = [...teams[teamName]];
-                teams[teamName] = teams[teamName].map((p) => (p === playerName ? null : p));
-                if (JSON.stringify(originalTeam) !== JSON.stringify(teams[teamName])) {
-                    teamsModified = true;
-                }
-            });
-        }
-
-        // Save both players and teams if teams were modified
-        if (teamsModified) {
-            await Promise.all([
-                data.set(
-                    'players',
-                    this.date,
-                    players,
-                    { available: [], waitingList: [] },
-                    true,
-                    this.leagueId
-                ),
-                data.set('teams', this.date, teams, {}, true, this.leagueId)
-            ]);
-        } else {
-            await data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            );
-        }
-
-        return players;
+        const result = await this.executeTransaction((state) =>
+            state.movePlayerBetweenLists(playerName, fromList, toList)
+        );
+        return result.players;
     }
 
     /**
      * Remove player from a specific team and optionally move to waiting list or remove completely
      */
     async removePlayerFromTeam(playerName, teamName, action = 'waitingList') {
-        const gameData = await this.getData();
-        const { players, teams } = gameData;
-
-        // Remove from team
-        if (teams[teamName]) {
-            teams[teamName] = teams[teamName].map((p) => (p === playerName ? null : p));
-        }
-
-        // Handle the action
-        if (action === 'waitingList') {
-            // Move to waiting list
-            players.available = players.available.filter((p) => p !== playerName);
-            if (!players.waitingList.includes(playerName)) {
-                players.waitingList.push(playerName);
+        return await this.executeTransaction((state) => {
+            const location = state.getPlayerLocation(playerName);
+            if (!location.location) {
+                throw new PlayerError(`Player ${playerName} is not registered.`, 400);
             }
-        } else if (action === 'unassign') {
-            // Keep in available list but remove from team (becomes unassigned)
-            if (!players.available.includes(playerName)) {
-                players.available.push(playerName);
+
+            if (!location.isAssigned || location.teamName !== teamName) {
+                throw new PlayerError(
+                    `Player ${playerName} is not assigned to team ${teamName}.`,
+                    400
+                );
             }
-            // Remove from waiting list if present
-            players.waitingList = players.waitingList.filter((p) => p !== playerName);
-        } else if (action === 'remove') {
-            // Remove completely
-            players.available = players.available.filter((p) => p !== playerName);
-            players.waitingList = players.waitingList.filter((p) => p !== playerName);
-        }
 
-        // Save both players and teams
-        await Promise.all([
-            data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            ),
-            data.set('teams', this.date, teams, {}, true, this.leagueId)
-        ]);
+            const newState = new PlayerState(state.players, state.teams, state.settings);
 
-        return { players, teams };
-    }
+            // Remove from team
+            newState.teams[teamName] = newState.teams[teamName].map((p) =>
+                p === playerName ? null : p
+            );
 
-    /**
-     * Move player from waiting list to a specific team
-     */
-    async movePlayerFromWaitingToTeam(playerName, teamName) {
-        const gameData = await this.getData();
-        const { players, teams, settings } = gameData;
+            // Handle the action
+            if (action === 'waitingList') {
+                // Move to waiting list
+                newState.players.available = newState.players.available.filter(
+                    (p) => p !== playerName
+                );
+                if (!newState.players.waitingList.includes(playerName)) {
+                    newState.players.waitingList.push(playerName);
+                }
+            } else if (action === 'unassign') {
+                // Keep in available list (already there, just remove from team)
+            } else if (action === 'remove') {
+                // Remove completely
+                newState.players.available = newState.players.available.filter(
+                    (p) => p !== playerName
+                );
+                newState.players.waitingList = newState.players.waitingList.filter(
+                    (p) => p !== playerName
+                );
+            }
 
-        // Check if player is in waiting list
-        if (!players.waitingList.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is not in waiting list.`, 400);
-        }
-
-        // Check if team exists
-        if (!teams[teamName]) {
-            throw new PlayerError(`Team ${teamName} does not exist.`, 400);
-        }
-
-        // Find empty slot in team
-        const emptySlotIndex = teams[teamName].findIndex((p) => p === null);
-        if (emptySlotIndex === -1) {
-            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
-        }
-
-        // Move player
-        teams[teamName][emptySlotIndex] = playerName;
-        players.waitingList = players.waitingList.filter((p) => p !== playerName);
-
-        // Add to available list if not already there and within limit
-        if (
-            !players.available.includes(playerName) &&
-            players.available.length < settings.playerLimit
-        ) {
-            players.available.push(playerName);
-        }
-
-        // Save both players and teams
-        await Promise.all([
-            data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            ),
-            data.set('teams', this.date, teams, {}, true, this.leagueId)
-        ]);
-
-        return { players, teams };
+            newState.validateState();
+            return newState;
+        });
     }
 
     /**
      * Fill empty team slot with specific player from waiting list or available list
      */
     async fillEmptySlotWithPlayer(teamName, playerName) {
-        const gameData = await this.getData();
-        const { players, teams } = gameData;
-
-        // Check if player is in waiting list or available list
-        if (!players.waitingList.includes(playerName) && !players.available.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is not available for assignment.`, 400);
-        }
-
-        // Check if team exists
-        if (!teams[teamName]) {
-            throw new PlayerError(`Team ${teamName} does not exist.`, 400);
-        }
-
-        // Find empty slot in team
-        const emptySlotIndex = teams[teamName].findIndex((p) => p === null);
-        if (emptySlotIndex === -1) {
-            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
-        }
-
-        // Fill slot
-        teams[teamName][emptySlotIndex] = playerName;
-
-        // Remove from waiting list if present
-        players.waitingList = players.waitingList.filter((p) => p !== playerName);
-
-        // Ensure player is in available list (they should be if they're assigned to a team)
-        if (!players.available.includes(playerName)) {
-            players.available.push(playerName);
-        }
-
-        // Save both players and teams
-        await Promise.all([
-            data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            ),
-            data.set('teams', this.date, teams, {}, true, this.leagueId)
-        ]);
-
-        return { players, teams };
+        return await this.executeTransaction((state) =>
+            state.movePlayerToTeam(playerName, teamName)
+        );
     }
 
     /**
@@ -390,110 +516,39 @@ export class PlayerManager {
     }
 
     /**
-     * Move player between teams
-     */
-    async movePlayerBetweenTeams(playerName, fromTeam, toTeam) {
-        const gameData = await this.getData();
-        const { teams } = gameData;
-
-        // Check if teams exist
-        if (!teams[fromTeam] || !teams[toTeam]) {
-            throw new PlayerError('Both teams must exist.', 400);
-        }
-
-        // Check if player is in source team
-        const fromIndex = teams[fromTeam].findIndex((p) => p === playerName);
-        if (fromIndex === -1) {
-            throw new PlayerError(`Player ${playerName} is not in team ${fromTeam}.`, 400);
-        }
-
-        // Check if target team has empty slot
-        const toIndex = teams[toTeam].findIndex((p) => p === null);
-        if (toIndex === -1) {
-            throw new PlayerError(`Team ${toTeam} has no empty slots.`, 400);
-        }
-
-        // Move player
-        teams[fromTeam][fromIndex] = null;
-        teams[toTeam][toIndex] = playerName;
-
-        await data.set('teams', this.date, teams, {}, true, this.leagueId);
-        return teams;
-    }
-
-    /**
-     * Add player directly to available list after teams are generated
-     */
-    async addPlayerToAvailable(playerName) {
-        const gameData = await this.getData();
-        const { players, settings } = gameData;
-
-        if (players.available.includes(playerName)) {
-            throw new PlayerError(`Player ${playerName} is already in available list.`, 400);
-        }
-
-        if (players.available.length >= settings.playerLimit) {
-            throw new PlayerError(
-                `Player limit of ${settings.playerLimit} reached. Use waiting list instead.`,
-                400
-            );
-        }
-
-        // Remove from waiting list if present
-        players.waitingList = players.waitingList.filter((p) => p !== playerName);
-        players.available.push(playerName);
-
-        await data.set(
-            'players',
-            this.date,
-            players,
-            { available: [], waitingList: [] },
-            true,
-            this.leagueId
-        );
-        return players;
-    }
-
-    /**
      * Validate and clean up inconsistencies between players and teams
      */
     async validateAndCleanup() {
-        const gameData = await this.getData();
-        const { players, teams } = gameData;
+        return await this.executeTransaction((state) => {
+            const newState = new PlayerState(state.players, state.teams, state.settings);
+            let hasChanges = false;
 
-        let hasChanges = false;
-
-        // Get all players in teams
-        const playersInTeams = new Set();
-        Object.values(teams).forEach((roster) => {
-            roster.forEach((player) => {
-                if (player !== null) {
-                    playersInTeams.add(player);
-                }
+            // Get all players in teams
+            const playersInTeams = new Set();
+            Object.values(newState.teams).forEach((roster) => {
+                roster.forEach((player) => {
+                    if (player !== null) {
+                        playersInTeams.add(player);
+                    }
+                });
             });
-        });
 
-        // Check if any team players are not in available list
-        for (const teamPlayer of playersInTeams) {
-            if (!players.available.includes(teamPlayer)) {
-                players.available.push(teamPlayer);
-                hasChanges = true;
+            // Check if any team players are not in available list
+            for (const teamPlayer of playersInTeams) {
+                if (!newState.players.available.includes(teamPlayer)) {
+                    newState.players.available.push(teamPlayer);
+                    hasChanges = true;
+                }
             }
-        }
 
-        // Save if changes were made
-        if (hasChanges) {
-            await data.set(
-                'players',
-                this.date,
-                players,
-                { available: [], waitingList: [] },
-                true,
-                this.leagueId
-            );
-        }
+            // Only return new state if changes were made
+            if (hasChanges) {
+                newState.validateState();
+                return newState;
+            }
 
-        return { players, teams, hasChanges };
+            return state; // No changes needed
+        });
     }
 }
 

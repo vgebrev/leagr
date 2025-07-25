@@ -96,25 +96,8 @@ export const PATCH = async ({ request, url, locals }) => {
                 .setLeague(leagueId)
                 .fillEmptySlotWithPlayer(body.teamName, body.playerName);
             return json(result);
-        } else if (operation === 'movePlayerBetweenTeams') {
-            // Move player between teams
-            if (!body.playerName || !body.fromTeam || !body.toTeam) {
-                return error(
-                    400,
-                    'playerName, fromTeam, and toTeam are required for movePlayerBetweenTeams operation'
-                );
-            }
-
-            const result = await createPlayerManager()
-                .setDate(date)
-                .setLeague(leagueId)
-                .movePlayerBetweenTeams(body.playerName, body.fromTeam, body.toTeam);
-            return json({ teams: result });
         } else {
-            return error(
-                400,
-                'Invalid operation. Supported operations: fillSlot, movePlayerBetweenTeams'
-            );
+            return error(400, 'Invalid operation. Supported operations: fillSlot');
         }
     } catch (err) {
         console.error('Error performing team operation:', err);
