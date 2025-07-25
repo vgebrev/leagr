@@ -16,7 +16,7 @@
 
 <div class="grid grid-cols-2 gap-2">
     <PlayersList
-        label={`Players (${effectivePlayerLimit} max)`}
+        label={`Players (${availablePlayers?.length || 0}/${effectivePlayerLimit})`}
         players={availablePlayers}
         {canModifyList}
         onremove={async (name) => await onremove(name, 'available')}

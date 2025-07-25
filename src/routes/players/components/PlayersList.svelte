@@ -49,7 +49,7 @@
                         simple
                         isOpen={dropdownOpen[i]}>
                         <DropdownItem
-                            class="w-full font-normal"
+                            classes={{ anchor: 'w-full font-normal' }}
                             onclick={async () => {
                                 await onremove(player);
                             }}>
@@ -63,7 +63,7 @@
                                 ? canMoveToOtherList(player, sourceList, destinationList)
                                 : true}
                             <DropdownItem
-                                class="w-full font-normal"
+                                classes={{ anchor: 'w-full font-normal' }}
                                 onclick={async () => {
                                     await onmove(player, sourceList, destinationList);
                                 }}

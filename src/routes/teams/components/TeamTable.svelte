@@ -130,7 +130,7 @@
                                     isOpen={assignDropdownOpen[i]}>
                                     {#each teamsWithEmptySlots as teamName (teamName)}
                                         <DropdownItem
-                                            class="w-full font-normal"
+                                            classes={{ anchor: 'w-full font-normal' }}
                                             onclick={() => handleAssignToTeam(player, teamName)}>
                                             <span class="flex items-center">
                                                 <ArrowLeftOutline class="me-2 h-4 w-4" />
@@ -139,7 +139,7 @@
                                         </DropdownItem>
                                     {/each}
                                     <DropdownItem
-                                        class="w-full font-normal"
+                                        classes={{ anchor: 'w-full font-normal' }}
                                         onclick={() => handleRemoveFromList(player)}>
                                         <span class="flex items-center">
                                             <TrashBinOutline class="me-2 h-4 w-4" />
@@ -161,7 +161,7 @@
                                     simple
                                     isOpen={removeDropdownOpen[i]}>
                                     <DropdownItem
-                                        class="w-full font-normal"
+                                        classes={{ anchor: 'w-full font-normal' }}
                                         onclick={() => handleRemovePlayer(player, 'waitingList')}>
                                         <span class="flex items-center">
                                             <ClockOutline class="me-2 h-4 w-4" />
@@ -169,7 +169,7 @@
                                         </span>
                                     </DropdownItem>
                                     <DropdownItem
-                                        class="w-full font-normal"
+                                        classes={{ anchor: 'w-full font-normal' }}
                                         onclick={() => handleRemovePlayer(player, 'remove')}>
                                         <span class="flex items-center">
                                             <TrashBinOutline class="me-2 h-4 w-4" />
@@ -194,7 +194,7 @@
                                         isOpen={fillDropdownOpen[i]}>
                                         {#each [...waitingList, ...allWaitingPlayers] as waitingPlayer (waitingPlayer)}
                                             <DropdownItem
-                                                class="w-full font-normal"
+                                                classes={{ anchor: 'w-full font-normal' }}
                                                 onclick={() =>
                                                     handleFillEmptySpot(i, waitingPlayer)}>
                                                 <span class="flex items-center">
