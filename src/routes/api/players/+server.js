@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 
 export const GET = async ({ url, locals }) => {
     const date = url.searchParams.get('date');
@@ -28,6 +28,11 @@ export const POST = async ({ request, url, locals }) => {
         return error(400, 'Invalid request body. playerName and list are required');
     }
 
+    // Validate player name is not empty/whitespace
+    if (!body.playerName.trim()) {
+        return error(400, 'Player name cannot be empty');
+    }
+
     try {
         const result = await createPlayerManager()
             .setDate(date)
@@ -36,7 +41,10 @@ export const POST = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error adding player:', err);
-        return error(400, err.message);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to add player');
     }
 };
 
@@ -52,6 +60,11 @@ export const DELETE = async ({ request, url, locals }) => {
         return error(400, 'Invalid request body. playerName and list are required');
     }
 
+    // Validate player name is not empty/whitespace
+    if (!body.playerName.trim()) {
+        return error(400, 'Player name cannot be empty');
+    }
+
     try {
         const result = await createPlayerManager()
             .setDate(date)
@@ -60,6 +73,9 @@ export const DELETE = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error removing player:', err);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
         return error(500, 'Failed to remove player');
     }
 };
@@ -76,6 +92,11 @@ export const PATCH = async ({ request, url, locals }) => {
         return error(400, 'Invalid request body. playerName, fromList, and toList are required');
     }
 
+    // Validate player name is not empty/whitespace
+    if (!body.playerName.trim()) {
+        return error(400, 'Player name cannot be empty');
+    }
+
     try {
         const result = await createPlayerManager()
             .setDate(date)
@@ -84,6 +105,9 @@ export const PATCH = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error moving player:', err);
-        return error(400, err.message);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to move player');
     }
 };

@@ -2,6 +2,17 @@ import { data } from './data.js';
 import { defaultPlayers } from '$lib/shared/defaults.js';
 import { getConsolidatedSettings } from './settings.js';
 
+/**
+ * Custom error class for player operations that preserves HTTP status codes
+ */
+export class PlayerError extends Error {
+    constructor(message, statusCode = 500) {
+        super(message);
+        this.name = 'PlayerError';
+        this.statusCode = statusCode;
+    }
+}
+
 export class PlayerManager {
     constructor() {
         this.date = null;
@@ -56,7 +67,7 @@ export class PlayerManager {
 
         // Check for duplicates
         if (players.available.includes(playerName) || players.waitingList.includes(playerName)) {
-            throw new Error(`Player ${playerName} is already registered.`);
+            throw new PlayerError(`Player ${playerName} is already registered.`, 400);
         }
 
         if (targetList === 'auto') {
@@ -146,10 +157,10 @@ export class PlayerManager {
 
         // Validate player exists in source list
         if (fromList === 'available' && !players.available.includes(playerName)) {
-            throw new Error(`Player ${playerName} is not in available list.`);
+            throw new PlayerError(`Player ${playerName} is not in available list.`, 400);
         }
         if (fromList === 'waitingList' && !players.waitingList.includes(playerName)) {
-            throw new Error(`Player ${playerName} is not in waiting list.`);
+            throw new PlayerError(`Player ${playerName} is not in waiting list.`, 400);
         }
 
         // Remove from source list
@@ -162,7 +173,7 @@ export class PlayerManager {
         // Add to target list
         if (toList === 'available') {
             if (players.available.length >= settings.playerLimit) {
-                throw new Error(`Player limit of ${settings.playerLimit} reached.`);
+                throw new PlayerError(`Player limit of ${settings.playerLimit} reached.`, 400);
             }
             players.available.push(playerName);
         } else if (toList === 'waitingList') {
@@ -265,18 +276,18 @@ export class PlayerManager {
 
         // Check if player is in waiting list
         if (!players.waitingList.includes(playerName)) {
-            throw new Error(`Player ${playerName} is not in waiting list.`);
+            throw new PlayerError(`Player ${playerName} is not in waiting list.`, 400);
         }
 
         // Check if team exists
         if (!teams[teamName]) {
-            throw new Error(`Team ${teamName} does not exist.`);
+            throw new PlayerError(`Team ${teamName} does not exist.`, 400);
         }
 
         // Find empty slot in team
         const emptySlotIndex = teams[teamName].findIndex((p) => p === null);
         if (emptySlotIndex === -1) {
-            throw new Error(`Team ${teamName} has no empty slots.`);
+            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
         }
 
         // Move player
@@ -316,18 +327,18 @@ export class PlayerManager {
 
         // Check if player is in waiting list or available list
         if (!players.waitingList.includes(playerName) && !players.available.includes(playerName)) {
-            throw new Error(`Player ${playerName} is not available for assignment.`);
+            throw new PlayerError(`Player ${playerName} is not available for assignment.`, 400);
         }
 
         // Check if team exists
         if (!teams[teamName]) {
-            throw new Error(`Team ${teamName} does not exist.`);
+            throw new PlayerError(`Team ${teamName} does not exist.`, 400);
         }
 
         // Find empty slot in team
         const emptySlotIndex = teams[teamName].findIndex((p) => p === null);
         if (emptySlotIndex === -1) {
-            throw new Error(`Team ${teamName} has no empty slots.`);
+            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
         }
 
         // Fill slot
@@ -387,19 +398,19 @@ export class PlayerManager {
 
         // Check if teams exist
         if (!teams[fromTeam] || !teams[toTeam]) {
-            throw new Error('Both teams must exist.');
+            throw new PlayerError('Both teams must exist.', 400);
         }
 
         // Check if player is in source team
         const fromIndex = teams[fromTeam].findIndex((p) => p === playerName);
         if (fromIndex === -1) {
-            throw new Error(`Player ${playerName} is not in team ${fromTeam}.`);
+            throw new PlayerError(`Player ${playerName} is not in team ${fromTeam}.`, 400);
         }
 
         // Check if target team has empty slot
         const toIndex = teams[toTeam].findIndex((p) => p === null);
         if (toIndex === -1) {
-            throw new Error(`Team ${toTeam} has no empty slots.`);
+            throw new PlayerError(`Team ${toTeam} has no empty slots.`, 400);
         }
 
         // Move player
@@ -418,12 +429,13 @@ export class PlayerManager {
         const { players, settings } = gameData;
 
         if (players.available.includes(playerName)) {
-            throw new Error(`Player ${playerName} is already in available list.`);
+            throw new PlayerError(`Player ${playerName} is already in available list.`, 400);
         }
 
         if (players.available.length >= settings.playerLimit) {
-            throw new Error(
-                `Player limit of ${settings.playerLimit} reached. Use waiting list instead.`
+            throw new PlayerError(
+                `Player limit of ${settings.playerLimit} reached. Use waiting list instead.`,
+                400
             );
         }
 

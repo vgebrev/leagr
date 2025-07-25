@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
 export const DELETE = async ({ request, url, locals }) => {
@@ -29,7 +29,10 @@ export const DELETE = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error removing player from team:', err);
-        return error(400, err.message);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to remove player from team');
     }
 };
 
@@ -59,7 +62,10 @@ export const POST = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error assigning player to team:', err);
-        return error(400, err.message);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to assign player to team');
     }
 };
 
@@ -112,7 +118,10 @@ export const PATCH = async ({ request, url, locals }) => {
         }
     } catch (err) {
         console.error('Error performing team operation:', err);
-        return error(400, err.message);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to perform team operation');
     }
 };
 
