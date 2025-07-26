@@ -14,6 +14,7 @@
         teamIndex = null,
         color = null,
         teamName,
+        canModifyList = true,
         onremove = null,
         onfillempty = null,
         onfillemptyWithPlayer = null,
@@ -122,6 +123,7 @@
                                     type="button"
                                     outline={true}
                                     color="alternative"
+                                    disabled={!canModifyList}
                                     onclick={() => {
                                         assignDropdownOpen[i] = !assignDropdownOpen[i];
                                     }}><DotsVerticalOutline class="h-4 w-4" /></Button>
@@ -154,6 +156,7 @@
                                     type="button"
                                     outline={true}
                                     color="alternative"
+                                    disabled={!canModifyList}
                                     onclick={() => {
                                         removeDropdownOpen[i] = !removeDropdownOpen[i];
                                     }}><DotsVerticalOutline class="h-4 w-4" /></Button>
@@ -186,6 +189,7 @@
                                         type="button"
                                         outline={true}
                                         color="alternative"
+                                        disabled={!canModifyList}
                                         onclick={() => {
                                             fillDropdownOpen[i] = !fillDropdownOpen[i];
                                         }}><DotsVerticalOutline class="h-4 w-4" /></Button>

@@ -5,6 +5,7 @@
         players,
         waitingList,
         unassignedPlayers,
+        canModifyList,
         onremove,
         onfillempty,
         onfillemptyWithPlayer,
@@ -18,6 +19,7 @@
             {team}
             {teamName}
             teamIndex={i}
+            {canModifyList}
             {onfillempty}
             {onfillemptyWithPlayer}
             {onremove}
@@ -32,6 +34,7 @@
                     team={unassignedPlayers}
                     color="gray"
                     teamName="Unassigned Players"
+                    {canModifyList}
                     players={unassignedPlayers}
                     availableTeams={Object.keys(teams)}
                     allTeams={teams}
@@ -43,6 +46,7 @@
                     team={waitingList}
                     color="gray"
                     teamName="Waiting List"
+                    {canModifyList}
                     players={waitingList}
                     availableTeams={Object.keys(teams)}
                     allTeams={teams}

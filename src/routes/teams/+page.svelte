@@ -17,6 +17,7 @@
     let waitingList = $derived(playersService.waitingList);
     let players = $derived(playersService.players);
     let unassignedPlayers = $derived(teamsService.unassignedPlayers);
+    let canModifyList = $derived(playersService.canModifyList);
 
     // Get summary data
     let playerSummary = $derived(teamsService.playerSummary);
@@ -70,6 +71,7 @@
         {players}
         {waitingList}
         {unassignedPlayers}
+        {canModifyList}
         onremove={removePlayer}
         onfillempty={fillEmptySpotFromWaitingList}
         onfillemptyWithPlayer={fillEmptySpotWithPlayer}

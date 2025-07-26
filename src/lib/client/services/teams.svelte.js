@@ -58,6 +58,7 @@ class TeamsService {
     canGenerateTeams = $derived.by(() => {
         return (
             !this.isPast &&
+            playersService.canModifyList &&
             (this.#settings.canRegenerateTeams || Object.keys(this.teams).length === 0)
         );
     });
@@ -232,8 +233,8 @@ class TeamsService {
      * @param {Object} options - Configuration object containing team options
      */
     async generateTeams(options) {
-        if (this.isPast) {
-            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
+        if (this.isPast || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
             return false;
         }
 
@@ -272,8 +273,8 @@ class TeamsService {
      * @param {string} action - Action to take: 'waitingList' or 'remove'
      */
     async removePlayerFromTeam(player, teamIndex, action = 'waitingList') {
-        if (this.isPast) {
-            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
+        if (this.isPast || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
             return;
         }
 
@@ -336,8 +337,8 @@ class TeamsService {
      * @param {string} teamName - Team name to assign to
      */
     async assignPlayerToTeam(playerName, teamName) {
-        if (this.isPast) {
-            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
+        if (this.isPast || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
             return;
         }
 
@@ -376,8 +377,8 @@ class TeamsService {
      * @param {string} selectedPlayer - Player name to move from waiting list
      */
     async fillEmptySpotWithPlayer(playerIndex, teamIndex, selectedPlayer) {
-        if (this.isPast) {
-            setNotification('The date is in the past. Teams cannot be changed.', 'warning');
+        if (this.isPast || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
             return;
         }
 
