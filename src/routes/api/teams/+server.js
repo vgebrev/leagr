@@ -38,26 +38,67 @@ export const POST = async ({ request, url, locals }) => {
         return error(400, 'Date parameter is required');
     }
 
-    if (!body) {
-        return error(400, 'Invalid request body');
+    if (!body || !body.method || !body.teamConfig) {
+        return error(400, 'Invalid request body. method and teamConfig are required');
+    }
+
+    const { method, teamConfig } = body;
+
+    if (!['random', 'seeded'].includes(method)) {
+        return error(400, 'Invalid method. Must be "random" or "seeded"');
+    }
+
+    if (!teamConfig.teams || !teamConfig.teamSizes || !Array.isArray(teamConfig.teamSizes)) {
+        return error(400, 'Invalid teamConfig. Must include teams and teamSizes array');
     }
 
     try {
-        // When teams are set, validate and cleanup player consistency
+        // Get player data, settings, and rankings
+        const playerManager = createPlayerManager().setDate(date).setLeague(leagueId);
 
-        // Set the teams using the data service (maintain existing functionality)
+        const gameData = await playerManager.getData({
+            players: true,
+            teams: false,
+            settings: true
+        });
+
+        // Get rankings for seeded teams
+        let rankings = null;
+        if (method === 'seeded') {
+            const { data } = await import('$lib/server/data.js');
+            rankings = await data.get('rankings', null, {}, leagueId);
+        }
+
+        // Get eligible players (respecting player limit)
+        const effectivePlayerLimit =
+            gameData.settings[date]?.playerLimit || gameData.settings.playerLimit;
+        const eligiblePlayers = gameData.players.available.slice(
+            0,
+            Math.min(gameData.players.available.length, effectivePlayerLimit)
+        );
+
+        // Generate teams
+        const { createTeamGenerator } = await import('$lib/server/teamGenerator.js');
+        const teamGenerator = createTeamGenerator()
+            .setSettings(gameData.settings)
+            .setPlayers(eligiblePlayers)
+            .setRankings(rankings);
+
+        const result = teamGenerator.generateTeams(method, teamConfig);
+
+        // Store the generated teams
         const { data } = await import('$lib/server/data.js');
-        await data.set('teams', date, body, {}, true, leagueId);
+        await data.set('teams', date, result.teams, {}, true, leagueId);
 
-        // Then validate and cleanup any inconsistencies
-        const result = await createPlayerManager()
-            .setDate(date)
-            .setLeague(leagueId)
-            .validateAndCleanup();
+        // Validate and cleanup any inconsistencies
+        const cleanupResult = await playerManager.validateAndCleanup();
 
-        return json(result.teams);
+        return json({
+            teams: cleanupResult.teams,
+            config: result.config
+        });
     } catch (err) {
-        console.error('Error setting teams:', err);
-        return error(500, 'Failed to set teams');
+        console.error('Error generating teams:', err);
+        return error(500, 'Failed to generate teams');
     }
 };

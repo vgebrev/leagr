@@ -3,8 +3,7 @@ import { playersService } from '$lib/client/services/players.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { nouns } from '$lib/client/nouns.js';
-import { teamColours, isDateInPast } from '$lib/shared/helpers.js';
+import { isDateInPast } from '$lib/shared/helpers.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 
 class TeamsService {
@@ -48,11 +47,14 @@ class TeamsService {
     });
 
     teamConfig = $derived.by(() => {
-        const effectivePlayerLimit =
-            this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
-        const playerCount = Math.min(playersService.players.length, effectivePlayerLimit);
-        return this.calculateTeamConfig(playerCount);
+        return this.#teamConfigurations || [];
     });
+
+    /** @type {Array} */
+    #teamConfigurations = $state([]);
+
+    /** @type {boolean} */
+    confirmRegenerate = $state(false);
 
     /** @type {boolean} */
     canGenerateTeams = $derived.by(() => {
@@ -87,145 +89,26 @@ class TeamsService {
     }
 
     // Methods
-    calculateTeamConfig(playerCount) {
-        const teamLimits = {
-            min: this.#settings.teamGeneration.minTeams,
-            max: this.#settings.teamGeneration.maxTeams
-        };
-        const playerLimits = {
-            min: this.#settings.teamGeneration.minPlayersPerTeam,
-            max: this.#settings.teamGeneration.maxPlayersPerTeam
-        };
-        const config = [];
+    /**
+     * Load team configurations from server
+     */
+    async loadTeamConfigurations() {
+        if (!this.currentDate) return;
 
-        for (
-            let t = teamLimits.min;
-            t <= teamLimits.max && t * playerLimits.min <= playerCount;
-            t++
-        ) {
-            const minPlayers = Math.floor(playerCount / t);
-            const extraPlayers = playerCount % t;
-            const teamSizes = Array(t).fill(minPlayers);
-
-            for (let i = 0; i < extraPlayers; i++) {
-                teamSizes[i]++;
+        await withLoading(
+            async () => {
+                const configurations = await api.get('teams/configurations', this.currentDate);
+                this.#teamConfigurations = configurations.configurations || [];
+            },
+            (err) => {
+                console.error('Error loading team configurations:', err);
+                setNotification(
+                    err.message || 'Failed to load team configurations. Please try again.',
+                    'error'
+                );
+                this.#teamConfigurations = [];
             }
-
-            if (teamSizes.every((size) => size >= playerLimits.min && size <= playerLimits.max)) {
-                config.push({
-                    teams: t,
-                    teamSizes: teamSizes
-                });
-            }
-        }
-        return config;
-    }
-
-    generateRandomTeams(options) {
-        const players = playersService.players;
-        const eligiblePlayers = players.slice(
-            0,
-            Math.min(
-                players.length,
-                this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit
-            )
         );
-        const teams = {};
-        const teamSizes = options.teamSizes;
-        const shuffledPlayers = eligiblePlayers.sort(() => Math.random() - 0.5);
-
-        for (let i = 0; i < teamSizes.length; i++) {
-            const noun = nouns[Math.floor(Math.random() * nouns.length)];
-            const name = `${teamColours[i]} ${noun}`;
-            teams[name] = [...shuffledPlayers.splice(0, teamSizes[i])];
-        }
-        return teams;
-    }
-
-    generateSeededTeams(options) {
-        const players = playersService.players;
-        const eligiblePlayers = players.slice(
-            0,
-            Math.min(
-                players.length,
-                this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit
-            )
-        );
-        const teamSizes = options.teamSizes;
-        const numTeams = teamSizes.length;
-        const teams = {};
-
-        // Sort players by ranking points first, then total points, then appearances
-        const sortedPlayers = [...eligiblePlayers].sort((a, b) => {
-            const playerA = this.rankings?.players?.[a];
-            const playerB = this.rankings?.players?.[b];
-
-            if (playerA?.rankingPoints !== undefined && playerB?.rankingPoints !== undefined) {
-                if (playerA.rankingPoints !== playerB.rankingPoints) {
-                    return playerB.rankingPoints - playerA.rankingPoints;
-                }
-            }
-
-            if ((playerA?.points || 0) !== (playerB?.points || 0)) {
-                return (playerB?.points || 0) - (playerA?.points || 0);
-            }
-
-            return (playerB?.appearances || 0) - (playerA?.appearances || 0);
-        });
-
-        // Create team structure
-        for (let i = 0; i < numTeams; i++) {
-            const noun = nouns[Math.floor(Math.random() * nouns.length)];
-            const name = `${teamColours[i]} ${noun}`;
-            teams[name] = [];
-        }
-
-        const teamNames = Object.keys(teams);
-        let playerIndex = 0;
-
-        // Fill teams round by round until all are complete
-        while (
-            teamNames.some((name, i) => teams[name].length < teamSizes[i]) &&
-            playerIndex < sortedPlayers.length
-        ) {
-            // Create a pot of players for this round (double size for variability)
-            const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
-            const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
-
-            // Randomize within the pot
-            currentPot.sort(() => Math.random() - 0.5);
-
-            let potPlayerIndex = 0;
-
-            // Distribute players from this pot to teams that still need players
-            for (
-                let teamIndex = 0;
-                teamIndex < numTeams && potPlayerIndex < currentPot.length;
-                teamIndex++
-            ) {
-                const teamName = teamNames[teamIndex];
-                const currentTeamSize = teams[teamName].length;
-                const targetTeamSize = teamSizes[teamIndex];
-
-                // Skip if team is already full
-                if (currentTeamSize >= targetTeamSize) continue;
-
-                // Determine how many players to assign (1 or 2, but no more than available in pot)
-                const remainingSpots = targetTeamSize - currentTeamSize;
-                const availableInPot = currentPot.length - potPlayerIndex;
-                const playersToAssign = Math.min(2, remainingSpots, availableInPot);
-
-                // Assign players from pot to this team
-                for (let p = 0; p < playersToAssign; p++) {
-                    teams[teamName].push(currentPot[potPlayerIndex++]);
-                }
-            }
-
-            // Move to next batch of players
-            playerIndex += potSize;
-        }
-
-        return teams;
     }
 
     /**
@@ -243,22 +126,26 @@ class TeamsService {
             return false;
         }
 
-        // Remove confirmRegenerate logic - let component handle it
         const restoreTeams = { ...this.teams };
         let success = false;
 
         await withLoading(
             async () => {
-                this.teams = this.#settings.seedTeams
-                    ? this.generateSeededTeams(options)
-                    : this.generateRandomTeams(options);
+                const method = this.#settings.seedTeams ? 'seeded' : 'random';
+                const result = await api.post('teams', this.currentDate, {
+                    method,
+                    teamConfig: options
+                });
 
-                this.teams = (await api.post('teams', this.currentDate, this.teams)) || {};
+                this.teams = result.teams || {};
                 success = true;
             },
             (err) => {
                 console.error('Error generating teams:', err);
-                setNotification('Failed to generate teams. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to generate teams. Please try again.',
+                    'error'
+                );
                 this.teams = restoreTeams;
             }
         );
@@ -439,6 +326,9 @@ class TeamsService {
 
                 // Load existing teams data
                 this.teams = (await api.get('teams', date)) || {};
+
+                // Load team configurations
+                await this.loadTeamConfigurations();
             },
             (err) => {
                 console.error('Error fetching teams data:', err);
@@ -457,6 +347,7 @@ class TeamsService {
         this.teams = {};
         this.rankings = {};
         this.currentDate = null;
+        this.#teamConfigurations = [];
         this.confirmRegenerate = false;
     }
 
