@@ -1,6 +1,6 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager } from '$lib/server/playerManager.js';
-import { createTeamGenerator } from '$lib/server/teamGenerator.js';
+import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
 export const GET = async ({ url, locals }) => {
@@ -40,6 +40,13 @@ export const GET = async ({ url, locals }) => {
         });
     } catch (err) {
         console.error('Error calculating team configurations:', err);
+
+        // Handle known error types with their specific status codes
+        if (err instanceof TeamError || err instanceof PlayerError) {
+            return error(err.statusCode || 500, err.message);
+        }
+
+        // Handle unexpected errors with generic message
         return error(500, 'Failed to calculate team configurations');
     }
 };

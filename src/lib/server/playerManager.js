@@ -59,7 +59,7 @@ export class PlayerState {
             if (availableSet.has(player)) {
                 throw new PlayerError(
                     `Player ${player} exists in both available and waiting lists`,
-                    500
+                    400
                 );
             }
         }
@@ -73,7 +73,7 @@ export class PlayerState {
                     if (!availableSet.has(player)) {
                         throw new PlayerError(
                             `Assigned player ${player} not in available list`,
-                            500
+                            400
                         );
                     }
                 }
@@ -84,7 +84,7 @@ export class PlayerState {
         if (this.players.available.length > this.settings.playerLimit) {
             throw new PlayerError(
                 `Available players exceed limit of ${this.settings.playerLimit}`,
-                500
+                400
             );
         }
     }
@@ -406,9 +406,8 @@ export class PlayerManager {
                 // Log the specific save error for debugging
                 console.error('Failed to save player/team data atomically:', saveError);
 
-                // Re-throw with context about which operation failed during save
-                const errorMessage = `Failed to save changes: ${saveError.message || 'Unknown database error'}`;
-                throw new PlayerError(errorMessage, 500);
+                // Re-throw the original error to preserve its type and status code
+                throw saveError;
             }
         }
 

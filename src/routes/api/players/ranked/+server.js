@@ -1,4 +1,4 @@
-import { rankings } from '$lib/server/rankings.js';
+import { createRankingsManager } from '$lib/server/rankings.js';
 import { json, error } from '@sveltejs/kit';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
@@ -8,7 +8,7 @@ export async function GET({ locals }) {
         return error(404, 'League not found');
     }
 
-    const rankingData = await rankings.loadRankings(leagueId);
+    const rankingData = await createRankingsManager().setLeague(leagueId).loadRankings();
     const sorted = Object.keys(rankingData.players ?? {}).sort((a, b) =>
         a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase())
     );

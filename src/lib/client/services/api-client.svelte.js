@@ -105,7 +105,10 @@ async function remove(key, date, value) {
     });
     if (!response.ok) {
         handleAuthError(response);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     return await response.json();
 }
@@ -119,7 +122,10 @@ async function patch(key, date, value) {
     });
     if (!response.ok) {
         handleAuthError(response);
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
     }
     return await response.json();
 }

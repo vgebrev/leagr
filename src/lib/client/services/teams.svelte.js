@@ -166,7 +166,7 @@ class TeamsService {
         }
 
         const restoreTeams = { ...this.teams };
-        const restorePlayers = { ...playersService.players };
+        const restorePlayers = [...playersService.players];
         const restoreWaitingList = [...playersService.waitingList];
 
         await withLoading(
@@ -189,7 +189,10 @@ class TeamsService {
             },
             (err) => {
                 console.error('Error removing player from team:', err);
-                setNotification('Failed to remove player. Please try again.', 'error');
+                setNotification(
+                    err.message || 'Failed to remove player. Please try again.',
+                    'error'
+                );
                 this.teams = restoreTeams;
                 playersService.players = restorePlayers;
                 playersService.waitingList = restoreWaitingList;

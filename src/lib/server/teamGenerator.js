@@ -2,6 +2,17 @@ import { nouns } from '$lib/shared/nouns.js';
 import { teamColours } from '$lib/shared/helpers.js';
 
 /**
+ * Team generation error class
+ */
+export class TeamError extends Error {
+    constructor(message, statusCode = 500) {
+        super(message);
+        this.name = 'TeamError';
+        this.statusCode = statusCode;
+    }
+}
+
+/**
  * Server-side team generation service
  */
 export class TeamGenerator {
@@ -50,7 +61,7 @@ export class TeamGenerator {
         const count = playerCount || this.players.length;
 
         if (!this.settings) {
-            throw new Error('Settings must be set before calculating configurations');
+            throw new TeamError('Settings must be set before calculating configurations', 400);
         }
 
         const teamLimits = {
@@ -116,7 +127,7 @@ export class TeamGenerator {
      */
     generateRandomTeams(config) {
         if (!this.players.length) {
-            throw new Error('Players must be set before generating teams');
+            throw new TeamError('No players available for team generation', 400);
         }
 
         const teams = {};
@@ -138,7 +149,7 @@ export class TeamGenerator {
      */
     generateSeededTeams(config) {
         if (!this.players.length) {
-            throw new Error('Players must be set before generating teams');
+            throw new TeamError('No players available for team generation', 400);
         }
 
         const teamSizes = config.teamSizes;
@@ -224,7 +235,23 @@ export class TeamGenerator {
      */
     generateTeams(method, config) {
         if (!this.settings) {
-            throw new Error('Settings must be set before generating teams');
+            throw new TeamError('Settings must be set before generating teams', 400);
+        }
+
+        if (!config || !config.teamSizes || !Array.isArray(config.teamSizes)) {
+            throw new TeamError('Invalid team configuration provided', 400);
+        }
+
+        if (!['random', 'seeded'].includes(method)) {
+            throw new TeamError(`Invalid team generation method: ${method}`, 400);
+        }
+
+        const totalPlayersNeeded = config.teamSizes.reduce((sum, size) => sum + size, 0);
+        if (totalPlayersNeeded > this.players.length) {
+            throw new TeamError(
+                `Not enough players: need ${totalPlayersNeeded}, have ${this.players.length}`,
+                400
+            );
         }
 
         const teams =
