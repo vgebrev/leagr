@@ -7,23 +7,20 @@
         TrashBinOutline,
         ClockOutline
     } from 'flowbite-svelte-icons';
-    import { capitalize, teamColours, teamStyles } from '$lib/shared/helpers.js';
+    import { capitalize, teamStyles } from '$lib/shared/helpers.js';
 
     let {
         team,
-        teamIndex = null,
-        color = null,
+        color = 'default',
         teamName,
         canModifyList = true,
         onremove = null,
         onassign = null,
-        players,
         assignablePlayers = [],
         allTeams = {}
     } = $props();
 
-    let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
-    const styles = $derived(teamStyles[teamColour] || teamStyles.default);
+    const styles = $derived(teamStyles[color] || teamStyles.default);
 
     // Track dropdown states for each player
     let removeDropdownOpen = $derived(team.map(() => false));
@@ -80,7 +77,7 @@
                 <th
                     scope="col"
                     class="p-2">
-                    {teamName || `${capitalize(teamColour)} Team`}
+                    {teamName || `${capitalize(color)} Team`}
                 </th>
             </tr>
         </thead>
@@ -89,11 +86,8 @@
                 <tr class={`${styles.row}`}>
                     <td class="m-0 p-2"
                         ><div class="flex">
-                            {#if player && Array.isArray(players) && players.includes(player)}
+                            {#if player}
                                 <span>{player}</span>
-                            {:else if player && Array.isArray(players) && !players.includes(player)}
-                                <span class="flex gap-2 line-through"
-                                    ><ExclamationCircleSolid />{player}</span>
                             {:else}
                                 <span class="flex gap-2 italic"
                                     ><ExclamationCircleSolid /> Empty</span>

@@ -1,14 +1,8 @@
 <script>
     import TeamTable from './TeamTable.svelte';
-    let {
-        teams,
-        players,
-        waitingList,
-        unassignedPlayers,
-        canModifyList,
-        onremove,
-        onassign
-    } = $props();
+    import { teamColours } from '$lib/shared/helpers.js';
+
+    let { teams, waitingList, unassignedPlayers, canModifyList, onremove, onassign } = $props();
 
     // Combine all assignable players for dropdown selection
     const assignablePlayers = $derived([...unassignedPlayers, ...waitingList]);
@@ -19,11 +13,10 @@
         <TeamTable
             {team}
             {teamName}
-            teamIndex={i}
+            color={teamColours[i % teamColours.length]}
             {canModifyList}
             {onassign}
             {onremove}
-            {players}
             {assignablePlayers} />
     {/each}
     {#if (unassignedPlayers?.length > 0 || waitingList?.length > 0) && Object.entries(teams).length > 0}
@@ -34,7 +27,6 @@
                     color="gray"
                     teamName="Unassigned Players"
                     {canModifyList}
-                    players={unassignedPlayers}
                     allTeams={teams}
                     {onassign}
                     {onremove} />
@@ -45,7 +37,6 @@
                     color="gray"
                     teamName="Waiting List"
                     {canModifyList}
-                    players={waitingList}
                     allTeams={teams}
                     {onassign}
                     {onremove} />

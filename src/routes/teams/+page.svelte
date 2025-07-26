@@ -15,7 +15,6 @@
 
     // Use players service for player data
     let waitingList = $derived(playersService.waitingList);
-    let players = $derived(playersService.players);
     let unassignedPlayers = $derived(teamsService.unassignedPlayers);
     let canModifyList = $derived(playersService.canModifyList);
 
@@ -42,7 +41,6 @@
         ongenerate={generateTeams} />
     <TeamsGrid
         {teams}
-        {players}
         {waitingList}
         {unassignedPlayers}
         {canModifyList}
