@@ -198,7 +198,10 @@ describe('PlayerManager', () => {
                 'test-league'
             );
 
-            expect(result).toEqual({ available: ['Jane'], waitingList: [] });
+            expect(result).toEqual({ 
+                players: { available: ['Jane'], waitingList: [] },
+                teams: expect.any(Object)
+            });
         });
 
         it('should remove player from team when assigned', async () => {
@@ -231,7 +234,10 @@ describe('PlayerManager', () => {
                 '2025-01-25',
                 'test-league'
             );
-            expect(result).toEqual({ available: ['Jane'], waitingList: [] });
+            expect(result).toEqual({ 
+                players: { available: ['Jane'], waitingList: [] },
+                teams: expect.any(Object)
+            });
         });
     });
 

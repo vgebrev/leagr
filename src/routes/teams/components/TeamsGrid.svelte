@@ -7,10 +7,11 @@
         unassignedPlayers,
         canModifyList,
         onremove,
-        onfillempty,
-        onfillemptyWithPlayer,
-        onremoveFromList
+        onassign
     } = $props();
+
+    // Combine all assignable players for dropdown selection
+    const assignablePlayers = $derived([...unassignedPlayers, ...waitingList]);
 </script>
 
 <div class="grid grid-cols-2 gap-2">
@@ -20,12 +21,10 @@
             {teamName}
             teamIndex={i}
             {canModifyList}
-            {onfillempty}
-            {onfillemptyWithPlayer}
+            {onassign}
             {onremove}
             {players}
-            waitingList={unassignedPlayers}
-            allWaitingPlayers={waitingList} />
+            {assignablePlayers} />
     {/each}
     {#if (unassignedPlayers?.length > 0 || waitingList?.length > 0) && Object.entries(teams).length > 0}
         <div class="flex flex-col gap-2">
@@ -36,10 +35,9 @@
                     teamName="Unassigned Players"
                     {canModifyList}
                     players={unassignedPlayers}
-                    availableTeams={Object.keys(teams)}
                     allTeams={teams}
-                    onassignToTeam={onfillemptyWithPlayer}
-                    onremovePlayer={onremoveFromList} />
+                    {onassign}
+                    {onremove} />
             {/if}
             {#if waitingList?.length > 0}
                 <TeamTable
@@ -48,10 +46,9 @@
                     teamName="Waiting List"
                     {canModifyList}
                     players={waitingList}
-                    availableTeams={Object.keys(teams)}
                     allTeams={teams}
-                    onassignToTeam={onfillemptyWithPlayer}
-                    onremovePlayer={onremoveFromList} />
+                    {onassign}
+                    {onremove} />
             {/if}
         </div>
     {/if}

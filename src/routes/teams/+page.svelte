@@ -26,32 +26,6 @@
         await teamsService.generateTeams(options);
     }
 
-    async function removePlayer({ player, teamIndex, action }) {
-        await teamsService.removePlayerFromTeam(player, teamIndex, action);
-    }
-
-    async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
-        await teamsService.fillEmptySpotFromWaitingList(playerIndex, teamIndex);
-    }
-
-    async function fillEmptySpotWithPlayer(data) {
-        if (data.playerName && data.teamName) {
-            // Direct assignment by team name
-            await teamsService.assignPlayerToTeam(data.playerName, data.teamName);
-        } else {
-            // Legacy slot-based assignment
-            await teamsService.fillEmptySpotWithPlayer(
-                data.playerIndex,
-                data.teamIndex,
-                data.selectedPlayer
-            );
-        }
-    }
-
-    async function removePlayerFromList(playerName, list) {
-        await playersService.removePlayer(playerName, list);
-    }
-
     onMount(async () => {
         await teamsService.loadTeams(date);
     });
@@ -72,8 +46,6 @@
         {waitingList}
         {unassignedPlayers}
         {canModifyList}
-        onremove={removePlayer}
-        onfillempty={fillEmptySpotFromWaitingList}
-        onfillemptyWithPlayer={fillEmptySpotWithPlayer}
-        onremoveFromList={removePlayerFromList} />
+        onremove={teamsService.removePlayer.bind(teamsService)}
+        onassign={teamsService.assignPlayerToTeam.bind(teamsService)} />
 </div>

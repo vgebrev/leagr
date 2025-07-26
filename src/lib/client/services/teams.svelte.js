@@ -13,9 +13,6 @@ class TeamsService {
     /** @type {Object} */
     teams = $state({});
 
-    /** @type {Object} */
-    rankings = $state({});
-
     /** @type {string | null} */
     currentDate = $state(null);
 
@@ -52,9 +49,6 @@ class TeamsService {
 
     /** @type {Array} */
     #teamConfigurations = $state([]);
-
-    /** @type {boolean} */
-    confirmRegenerate = $state(false);
 
     /** @type {boolean} */
     canGenerateTeams = $derived.by(() => {
@@ -154,14 +148,14 @@ class TeamsService {
     }
 
     /**
-     * Remove a player from a team with enhanced actions
-     * @param {string} player - Player name to remove
-     * @param {number} teamIndex - Index of the team
-     * @param {string} action - Action to take: 'waitingList' or 'remove'
+     * Unified player removal operation - handles all removal scenarios
+     * @param {string} playerName - Player name to remove
+     * @param {string} action - Action to take: 'waitingList', 'remove', or 'unassign'
+     * @param {string} [teamName] - Team name (auto-detected if not provided)
      */
-    async removePlayerFromTeam(player, teamIndex, action = 'waitingList') {
+    async removePlayer(playerName, action = 'waitingList', teamName = null) {
         if (this.isPast || !playersService.canModifyList) {
-            setNotification('Teams cannot be changed.', 'warning');
+            setNotification('Players cannot be changed.', 'warning');
             return;
         }
 
@@ -171,12 +165,21 @@ class TeamsService {
 
         await withLoading(
             async () => {
-                const teamNames = Object.keys(this.teams);
-                const teamName = teamNames[teamIndex];
+                // Auto-detect team name if not provided
+                let detectedTeamName = teamName;
+                if (!detectedTeamName) {
+                    // Find which team the player is in
+                    for (const [name, roster] of Object.entries(this.teams)) {
+                        if (roster.includes(playerName)) {
+                            detectedTeamName = name;
+                            break;
+                        }
+                    }
+                }
 
                 const result = await api.remove('teams/players', this.currentDate, {
-                    playerName: player,
-                    teamName: teamName,
+                    playerName: playerName,
+                    teamName: detectedTeamName,
                     action: action
                 });
 
@@ -188,7 +191,7 @@ class TeamsService {
                 }
             },
             (err) => {
-                console.error('Error removing player from team:', err);
+                console.error('Error removing player:', err);
                 setNotification(
                     err.message || 'Failed to remove player. Please try again.',
                     'error'
@@ -201,34 +204,22 @@ class TeamsService {
     }
 
     /**
-     * @deprecated Use removePlayerFromTeam instead
-     */
-    async removePlayer(player, teamIndex) {
-        return this.removePlayerFromTeam(player, teamIndex, 'waitingList');
-    }
-
-    /**
-     * Fill an empty spot from unassigned players (first available player)
-     * @param {number} playerIndex - Index of the empty spot
-     * @param {number} teamIndex - Index of the team
-     */
-    async fillEmptySpotFromWaitingList(playerIndex, teamIndex) {
-        if (this.unassignedPlayers.length > 0) {
-            const nextPlayer = this.unassignedPlayers[0];
-            return this.fillEmptySpotWithPlayer(playerIndex, teamIndex, nextPlayer);
-        } else {
-            setNotification('No unassigned players available.', 'info');
-        }
-    }
-
-    /**
-     * Assign a player to a team by team name (finds first empty slot)
-     * @param {string} playerName - Player name to assign
+     * Unified player assignment operation - handles all assignment scenarios
+     * @param {string} playerName - Player name to assign (optional for auto-assignment)
      * @param {string} teamName - Team name to assign to
      */
     async assignPlayerToTeam(playerName, teamName) {
         if (this.isPast || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
+            return;
+        }
+
+        // Auto-select first unassigned player if none specified
+        const selectedPlayer =
+            playerName || this.unassignedPlayers[0] || playersService.waitingList[0];
+
+        if (!selectedPlayer) {
+            setNotification('No unassigned players available.', 'info');
             return;
         }
 
@@ -239,55 +230,6 @@ class TeamsService {
         await withLoading(
             async () => {
                 const result = await api.post('teams/players', this.currentDate, {
-                    playerName: playerName,
-                    teamName: teamName
-                });
-
-                if (result) {
-                    // Update local state with server response
-                    this.teams = result.teams;
-                    playersService.players = result.players.available;
-                    playersService.waitingList = result.players.waitingList;
-                }
-            },
-            (err) => {
-                console.error('Error assigning player to team:', err);
-                setNotification('Failed to assign player to team. Please try again.', 'error');
-                this.teams = restoreTeams;
-                playersService.players = restorePlayers;
-                playersService.waitingList = restoreWaitingList;
-            }
-        );
-    }
-
-    /**
-     * Fill an empty spot with a specific player from the waiting list
-     * @param {number} playerIndex - Index of the empty spot
-     * @param {number} teamIndex - Index of the team
-     * @param {string} selectedPlayer - Player name to move from waiting list
-     */
-    async fillEmptySpotWithPlayer(playerIndex, teamIndex, selectedPlayer) {
-        if (this.isPast || !playersService.canModifyList) {
-            setNotification('Teams cannot be changed.', 'warning');
-            return;
-        }
-
-        const restoreTeams = { ...this.teams };
-        const restorePlayers = [...playersService.players];
-        const restoreWaitingList = [...playersService.waitingList];
-
-        await withLoading(
-            async () => {
-                const teamNames = Object.keys(this.teams);
-                const teamName = teamNames[teamIndex];
-
-                if (this.teams[teamName][playerIndex] !== null) {
-                    setNotification('This spot is already filled.', 'warning');
-                    return;
-                }
-
-                const result = await api.patch('teams/players', this.currentDate, {
-                    operation: 'fillSlot',
                     playerName: selectedPlayer,
                     teamName: teamName
                 });
@@ -300,9 +242,9 @@ class TeamsService {
                 }
             },
             (err) => {
-                console.error('Error filling empty spot with specific player:', err);
+                console.error('Error assigning player to team:', err);
                 setNotification(
-                    'Failed to assign player to empty spot. Please try again.',
+                    err.message || 'Failed to assign player to team. Please try again.',
                     'error'
                 );
                 this.teams = restoreTeams;
@@ -313,7 +255,7 @@ class TeamsService {
     }
 
     /**
-     * Load teams and rankings data for a specific date
+     * Load teams data for a specific date
      * @param {string} date - The date to load teams for
      */
     async loadTeams(date) {
@@ -323,9 +265,6 @@ class TeamsService {
 
                 // Load players first (teams depend on this)
                 await playersService.loadPlayers(date);
-
-                // Load rankings with enhanced data
-                this.rankings = await api.get('rankings');
 
                 // Load existing teams data
                 this.teams = (await api.get('teams', date)) || {};
@@ -348,10 +287,8 @@ class TeamsService {
      */
     reset() {
         this.teams = {};
-        this.rankings = {};
         this.currentDate = null;
         this.#teamConfigurations = [];
-        this.confirmRegenerate = false;
     }
 
     /**

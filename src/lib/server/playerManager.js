@@ -516,7 +516,7 @@ export class PlayerManager {
      */
     async removePlayer(playerName) {
         const result = await this.executeTransaction((state) => state.removePlayer(playerName));
-        return result.players;
+        return result;
     }
 
     /**

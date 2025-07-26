@@ -82,7 +82,7 @@ export const DELETE = async ({ request, url, locals }) => {
     }
 
     // Validate request body structure
-    const bodyValidation = validateRequestBody(bodyParseResult.data, ['playerName', 'list']);
+    const bodyValidation = validateRequestBody(bodyParseResult.data, ['playerName']);
     if (!bodyValidation.isValid) {
         return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
     }
@@ -93,18 +93,12 @@ export const DELETE = async ({ request, url, locals }) => {
         return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);
     }
 
-    // Validate list parameter
-    const listValidation = validateList(bodyParseResult.data.list);
-    if (!listValidation.isValid) {
-        return error(400, `Invalid list parameter: ${listValidation.errors.join(', ')}`);
-    }
-
     try {
         const result = await createPlayerManager()
             .setDate(dateValidation.date)
             .setLeague(locals.leagueId)
-            .removePlayer(nameValidation.sanitizedName, bodyParseResult.data.list);
-        return json(result);
+            .removePlayer(nameValidation.sanitizedName);
+        return json(result.players);
     } catch (err) {
         console.error('Error removing player:', err);
         if (err instanceof PlayerError) {

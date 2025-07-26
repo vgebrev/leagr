@@ -16,15 +16,10 @@
         teamName,
         canModifyList = true,
         onremove = null,
-        onfillempty = null,
-        onfillemptyWithPlayer = null,
+        onassign = null,
         players,
-        waitingList = [],
-        allWaitingPlayers = [],
-        availableTeams = [],
-        allTeams = {},
-        onassignToTeam = null,
-        onremovePlayer = null
+        assignablePlayers = [],
+        allTeams = {}
     } = $props();
 
     let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
@@ -46,11 +41,11 @@
 
     // Get teams with empty slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
-        if (!availableTeams || availableTeams.length === 0) {
+        if (!allTeams || Object.keys(allTeams).length === 0) {
             return [];
         }
 
-        return availableTeams.filter((teamName) => {
+        return Object.keys(allTeams).filter((teamName) => {
             const team = allTeams[teamName];
             if (!team) return false;
             return team.some((player) => player === null);
@@ -59,32 +54,20 @@
 
     function handleRemovePlayer(player, action) {
         if (onremove) {
-            onremove({ player, teamIndex, action });
+            onremove(player, action, teamName);
         }
     }
 
-    function handleFillEmptySpot(playerIndex, selectedPlayer = null) {
-        if (selectedPlayer && onfillemptyWithPlayer) {
-            onfillemptyWithPlayer({ playerIndex, teamIndex, selectedPlayer });
-        } else if (onfillempty) {
-            onfillempty({ playerIndex, teamIndex });
-        }
-    }
-
-    function handleAssignToTeam(player, teamName) {
-        if (onassignToTeam) {
-            // Let the server find the first empty slot in the target team
-            onassignToTeam({
-                playerName: player,
-                teamName: teamName
-            });
+    function handleAssignPlayer(playerName, targetTeamName) {
+        if (onassign) {
+            onassign(playerName, targetTeamName);
         }
     }
 
     function handleRemoveFromList(player) {
-        if (onremovePlayer) {
-            const list = teamName === 'Waiting List' ? 'waitingList' : 'available';
-            onremovePlayer(player, list);
+        // For player list tables - use unified remove operation
+        if (onremove) {
+            onremove(player, 'remove');
         }
     }
 </script>
@@ -133,7 +116,7 @@
                                     {#each teamsWithEmptySlots as teamName (teamName)}
                                         <DropdownItem
                                             classes={{ anchor: 'w-full font-normal' }}
-                                            onclick={() => handleAssignToTeam(player, teamName)}>
+                                            onclick={() => handleAssignPlayer(player, teamName)}>
                                             <span class="flex items-center">
                                                 <ArrowLeftOutline class="me-2 h-4 w-4" />
                                                 {capitalize(teamName)}
@@ -181,8 +164,8 @@
                                     </DropdownItem>
                                 </Dropdown>
                             {/if}
-                            {#if onfillempty && !player}
-                                {#if waitingList.length > 0 || allWaitingPlayers.length > 0}
+                            {#if onassign && !player}
+                                {#if assignablePlayers.length > 0}
                                     <Button
                                         size="sm"
                                         class="ms-auto p-0 {styles.buttonClass}"
@@ -196,11 +179,18 @@
                                     <Dropdown
                                         simple
                                         isOpen={fillDropdownOpen[i]}>
-                                        {#each [...waitingList, ...allWaitingPlayers] as waitingPlayer (waitingPlayer)}
+                                        <DropdownItem
+                                            classes={{ anchor: 'w-full font-normal' }}
+                                            onclick={() => handleAssignPlayer(null, teamName)}>
+                                            <span class="flex items-center">
+                                                <ArrowLeftOutline class="me-2 h-4 w-4" />
+                                                Auto-assign first available
+                                            </span>
+                                        </DropdownItem>
+                                        {#each assignablePlayers as waitingPlayer (waitingPlayer)}
                                             <DropdownItem
                                                 classes={{ anchor: 'w-full font-normal' }}
-                                                onclick={() =>
-                                                    handleFillEmptySpot(i, waitingPlayer)}>
+                                                onclick={() => handleAssignPlayer(waitingPlayer, teamName)}>
                                                 <span class="flex items-center">
                                                     <ArrowLeftOutline class="me-2 h-4 w-4" />
                                                     {waitingPlayer}
