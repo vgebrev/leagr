@@ -5,15 +5,23 @@ import {
     DAY_LEVEL_SETTINGS,
     LEAGUE_ONLY_SETTINGS
 } from '$lib/shared/defaults.js';
+import { globalSettingsCache, invalidateSettingsCache } from './settingsCache.js';
 
 /**
- * Get consolidated settings for a league and date
+ * Get consolidated settings for a league and date (with caching)
  * Returns league defaults merged with day-specific overrides
  * @param {string} date - Date in YYYY-MM-DD format
  * @param {string} leagueId - League identifier
  * @returns {Promise<Object>} - Consolidated settings object
  */
 export async function getConsolidatedSettings(date, leagueId) {
+    // Try cache first
+    const cached = globalSettingsCache.get(leagueId, date);
+    if (cached) {
+        return cached;
+    }
+
+    // Cache miss - load from disk and consolidate
     // Get league info and effective league settings (with fallback to defaultSettings)
     const leagueInfo = getLeagueInfo(leagueId);
     const leagueSettings = getEffectiveLeagueSettings(leagueInfo);
@@ -41,6 +49,9 @@ export async function getConsolidatedSettings(date, leagueId) {
 
         response[date] = dayOverrides;
     }
+
+    // Cache the consolidated result
+    globalSettingsCache.set(leagueId, date, response);
 
     return response;
 }
@@ -109,6 +120,15 @@ export async function saveConsolidatedSettings(date, leagueId, settings) {
         if (!result) {
             throw new Error('Failed to update day settings');
         }
+    }
+
+    // Invalidate cache after settings modification
+    if (Object.keys(leagueUpdates).length > 0) {
+        // League-level changes affect all dates for this league
+        invalidateSettingsCache(leagueId);
+    } else if (Object.keys(dayUpdates).length > 0) {
+        // Day-level changes only affect this specific date
+        invalidateSettingsCache(leagueId, date);
     }
 
     // Return the updated consolidated settings
