@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createPlayerManager } from '$lib/server/playerManager.js';
-import { data } from '$lib/server/data.js';
 
 // Mock the data service
 vi.mock('$lib/server/data.js', () => ({
@@ -24,7 +23,7 @@ describe('PlayerManager Caching', () => {
         // Import the mocked modules
         const { data } = await import('$lib/server/data.js');
         const { getConsolidatedSettings } = await import('$lib/server/settings.js');
-        
+
         mockGet = data.get;
         mockSetMany = data.setMany;
         mockGetConsolidatedSettings = getConsolidatedSettings;
@@ -71,7 +70,7 @@ describe('PlayerManager Caching', () => {
 
             // First call loads from disk
             const data1 = await manager.getData();
-            
+
             // Second call should use cache
             const data2 = await manager.getData();
 

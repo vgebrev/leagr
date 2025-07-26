@@ -419,38 +419,87 @@ export class PlayerManager {
     }
 
     /**
-     * Get current players and teams data (with caching)
+     * Get game data with selective loading (with caching)
+     * @param {Object} options - What data to load
+     * @param {boolean} options.players - Load players data (default: true)
+     * @param {boolean} options.teams - Load teams data (default: true)
+     * @param {boolean} options.settings - Load settings data (default: true)
      */
-    async getData() {
-        // Return cached data if valid
+    async getData(options = { players: true, teams: true, settings: true }) {
+        // Return cached data if valid and includes all requested components
         if (this.#isCacheValid()) {
-            return structuredClone(this.#dataCache);
+            const result = {};
+            if (options.players && this.#dataCache.players) {
+                result.players = structuredClone(this.#dataCache.players);
+            }
+            if (options.teams && this.#dataCache.teams) {
+                result.teams = structuredClone(this.#dataCache.teams);
+            }
+            if (options.settings && this.#dataCache.settings) {
+                result.settings = structuredClone(this.#dataCache.settings);
+            }
+
+            // If cache satisfies all requested data, return it
+            const hasAllRequested =
+                (!options.players || result.players !== undefined) &&
+                (!options.teams || result.teams !== undefined) &&
+                (!options.settings || result.settings !== undefined);
+
+            if (hasAllRequested) {
+                return result;
+            }
         }
 
-        // Load fresh data from disk
-        const [players, teams, consolidatedSettings] = await Promise.all([
-            data.get('players', this.date, this.leagueId),
-            data.get('teams', this.date, this.leagueId),
-            getConsolidatedSettings(this.date, this.leagueId)
-        ]);
+        // Build array of data loading promises based on options
+        const loadPromises = [];
+        const loadKeys = [];
 
-        // Extract effective settings for this date (day overrides take precedence)
-        const effectiveSettings =
-            this.date && consolidatedSettings[this.date]
-                ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
-                : consolidatedSettings;
+        if (options.players) {
+            loadPromises.push(data.get('players', this.date, this.leagueId));
+            loadKeys.push('players');
+        }
 
-        const gameData = {
-            players: players || structuredClone(defaultPlayers),
-            teams: teams || {},
-            settings: effectiveSettings
-        };
+        if (options.teams) {
+            loadPromises.push(data.get('teams', this.date, this.leagueId));
+            loadKeys.push('teams');
+        }
 
-        // Cache the loaded data
-        this.#dataCache = structuredClone(gameData);
-        this.#cacheKey = this.#getCacheKey();
+        if (options.settings) {
+            loadPromises.push(getConsolidatedSettings(this.date, this.leagueId));
+            loadKeys.push('settings');
+        }
 
-        return gameData;
+        // Load requested data from disk
+        const loadedData = await Promise.all(loadPromises);
+
+        // Build result object
+        const result = {};
+
+        for (let i = 0; i < loadKeys.length; i++) {
+            const key = loadKeys[i];
+            const value = loadedData[i];
+
+            if (key === 'players') {
+                result.players = value || structuredClone(defaultPlayers);
+            } else if (key === 'teams') {
+                result.teams = value || {};
+            } else if (key === 'settings') {
+                // Extract effective settings for this date (day overrides take precedence)
+                const consolidatedSettings = value;
+                result.settings =
+                    this.date && consolidatedSettings[this.date]
+                        ? { ...consolidatedSettings, ...consolidatedSettings[this.date] }
+                        : consolidatedSettings;
+            }
+        }
+
+        // Update cache only if we loaded all components (full cache)
+        if (options.players && options.teams && options.settings) {
+            this.#dataCache = structuredClone(result);
+            this.#cacheKey = this.#getCacheKey();
+        }
+
+        return result;
     }
 
     /**
@@ -544,7 +593,7 @@ export class PlayerManager {
      * Get available empty slots across all teams
      */
     async getAvailableSlots() {
-        const gameData = await this.getData();
+        const gameData = await this.getData({ players: false, teams: true, settings: false });
         const { teams } = gameData;
 
         const availableSlots = [];

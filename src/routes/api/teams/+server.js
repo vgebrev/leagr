@@ -14,7 +14,10 @@ export const GET = async ({ url, locals }) => {
     }
 
     try {
-        const gameData = await createPlayerManager().setDate(date).setLeague(leagueId).getData();
+        const gameData = await createPlayerManager()
+            .setDate(date)
+            .setLeague(leagueId)
+            .getData({ players: false, teams: true, settings: false });
         return json(gameData.teams);
     } catch (err) {
         console.error('Error fetching teams:', err);
