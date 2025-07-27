@@ -70,8 +70,8 @@ class PlayersService {
             async () => {
                 this.currentDate = date;
                 const playerData = await api.get('players', date);
-                this.players = playerData.available || [];
-                this.waitingList = playerData.waitingList || [];
+                this.players = playerData?.available || [];
+                this.waitingList = playerData?.waitingList || [];
             },
             (error) => {
                 setNotification(
@@ -248,6 +248,7 @@ class PlayersService {
     reset() {
         this.players = [];
         this.waitingList = [];
+        this.rankedPlayers = [];
         this.currentDate = null;
     }
 }

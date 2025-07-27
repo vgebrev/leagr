@@ -515,8 +515,7 @@ export class PlayerManager {
      * Remove player from specified list and from any teams they're assigned to
      */
     async removePlayer(playerName) {
-        const result = await this.executeTransaction((state) => state.removePlayer(playerName));
-        return result;
+        return await this.executeTransaction((state) => state.removePlayer(playerName));
     }
 
     /**
