@@ -213,17 +213,6 @@ describe('PlayerManager Lazy Loading', () => {
     });
 
     describe('performance optimization scenarios', () => {
-        it('should optimize getAvailableSlots to load only teams data', async () => {
-            const manager = createPlayerManager().setDate('2024-01-15').setLeague('test-league');
-
-            await manager.getAvailableSlots();
-
-            // Should only load teams data, not players or settings
-            expect(mockGet).toHaveBeenCalledTimes(1);
-            expect(mockGet).toHaveBeenCalledWith('teams', '2024-01-15', 'test-league');
-            expect(mockGetConsolidatedSettings).not.toHaveBeenCalled();
-        });
-
         it('should demonstrate I/O reduction for read-only operations', async () => {
             const manager = createPlayerManager().setDate('2024-01-15').setLeague('test-league');
 

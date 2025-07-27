@@ -10,6 +10,7 @@
 
     onMount(async () => {
         await playersService.loadPlayers(data.date);
+        await playersService.loadRankedPlayerNames();
     });
 
     /**

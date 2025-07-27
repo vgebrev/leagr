@@ -79,26 +79,3 @@ export const POST = async ({ request, url, locals }) => {
 };
 
 
-export const GET = async ({ url, locals }) => {
-    const { leagueId, isValid } = validateLeagueForAPI(locals);
-    if (!isValid) {
-        return error(404, 'League not found');
-    }
-
-    const date = url.searchParams.get('date');
-
-    if (!date) {
-        return error(400, 'Date parameter is required');
-    }
-
-    try {
-        const availableSlots = await createPlayerManager()
-            .setDate(date)
-            .setLeague(leagueId)
-            .getAvailableSlots();
-        return json({ availableSlots });
-    } catch (err) {
-        console.error('Error getting available slots:', err);
-        return error(500, 'Failed to get available slots');
-    }
-};

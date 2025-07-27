@@ -589,27 +589,6 @@ export class PlayerManager {
     }
 
     /**
-     * Get available empty slots across all teams
-     */
-    async getAvailableSlots() {
-        const gameData = await this.getData({ players: false, teams: true, settings: false });
-        const { teams } = gameData;
-
-        const availableSlots = [];
-
-        Object.entries(teams).forEach(([teamName, roster]) => {
-            const emptySlots = roster
-                .map((player, index) => ({ player, index }))
-                .filter((slot) => slot.player === null)
-                .map((slot) => ({ teamName, slotIndex: slot.index }));
-
-            availableSlots.push(...emptySlots);
-        });
-
-        return availableSlots;
-    }
-
-    /**
      * Validate and clean up inconsistencies between players and teams
      */
     async validateAndCleanup() {

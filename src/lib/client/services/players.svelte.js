@@ -72,16 +72,33 @@ class PlayersService {
                 const playerData = await api.get('players', date);
                 this.players = playerData.available || [];
                 this.waitingList = playerData.waitingList || [];
-
-                if (this.rankedPlayers.length === 0) {
-                    this.rankedPlayers = await api.get('players/ranked');
-                }
             },
             (error) => {
                 setNotification(
                     error.message || 'Failed to load players. Please try again.',
                     'error'
                 );
+            }
+        );
+    }
+
+    /**
+     * Load ranked player names (for autocomplete)
+     */
+    async loadRankedPlayerNames() {
+        if (this.rankedPlayers.length > 0) return; // Already loaded
+
+        await withLoading(
+            async () => {
+                this.rankedPlayers = await api.get('players/ranked');
+            },
+            (error) => {
+                console.error('Error loading ranked players:', error);
+                setNotification(
+                    error.message || 'Failed to load player suggestions. Please try again.',
+                    'error'
+                );
+                this.rankedPlayers = [];
             }
         );
     }
