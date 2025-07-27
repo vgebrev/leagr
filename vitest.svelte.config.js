@@ -8,13 +8,15 @@ export default defineConfig({
         environment: 'jsdom',
         include: ['test/**/*.svelte.{test,spec}.{js,ts}'],
         exclude: ['node_modules', '.svelte-kit'],
-        setupFiles: ['test/setup.svelte.js']
+        setupFiles: ['test/setup.svelte.js'],
+        silent: false,
+        reporter: 'default'
     },
     resolve: {
         alias: {
-            $lib: new URL('./src/lib', import.meta.url).pathname,
-            $src: new URL('./src', import.meta.url).pathname,
-            $test: new URL('./test', import.meta.url).pathname
+            $lib: './src/lib',
+            $src: './src',
+            $test: './test'
         },
         conditions: ['browser']
     },
