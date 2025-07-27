@@ -16,7 +16,7 @@ vi.mock('$lib/client/stores/notification.js', () => ({
     setNotification: vi.fn()
 }));
 
-// Mock the loading store  
+// Mock the loading store
 vi.mock('$lib/client/stores/loading.js', () => ({
     withLoading: vi.fn((fn) => fn())
 }));
@@ -37,7 +37,7 @@ describe('PlayersService', () => {
         const { api } = await import('$lib/client/services/api-client.svelte.js');
         const { setNotification } = await import('$lib/client/stores/notification.js');
         const { withLoading } = await import('$lib/client/stores/loading.js');
-        
+
         mockApi = api;
         mockSetNotification = setNotification;
         mockWithLoading = withLoading;
@@ -104,10 +104,7 @@ describe('PlayersService', () => {
 
             await playersService.loadPlayers('2025-01-25');
 
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'API Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('API Error', 'error');
         });
     });
 
@@ -138,10 +135,7 @@ describe('PlayersService', () => {
 
             await playersService.loadRankedPlayerNames();
 
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Ranked API Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Ranked API Error', 'error');
             expect(playersService.rankedPlayers).toEqual([]);
         });
     });
@@ -183,7 +177,7 @@ describe('PlayersService', () => {
 
         it('should prevent duplicate players', async () => {
             playersService.players = ['Alice'];
-            
+
             const result = await playersService.addPlayer('Alice', 'available');
 
             expect(mockApi.post).not.toHaveBeenCalled();
@@ -201,10 +195,7 @@ describe('PlayersService', () => {
             const result = await playersService.addPlayer('Bob', 'available');
 
             expect(result).toBe(false);
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Add Player Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Add Player Error', 'error');
         });
     });
 

@@ -47,12 +47,16 @@ export const DELETE = async ({ request, url, locals }) => {
         let result;
         if (bodyParseResult.data.teamName) {
             // Player is in a team - use removePlayerFromTeam
-            result = await playerManager.removePlayerFromTeam(nameValidation.sanitizedName, bodyParseResult.data.teamName, action);
+            result = await playerManager.removePlayerFromTeam(
+                nameValidation.sanitizedName,
+                bodyParseResult.data.teamName,
+                action
+            );
         } else {
             // Player is unassigned/waiting - use simple removePlayer for complete removal
             result = await playerManager.removePlayer(nameValidation.sanitizedName);
         }
-        
+
         return json(result);
     } catch (err) {
         console.error('Error removing player from team:', err);
@@ -106,5 +110,3 @@ export const POST = async ({ request, url, locals }) => {
         return error(500, 'Failed to assign player to team');
     }
 };
-
-

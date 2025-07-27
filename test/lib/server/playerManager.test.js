@@ -198,7 +198,7 @@ describe('PlayerManager', () => {
                 'test-league'
             );
 
-            expect(result).toEqual({ 
+            expect(result).toEqual({
                 players: { available: ['Jane'], waitingList: [] },
                 teams: expect.any(Object)
             });
@@ -234,7 +234,7 @@ describe('PlayerManager', () => {
                 '2025-01-25',
                 'test-league'
             );
-            expect(result).toEqual({ 
+            expect(result).toEqual({
                 players: { available: ['Jane'], waitingList: [] },
                 teams: expect.any(Object)
             });

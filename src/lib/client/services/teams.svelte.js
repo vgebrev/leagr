@@ -188,7 +188,7 @@ class TeamsService {
                     this.teams = result.teams;
                     playersService.players = result.players.available;
                     playersService.waitingList = result.players.waitingList;
-                    
+
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();
                 }
@@ -242,7 +242,7 @@ class TeamsService {
                     this.teams = result.teams;
                     playersService.players = result.players.available;
                     playersService.waitingList = result.players.waitingList;
-                    
+
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();
                 }

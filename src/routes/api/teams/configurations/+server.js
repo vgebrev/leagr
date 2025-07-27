@@ -17,7 +17,9 @@ export const GET = async ({ url, locals }) => {
 
     try {
         // Get player data and settings
-        const playerManager = createPlayerManager().setDate(dateValidation.date).setLeague(leagueId);
+        const playerManager = createPlayerManager()
+            .setDate(dateValidation.date)
+            .setLeague(leagueId);
 
         const gameData = await playerManager.getData({
             players: true,

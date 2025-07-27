@@ -24,7 +24,7 @@ vi.mock('$lib/client/stores/notification.js', () => ({
     setNotification: vi.fn()
 }));
 
-// Mock the loading store  
+// Mock the loading store
 vi.mock('$lib/client/stores/loading.js', () => ({
     withLoading: vi.fn((fn) => fn())
 }));
@@ -47,7 +47,7 @@ describe('TeamsService', () => {
         const { playersService } = await import('$lib/client/services/players.svelte.js');
         const { setNotification } = await import('$lib/client/stores/notification.js');
         const { withLoading } = await import('$lib/client/stores/loading.js');
-        
+
         mockApi = api;
         mockPlayersService = playersService;
         mockSetNotification = setNotification;
@@ -127,10 +127,7 @@ describe('TeamsService', () => {
 
             await teamsService.loadTeams('2025-01-25');
 
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Teams API Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Teams API Error', 'error');
         });
     });
 
@@ -170,10 +167,7 @@ describe('TeamsService', () => {
 
             await teamsService.loadTeamConfigurations();
 
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Config API Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Config API Error', 'error');
             expect(teamsService.teamConfig).toEqual([]);
         });
     });
@@ -215,10 +209,7 @@ describe('TeamsService', () => {
 
             expect(mockApi.post).not.toHaveBeenCalled();
             expect(result).toBe(false);
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Teams cannot be changed.',
-                'warning'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Teams cannot be changed.', 'warning');
         });
 
         it('should validate options are provided', async () => {
@@ -243,10 +234,7 @@ describe('TeamsService', () => {
 
             expect(result).toBe(false);
             expect(teamsService.teams).toEqual(originalTeams);
-            expect(mockSetNotification).toHaveBeenCalledWith(
-                'Generate Teams Error',
-                'error'
-            );
+            expect(mockSetNotification).toHaveBeenCalledWith('Generate Teams Error', 'error');
         });
     });
 

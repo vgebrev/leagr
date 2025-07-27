@@ -184,7 +184,8 @@
                                         {#each assignablePlayers as waitingPlayer (waitingPlayer)}
                                             <DropdownItem
                                                 classes={{ anchor: 'w-full font-normal' }}
-                                                onclick={() => handleAssignPlayer(waitingPlayer, teamName)}>
+                                                onclick={() =>
+                                                    handleAssignPlayer(waitingPlayer, teamName)}>
                                                 <span class="flex items-center">
                                                     <ArrowLeftOutline class="me-2 h-4 w-4" />
                                                     {waitingPlayer}

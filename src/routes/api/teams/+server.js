@@ -66,7 +66,9 @@ export const POST = async ({ request, url, locals }) => {
 
     try {
         // Get player data, settings, and rankings
-        const playerManager = createPlayerManager().setDate(dateValidation.date).setLeague(leagueId);
+        const playerManager = createPlayerManager()
+            .setDate(dateValidation.date)
+            .setLeague(leagueId);
 
         const gameData = await playerManager.getData({
             players: true,
