@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 
 // Mock DOM APIs
@@ -33,7 +33,7 @@ describe('Theme Store', () => {
     let theme;
 
     beforeEach(async () => {
-        // Clear module cache to get fresh instances
+        // Clear the module cache to get fresh instances
         vi.resetModules();
 
         // Reset mocks
@@ -56,9 +56,7 @@ describe('Theme Store', () => {
             // Re-import to trigger initialization
             vi.resetModules();
             const themeModule = await import('$lib/client/stores/theme.js');
-            const freshTheme = themeModule.theme;
-
-            expect(get(freshTheme)).toBe('system');
+            expect(get(themeModule.theme)).toBe('system');
             expect(mockLocalStorage.getItem).toHaveBeenCalledWith('theme');
         });
 
@@ -68,9 +66,7 @@ describe('Theme Store', () => {
             // Re-import to trigger initialization
             vi.resetModules();
             const themeModule = await import('$lib/client/stores/theme.js');
-            const freshTheme = themeModule.theme;
-
-            expect(get(freshTheme)).toBe('dark');
+            expect(get(themeModule.theme)).toBe('dark');
         });
 
         it('should initialize with system theme when localStorage has invalid value', async () => {
@@ -79,21 +75,17 @@ describe('Theme Store', () => {
             // Re-import to trigger initialization
             vi.resetModules();
             const themeModule = await import('$lib/client/stores/theme.js');
-            const freshTheme = themeModule.theme;
-
-            expect(get(freshTheme)).toBe('system');
+            expect(get(themeModule.theme)).toBe('system');
         });
 
         it('should handle localStorage being undefined', async () => {
-            // Temporarily unstub localStorage
+            // Temporarily un-stub localStorage
             vi.unstubAllGlobals();
 
             // Re-import to trigger initialization
             vi.resetModules();
             const themeModule = await import('$lib/client/stores/theme.js');
-            const freshTheme = themeModule.theme;
-
-            expect(get(freshTheme)).toBe('system');
+            expect(get(themeModule.theme)).toBe('system');
 
             // Restore mocks
             vi.stubGlobal('localStorage', mockLocalStorage);
@@ -112,7 +104,7 @@ describe('Theme Store', () => {
             const subscriber = vi.fn();
             const unsubscribe = theme.subscribe(subscriber);
 
-            // Should be called immediately with current value
+            // Should be called immediately with the current value
             expect(subscriber).toHaveBeenCalledWith('system');
 
             theme.set('light');
@@ -179,12 +171,12 @@ describe('Theme Store', () => {
         });
 
         it('should handle document being undefined (SSR)', () => {
-            // Temporarily unstub document
+            // Temporarily un-stub document
             vi.unstubAllGlobals();
             vi.stubGlobal('localStorage', mockLocalStorage);
             vi.stubGlobal('window', mockWindow);
 
-            // Should not throw when document is undefined
+            // Should not throw when the document is undefined
             expect(() => {
                 theme.set('dark');
             }).not.toThrow();
