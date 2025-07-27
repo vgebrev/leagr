@@ -3,6 +3,11 @@ import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import {
+    validateDateParameter,
+    parseRequestBody,
+    validateRequestBody
+} from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
@@ -10,14 +15,14 @@ export const GET = async ({ url, locals }) => {
         return error(404, 'League not found');
     }
 
-    const date = url.searchParams.get('date');
-    if (!date) {
-        return error(400, 'Date parameter is required');
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
     }
 
     try {
         const gameData = await createPlayerManager()
-            .setDate(date)
+            .setDate(dateValidation.date)
             .setLeague(leagueId)
             .getData({ players: false, teams: true, settings: false });
         return json(gameData.teams);
@@ -33,18 +38,23 @@ export const POST = async ({ request, url, locals }) => {
         return error(404, 'League not found');
     }
 
-    const date = url.searchParams.get('date');
-    const body = await request.json();
-
-    if (!date) {
-        return error(400, 'Date parameter is required');
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
     }
 
-    if (!body || !body.method || !body.teamConfig) {
-        return error(400, 'Invalid request body. method and teamConfig are required');
+    const bodyParseResult = await parseRequestBody(request);
+    if (!bodyParseResult.isValid) {
+        return error(400, bodyParseResult.error);
     }
 
-    const { method, teamConfig } = body;
+    // Validate request body structure
+    const bodyValidation = validateRequestBody(bodyParseResult.data, ['method', 'teamConfig']);
+    if (!bodyValidation.isValid) {
+        return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
+    }
+
+    const { method, teamConfig } = bodyParseResult.data;
 
     if (!['random', 'seeded'].includes(method)) {
         return error(400, 'Invalid method. Must be "random" or "seeded"');
@@ -56,7 +66,7 @@ export const POST = async ({ request, url, locals }) => {
 
     try {
         // Get player data, settings, and rankings
-        const playerManager = createPlayerManager().setDate(date).setLeague(leagueId);
+        const playerManager = createPlayerManager().setDate(dateValidation.date).setLeague(leagueId);
 
         const gameData = await playerManager.getData({
             players: true,
@@ -72,7 +82,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Get eligible players (respecting player limit)
         const effectivePlayerLimit =
-            gameData.settings[date]?.playerLimit || gameData.settings.playerLimit;
+            gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit;
         const eligiblePlayers = gameData.players.available.slice(
             0,
             Math.min(gameData.players.available.length, effectivePlayerLimit)
@@ -88,7 +98,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Store the generated teams
         const { data } = await import('$lib/server/data.js');
-        await data.set('teams', date, result.teams, {}, true, leagueId);
+        await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);
 
         // Validate and cleanup any inconsistencies
         const cleanupResult = await playerManager.validateAndCleanup();
@@ -102,7 +112,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Handle known error types with their specific status codes
         if (err instanceof TeamError || err instanceof PlayerError) {
-            return error(err.statusCode || 500, err.message);
+            return error(err.statusCode, err.message);
         }
 
         // Handle unexpected errors with generic message

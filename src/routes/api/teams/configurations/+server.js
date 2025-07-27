@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
+import { validateDateParameter } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
@@ -9,14 +10,14 @@ export const GET = async ({ url, locals }) => {
         return error(404, 'League not found');
     }
 
-    const date = url.searchParams.get('date');
-    if (!date) {
-        return error(400, 'Date parameter is required');
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
     }
 
     try {
         // Get player data and settings
-        const playerManager = createPlayerManager().setDate(date).setLeague(leagueId);
+        const playerManager = createPlayerManager().setDate(dateValidation.date).setLeague(leagueId);
 
         const gameData = await playerManager.getData({
             players: true,
@@ -26,7 +27,7 @@ export const GET = async ({ url, locals }) => {
 
         const playerCount = Math.min(
             gameData.players.available.length,
-            gameData.settings[date]?.playerLimit || gameData.settings.playerLimit
+            gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit
         );
 
         // Calculate possible team configurations
@@ -43,7 +44,7 @@ export const GET = async ({ url, locals }) => {
 
         // Handle known error types with their specific status codes
         if (err instanceof TeamError || err instanceof PlayerError) {
-            return error(err.statusCode || 500, err.message);
+            return error(err.statusCode, err.message);
         }
 
         // Handle unexpected errors with generic message

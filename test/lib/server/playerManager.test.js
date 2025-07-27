@@ -173,7 +173,7 @@ describe('PlayerManager', () => {
             playerManager.setDate('2025-01-25').setLeague('test-league');
         });
 
-        it('should remove player from available list only', async () => {
+        it('should remove player completely from all lists', async () => {
             const mockGameData = {
                 players: { available: ['John', 'Jane'], waitingList: [] },
                 teams: {},
@@ -183,7 +183,7 @@ describe('PlayerManager', () => {
             vi.spyOn(playerManager, 'getData').mockResolvedValue(mockGameData);
             mockData.setMany.mockResolvedValue({});
 
-            const result = await playerManager.removePlayer('John', 'available');
+            const result = await playerManager.removePlayer('John');
 
             expect(mockData.setMany).toHaveBeenCalledWith(
                 [
@@ -214,7 +214,7 @@ describe('PlayerManager', () => {
             vi.spyOn(playerManager, 'getData').mockResolvedValue(mockGameData);
             mockData.setMany.mockResolvedValue({});
 
-            const result = await playerManager.removePlayer('John', 'available');
+            const result = await playerManager.removePlayer('John');
 
             expect(mockData.setMany).toHaveBeenCalledWith(
                 [
