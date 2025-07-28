@@ -36,7 +36,7 @@ export const DELETE = async ({ request, url, locals }) => {
         return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);
     }
 
-    // Default action is to move to waiting list, but can be 'remove' for complete removal
+    // The default action is to move to the waiting list, but can be 'remove' for complete removal
     const action = bodyParseResult.data.action || 'waitingList';
 
     try {
@@ -89,7 +89,7 @@ export const POST = async ({ request, url, locals }) => {
         return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
     }
 
-    // Validate and sanitize player name
+    // Validate and sanitise player name
     const nameValidation = validateAndSanitizePlayerName(bodyParseResult.data.playerName);
     if (!nameValidation.isValid) {
         return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);

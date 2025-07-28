@@ -8,6 +8,10 @@ import { isValidSubdomain } from '$lib/shared/validation.js';
  */
 
 export class LeagueError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} statusCode
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'LeagueError';
@@ -292,8 +296,8 @@ export const createLeagueService = () => new LeagueService();
 
 /**
  * Validate league exists for API requests
- * @param {Object} locals - SvelteKit locals object
- * @returns {Object} - { leagueId, isValid }
+ * @param {Record<string, any>} locals - SvelteKit locals object
+ * @returns {{leagueId: string|null, isValid: boolean}} - { leagueId, isValid }
  */
 export function validateLeagueForAPI(locals) {
     const leagueInfo = locals.leagueInfo;

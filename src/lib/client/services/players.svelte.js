@@ -118,7 +118,7 @@ class PlayersService {
 
         await withLoading(
             async () => {
-                // Validate and sanitize player name
+                // Validate and sanitise player name
                 const validation = validatePlayerNameForUI(name);
 
                 if (!validation.isValid) {

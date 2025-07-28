@@ -264,7 +264,7 @@ export async function parseRequestBody(request) {
 
 /**
  * Validates request body structure and required fields
- * @param {Object} body - Request body to validate
+ * @param {Record<string, any>} body - Request body to validate
  * @param {Array<string>} requiredFields - Array of required field names
  * @returns {{isValid: boolean, errors: string[]}}
  */
@@ -314,7 +314,7 @@ export function validateList(list) {
 
 /**
  * Validates required fields are present and non-empty
- * @param {Object} data - Data object to validate
+ * @param {Record<string, any>} data - Data object to validate
  * @param {Array<string>} fields - Array of required field names
  * @returns {{isValid: boolean, errors: string[]}}
  */

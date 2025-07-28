@@ -49,6 +49,9 @@ function extractLeagueId(host) {
     return null;
 }
 
+/**
+ * @param {import('@sveltejs/kit').RequestEvent} event
+ */
 const getIp = (event) => {
     const { request } = event;
     return (

@@ -36,11 +36,6 @@ export function formatDisplayDate(dateString) {
     });
 }
 
-export function isSaturday(date) {
-    if (!date) return false;
-    return date.getDay() === 6;
-}
-
 export function isCompetitionDay(date, competitionDays = [6]) {
     if (!date) return false;
     if (!competitionDays || !Array.isArray(competitionDays) || competitionDays.length === 0)

@@ -372,38 +372,6 @@ export class RankingsManager {
         // Need to enhance the raw data
         return this.calculateEnhancedRankings(rawRankings);
     }
-
-    /**
-     * Get players data suitable for team generation
-     * @returns {Promise<Object>} - Players data for team generation
-     */
-    async getPlayersForTeamGeneration() {
-        const enhancedRankings = await this.loadEnhancedRankings();
-
-        if (!enhancedRankings.players) {
-            return {
-                players: [],
-                metadata: enhancedRankings.rankingMetadata || {}
-            };
-        }
-
-        const players = Object.entries(enhancedRankings.players).map(([name, data]) => ({
-            name: name,
-            rankingPoints: data.rankingPoints,
-            weightedAverage: data.weightedAverage,
-            appearances: data.appearances,
-            hasFullConfidence: data.hasFullConfidence,
-            rank: data.rank
-        }));
-
-        // Sort by ranking points for consistency
-        players.sort((a, b) => b.rankingPoints - a.rankingPoints);
-
-        return {
-            players: players,
-            metadata: enhancedRankings.rankingMetadata
-        };
-    }
 }
 
 /**
@@ -413,10 +381,3 @@ export class RankingsManager {
 export function createRankingsManager() {
     return new RankingsManager();
 }
-
-// Export configuration for easy tuning
-export const rankingConfig = {
-    CONFIDENCE_FRACTION,
-    PULL_STRENGTH,
-    BONUS_MULTIPLIER
-};

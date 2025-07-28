@@ -1,12 +1,15 @@
 import Mailgun from 'mailgun.js';
 import FormData from 'form-data';
 
+/** @type {any|null} */
 let mailgun = null;
+/** @type {string|null} */
 let mailgunDomain = null;
+/** @type {string|null} */
 let appUrl = null;
 
 /**
- * Initialize the email service with configuration from hooks.server.js
+ * Initialise the email service with configuration from hooks.server.js
  * @param {string} apiKey - Mailgun API key
  * @param {string} domain - Mailgun domain
  * @param {string} appUrlConfig - App URL for generating reset links
@@ -77,12 +80,4 @@ This is an automated message from Leagr. Please do not reply to this email.
         console.error('Failed to send access code reset email:', error);
         return false;
     }
-}
-
-/**
- * Check if email service is properly configured
- * @returns {boolean} - Configuration status
- */
-export function isEmailServiceConfigured() {
-    return !!(mailgun && mailgunDomain && appUrl);
 }

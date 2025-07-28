@@ -60,21 +60,6 @@ export function getEffectiveLeagueSettings(leagueInfo) {
 }
 
 /**
- * Get effective day settings by merging league defaults with day-specific overrides
- * @param {Object} leagueInfo - League info object from server
- * @param {Object} daySettings - Day-specific settings
- * @returns {Object} - Merged settings for the day
- */
-export function getEffectiveDaySettings(leagueInfo, daySettings = defaultSettings) {
-    const leagueDefaults = getEffectiveLeagueSettings(leagueInfo);
-
-    return {
-        ...leagueDefaults,
-        ...daySettings
-    };
-}
-
-/**
  * Extract day-level settings defaults from league settings
  * @param {Object} leagueSettings - League settings object
  * @returns {Object} - Day-level settings with league defaults
