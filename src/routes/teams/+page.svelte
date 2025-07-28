@@ -9,11 +9,11 @@
     let { data } = $props();
     const date = data.date;
 
-    // Use teams service for all team-related data and operations
+    // Use the Teams service for all team-related data and operations
     let teams = $derived(teamsService.teams);
     let teamConfig = $derived(teamsService.teamConfig);
 
-    // Use players service for player data
+    // Use the Players service for player data
     let waitingList = $derived(playersService.waitingList);
     let unassignedPlayers = $derived(teamsService.unassignedPlayers);
     let canModifyList = $derived(playersService.canModifyList);
@@ -21,6 +21,10 @@
     // Get summary data
     let playerSummary = $derived(teamsService.playerSummary);
 
+    /**
+     * Generate teams based on the current configuration and player data.
+     * @param {Object} options
+     */
     async function generateTeams(options) {
         await teamsService.generateTeams(options);
     }

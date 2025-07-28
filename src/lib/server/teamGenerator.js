@@ -54,7 +54,7 @@ export class TeamGenerator {
 
     /**
      * Calculate possible team configurations based on player count and settings
-     * @param {number} playerCount - Number of players available (optional, uses set players if not provided)
+     * @param {?number} playerCount - Number of players available (optional, uses set players if not provided)
      * @returns {Array} Array of possible team configurations
      */
     calculateConfigurations(playerCount = null) {
@@ -175,7 +175,7 @@ export class TeamGenerator {
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
 
-        // Initialize teams
+        // Initialise teams
         for (let i = 0; i < numTeams; i++) {
             teams[teamNames[i]] = [];
         }
@@ -191,7 +191,7 @@ export class TeamGenerator {
             const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
             const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
-            // Randomize within the pot
+            // Randomise within the pot
             currentPot.sort(() => Math.random() - 0.5);
 
             let potPlayerIndex = 0;
@@ -206,7 +206,7 @@ export class TeamGenerator {
                 const currentTeamSize = teams[teamName].length;
                 const targetTeamSize = teamSizes[teamIndex];
 
-                // Skip if team is already full
+                // Skip if the team is already full
                 if (currentTeamSize >= targetTeamSize) continue;
 
                 // Determine how many players to assign (1 or 2, but no more than available in pot)
@@ -220,7 +220,7 @@ export class TeamGenerator {
                 }
             }
 
-            // Move to next batch of players
+            // Move to the next batch of players
             playerIndex += potSize;
         }
 

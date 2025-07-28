@@ -19,7 +19,7 @@ function getAuthHeaders() {
         'x-api-key': apiKey
     };
 
-    // Add access code to Authorization header if we have a league context
+    // Add access code to the "Authorization" header if we have a league context
     if (leagueId) {
         const accessCode = getStoredAccessCode(leagueId);
         if (accessCode) {

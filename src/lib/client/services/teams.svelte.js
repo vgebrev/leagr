@@ -84,7 +84,7 @@ class TeamsService {
 
     // Methods
     /**
-     * Load team configurations from server
+     * Load team configurations from the server
      */
     async loadTeamConfigurations() {
         if (!this.currentDate) return;
@@ -151,7 +151,7 @@ class TeamsService {
      * Unified player removal operation - handles all removal scenarios
      * @param {string} playerName - Player name to remove
      * @param {string} action - Action to take: 'waitingList', 'remove', or 'unassign'
-     * @param {string} [teamName] - Team name (auto-detected if not provided)
+     * @param {?string} [teamName] - Team name (auto-detected if not provided)
      */
     async removePlayer(playerName, action = 'waitingList', teamName = null) {
         if (this.isPast || !playersService.canModifyList) {
@@ -208,7 +208,7 @@ class TeamsService {
 
     /**
      * Unified player assignment operation - handles all assignment scenarios
-     * @param {string} playerName - Player name to assign (optional for auto-assignment)
+     * @param {?string} playerName - Player name to assign (optional for auto-assignment)
      * @param {string} teamName - Team name to assign to
      */
     async assignPlayerToTeam(playerName, teamName) {
@@ -289,7 +289,7 @@ class TeamsService {
     }
 
     /**
-     * Reset the teams state
+     * Reset the teams service state
      */
     reset() {
         this.teams = {};
@@ -298,7 +298,7 @@ class TeamsService {
     }
 
     /**
-     * Get all players (available + waiting list) for team table display
+     * Get all players (available and waiting list) for team table display
      */
     getAllPlayers() {
         return [...playersService.players, ...playersService.waitingList];

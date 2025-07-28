@@ -15,7 +15,7 @@ export function isValidSubdomain(subdomain) {
     // Check maximum length (63 characters)
     if (subdomain.length > 63) return false;
 
-    // Check pattern: alphanumeric and hyphens, but not starting/ending with hyphen
+    // Check characters: alphanumeric and hyphens, but not starting/ending with hyphen
     const subdomainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/;
     if (!subdomainRegex.test(subdomain)) return false;
 
@@ -26,7 +26,7 @@ export function isValidSubdomain(subdomain) {
     // Check against disallowed names (case-insensitive)
     if (disallowedLeagueNames.includes(lowerSubdomain)) return false;
 
-    // Check if subdomain contains any disallowed words
+    // Check if the subdomain contains any disallowed words
     const containsDisallowed = disallowedLeagueNames.some((word) => lowerSubdomain.includes(word));
     return !containsDisallowed;
 }
@@ -112,7 +112,7 @@ const PLAYER_NAME_CONFIG = {
 };
 
 /**
- * Validates and sanitizes a player name using inclusive blocklist approach
+ * Validates and sanitises a player name using inclusive blocklist approach
  * Works on both client and server side
  * @param {string} playerName - The raw player name input
  * @returns {{isValid: boolean, sanitizedName: string, errors: string[]}}
@@ -169,7 +169,7 @@ export function validateAndSanitizePlayerName(playerName) {
         }
     }
 
-    // Normalize whitespace - collapse multiple spaces but preserve single spaces
+    // Normalise whitespace - collapse multiple spaces but preserve single spaces
     sanitized = sanitized.replace(/\s+/g, ' ').trim();
 
     // Final empty check after sanitization

@@ -17,6 +17,10 @@
         }
     });
 
+    /**
+     * Handles the form submission to request a reset link for the access code.
+     * @param {SubmitEvent} event
+     */
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -36,7 +40,7 @@
             async () => {
                 await leaguesService.forgotAccessCode(email.trim());
                 setNotification('A reset link has been sent to the league organiser.', 'success');
-                // Don't redirect immediately - let user read the message
+                // Don't redirect immediately - let the user read the message
             },
             (error) => {
                 console.error('Error requesting reset code:', error);

@@ -6,6 +6,11 @@ import { getLeagueDataPath } from './league.js';
 
 const mutexes = new Map();
 
+/**
+ * Returns a mutex for the given filename
+ * @param filename
+ * @returns {any}
+ */
 function getMutex(filename) {
     if (!mutexes.has(filename)) {
         mutexes.set(filename, new Mutex());
@@ -13,6 +18,15 @@ function getMutex(filename) {
     return mutexes.get(filename);
 }
 
+/**
+ * Resolves a path in an object and returns the parent object and the final key.
+ * This is useful for setting or getting nested properties in an object.
+ * If the path does not exist, it initialises the parent object with a default value.
+ * @param obj
+ * @param path
+ * @param defaultValue
+ * @returns {{parent, key: *}}
+ */
 function resolvePath(obj, path, defaultValue = {}) {
     const parts = path.split('.');
     let current = obj;
@@ -23,6 +37,14 @@ function resolvePath(obj, path, defaultValue = {}) {
     return { parent: current, key: parts[parts.length - 1] };
 }
 
+/**
+ * Gets a value from the JSON file for a given key and date.
+ * If the file does not exist or the key is not found, it returns null.
+ * @param key
+ * @param date
+ * @param {string | null} leagueId
+ * @returns {Promise<*|null>}
+ */
 async function get(key, date, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {
@@ -124,6 +146,18 @@ async function setMany(operations, date, leagueId = null) {
     });
 }
 
+/**
+ * Removes a value from the JSON file for a given key and date.
+ * If the key does not exist, it returns null.
+ * If the value is an array, it removes the specified value from the array.
+ * If the value is an object, it deletes the specified key from the object.
+ * If the value is a primitive, it sets the key to null.
+ * @param key
+ * @param date
+ * @param value
+ * @param {string | null } leagueId
+ * @returns {Promise<*|null>}
+ */
 async function remove(key, date, value, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
     if (!filename) {

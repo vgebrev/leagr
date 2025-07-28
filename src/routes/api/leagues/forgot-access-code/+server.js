@@ -34,7 +34,7 @@ export async function POST({ request, locals }) {
 
         // Handle LeagueError with proper status codes
         if (err instanceof LeagueError) {
-            // For security, always return success message for client errors
+            // For security, always return a success message for client errors
             if (err.statusCode < 500) {
                 return json({
                     success: true,
@@ -44,7 +44,7 @@ export async function POST({ request, locals }) {
             return error(err.statusCode, { message: err.message });
         }
 
-        // Handle unexpected errors with generic message for security
+        // Handle unexpected errors with a generic message for security
         return json({
             success: true,
             message: 'A reset link has been sent to the league organiser email.'

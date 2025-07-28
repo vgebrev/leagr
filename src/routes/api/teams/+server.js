@@ -102,7 +102,7 @@ export const POST = async ({ request, url, locals }) => {
         const { data } = await import('$lib/server/data.js');
         await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);
 
-        // Validate and cleanup any inconsistencies
+        // Validate and clean-up any inconsistencies
         const cleanupResult = await playerManager.validateAndCleanup();
 
         return json({
@@ -117,7 +117,7 @@ export const POST = async ({ request, url, locals }) => {
             return error(err.statusCode, err.message);
         }
 
-        // Handle unexpected errors with generic message
+        // Handle unexpected errors with a generic message
         return error(500, 'Failed to generate teams');
     }
 };

@@ -10,7 +10,7 @@ vi.mock('$lib/client/services/api-client.svelte.js', () => ({
     }
 }));
 
-// Mock the players service
+// Mock the Players service
 vi.mock('$lib/client/services/players.svelte.js', () => ({
     playersService: {
         loadPlayers: vi.fn(),
@@ -56,7 +56,7 @@ describe('TeamsService', () => {
         // Reset all mocks
         vi.clearAllMocks();
 
-        // Setup withLoading to handle both success and error cases
+        // Set up withLoading to handle both success and error cases
         mockWithLoading.mockImplementation(async (fn, errorHandler) => {
             try {
                 await fn();
@@ -289,7 +289,7 @@ describe('TeamsService', () => {
 
             expect(mockApi.remove).toHaveBeenCalledWith('teams/players', '2025-01-25', {
                 playerName: 'Bob',
-                teamName: 'Team A', // auto-detected from teams state
+                teamName: 'Team A', // auto-detected from Teams state
                 action: 'waitingList'
             });
         });
@@ -364,7 +364,7 @@ describe('TeamsService', () => {
             await teamsService.assignPlayerToTeam(null, 'Team A');
 
             expect(mockApi.post).toHaveBeenCalledWith('teams/players', '2025-01-25', {
-                playerName: 'Bob', // first from waiting list
+                playerName: 'Bob', // first from the waiting list
                 teamName: 'Team A'
             });
         });

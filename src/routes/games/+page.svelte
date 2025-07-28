@@ -1,5 +1,20 @@
 <script>
     import { Listgroup, ListgroupItem, Input, Button, Alert } from 'flowbite-svelte';
+
+    /**
+     * @typedef {Object} Match
+     * @property {string} [home] - Home team name
+     * @property {string} [away] - Away team name
+     * @property {number | null} [homeScore] - Home team score
+     * @property {number | null} [awayScore] - Away team score
+     * @property {string} [bye] - Team that has a bye
+     */
+
+    /**
+     * @typedef {Object} TeamData
+     * @property {string} colour - Team colour
+     * @property {string[]} players - Array of player names
+     */
     import { CalendarMonthSolid, UsersGroupSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
@@ -11,14 +26,30 @@
     import { isDateInPast, rotateArray } from '$lib/shared/helpers.js';
 
     let { data } = $props();
+    /** @type {string} */
     const date = data.date;
+    /** @type {boolean} */
     let isPast = $derived(isDateInPast(date));
+    /** @type {Array<Array<Match>>} */
     let schedule = $state([]);
+    /** @type {number} */
     let anchorIndex = $state(0);
+    /** @type {Record<string, TeamData>} */
     let teams = $state({});
+    /** @type {string[]} */
     let teamNames = $derived(Object.keys(teams || {}));
+    /** @type {boolean} */
     let confirmRegenerate = $derived(false);
 
+    /**
+     * Generates a round-robin schedule for the given teams.
+     * Each team plays every other team once, with an optional bye if the number of teams is odd.
+     * The schedule is generated in rounds, where each round contains matches between teams.
+     * The first team in each round is fixed, and the rest are rotated to create the schedule.
+     * @param {Array<?string>} teams - Array of team names
+     * @param {number} anchorIndex - Starting index for team rotation
+     * @returns {Array<Match[]>} Array of rounds containing matches
+     */
     function generateRoundRobinRounds(teams, anchorIndex = 0) {
         const totalTeams = [...teams];
 
@@ -65,6 +96,14 @@
         return rounds;
     }
 
+    /**
+     * Generates a full round-robin schedule for the given teams.
+     * This includes both legs of the round-robin, where each team plays every other team twice.
+     * The first leg is generated normally, and the second leg is the reverse of the first leg.
+     * @param {string[]} teams - Array of team names
+     * @param {number} anchorIndex - Starting index for team rotation
+     * @returns {Array<Match[]>} Array of rounds containing matches for both legs
+     */
     function generateFullRoundRobinSchedule(teams, anchorIndex = 0) {
         const firstLeg = generateRoundRobinRounds(teams, anchorIndex);
         const secondLeg = firstLeg.map((round) =>
@@ -76,6 +115,10 @@
         return [...firstLeg, ...secondLeg];
     }
 
+    /**
+     * Schedules games for the current date
+     * @param {boolean} regenerate - Whether to regenerate existing schedule
+     */
     async function scheduleGames(regenerate = false) {
         if (isPast) {
             setNotification('The date is in the past. Games cannot be changed.', 'warning');
@@ -90,6 +133,7 @@
             async () => {
                 anchorIndex = Math.floor(Math.random() * teamNames.length);
                 schedule = generateFullRoundRobinSchedule(teamNames, anchorIndex);
+                /** @type {{ rounds: Array<Match[]>, anchorIndex: number }} */
                 const scheduleData = await api.post('games', date, {
                     anchorIndex,
                     rounds: schedule
@@ -109,6 +153,9 @@
         );
     }
 
+    /**
+     * Adds more games to the current schedule
+     */
     async function addMoreGames() {
         if (isPast) {
             setNotification('The date is in the past. Games cannot be changed.', 'warning');
@@ -118,8 +165,9 @@
         await withLoading(
             async () => {
                 schedule = schedule.concat(generateFullRoundRobinSchedule(teamNames, anchorIndex));
-                schedule = (await api.post('games', date, { anchorIndex, rounds: schedule }))
-                    .rounds;
+                /** @type {{ rounds: Array<Match[]> }} */
+                const gameData = await api.post('games', date, { anchorIndex, rounds: schedule });
+                schedule = gameData.rounds;
             },
             (err) => {
                 console.error(err);
@@ -132,12 +180,16 @@
         );
     }
 
+    /**
+     * Saves the current scores to the server
+     */
     async function saveScore() {
         const restoreSchedule = schedule;
         await withLoading(
             async () => {
-                schedule = (await api.post('games', date, { anchorIndex, rounds: schedule }))
-                    .rounds;
+                /** @type {{ rounds: Array<Match[]> }} */
+                const scoreData = await api.post('games', date, { anchorIndex, rounds: schedule });
+                schedule = scoreData.rounds;
             },
             (err) => {
                 console.error(err);
@@ -150,7 +202,9 @@
     onMount(async () => {
         await withLoading(
             async () => {
-                teams = (await api.get('teams', date)) || {};
+                const teamsData = await api.get('teams', date);
+                teams = teamsData || {};
+                /** @type {{ rounds?: Array<Match[]>, anchorIndex?: number }} */
                 const scheduleData = await api.get('games', date);
                 schedule = scheduleData.rounds || [];
                 anchorIndex = scheduleData.anchorIndex || 0;

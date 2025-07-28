@@ -9,7 +9,7 @@ const BONUS_MULTIPLIER = 2;
 
 // Hybrid ranking algorithm configuration
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
-const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below threshold
+const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below the threshold
 
 /**
  * Server-side rankings management service
@@ -30,7 +30,7 @@ export class RankingsManager {
     }
 
     /**
-     * Get data path for the current league
+     * Get the data path for the current league
      * @returns {string} - Data path
      */
     getDataPath() {
@@ -41,7 +41,7 @@ export class RankingsManager {
     }
 
     /**
-     * Get rankings file path for the current league
+     * Get the Rankings file path for the current league
      * @returns {string} - Rankings file path
      */
     getRankingsPath() {
@@ -232,14 +232,14 @@ export class RankingsManager {
                 pullFactor = 0;
                 hasFullConfidence = true;
             } else {
-                // Below threshold: proportional pull toward minimum
+                // Under threshold: proportional pull toward the minimum
                 const gamesNeeded = confidenceThreshold - data.appearances;
                 pullFactor = (gamesNeeded / confidenceThreshold) * PULL_STRENGTH;
 
                 // Clamp pullFactor between 0 and 1
                 pullFactor = Math.max(0, Math.min(1, pullFactor));
 
-                // Apply proportional pull toward minimum
+                // Apply proportional pull toward the minimum
                 weightedAverage = rawAverage - pullFactor * (rawAverage - minAverage);
                 hasFullConfidence = false;
             }
@@ -305,7 +305,7 @@ export class RankingsManager {
             const files = await fs.readdir(this.getDataPath());
             const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
 
-            const rankings = await this.loadRankingsUnsafe(); // Use unsafe version to avoid double-mutex
+            const rankings = await this.loadRankingsUnsafe(); // Use the unsafe version to avoid double-mutex
 
             for (const file of dateFiles) {
                 const date = file.replace('.json', '');
@@ -348,7 +348,7 @@ export class RankingsManager {
             // Apply hybrid ranking algorithm to the raw data
             const enhancedRankings = this.calculateEnhancedRankings(rankings);
 
-            await this.saveRankingsUnsafe(enhancedRankings); // Use unsafe version to avoid double-mutex
+            await this.saveRankingsUnsafe(enhancedRankings); // Use the unsafe version to avoid double-mutex
             return enhancedRankings;
         });
     }

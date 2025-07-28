@@ -6,7 +6,7 @@ class GlobalSettingsCache {
     #cache = new Map(); // key: "leagueId:date", value: { data, timestamp }
 
     // Cache TTL settings
-    static TTL_MS = 5 * 60 * 1000; // 5 minutes TTL for settings
+    static TTL_MS = 5 * 60 * 1000; // 5-minutes TTL for settings
 
     /**
      * Generate cache key ensuring league isolation
@@ -150,7 +150,7 @@ export const globalSettingsCache = new GlobalSettingsCache();
  * Invalidate settings cache when settings are modified
  * Call this from settings modification APIs
  * @param {string} leagueId
- * @param {string} date - Optional, if provided invalidates only that date
+ * @param {?string} date - Optional, if provided invalidates only that date
  */
 export function invalidateSettingsCache(leagueId, date = null) {
     if (date) {

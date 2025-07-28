@@ -22,16 +22,16 @@
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
 
-    // Dynamic URL parts from current page
+    // Dynamic URL parts from the current page
     let urlProtocol = $derived(page.url.protocol);
     let urlHost = $derived.by(() => {
         if (!appUrl) {
-            // Fallback: only extract base domain if we're on a subdomain
+            // Fallback: only extract the base domain if we're on a subdomain
             const hostname = page.url.hostname;
             const port = page.url.port;
 
             // If we have a leagueId, we're on a subdomain and need to extract base domain
-            // If no leagueId, we're on root domain and should use full hostname
+            // If no leagueId, we're on the root domain and should use the full hostname
             if (leagueId) {
                 const parts = hostname.split('.');
                 const baseDomain = parts.length > 1 ? parts.slice(1).join('.') : hostname;
@@ -70,6 +70,10 @@
         return '';
     });
 
+    /**
+     * Handles the form submission to create or register a league.
+     * @param {SubmitEvent} event
+     */
     async function handleSubmit(event) {
         event.preventDefault();
         // Validate form

@@ -30,7 +30,7 @@ export const DELETE = async ({ request, url, locals }) => {
         return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
     }
 
-    // Validate and sanitize player name
+    // Validate and sanitise player name
     const nameValidation = validateAndSanitizePlayerName(bodyParseResult.data.playerName);
     if (!nameValidation.isValid) {
         return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);

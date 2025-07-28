@@ -119,7 +119,7 @@ export class LeagueService {
             );
         }
 
-        // Check if league already exists
+        // Check if a league already exists
         const leagueDataPath = join(process.cwd(), 'data', subdomain);
         const infoPath = join(leagueDataPath, 'info.json');
 
@@ -127,7 +127,7 @@ export class LeagueService {
             throw new LeagueError('League already exists', 409);
         }
 
-        // Create league directory and info file
+        // Create a league directory and info file
         await mkdir(leagueDataPath, { recursive: true });
 
         const leagueInfo = {
@@ -160,7 +160,7 @@ export class LeagueService {
             throw new LeagueError('Email is required', 400);
         }
 
-        // Check if league has owner email configured
+        // Check if the league has owner email configured
         if (!leagueInfo.ownerEmail) {
             throw new LeagueError('No owner email configured for this league', 400);
         }
@@ -291,7 +291,7 @@ export class LeagueService {
     }
 }
 
-// Export factory function to create new instance per request
+// Export factory function to create a new instance per request
 export const createLeagueService = () => new LeagueService();
 
 /**

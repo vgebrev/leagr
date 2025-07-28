@@ -14,11 +14,11 @@ export async function copyToClipboard(text) {
             await navigator.clipboard.writeText(text);
             return true;
         } catch {
-            // Fall back to legacy method if modern API fails
+            // Fall back to the legacy method if modern API fails
             return fallbackCopyToClipboard(text);
         }
     } else {
-        // Use fallback method if modern API is not available
+        // Use a fallback method if modern API is not available
         return fallbackCopyToClipboard(text);
     }
 }

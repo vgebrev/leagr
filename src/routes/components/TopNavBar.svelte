@@ -13,7 +13,7 @@
     async function shareCurrentPage() {
         const url = new URL(window.location.href);
 
-        // Check if user is authenticated (has access code in localStorage)
+        // Check if the user is authenticated (has access code in localStorage)
         if (leagueInfo?.id) {
             const accessCode = getStoredAccessCode(leagueInfo.id);
             if (accessCode) {
@@ -21,7 +21,7 @@
             }
         }
 
-        // Prepare share data
+        // Prepare a share data object
         const shareData = {
             title: leagueInfo?.name ? `Leagr - ${leagueInfo.name}` : 'Leagr',
             text: `Join ${leagueInfo?.name || 'our league'} on Leagr`,
@@ -37,8 +37,6 @@
             } else {
                 setNotification('Link copied to clipboard!', 'success');
             }
-        } else if (result.cancelled) {
-            // User cancelled sharing, don't show error
         } else {
             setNotification('Failed to share link', 'error');
         }

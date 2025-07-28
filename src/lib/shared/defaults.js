@@ -1,5 +1,5 @@
 /**
- * Centralized default values for the application
+ * Centralised default values for the application
  */
 
 /**
@@ -19,6 +19,10 @@ export const LEAGUE_ONLY_SETTINGS = [
     'seedTeams'
 ];
 
+/**
+ * Default league settings
+ * @type {{competitionDays: number[], registrationWindow: {enabled: boolean, startDayOffset: number, startTime: string, endDayOffset: number, endTime: string}, teamGeneration: {minTeams: number, maxTeams: number, minPlayersPerTeam: number, maxPlayersPerTeam: number}, playerLimit: number, canRegenerateTeams: boolean, canResetSchedule: boolean, seedTeams: boolean}}
+ */
 export const defaultSettings = {
     competitionDays: [6], // Array of weekdays (0=Sunday, 6=Saturday)
     registrationWindow: {

@@ -45,7 +45,7 @@ describe('PlayersService', () => {
         // Reset all mocks
         vi.clearAllMocks();
 
-        // Setup withLoading to handle both success and error cases
+        // Set up withLoading to handle both success and error cases
         mockWithLoading.mockImplementation(async (fn, errorHandler) => {
             try {
                 await fn();

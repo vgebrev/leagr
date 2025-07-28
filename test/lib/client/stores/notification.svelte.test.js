@@ -5,7 +5,7 @@ describe('Notification Store', () => {
     let notification, setNotification;
 
     beforeEach(async () => {
-        // Clear module cache to get fresh instances
+        // Clear the module cache to get fresh instances
         vi.resetModules();
 
         const notificationModule = await import('$lib/client/stores/notification.js');
@@ -38,7 +38,7 @@ describe('Notification Store', () => {
             const subscriber = vi.fn();
             const unsubscribe = notification.subscribe(subscriber);
 
-            // Should be called immediately with current value
+            // Should be called immediately with the current value
             expect(subscriber).toHaveBeenCalledWith(null);
 
             const testNotification = { message: 'Test', type: 'info' };
@@ -117,19 +117,19 @@ describe('Notification Store', () => {
                 type: 'info'
             });
 
-            // Set new notification (creates a new timer, doesn't cancel first)
+            // Set a new notification (creates a new timer, doesn't cancel first)
             setNotification('Second message', 'warning');
             expect(get(notification)).toEqual({
                 message: 'Second message',
                 type: 'warning'
             });
 
-            // Fast-forward another 2 seconds (total 5 seconds from first timer)
+            // Fast-forward another 2 seconds (total 5 seconds from the first timer)
             // First timer should fire and set notification to null
             vi.advanceTimersByTime(2000);
             expect(get(notification)).toBeNull();
 
-            // Fast-forward another 3 seconds (total 5 seconds from second timer)
+            // Fast-forward another 3 seconds (total 5 seconds from the second timer)
             // Second timer should fire but notification is already null
             vi.advanceTimersByTime(3000);
             expect(get(notification)).toBeNull();
@@ -178,7 +178,7 @@ describe('Notification Store', () => {
             // Fast-forward 2 seconds
             vi.advanceTimersByTime(2000);
 
-            // Set second notification (creates new timer, doesn't cancel first)
+            // Set a second notification (creates new timer, doesn't cancel the first)
             setNotification('Second', 'warning');
 
             // Fast-forward 3 seconds (total 5 from first timer)
@@ -186,8 +186,8 @@ describe('Notification Store', () => {
             vi.advanceTimersByTime(3000);
             expect(get(notification)).toBeNull();
 
-            // Fast-forward 2 more seconds (total 5 from second timer)
-            // Second timer should fire but notification is already null
+            // Fast-forward 2 more seconds (total 5 from the second timer)
+            // Second timer should fire, but the notification is already null
             vi.advanceTimersByTime(2000);
             expect(get(notification)).toBeNull();
         });

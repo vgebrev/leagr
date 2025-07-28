@@ -32,6 +32,11 @@
         }
     });
 
+    /**
+     * Handles the date change event from the Datepicker.
+     * Redirects to the current page with the new date as a query parameter.
+     * @param {import('flowbite-svelte').DateOrRange} newDate - The newly selected date.
+     */
     function dateChanged(newDate) {
         const date = dateString(newDate);
         window.location.href = `${page.url.pathname}?date=${date}`;

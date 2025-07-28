@@ -22,7 +22,7 @@
     let leagueSettings = $state({ ...defaultSettings });
     let daySettings = $state(getDaySettingsDefaults(defaultSettings));
 
-    // UI helpers for registration window - show positive numbers, store negative values
+    // UI helpers for the registration window - show positive numbers, store negative values
     let startDaysBeforeUI = $derived.by(() =>
         Math.abs(leagueSettings.registrationWindow.startDayOffset || 0)
     );
@@ -30,12 +30,24 @@
         Math.abs(leagueSettings.registrationWindow.endDayOffset || 0)
     );
 
+    /**
+     * Updates the start day offset for the registration window.
+     * Converts the input value to a negative number to match the stored offset.
+     * If the input is not a valid number, defaults to 0.
+     * @param {string} value
+     */
     function updateStartDayOffset(value) {
         const numValue = parseInt(value) || 0;
         leagueSettings.registrationWindow.startDayOffset = -Math.abs(numValue);
         saveLeagueSettings(new Event('change'));
     }
 
+    /**
+     * Updates the end day offset for the registration window.
+     * Converts the input value to a negative number to match the stored offset.
+     * If the input is not a valid number, defaults to 0.
+     * @param {string} value
+     */
     function updateEndDayOffset(value) {
         const numValue = parseInt(value) || 0;
         leagueSettings.registrationWindow.endDayOffset = -Math.abs(numValue);
@@ -231,7 +243,7 @@
                             <span>Closes</span>
                             <Input
                                 value={endDaysBeforeUI}
-                                onchange={(e) => updateEndDayOffset(e.target.value)}
+                                onchange={(e) => updateEndDayOffset(e.target?.value)}
                                 type="number"
                                 step={1}
                                 min={0}

@@ -150,7 +150,7 @@ class PlayersService {
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
 
-                // Show notification if player was auto-redirected to waiting list
+                // Show notification if the player was auto-redirected to the waiting list
                 if (
                     originalList === 'available' &&
                     (list === 'waitingList' || result.waitingList.includes(sanitizedName))
@@ -243,7 +243,7 @@ class PlayersService {
         );
     }
     /**
-     * Reset the players state
+     * Reset the player service state
      */
     reset() {
         this.players = [];

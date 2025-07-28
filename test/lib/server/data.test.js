@@ -124,13 +124,13 @@ describe('Data Service', () => {
         });
 
         it('should be truly atomic - all or nothing on file write errors', async () => {
-            // This test verifies atomicity by ensuring consistent state even if there are issues
+            // This test verifies atomicity by ensuring a consistent state even if there are issues
             const operations = [
                 { key: 'players.available', value: 'Alice', defaultValue: [] },
                 { key: 'players.waitingList', value: 'Bob', defaultValue: [] }
             ];
 
-            // First successful write
+            // Successfully write
             await data.setMany(operations, testDate, testLeagueId);
 
             // Verify both values exist
@@ -331,7 +331,7 @@ describe('Data Service', () => {
                 ]
             });
 
-            // Verify this data doesn't exist in other leagues (returns null when file doesn't exist)
+            // Verify this data doesn't exist in other leagues (returns null when the file doesn't exist)
             expect(await data.get('tournament', testDate, testLeagueId)).toBeNull();
         });
     });

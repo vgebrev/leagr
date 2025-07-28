@@ -31,6 +31,10 @@
         }
     });
 
+    /**
+     * Handles the form submission to authenticate with an access code.
+     * @param {SubmitEvent} event
+     */
     async function handleSubmit(event) {
         event.preventDefault();
 
@@ -41,7 +45,7 @@
                 return;
             }
 
-            // Validate with server
+            // Validate with the server
             const isValid = await validateAccessCode(accessCode.trim());
 
             if (isValid) {

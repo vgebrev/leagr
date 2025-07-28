@@ -25,7 +25,7 @@ export class PlayerState {
     }
 
     /**
-     * Get player's current location/status
+     * Get a player's current location/status
      * @param {string} playerName
      * @returns {{ location: 'available'|'waiting'|null, teamName?: string, isAssigned: boolean }}
      */
@@ -64,7 +64,7 @@ export class PlayerState {
             }
         }
 
-        // Check that all assigned players are in available list
+        // Check that all assigned players are in the available list
         const assignedPlayers = new Set();
         for (const roster of Object.values(this.teams)) {
             for (const player of roster) {
@@ -90,7 +90,7 @@ export class PlayerState {
     }
 
     /**
-     * Add player to appropriate list based on player limit and target
+     * Add player to the appropriate list based on player limit and target
      * @param {string} playerName
      * @param {string} targetList - 'auto', 'available', or 'waitingList'
      * @returns {PlayerState} New state
@@ -103,7 +103,7 @@ export class PlayerState {
 
         const newState = new PlayerState(this.players, this.teams, this.settings);
 
-        // Determine actual target list
+        // Determine the actual target list
         let actualTarget = targetList;
         if (targetList === 'auto') {
             actualTarget =
@@ -112,10 +112,10 @@ export class PlayerState {
                     : 'available';
         }
 
-        // Add to appropriate list
+        // Add to the appropriate list
         if (actualTarget === 'available') {
             if (newState.players.available.length >= this.settings.playerLimit) {
-                // Auto-redirect to waiting list
+                // Auto-redirect to the waiting list
                 newState.players.waitingList.push(playerName);
             } else {
                 newState.players.available.push(playerName);
@@ -157,7 +157,7 @@ export class PlayerState {
     }
 
     /**
-     * Move player from unassigned/waiting to a specific team
+     * Move a player from unassigned/waiting to a specific team
      * @param {string} playerName
      * @param {string} teamName
      * @returns {PlayerState} New state
@@ -177,12 +177,12 @@ export class PlayerState {
 
         const newState = new PlayerState(this.players, this.teams, this.settings);
 
-        // Check if team exists
+        // Check if the team exists
         if (!newState.teams[teamName]) {
             throw new PlayerError(`Team ${teamName} does not exist.`, 400);
         }
 
-        // Find empty slot in team
+        // Find an empty slot in the team
         const emptySlotIndex = newState.teams[teamName].findIndex((p) => p === null);
         if (emptySlotIndex === -1) {
             throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
@@ -226,7 +226,7 @@ export class PlayerState {
 
         const newState = new PlayerState(this.players, this.teams, this.settings);
 
-        // Remove from team
+        // Remove from the team
         newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
             p === playerName ? null : p
         );
@@ -310,7 +310,7 @@ export class PlayerManager {
     }
 
     /**
-     * Initialize with date for operations
+     * Initialise with a date for operations
      */
     setDate(date) {
         if (this.date !== date) {
@@ -321,7 +321,7 @@ export class PlayerManager {
     }
 
     /**
-     * Initialize with league id for operations
+     * Initialise with league id for operations
      */
     setLeague(leagueId) {
         if (this.leagueId !== leagueId) {
@@ -340,14 +340,14 @@ export class PlayerManager {
     }
 
     /**
-     * Get current cache key for the date-league combination
+     * Get the current cache key for the date-league combination
      */
     #getCacheKey() {
         return `${this.date}-${this.leagueId}`;
     }
 
     /**
-     * Check if cached data is valid for current date-league combination
+     * Check if cached data is valid for the current date-league combination
      */
     #isCacheValid() {
         return this.#dataCache !== null && this.#cacheKey === this.#getCacheKey();
@@ -362,10 +362,10 @@ export class PlayerManager {
         const gameData = await this.getData();
         const { players, teams, settings } = gameData;
 
-        // Create current state
+        // Create the current state
         const currentState = new PlayerState(players, teams, settings);
 
-        // Apply operation to get new state
+        // Apply operation to get the new state
         const newState = operation(currentState);
 
         // Validate the new state
@@ -438,7 +438,7 @@ export class PlayerManager {
                 result.settings = structuredClone(this.#dataCache.settings);
             }
 
-            // If cache satisfies all requested data, return it
+            // If the cache satisfies all requested data, return it
             const hasAllRequested =
                 (!options.players || result.players !== undefined) &&
                 (!options.teams || result.teams !== undefined) &&
@@ -449,7 +449,7 @@ export class PlayerManager {
             }
         }
 
-        // Build array of data loading promises based on options
+        // Build an array of data loading promises based on options
         const loadPromises = [];
         const loadKeys = [];
 
@@ -502,7 +502,7 @@ export class PlayerManager {
     }
 
     /**
-     * Add player to available list or waiting list based on player limit
+     * Add player to available list or waiting list based on the player limit
      */
     async addPlayer(playerName, targetList = 'auto') {
         const result = await this.executeTransaction((state) =>
@@ -512,14 +512,14 @@ export class PlayerManager {
     }
 
     /**
-     * Remove player from specified list and from any teams they're assigned to
+     * Remove a player from the lists and from any teams they're assigned to
      */
     async removePlayer(playerName) {
         return await this.executeTransaction((state) => state.removePlayer(playerName));
     }
 
     /**
-     * Move player between available and waiting lists, removing from teams if moving to waiting list
+     * Move a player between available and waiting lists, removing from teams if moving to the waiting list
      */
     async movePlayer(playerName, fromList, toList) {
         const result = await this.executeTransaction((state) =>
@@ -529,7 +529,7 @@ export class PlayerManager {
     }
 
     /**
-     * Remove player from a specific team and optionally move to waiting list or remove completely
+     * Remove a player from a specific team and optionally move to waiting list or remove completely
      */
     async removePlayerFromTeam(playerName, teamName, action = 'waitingList') {
         return await this.executeTransaction((state) => {
@@ -547,14 +547,14 @@ export class PlayerManager {
 
             const newState = new PlayerState(state.players, state.teams, state.settings);
 
-            // Remove from team
+            // Remove from the team
             newState.teams[teamName] = newState.teams[teamName].map((p) =>
                 p === playerName ? null : p
             );
 
             // Handle the action
             if (action === 'waitingList') {
-                // Move to waiting list
+                // Move to the waiting list
                 newState.players.available = newState.players.available.filter(
                     (p) => p !== playerName
                 );
@@ -562,7 +562,7 @@ export class PlayerManager {
                     newState.players.waitingList.push(playerName);
                 }
             } else if (action === 'unassign') {
-                // Keep in available list (already there, just remove from team)
+                // Keep in the available list (already there, just remove from the team)
             } else if (action === 'remove') {
                 // Remove completely
                 newState.players.available = newState.players.available.filter(
@@ -579,7 +579,7 @@ export class PlayerManager {
     }
 
     /**
-     * Fill empty team slot with specific player from waiting list or available list
+     * Fill empty team slot with specific player from the waiting list or available list
      */
     async fillEmptySlotWithPlayer(teamName, playerName) {
         return await this.executeTransaction((state) =>
@@ -605,7 +605,7 @@ export class PlayerManager {
                 });
             });
 
-            // Check if any team players are not in available list
+            // Check if any team players are not in the available list
             for (const teamPlayer of playersInTeams) {
                 if (!newState.players.available.includes(teamPlayer)) {
                     newState.players.available.push(teamPlayer);
@@ -613,7 +613,7 @@ export class PlayerManager {
                 }
             }
 
-            // Only return new state if changes were made
+            // Only return the new state if changes were made
             if (hasChanges) {
                 newState.validateState();
                 return newState;
@@ -624,5 +624,5 @@ export class PlayerManager {
     }
 }
 
-// Export factory function to create new instance per request
+// Export factory function to create a new instance per request
 export const createPlayerManager = () => new PlayerManager();

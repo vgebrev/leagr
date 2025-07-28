@@ -45,7 +45,7 @@ function extractLeagueId(host) {
         }
     }
 
-    // If it's not a recognized domain format, return null
+    // If it's not a recognised domain format, return null
     return null;
 }
 

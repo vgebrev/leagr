@@ -57,6 +57,10 @@
         );
     }
 
+    /**
+     * Handles the form submission to update the access code.
+     * @param {SubmitEvent} event
+     */
     async function handleSubmit(event) {
         event.preventDefault();
 

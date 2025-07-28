@@ -22,7 +22,7 @@ export const load = async ({ locals, url }) => {
         ? await getConsolidatedSettings(date, leagueInfo.id)
         : defaultSettings;
 
-    // Strip access code from league info before sending to client
+    // Strip access code from league info before sending to the client
     const clientLeagueInfo = leagueInfo
         ? {
               id: leagueInfo.id,

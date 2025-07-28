@@ -4,10 +4,15 @@
     import { fade } from 'svelte/transition';
 
     let {
+        /** @type {string} */
         teamName,
+        /** @type {keyof typeof teamStyles} */
         teamColour,
+        /** @type {boolean} */
         celebrating = $bindable(),
+        /** @type {string} */
         icon = '🏆',
+        /** @type {string[] | null} */
         confettiColours = null
     } = $props();
 
@@ -44,6 +49,9 @@
         setTimeout(shoot, 800);
     }
 
+    /**
+     * @param {string[]} teamColours - Array of hex colour strings for confetti
+     */
     export function fireConfetti(teamColours) {
         const end = Date.now() + 0.5 * 1000;
 
@@ -71,6 +79,7 @@
         })();
     }
 
+    /** @type {number | NodeJS.Timeout | null} */
     let celebrationTimeout = null;
     function celebrate() {
         if (celebrationTimeout) clearTimeout(celebrationTimeout);

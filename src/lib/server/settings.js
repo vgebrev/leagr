@@ -26,15 +26,15 @@ export async function getConsolidatedSettings(date, leagueId) {
     const leagueInfo = getLeagueInfo(leagueId);
     const leagueSettings = getEffectiveLeagueSettings(leagueInfo);
 
-    // Get day-specific settings from daily file
+    // Get day-specific settings from the daily file
     const daySettings = (await data.get('settings', date, leagueId)) || {};
 
-    // Create the response structure with league settings as base
+    // Create the response structure with league settings as the base
     const response = { ...leagueSettings };
 
-    // Add day-specific overrides as a nested object if date is provided
+    // Add day-specific overrides as a nested object if a date is provided
     if (date) {
-        // Create day overrides object with league defaults as fallback
+        // Create a day overrides object with league defaults as fallback
         const dayOverrides = {};
 
         // For each day-level setting, use saved value or fallback to league default

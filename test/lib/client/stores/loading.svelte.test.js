@@ -10,7 +10,7 @@ describe('Loading Store', () => {
     let loadingCount, isLoading, pushLoading, popLoading, withLoading;
 
     beforeEach(async () => {
-        // Clear module cache to get fresh instances
+        // Clear the module cache to get fresh instances
         vi.resetModules();
 
         const loadingModule = await import('$lib/client/stores/loading.js');

@@ -42,7 +42,7 @@
                                       onclick: async () =>
                                           await onmove(player, sourceList, destinationList),
                                       disabled: canMoveToOtherList
-                                          ? !canMoveToOtherList(player, sourceList, destinationList)
+                                          ? !canMoveToOtherList(sourceList, destinationList)
                                           : false
                                   }
                               ]

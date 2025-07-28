@@ -49,7 +49,7 @@ export const GET = async ({ url, locals }) => {
             return error(err.statusCode, err.message);
         }
 
-        // Handle unexpected errors with generic message
+        // Handle unexpected errors with a generic message
         return error(500, 'Failed to calculate team configurations');
     }
 };
