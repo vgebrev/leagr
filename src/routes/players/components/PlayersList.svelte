@@ -1,11 +1,6 @@
 <script>
-    import { Button, Listgroup, ListgroupItem, Dropdown, DropdownItem } from 'flowbite-svelte';
-    import {
-        DotsVerticalOutline,
-        TrashBinOutline,
-        ClockOutline,
-        ThumbsUpOutline
-    } from 'flowbite-svelte-icons';
+    import { Listgroup, ListgroupItem } from 'flowbite-svelte';
+    import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
 
     let {
         label,
@@ -19,10 +14,6 @@
         canMoveToOtherList
     } = $props();
 
-    let dropdownOpen = $derived(players.map(() => false));
-    $effect(() => {
-        dropdownOpen = players.map(() => false);
-    });
 </script>
 
 <div class="flex flex-col gap-2">
@@ -35,50 +26,20 @@
                     class="max-w-100 overflow-hidden text-nowrap overflow-ellipsis whitespace-nowrap"
                     >{i + 1}. {player}</span
                 >{#if onremove}
-                    <Button
-                        size="sm"
-                        class="ms-auto p-0"
-                        type="button"
-                        outline={true}
-                        color="alternative"
-                        onclick={() => {
-                            dropdownOpen[i] = !dropdownOpen[i];
-                        }}
-                        disabled={!canModifyList}><DotsVerticalOutline class="h-4 w-4" /></Button>
-                    <Dropdown
-                        simple
-                        isOpen={dropdownOpen[i]}>
-                        <DropdownItem
-                            classes={{ anchor: 'w-full font-normal' }}
-                            onclick={async () => {
-                                await onremove(player);
-                            }}>
-                            <span class="flex items-center">
-                                <TrashBinOutline class="me-2 h-4 w-4" />
-                                Remove
-                            </span>
-                        </DropdownItem>
-                        {#if onmove && sourceList && destinationList}
-                            {@const canMove = canMoveToOtherList
-                                ? canMoveToOtherList(player, sourceList, destinationList)
-                                : true}
-                            <DropdownItem
-                                classes={{ anchor: 'w-full font-normal' }}
-                                onclick={async () => {
-                                    await onmove(player, sourceList, destinationList);
-                                }}
-                                disabled={!canMove}>
-                                <span class="flex items-center">
-                                    {#if sourceList === 'available'}
-                                        <ClockOutline class="me-2 h-4 w-4" />
-                                    {:else}
-                                        <ThumbsUpOutline class="me-2 h-4 w-4" />
-                                    {/if}
-                                    {moveLabel || 'Move player'}
-                                    <span class="flex items-center"> </span></span
-                                ></DropdownItem>
-                        {/if}
-                    </Dropdown>
+                    {@const actions = [
+                        {
+                            type: 'remove',
+                            label: 'Remove',
+                            onclick: async () => await onremove(player)
+                        },
+                        ...(onmove && sourceList && destinationList ? [{
+                            type: sourceList === 'available' ? 'move-to-waiting' : 'move-to-active',
+                            label: moveLabel || 'Move player',
+                            onclick: async () => await onmove(player, sourceList, destinationList),
+                            disabled: canMoveToOtherList ? !canMoveToOtherList(player, sourceList, destinationList) : false
+                        }] : [])
+                    ]}
+                    <PlayerActionsDropdown {actions} {canModifyList} />
                 {/if}
             </ListgroupItem>
         {/each}
