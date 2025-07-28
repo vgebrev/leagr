@@ -13,7 +13,6 @@
         moveLabel,
         canMoveToOtherList
     } = $props();
-
 </script>
 
 <div class="flex flex-col gap-2">
@@ -32,14 +31,26 @@
                             label: 'Remove',
                             onclick: async () => await onremove(player)
                         },
-                        ...(onmove && sourceList && destinationList ? [{
-                            type: sourceList === 'available' ? 'move-to-waiting' : 'move-to-active',
-                            label: moveLabel || 'Move player',
-                            onclick: async () => await onmove(player, sourceList, destinationList),
-                            disabled: canMoveToOtherList ? !canMoveToOtherList(player, sourceList, destinationList) : false
-                        }] : [])
+                        ...(onmove && sourceList && destinationList
+                            ? [
+                                  {
+                                      type:
+                                          sourceList === 'available'
+                                              ? 'move-to-waiting'
+                                              : 'move-to-active',
+                                      label: moveLabel || 'Move player',
+                                      onclick: async () =>
+                                          await onmove(player, sourceList, destinationList),
+                                      disabled: canMoveToOtherList
+                                          ? !canMoveToOtherList(player, sourceList, destinationList)
+                                          : false
+                                  }
+                              ]
+                            : [])
                     ]}
-                    <PlayerActionsDropdown {actions} {canModifyList} />
+                    <PlayerActionsDropdown
+                        {actions}
+                        {canModifyList} />
                 {/if}
             </ListgroupItem>
         {/each}

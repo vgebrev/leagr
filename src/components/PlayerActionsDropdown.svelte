@@ -23,37 +23,39 @@
      *   styleClass: string
      * }}
      */
-    let { 
-        actions = [],           // Array of action objects
-        canModifyList = true,   // Whether the dropdown should be enabled
-        styleClass = ""         // Additional CSS classes for the button
+    let {
+        actions = [], // Array of action objects
+        canModifyList = true, // Whether the dropdown should be enabled
+        styleClass = '' // Additional CSS classes for the button
     } = $props();
 
     // Internal icon mapping for action types
     const iconMap = {
-        'remove': TrashBinOutline,
+        remove: TrashBinOutline,
         'move-to-waiting': ClockOutline,
         'move-to-active': ThumbsUpOutline,
-        'assign': ArrowLeftOutline
+        assign: ArrowLeftOutline
     };
 
     let isOpen = $state(false);
 </script>
 
-<Button 
-    size="sm" 
-    class="ms-auto p-0 {styleClass}" 
-    outline={true} 
+<Button
+    size="sm"
+    class="ms-auto p-0 {styleClass}"
+    outline={true}
     color="alternative"
     disabled={!canModifyList}
-    onclick={() => isOpen = !isOpen}>
+    onclick={() => (isOpen = !isOpen)}>
     <DotsVerticalOutline class="h-4 w-4" />
 </Button>
 
-<Dropdown simple {isOpen}>
-    {#each actions as action}
+<Dropdown
+    simple
+    {isOpen}>
+    {#each actions as action, i (i)}
         {@const Icon = iconMap[action.type]}
-        <DropdownItem 
+        <DropdownItem
             classes={{ anchor: 'w-full font-normal' }}
             onclick={action.onclick}
             disabled={action.disabled}>

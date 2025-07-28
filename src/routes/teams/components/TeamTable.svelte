@@ -1,9 +1,6 @@
 <script>
-    import { Button, Dropdown, DropdownItem } from 'flowbite-svelte';
-    import {
-        ExclamationCircleSolid,
-        ArrowLeftOutline
-    } from 'flowbite-svelte-icons';
+    import { Button } from 'flowbite-svelte';
+    import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
 
@@ -19,7 +16,6 @@
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
-
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
@@ -83,7 +79,7 @@
                             {#if isPlayerList && player}
                                 <!-- Dropdown for unassigned/waiting list players -->
                                 {@const actions = [
-                                    ...teamsWithEmptySlots.map(teamName => ({
+                                    ...teamsWithEmptySlots.map((teamName) => ({
                                         type: 'assign',
                                         label: capitalize(teamName),
                                         onclick: () => handleAssignPlayer(player, teamName)
@@ -94,7 +90,10 @@
                                         onclick: () => handleRemoveFromList(player)
                                     }
                                 ]}
-                                <PlayerActionsDropdown {actions} {canModifyList} styleClass={styles.buttonClass} />
+                                <PlayerActionsDropdown
+                                    {actions}
+                                    {canModifyList}
+                                    styleClass={styles.buttonClass} />
                             {:else if onremove && player}
                                 {@const actions = [
                                     {
@@ -108,7 +107,10 @@
                                         onclick: () => handleRemovePlayer(player, 'remove')
                                     }
                                 ]}
-                                <PlayerActionsDropdown {actions} {canModifyList} styleClass={styles.buttonClass} />
+                                <PlayerActionsDropdown
+                                    {actions}
+                                    {canModifyList}
+                                    styleClass={styles.buttonClass} />
                             {/if}
                             {#if onassign && !player}
                                 {#if assignablePlayers.length > 0}
@@ -118,13 +120,17 @@
                                             label: 'Auto-assign first available',
                                             onclick: () => handleAssignPlayer(null, teamName)
                                         },
-                                        ...assignablePlayers.map(waitingPlayer => ({
+                                        ...assignablePlayers.map((waitingPlayer) => ({
                                             type: 'assign',
                                             label: waitingPlayer,
-                                            onclick: () => handleAssignPlayer(waitingPlayer, teamName)
+                                            onclick: () =>
+                                                handleAssignPlayer(waitingPlayer, teamName)
                                         }))
                                     ]}
-                                    <PlayerActionsDropdown {actions} {canModifyList} styleClass={styles.buttonClass} />
+                                    <PlayerActionsDropdown
+                                        {actions}
+                                        {canModifyList}
+                                        styleClass={styles.buttonClass} />
                                 {:else}
                                     <Button
                                         size="sm"
