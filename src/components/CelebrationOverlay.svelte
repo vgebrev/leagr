@@ -3,19 +3,24 @@
     import { teamStyles } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
+    /**
+     * @typedef {Object} Props
+     * @property {string} teamName
+     * @property {import('$lib/shared/helpers.js').TeamColour} teamColour
+     * @property {boolean} [celebrating]
+     * @property {string} [icon]
+     * @property {string[] | null} [confettiColours]
+     */
+
+    /** @type {Props} */
     let {
-        /** @type {string} */
         teamName,
-        /** @type {keyof typeof teamStyles} */
         teamColour,
-        /** @type {boolean} */
         celebrating = $bindable(),
-        /** @type {string} */
         icon = '🏆',
-        /** @type {string[] | null} */
         confettiColours = null
     } = $props();
-
+    
     export function shootStars() {
         const defaults = {
             spread: 360,
@@ -106,7 +111,9 @@
         in:fade={{ duration: 300 }}
         out:fade={{ duration: 500 }}>
         <div
-            class={`rounded-xl px-8 py-6 text-center text-4xl font-bold shadow-lg ${teamStyles[teamColour]?.text ?? teamStyles.default.text} pulse-and-shake`}>
+            class="rounded-xl px-8 py-6 text-center text-4xl font-bold shadow-lg {teamStyles[
+                teamColour
+            ]?.text ?? teamStyles.default.text} pulse-and-shake">
             {icon}
             <div class="mt-2 text-xl uppercase">{teamName}</div>
         </div>

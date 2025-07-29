@@ -74,8 +74,25 @@ export function rotateArray(arr, offset) {
     return arr.slice(shift).concat(arr.slice(0, shift));
 }
 
+/**
+ * @typedef {Object} TeamStyle
+ * @property {string} text
+ * @property {string} header
+ * @property {string} row
+ * @property {string} button
+ * @property {string} buttonClass
+ * @property {string[]} confetti
+ */
+
+/**
+ * @typedef {'blue'|'orange'|'green'|'red'|'purple'|'yellow'|'pink'|'default'} TeamColour
+ */
+
+/** @type {Record<TeamColour, TeamStyle>} */
+
 export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
+/** @type {Record<TeamColour, TeamStyle>} */
 export const teamStyles = {
     blue: {
         text: 'text-blue-100 bg-blue-500',
