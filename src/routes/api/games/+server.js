@@ -18,7 +18,15 @@ export const GET = async ({ url, locals }) => {
 
     try {
         const games = (await data.get('games', dateValidation.date, leagueId)) || {};
-        return json(games);
+
+        // Add team count to response
+        const teams = await getTeamsForDate(dateValidation.date, leagueId);
+        const teamCount = teams ? Object.keys(teams).length : 0;
+
+        return json({
+            ...games,
+            teamCount
+        });
     } catch (err) {
         console.error('Error fetching games:', err);
         return error(500, 'Failed to fetch games data');
@@ -47,69 +55,95 @@ export const POST = async ({ request, url, locals }) => {
         const gameScheduler = createGameScheduler();
         const requestData = bodyValidation.data;
 
+        // Get teams data once for operations that need it
+        const teams = ['generate', 'addMore'].includes(requestData.operation)
+            ? await getTeamsForDate(dateValidation.date, leagueId)
+            : null;
+
+        const teamCount = teams ? Object.keys(teams).length : 0;
+
         // Handle different types of game operations
         if (requestData.operation === 'generate') {
             // Generate new schedule
-            const teams = await getTeamsForDate(dateValidation.date, leagueId);
-            if (!teams || Object.keys(teams).length === 0) {
+            if (!teams || teamCount === 0) {
                 return error(400, 'No teams available for schedule generation');
             }
 
             const teamNames = Object.keys(teams);
-            const scheduleData = gameScheduler
-                .setTeams(teamNames)
-                .processScheduleRequest({
-                    teams: teamNames,
-                    anchorIndex: requestData.anchorIndex
-                });
+            const scheduleData = gameScheduler.setTeams(teamNames).processScheduleRequest({
+                teams: teamNames,
+                anchorIndex: requestData.anchorIndex
+            });
 
-            const result = await data.set('games', dateValidation.date, scheduleData, {}, false, leagueId);
-            return result ? json(result) : error(500, 'Failed to save schedule');
-
+            const result = await data.set(
+                'games',
+                dateValidation.date,
+                scheduleData,
+                {},
+                false,
+                leagueId
+            );
+            return result ? json({ ...result, teamCount }) : error(500, 'Failed to save schedule');
         } else if (requestData.operation === 'addMore') {
             // Add more rounds to existing schedule
             const existingGames = (await data.get('games', dateValidation.date, leagueId)) || {};
-            const teams = await getTeamsForDate(dateValidation.date, leagueId);
-            
-            if (!teams || Object.keys(teams).length === 0) {
+
+            if (!teams || teamCount === 0) {
                 return error(400, 'No teams available for adding more games');
             }
 
             const teamNames = Object.keys(teams);
-            const scheduleData = gameScheduler
-                .setTeams(teamNames)
-                .processScheduleRequest({
-                    teams: teamNames,
-                    anchorIndex: requestData.anchorIndex || existingGames.anchorIndex || 0,
-                    existingRounds: existingGames.rounds || [],
-                    addMore: true
-                });
+            const scheduleData = gameScheduler.setTeams(teamNames).processScheduleRequest({
+                teams: teamNames,
+                anchorIndex: requestData.anchorIndex || existingGames.anchorIndex || 0,
+                existingRounds: existingGames.rounds || [],
+                addMore: true
+            });
 
-            const result = await data.set('games', dateValidation.date, scheduleData, {}, false, leagueId);
-            return result ? json(result) : error(500, 'Failed to save extended schedule');
-
+            const result = await data.set(
+                'games',
+                dateValidation.date,
+                scheduleData,
+                {},
+                false,
+                leagueId
+            );
+            return result
+                ? json({ ...result, teamCount })
+                : error(500, 'Failed to save extended schedule');
         } else {
             // Update existing schedule (scores, etc.)
             const validatedData = gameScheduler.validateGameRequest(requestData);
-            
+
+            // Get team count for score updates too
+            const teams = await getTeamsForDate(dateValidation.date, leagueId);
+            const scoreUpdateTeamCount = teams ? Object.keys(teams).length : 0;
+
             // Add schedule status information
             const status = gameScheduler.getScheduleStatus(validatedData.rounds);
             const dataWithStatus = {
                 ...validatedData,
-                status
+                status,
+                teamCount: scoreUpdateTeamCount
             };
 
-            const result = await data.set('games', dateValidation.date, dataWithStatus, {}, false, leagueId);
+            const result = await data.set(
+                'games',
+                dateValidation.date,
+                dataWithStatus,
+                {},
+                false,
+                leagueId
+            );
             return result ? json(result) : error(500, 'Failed to save games');
         }
-
     } catch (err) {
         console.error('Error processing games request:', err);
-        
+
         if (err instanceof GameSchedulerError) {
             return error(err.statusCode, err.message);
         }
-        
+
         return error(500, 'Internal server error processing games');
     }
 };

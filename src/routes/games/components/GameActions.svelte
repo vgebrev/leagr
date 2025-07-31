@@ -48,13 +48,6 @@
             await onAddMoreGames();
         }
     }
-
-    /**
-     * Cancel regeneration confirmation
-     */
-    function cancelRegenerate() {
-        showConfirmRegenerate = false;
-    }
 </script>
 
 <!-- No teams warning -->

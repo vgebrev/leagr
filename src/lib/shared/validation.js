@@ -490,7 +490,9 @@ export function validateRound(round, roundIndex = 0) {
 
         // Validate regular matches
         if (match.home === undefined || match.away === undefined) {
-            errors.push(`Round ${roundIndex + 1}, match ${i + 1}: home and away teams are required`);
+            errors.push(
+                `Round ${roundIndex + 1}, match ${i + 1}: home and away teams are required`
+            );
             continue;
         }
 
@@ -512,7 +514,11 @@ export function validateRound(round, roundIndex = 0) {
         // Validate scores
         const scoreResult = validateMatchScores(match);
         if (!scoreResult.isValid) {
-            errors.push(...scoreResult.errors.map(err => `Round ${roundIndex + 1}, match ${i + 1}: ${err}`));
+            errors.push(
+                ...scoreResult.errors.map(
+                    (err) => `Round ${roundIndex + 1}, match ${i + 1}: ${err}`
+                )
+            );
         }
 
         sanitizedRound.push({
@@ -552,7 +558,11 @@ export function validateScheduleData(scheduleData) {
 
     // Validate anchorIndex
     if (scheduleData.anchorIndex !== undefined) {
-        if (typeof scheduleData.anchorIndex !== 'number' || !Number.isInteger(scheduleData.anchorIndex) || scheduleData.anchorIndex < 0) {
+        if (
+            typeof scheduleData.anchorIndex !== 'number' ||
+            !Number.isInteger(scheduleData.anchorIndex) ||
+            scheduleData.anchorIndex < 0
+        ) {
             errors.push('Anchor index must be a non-negative integer');
         } else {
             sanitizedData.anchorIndex = scheduleData.anchorIndex;
@@ -600,8 +610,6 @@ export function validateScheduleData(scheduleData) {
  * @returns {{isValid: boolean, errors: string[], sanitizedData: Object}}
  */
 export function validateGameRequest(requestBody) {
-    const errors = [];
-
     if (!requestBody || typeof requestBody !== 'object') {
         return {
             isValid: false,
@@ -612,7 +620,7 @@ export function validateGameRequest(requestBody) {
 
     // Use existing schedule validation
     const scheduleResult = validateScheduleData(requestBody);
-    
+
     return {
         isValid: scheduleResult.isValid,
         errors: scheduleResult.errors,

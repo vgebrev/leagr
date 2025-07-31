@@ -20,7 +20,7 @@
         icon = '🏆',
         confettiColours = null
     } = $props();
-    
+
     export function shootStars() {
         const defaults = {
             spread: 360,

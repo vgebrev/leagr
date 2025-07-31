@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createGameScheduler, GameScheduler, GameSchedulerError } from '$lib/server/gameScheduler.js';
+import {
+    createGameScheduler,
+    GameScheduler,
+    GameSchedulerError
+} from '$lib/server/gameScheduler.js';
 
 describe('GameScheduler', () => {
     let gameScheduler;
@@ -19,9 +23,7 @@ describe('GameScheduler', () => {
 
     describe('Fluent interface', () => {
         it('should allow method chaining', () => {
-            const result = gameScheduler
-                .setTeams(mockTeams)
-                .setSettings({ someOption: true });
+            const result = gameScheduler.setTeams(mockTeams).setSettings({ someOption: true });
 
             expect(result).toBe(gameScheduler);
         });
@@ -65,9 +67,9 @@ describe('GameScheduler', () => {
         it('should generate correct rounds for even number of teams', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const rounds = gameScheduler.generateRoundRobinRounds(teams, 0);
-            
+
             expect(rounds).toHaveLength(3); // n-1 rounds for n teams
-            
+
             // Check first round structure
             expect(rounds[0]).toHaveLength(2); // n/2 matches per round
             expect(rounds[0][0]).toHaveProperty('home');
@@ -79,12 +81,12 @@ describe('GameScheduler', () => {
         it('should generate correct rounds for odd number of teams (with bye)', () => {
             const teams = ['A', 'B', 'C'];
             const rounds = gameScheduler.generateRoundRobinRounds(teams, 0);
-            
+
             expect(rounds).toHaveLength(3); // n rounds for n teams (odd)
-            
+
             // Each round should have one bye
-            rounds.forEach(round => {
-                const byeMatches = round.filter(match => match.bye);
+            rounds.forEach((round) => {
+                const byeMatches = round.filter((match) => match.bye);
                 expect(byeMatches).toHaveLength(1);
             });
         });
@@ -92,16 +94,16 @@ describe('GameScheduler', () => {
         it('should ensure each team plays every other team exactly once', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const rounds = gameScheduler.generateRoundRobinRounds(teams, 0);
-            
-            const allMatches = rounds.flat().filter(match => !match.bye);
+
+            const allMatches = rounds.flat().filter((match) => !match.bye);
             const matchPairs = new Set();
-            
-            allMatches.forEach(match => {
+
+            allMatches.forEach((match) => {
                 const pair = [match.home, match.away].sort().join('-');
                 expect(matchPairs.has(pair)).toBe(false); // No duplicate pairings
                 matchPairs.add(pair);
             });
-            
+
             // Should have n*(n-1)/2 unique pairings
             expect(matchPairs.size).toBe(6); // 4*3/2 = 6
         });
@@ -109,39 +111,52 @@ describe('GameScheduler', () => {
         it('should ensure all teams participate in games', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const rounds = gameScheduler.generateRoundRobinRounds(teams, 0);
-            
+
             // Check that all teams participate
             const teamAppearances = {};
-            
+
             // Initialize counters for all teams
-            teams.forEach(team => {
+            teams.forEach((team) => {
                 teamAppearances[team] = 0;
             });
-            
-            rounds.flat().filter(match => !match.bye).forEach(match => {
-                teamAppearances[match.home] = (teamAppearances[match.home] || 0) + 1;
-                teamAppearances[match.away] = (teamAppearances[match.away] || 0) + 1;
-            });
-            
+
+            rounds
+                .flat()
+                .filter((match) => !match.bye)
+                .forEach((match) => {
+                    teamAppearances[match.home] = (teamAppearances[match.home] || 0) + 1;
+                    teamAppearances[match.away] = (teamAppearances[match.away] || 0) + 1;
+                });
+
             // Each team should play n-1 games total
-            teams.forEach(team => {
+            teams.forEach((team) => {
                 expect(teamAppearances[team]).toBe(teams.length - 1);
             });
         });
 
         it('should throw error for empty teams array', () => {
             expect(() => gameScheduler.generateRoundRobinRounds([])).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.generateRoundRobinRounds([])).toThrow('Teams array is required and cannot be empty');
+            expect(() => gameScheduler.generateRoundRobinRounds([])).toThrow(
+                'Teams array is required and cannot be empty'
+            );
         });
 
         it('should throw error for single team', () => {
-            expect(() => gameScheduler.generateRoundRobinRounds(['Team A'])).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.generateRoundRobinRounds(['Team A'])).toThrow('At least 2 teams are required for scheduling');
+            expect(() => gameScheduler.generateRoundRobinRounds(['Team A'])).toThrow(
+                GameSchedulerError
+            );
+            expect(() => gameScheduler.generateRoundRobinRounds(['Team A'])).toThrow(
+                'At least 2 teams are required for scheduling'
+            );
         });
 
         it('should throw error for invalid anchor index', () => {
-            expect(() => gameScheduler.generateRoundRobinRounds(mockTeams, -1)).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.generateRoundRobinRounds(mockTeams, 'invalid')).toThrow(GameSchedulerError);
+            expect(() => gameScheduler.generateRoundRobinRounds(mockTeams, -1)).toThrow(
+                GameSchedulerError
+            );
+            expect(() => gameScheduler.generateRoundRobinRounds(mockTeams, 'invalid')).toThrow(
+                GameSchedulerError
+            );
         });
 
         it('should handle anchor index larger than team count', () => {
@@ -155,13 +170,13 @@ describe('GameScheduler', () => {
         it('should generate double round-robin (home and away)', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const fullSchedule = gameScheduler.generateFullRoundRobinSchedule(teams, 0);
-            
+
             // Should have 2 * (n-1) rounds
             expect(fullSchedule).toHaveLength(6);
-            
+
             // Count all matches (excluding byes)
-            const allMatches = fullSchedule.flat().filter(match => !match.bye);
-            
+            const allMatches = fullSchedule.flat().filter((match) => !match.bye);
+
             // Should have n*(n-1) total matches (each pairing twice)
             expect(allMatches).toHaveLength(12); // 4*3 = 12
         });
@@ -169,17 +184,17 @@ describe('GameScheduler', () => {
         it('should ensure each team plays every other team twice (home and away)', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const fullSchedule = gameScheduler.generateFullRoundRobinSchedule(teams, 0);
-            
-            const allMatches = fullSchedule.flat().filter(match => !match.bye);
+
+            const allMatches = fullSchedule.flat().filter((match) => !match.bye);
             const matchCount = {};
-            
-            allMatches.forEach(match => {
+
+            allMatches.forEach((match) => {
                 const pair = [match.home, match.away].sort().join('-');
                 matchCount[pair] = (matchCount[pair] || 0) + 1;
             });
-            
+
             // Each pairing should appear exactly twice
-            Object.values(matchCount).forEach(count => {
+            Object.values(matchCount).forEach((count) => {
                 expect(count).toBe(2);
             });
         });
@@ -187,18 +202,18 @@ describe('GameScheduler', () => {
         it('should have symmetric home/away distribution', () => {
             const teams = ['A', 'B', 'C', 'D'];
             const fullSchedule = gameScheduler.generateFullRoundRobinSchedule(teams, 0);
-            
-            const allMatches = fullSchedule.flat().filter(match => !match.bye);
+
+            const allMatches = fullSchedule.flat().filter((match) => !match.bye);
             const homeCount = {};
             const awayCount = {};
-            
-            allMatches.forEach(match => {
+
+            allMatches.forEach((match) => {
                 homeCount[match.home] = (homeCount[match.home] || 0) + 1;
                 awayCount[match.away] = (awayCount[match.away] || 0) + 1;
             });
-            
+
             // Each team should play equal home and away games
-            teams.forEach(team => {
+            teams.forEach((team) => {
                 expect(homeCount[team]).toBe(awayCount[team]);
                 expect(homeCount[team]).toBe(3); // n-1 games each way
             });
@@ -212,7 +227,7 @@ describe('GameScheduler', () => {
 
         it('should generate schedule with teams set', () => {
             const result = gameScheduler.generateSchedule(0);
-            
+
             expect(result).toHaveProperty('rounds');
             expect(result).toHaveProperty('anchorIndex');
             expect(result.anchorIndex).toBe(0);
@@ -221,7 +236,7 @@ describe('GameScheduler', () => {
 
         it('should generate random anchor index when not provided', () => {
             const result = gameScheduler.generateSchedule();
-            
+
             expect(typeof result.anchorIndex).toBe('number');
             expect(result.anchorIndex).toBeGreaterThanOrEqual(0);
             expect(result.anchorIndex).toBeLessThan(mockTeams.length);
@@ -230,13 +245,17 @@ describe('GameScheduler', () => {
         it('should throw error when no teams are set', () => {
             const emptyScheduler = createGameScheduler();
             expect(() => emptyScheduler.generateSchedule()).toThrow(GameSchedulerError);
-            expect(() => emptyScheduler.generateSchedule()).toThrow('No teams available for schedule generation');
+            expect(() => emptyScheduler.generateSchedule()).toThrow(
+                'No teams available for schedule generation'
+            );
         });
 
         it('should throw error for insufficient teams', () => {
             gameScheduler.setTeams(['Team A']);
             expect(() => gameScheduler.generateSchedule()).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.generateSchedule()).toThrow('At least 2 teams are required for schedule generation');
+            expect(() => gameScheduler.generateSchedule()).toThrow(
+                'At least 2 teams are required for schedule generation'
+            );
         });
     });
 
@@ -248,14 +267,18 @@ describe('GameScheduler', () => {
         it('should add more rounds to existing schedule', () => {
             const initialSchedule = gameScheduler.generateSchedule(0);
             const extendedSchedule = gameScheduler.addMoreRounds(initialSchedule.rounds, 0);
-            
+
             expect(extendedSchedule.rounds.length).toBe(initialSchedule.rounds.length * 2);
             expect(extendedSchedule.anchorIndex).toBe(0);
         });
 
         it('should throw error for invalid existing rounds', () => {
-            expect(() => gameScheduler.addMoreRounds('not an array', 0)).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.addMoreRounds('not an array', 0)).toThrow('Existing rounds must be an array');
+            expect(() => gameScheduler.addMoreRounds('not an array', 0)).toThrow(
+                GameSchedulerError
+            );
+            expect(() => gameScheduler.addMoreRounds('not an array', 0)).toThrow(
+                'Existing rounds must be an array'
+            );
         });
 
         it('should throw error for invalid anchor index', () => {
@@ -268,11 +291,9 @@ describe('GameScheduler', () => {
         it('should validate correct schedule data', () => {
             const validSchedule = {
                 anchorIndex: 1,
-                rounds: [
-                    [{ home: 'Team A', away: 'Team B', homeScore: null, awayScore: null }]
-                ]
+                rounds: [[{ home: 'Team A', away: 'Team B', homeScore: null, awayScore: null }]]
             };
-            
+
             const result = gameScheduler.validateSchedule(validSchedule);
             expect(result).toHaveProperty('rounds');
             expect(result).toHaveProperty('anchorIndex');
@@ -283,9 +304,13 @@ describe('GameScheduler', () => {
                 anchorIndex: -1,
                 rounds: 'not an array'
             };
-            
-            expect(() => gameScheduler.validateSchedule(invalidSchedule)).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.validateSchedule(invalidSchedule)).toThrow('Invalid schedule data');
+
+            expect(() => gameScheduler.validateSchedule(invalidSchedule)).toThrow(
+                GameSchedulerError
+            );
+            expect(() => gameScheduler.validateSchedule(invalidSchedule)).toThrow(
+                'Invalid schedule data'
+            );
         });
     });
 
@@ -306,7 +331,7 @@ describe('GameScheduler', () => {
                     { home: 'Team C', away: 'Team D', homeScore: null, awayScore: null }
                 ]
             ];
-            
+
             const status = gameScheduler.getScheduleStatus(rounds);
             expect(status).toEqual({
                 isComplete: false,
@@ -322,7 +347,7 @@ describe('GameScheduler', () => {
                     { home: 'Team C', away: 'Team D', homeScore: 3, awayScore: 0 }
                 ]
             ];
-            
+
             const status = gameScheduler.getScheduleStatus(rounds);
             expect(status).toEqual({
                 isComplete: true,
@@ -333,12 +358,9 @@ describe('GameScheduler', () => {
 
         it('should ignore bye matches in status calculation', () => {
             const rounds = [
-                [
-                    { home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 },
-                    { bye: 'Team C' }
-                ]
+                [{ home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 }, { bye: 'Team C' }]
             ];
-            
+
             const status = gameScheduler.getScheduleStatus(rounds);
             expect(status).toEqual({
                 isComplete: true,
@@ -348,7 +370,9 @@ describe('GameScheduler', () => {
         });
 
         it('should throw error for invalid rounds', () => {
-            expect(() => gameScheduler.getScheduleStatus('not an array')).toThrow(GameSchedulerError);
+            expect(() => gameScheduler.getScheduleStatus('not an array')).toThrow(
+                GameSchedulerError
+            );
         });
     });
 
@@ -361,7 +385,7 @@ describe('GameScheduler', () => {
                     { bye: 'Team E' }
                 ]
             ];
-            
+
             const results = gameScheduler.getMatchResults(rounds);
             expect(results).toEqual([
                 { home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 }
@@ -375,7 +399,7 @@ describe('GameScheduler', () => {
                     { bye: 'Team C' }
                 ]
             ];
-            
+
             const results = gameScheduler.getMatchResults(rounds);
             expect(results).toEqual([]);
         });
@@ -388,7 +412,7 @@ describe('GameScheduler', () => {
                     { home: 'Team E', away: 'Team F', homeScore: 1, awayScore: null }
                 ]
             ];
-            
+
             const results = gameScheduler.getMatchResults(rounds);
             expect(results).toEqual([
                 { home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 }
@@ -406,7 +430,7 @@ describe('GameScheduler', () => {
                 teams: mockTeams,
                 anchorIndex: 1
             });
-            
+
             expect(result).toHaveProperty('rounds');
             expect(result).toHaveProperty('anchorIndex', 1);
             expect(result).toHaveProperty('status');
@@ -418,28 +442,30 @@ describe('GameScheduler', () => {
         it('should process add more rounds request', () => {
             gameScheduler.setTeams(mockTeams);
             const initialSchedule = gameScheduler.generateSchedule(0);
-            
+
             const result = gameScheduler.processScheduleRequest({
                 anchorIndex: 0,
                 existingRounds: initialSchedule.rounds,
                 addMore: true
             });
-            
+
             expect(result.rounds.length).toBe(initialSchedule.rounds.length * 2);
         });
 
         it('should throw error when no teams available', () => {
             expect(() => gameScheduler.processScheduleRequest({})).toThrow(GameSchedulerError);
-            expect(() => gameScheduler.processScheduleRequest({})).toThrow('No teams available for schedule generation');
+            expect(() => gameScheduler.processScheduleRequest({})).toThrow(
+                'No teams available for schedule generation'
+            );
         });
 
         it('should use pre-set teams if teams not provided in options', () => {
             gameScheduler.setTeams(mockTeams);
-            
+
             const result = gameScheduler.processScheduleRequest({
                 anchorIndex: 2
             });
-            
+
             expect(result).toHaveProperty('rounds');
             expect(result.anchorIndex).toBe(2);
         });
@@ -470,23 +496,21 @@ describe('GameScheduler', () => {
     describe('Integration tests', () => {
         it('should handle complete workflow for 4 teams', () => {
             const teams = ['Red Lions', 'Blue Eagles', 'Green Wolves', 'Yellow Tigers'];
-            
+
             // Generate initial schedule
-            const schedule = gameScheduler
-                .setTeams(teams)
-                .generateSchedule(0);
-            
+            const schedule = gameScheduler.setTeams(teams).generateSchedule(0);
+
             expect(schedule.rounds).toHaveLength(6); // Double round-robin for 4 teams
-            
+
             // Check schedule status
             const status = gameScheduler.getScheduleStatus(schedule.rounds);
             expect(status.isComplete).toBe(false);
             expect(status.totalGames).toBe(12); // 4 teams * 3 opponents * 2 legs
-            
+
             // Simulate adding scores to first match
             schedule.rounds[0][0].homeScore = 2;
             schedule.rounds[0][0].awayScore = 1;
-            
+
             const updatedStatus = gameScheduler.getScheduleStatus(schedule.rounds);
             expect(updatedStatus.playedGames).toBe(1);
             expect(updatedStatus.isComplete).toBe(false);
@@ -494,22 +518,20 @@ describe('GameScheduler', () => {
 
         it('should handle odd number of teams with byes', () => {
             const teams = ['Team A', 'Team B', 'Team C'];
-            
-            const schedule = gameScheduler
-                .setTeams(teams)
-                .generateSchedule(0);
-            
+
+            const schedule = gameScheduler.setTeams(teams).generateSchedule(0);
+
             // Should have 6 rounds (3 teams, double round-robin)
             expect(schedule.rounds).toHaveLength(6);
-            
+
             // Each round should have exactly one bye
-            schedule.rounds.forEach(round => {
-                const byeMatches = round.filter(match => match.bye);
+            schedule.rounds.forEach((round) => {
+                const byeMatches = round.filter((match) => match.bye);
                 expect(byeMatches).toHaveLength(1);
             });
-            
+
             // Total actual matches should be 6 (3 choose 2, times 2 for double round-robin)
-            const allMatches = schedule.rounds.flat().filter(match => !match.bye);
+            const allMatches = schedule.rounds.flat().filter((match) => !match.bye);
             expect(allMatches).toHaveLength(6);
         });
     });

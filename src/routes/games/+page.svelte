@@ -9,30 +9,41 @@
     import GameActions from './components/GameActions.svelte';
 
     let { data } = $props();
-    
+
     /** @type {string} */
     const date = data.date;
-    
+
     /** @type {boolean} */
     let isPast = $derived(isDateInPast(date));
-    
+
     /** @type {Array<Array<Object>>} */
     let schedule = $state([]);
-    
+
     /** @type {number} */
     let anchorIndex = $state(0);
-    
-    /** @type {Record<string, Object>} */
-    let teams = $state({});
-    
-    /** @type {string[]} */
-    let teamNames = $derived(Object.keys(teams || {}));
-    
+
+    /** @type {number} */
+    let teamCount = $state(0);
+
     /** @type {boolean} */
-    let hasTeams = $derived(teamNames.length > 0);
-    
+    let hasTeams = $derived(teamCount > 0);
+
     /** @type {boolean} */
     let hasSchedule = $derived(schedule.length > 0);
+
+    /**
+     * Helper to execute operations with schedule restore on failure
+     * @param {() => Promise<any>} operation - Async operation to execute
+     * @param {string} errorMessage - Error message to show on failure
+     */
+    async function withScheduleRestore(operation, errorMessage) {
+        const restoreSchedule = schedule;
+        await withLoading(operation, (err) => {
+            console.error(err);
+            setNotification(err.message || errorMessage, 'error');
+            schedule = restoreSchedule;
+        });
+    }
 
     /**
      * Generate a new schedule
@@ -43,27 +54,17 @@
             return;
         }
 
-        const restoreSchedule = schedule;
-        await withLoading(
-            async () => {
-                const requestData = {
-                    operation: 'generate',
-                    anchorIndex: Math.floor(Math.random() * teamNames.length)
-                };
+        await withScheduleRestore(async () => {
+            const requestData = {
+                operation: 'generate',
+                anchorIndex: Math.floor(Math.random() * teamCount)
+            };
 
-                const scheduleData = await api.post('games', date, requestData);
-                schedule = scheduleData.rounds || [];
-                anchorIndex = scheduleData.anchorIndex || 0;
-            },
-            (err) => {
-                console.error(err);
-                setNotification(
-                    err.message || 'Failed to generate schedule. Please try again.',
-                    'error'
-                );
-                schedule = restoreSchedule;
-            }
-        );
+            const scheduleData = await api.post('games', date, requestData);
+            schedule = scheduleData.rounds || [];
+            anchorIndex = scheduleData.anchorIndex || 0;
+            teamCount = scheduleData.teamCount || 0;
+        }, 'Failed to generate schedule. Please try again.');
     }
 
     /**
@@ -75,27 +76,17 @@
             return;
         }
 
-        const restoreSchedule = schedule;
-        await withLoading(
-            async () => {
-                const requestData = {
-                    operation: 'addMore',
-                    anchorIndex: anchorIndex
-                };
+        await withScheduleRestore(async () => {
+            const requestData = {
+                operation: 'addMore',
+                anchorIndex: anchorIndex
+            };
 
-                const gameData = await api.post('games', date, requestData);
-                schedule = gameData.rounds || [];
-                anchorIndex = gameData.anchorIndex || anchorIndex;
-            },
-            (err) => {
-                console.error(err);
-                setNotification(
-                    err.message || 'Failed to add more games. Please try again.',
-                    'error'
-                );
-                schedule = restoreSchedule;
-            }
-        );
+            const gameData = await api.post('games', date, requestData);
+            schedule = gameData.rounds || [];
+            anchorIndex = gameData.anchorIndex || anchorIndex;
+            teamCount = gameData.teamCount || teamCount;
+        }, 'Failed to add more games. Please try again.');
     }
 
     /**
@@ -112,42 +103,32 @@
         schedule = newSchedule;
 
         // Save to server
-        const restoreSchedule = schedule;
-        await withLoading(
-            async () => {
-                const requestData = {
-                    rounds: schedule,
-                    anchorIndex: anchorIndex
-                };
+        await withScheduleRestore(async () => {
+            const requestData = {
+                rounds: schedule,
+                anchorIndex: anchorIndex
+            };
 
-                const scoreData = await api.post('games', date, requestData);
-                schedule = scoreData.rounds || schedule;
-            },
-            (err) => {
-                console.error(err);
-                setNotification(err.message || 'Failed to save score. Please try again.', 'error');
-                schedule = restoreSchedule;
-            }
-        );
+            const scoreData = await api.post('games', date, requestData);
+            schedule = scoreData.rounds || schedule;
+            teamCount = scoreData.teamCount || teamCount;
+        }, 'Failed to save score. Please try again.');
     }
 
     onMount(async () => {
         await withLoading(
             async () => {
-                // Load teams and games data in parallel
-                const [teamsData, gamesData] = await Promise.all([
-                    api.get('teams', date),
-                    api.get('games', date)
-                ]);
+                // Load games data (now includes team count)
+                const gamesData = await api.get('games', date);
 
-                teams = teamsData || {};
                 schedule = gamesData?.rounds || [];
                 anchorIndex = gamesData?.anchorIndex || 0;
+                teamCount = gamesData?.teamCount || 0;
             },
             (err) => {
                 console.error('Error fetching data:', err);
                 setNotification(
-                    err.message || 'Failed to load team and schedule data. Please try again.',
+                    err.message || 'Failed to load schedule data. Please try again.',
                     'error'
                 );
             }

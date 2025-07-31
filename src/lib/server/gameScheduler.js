@@ -31,7 +31,7 @@ export class GameScheduler {
         if (!Array.isArray(teams)) {
             throw new GameSchedulerError('Teams must be an array', 400);
         }
-        this.teams = teams.filter(team => team && typeof team === 'string' && team.trim());
+        this.teams = teams.filter((team) => team && typeof team === 'string' && team.trim());
         return this;
     }
 
@@ -145,12 +145,16 @@ export class GameScheduler {
         }
 
         if (this.teams.length < 2) {
-            throw new GameSchedulerError('At least 2 teams are required for schedule generation', 400);
+            throw new GameSchedulerError(
+                'At least 2 teams are required for schedule generation',
+                400
+            );
         }
 
         // Use provided anchor index or generate random one
-        const finalAnchorIndex = anchorIndex !== null ? anchorIndex : Math.floor(Math.random() * this.teams.length);
-        
+        const finalAnchorIndex =
+            anchorIndex !== null ? anchorIndex : Math.floor(Math.random() * this.teams.length);
+
         const rounds = this.generateFullRoundRobinSchedule(this.teams, finalAnchorIndex);
 
         return {
@@ -175,7 +179,7 @@ export class GameScheduler {
         }
 
         const additionalRounds = this.generateFullRoundRobinSchedule(this.teams, anchorIndex);
-        
+
         return {
             rounds: [...existingRounds, ...additionalRounds],
             anchorIndex
@@ -189,7 +193,7 @@ export class GameScheduler {
      */
     validateSchedule(scheduleData) {
         const validation = validateScheduleData(scheduleData);
-        
+
         if (!validation.isValid) {
             throw new GameSchedulerError(
                 `Invalid schedule data: ${validation.errors.join(', ')}`,
@@ -207,7 +211,7 @@ export class GameScheduler {
      */
     validateGameRequest(requestBody) {
         const validation = validateGameRequest(requestBody);
-        
+
         if (!validation.isValid) {
             throw new GameSchedulerError(
                 `Invalid game request: ${validation.errors.join(', ')}`,
@@ -233,12 +237,12 @@ export class GameScheduler {
 
         for (const round of rounds) {
             if (!Array.isArray(round)) continue;
-            
+
             for (const match of round) {
                 if (match.bye) continue; // Skip bye matches
-                
+
                 totalGames++;
-                
+
                 // Check if game has been played (both scores are not null)
                 if (match.homeScore !== null && match.awayScore !== null) {
                     playedGames++;
@@ -264,23 +268,27 @@ export class GameScheduler {
         }
 
         const results = [];
-        
+
         for (const round of rounds) {
             if (!Array.isArray(round)) continue;
-            
+
             for (const game of round) {
                 if (game.bye) continue; // Skip bye matches
-                
+
                 const { home, away, homeScore, awayScore } = game;
-                
+
                 // Only include completed games
-                if (homeScore !== null && awayScore !== null && 
-                    typeof homeScore === 'number' && typeof awayScore === 'number') {
+                if (
+                    homeScore !== null &&
+                    awayScore !== null &&
+                    typeof homeScore === 'number' &&
+                    typeof awayScore === 'number'
+                ) {
                     results.push({ home, away, homeScore, awayScore });
                 }
             }
         }
-        
+
         return results;
     }
 
@@ -317,7 +325,7 @@ export class GameScheduler {
 
         // Validate the generated schedule
         const validatedSchedule = this.validateSchedule(scheduleData);
-        
+
         // Add schedule status information
         const status = this.getScheduleStatus(validatedSchedule.rounds);
 

@@ -128,7 +128,9 @@ describe('Game Score Validation', () => {
             const match = { home: 'Team A', away: 'Team B', homeScore: 2, awayScore: null };
             const result = validateMatchScores(match);
             expect(result.isValid).toBe(false);
-            expect(result.errors).toContain('Both home and away scores must be provided, or both must be empty');
+            expect(result.errors).toContain(
+                'Both home and away scores must be provided, or both must be empty'
+            );
         });
 
         it('should reject invalid home score', () => {
@@ -259,9 +261,7 @@ describe('Game Score Validation', () => {
 
         it('should accept schedule with default anchorIndex', () => {
             const scheduleData = {
-                rounds: [
-                    [{ home: 'Team A', away: 'Team B', homeScore: null, awayScore: null }]
-                ]
+                rounds: [[{ home: 'Team A', away: 'Team B', homeScore: null, awayScore: null }]]
             };
             const result = validateScheduleData(scheduleData);
             expect(result.isValid).toBe(true);
@@ -311,9 +311,7 @@ describe('Game Score Validation', () => {
 
         it('should propagate round validation errors', () => {
             const scheduleData = {
-                rounds: [
-                    [{ home: 'Team A', away: 'Team A', homeScore: 2, awayScore: 1 }]
-                ]
+                rounds: [[{ home: 'Team A', away: 'Team A', homeScore: 2, awayScore: 1 }]]
             };
             const result = validateScheduleData(scheduleData);
             expect(result.isValid).toBe(false);
@@ -332,9 +330,7 @@ describe('Game Score Validation', () => {
         it('should accept valid game request', () => {
             const requestBody = {
                 anchorIndex: 1,
-                rounds: [
-                    [{ home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 }]
-                ]
+                rounds: [[{ home: 'Team A', away: 'Team B', homeScore: 2, awayScore: 1 }]]
             };
             const result = validateGameRequest(requestBody);
             expect(result.isValid).toBe(true);
@@ -351,9 +347,7 @@ describe('Game Score Validation', () => {
 
         it('should propagate schedule validation errors', () => {
             const requestBody = {
-                rounds: [
-                    [{ home: 'Team A', away: 'Team B', homeScore: -1, awayScore: 1 }]
-                ]
+                rounds: [[{ home: 'Team A', away: 'Team B', homeScore: -1, awayScore: 1 }]]
             };
             const result = validateGameRequest(requestBody);
             expect(result.isValid).toBe(false);
