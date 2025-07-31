@@ -117,6 +117,7 @@
                 class={`w-8 text-center md:w-16 ${homeScoreError ? 'border-red-500' : ''}`}
                 value={homeScoreInput}
                 onchange={handleHomeScoreChange}
+                onfocus={(e) => e.target.select()}
                 {disabled}
                 min="0"
                 max="99"
@@ -134,6 +135,7 @@
                 class={`w-8 text-center md:w-16 ${awayScoreError ? 'border-red-500' : ''}`}
                 value={awayScoreInput}
                 onchange={handleAwayScoreChange}
+                onfocus={(e) => e.target.select()}
                 {disabled}
                 min="0"
                 max="99"
