@@ -172,7 +172,7 @@ export function validateAndSanitizePlayerName(playerName) {
     // Normalise whitespace - collapse multiple spaces but preserve single spaces
     sanitized = sanitized.replace(/\s+/g, ' ').trim();
 
-    // Final empty check after sanitization
+    // Final empty check after sanitising
     if (sanitized.length === 0) {
         errors.push('Player name contains only invalid characters');
     }
@@ -356,7 +356,7 @@ const GAME_SCORE_CONFIG = {
 
 /**
  * Validates an individual game score
- * @param {number|null} score - The score to validate
+ * @param {string|number|null} score - The score to validate
  * @param {string} scoreType - Type of score for error messages (e.g., 'home', 'away')
  * @returns {{isValid: boolean, errors: string[]}}
  */
@@ -429,7 +429,7 @@ export function validateMatchScores(match) {
     if (!homeResult.isValid) {
         errors.push(...homeResult.errors);
     } else if (match.homeScore !== null && match.homeScore !== undefined) {
-        // Sanitize by converting to integer if valid
+        // Sanitise by converting to integer if valid
         sanitizedMatch.homeScore = parseInt(match.homeScore, 10);
     }
 
@@ -438,11 +438,11 @@ export function validateMatchScores(match) {
     if (!awayResult.isValid) {
         errors.push(...awayResult.errors);
     } else if (match.awayScore !== null && match.awayScore !== undefined) {
-        // Sanitize by converting to integer if valid
+        // Sanitise by converting to integer if valid
         sanitizedMatch.awayScore = parseInt(match.awayScore, 10);
     }
 
-    // Check logical consistency - both scores should be null or both should be numbers
+    // Check logical consistency - both scores should be null, or both should be numbers
     const homeIsNull = match.homeScore === null || match.homeScore === undefined;
     const awayIsNull = match.awayScore === null || match.awayScore === undefined;
 
