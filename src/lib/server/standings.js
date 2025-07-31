@@ -1,7 +1,7 @@
 import { data } from './data.js';
 
 /**
- * Standings calculation error class
+ * Table of standings calculation error class
  */
 export class StandingsError extends Error {
     constructor(message, statusCode = 500) {
@@ -12,7 +12,7 @@ export class StandingsError extends Error {
 }
 
 /**
- * Server-side standings calculation service
+ * Server-side Standings calculation service
  * Handles league table generation and knockout tournament seeding
  */
 export class StandingsManager {
@@ -123,7 +123,7 @@ export class StandingsManager {
      * Get calculated standings for a specific date
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Array>} Promise resolving to standings array
+     * @returns {Promise<Array>} Promise resolving to a Standings array
      */
     async getStandingsForDate(date, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -134,7 +134,7 @@ export class StandingsManager {
             const games = await data.get('games', date, leagueId);
             const schedule = games?.rounds || [];
 
-            // Flatten nested rounds structure if it exists
+            // Flatten the nested rounds structure if it exists
             const flatMatches =
                 Array.isArray(schedule) && schedule.every(Array.isArray) ? schedule.flat() : [];
 
