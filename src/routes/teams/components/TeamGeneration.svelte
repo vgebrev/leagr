@@ -90,10 +90,9 @@
 {#if confirmRegenerate}
     <Alert class="flex items-center border"
         ><ExclamationCircleSolid /><span
-            >Teams have already been generated. Are you sure you want to regenerate them?
-            <Button
-                size="sm"
-                onclick={() => handleGenerate(true)}>Yes</Button
-            ></span
+            >Teams have already been generated. Are you sure you want to regenerate them?</span>
+        <Button
+            size="sm"
+            onclick={() => handleGenerate(true)}>Yes</Button
         ></Alert>
 {/if}

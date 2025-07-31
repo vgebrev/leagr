@@ -344,3 +344,278 @@ export function validateRequiredFields(data, fields) {
         errors
     };
 }
+
+/**
+ * Game score validation configuration
+ */
+const GAME_SCORE_CONFIG = {
+    minScore: 0,
+    maxScore: 99,
+    allowNull: true // For unplayed games
+};
+
+/**
+ * Validates an individual game score
+ * @param {number|null} score - The score to validate
+ * @param {string} scoreType - Type of score for error messages (e.g., 'home', 'away')
+ * @returns {{isValid: boolean, errors: string[]}}
+ */
+export function validateGameScore(score, scoreType = 'score') {
+    const errors = [];
+
+    // Allow null scores for unplayed games
+    if (score === null || score === undefined) {
+        return {
+            isValid: GAME_SCORE_CONFIG.allowNull,
+            errors: GAME_SCORE_CONFIG.allowNull ? [] : [`${scoreType} score is required`]
+        };
+    }
+
+    // Check if it's a number
+    if (typeof score !== 'number') {
+        // Try to parse if it's a string number
+        if (typeof score === 'string' && score.trim() !== '') {
+            const parsed = parseInt(score.trim(), 10);
+            if (isNaN(parsed)) {
+                errors.push(`${scoreType} score must be a valid number`);
+                return { isValid: false, errors };
+            }
+            score = parsed;
+        } else {
+            errors.push(`${scoreType} score must be a valid number`);
+            return { isValid: false, errors };
+        }
+    }
+
+    // Check if it's an integer
+    if (!Number.isInteger(score)) {
+        errors.push(`${scoreType} score must be a whole number`);
+    }
+
+    // Check range
+    if (score < GAME_SCORE_CONFIG.minScore) {
+        errors.push(`${scoreType} score cannot be less than ${GAME_SCORE_CONFIG.minScore}`);
+    }
+
+    if (score > GAME_SCORE_CONFIG.maxScore) {
+        errors.push(`${scoreType} score cannot exceed ${GAME_SCORE_CONFIG.maxScore}`);
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+}
+
+/**
+ * Validates a complete match with home and away scores
+ * @param {Object} match - Match object with homeScore and awayScore
+ * @returns {{isValid: boolean, errors: string[], sanitizedMatch: Object}}
+ */
+export function validateMatchScores(match) {
+    const errors = [];
+    let sanitizedMatch = { ...match };
+
+    if (!match || typeof match !== 'object') {
+        return {
+            isValid: false,
+            errors: ['Match must be a valid object'],
+            sanitizedMatch: null
+        };
+    }
+
+    // Validate home score
+    const homeResult = validateGameScore(match.homeScore, 'Home');
+    if (!homeResult.isValid) {
+        errors.push(...homeResult.errors);
+    } else if (match.homeScore !== null && match.homeScore !== undefined) {
+        // Sanitize by converting to integer if valid
+        sanitizedMatch.homeScore = parseInt(match.homeScore, 10);
+    }
+
+    // Validate away score
+    const awayResult = validateGameScore(match.awayScore, 'Away');
+    if (!awayResult.isValid) {
+        errors.push(...awayResult.errors);
+    } else if (match.awayScore !== null && match.awayScore !== undefined) {
+        // Sanitize by converting to integer if valid
+        sanitizedMatch.awayScore = parseInt(match.awayScore, 10);
+    }
+
+    // Check logical consistency - both scores should be null or both should be numbers
+    const homeIsNull = match.homeScore === null || match.homeScore === undefined;
+    const awayIsNull = match.awayScore === null || match.awayScore === undefined;
+
+    if (homeIsNull !== awayIsNull) {
+        errors.push('Both home and away scores must be provided, or both must be empty');
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        sanitizedMatch
+    };
+}
+
+/**
+ * Validates a round of matches
+ * @param {Array} round - Array of match objects
+ * @param {number} roundIndex - Round number for error context
+ * @returns {{isValid: boolean, errors: string[], sanitizedRound: Array}}
+ */
+export function validateRound(round, roundIndex = 0) {
+    const errors = [];
+    const sanitizedRound = [];
+
+    if (!Array.isArray(round)) {
+        return {
+            isValid: false,
+            errors: [`Round ${roundIndex + 1} must be an array of matches`],
+            sanitizedRound: []
+        };
+    }
+
+    for (let i = 0; i < round.length; i++) {
+        const match = round[i];
+
+        // Handle bye matches
+        if (match.bye !== undefined) {
+            if (typeof match.bye !== 'string' || match.bye.trim() === '') {
+                errors.push(`Round ${roundIndex + 1}, match ${i + 1}: bye team name is required`);
+            } else {
+                sanitizedRound.push({ bye: match.bye.trim() });
+            }
+            continue;
+        }
+
+        // Validate regular matches
+        if (match.home === undefined || match.away === undefined) {
+            errors.push(`Round ${roundIndex + 1}, match ${i + 1}: home and away teams are required`);
+            continue;
+        }
+
+        if (typeof match.home !== 'string' || typeof match.away !== 'string') {
+            errors.push(`Round ${roundIndex + 1}, match ${i + 1}: team names must be strings`);
+            continue;
+        }
+
+        if (match.home.trim() === '' || match.away.trim() === '') {
+            errors.push(`Round ${roundIndex + 1}, match ${i + 1}: team names cannot be empty`);
+            continue;
+        }
+
+        if (match.home === match.away) {
+            errors.push(`Round ${roundIndex + 1}, match ${i + 1}: team cannot play against itself`);
+            continue;
+        }
+
+        // Validate scores
+        const scoreResult = validateMatchScores(match);
+        if (!scoreResult.isValid) {
+            errors.push(...scoreResult.errors.map(err => `Round ${roundIndex + 1}, match ${i + 1}: ${err}`));
+        }
+
+        sanitizedRound.push({
+            home: match.home.trim(),
+            away: match.away.trim(),
+            homeScore: scoreResult.sanitizedMatch?.homeScore ?? match.homeScore,
+            awayScore: scoreResult.sanitizedMatch?.awayScore ?? match.awayScore
+        });
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        sanitizedRound
+    };
+}
+
+/**
+ * Validates complete schedule data structure
+ * @param {Object} scheduleData - Schedule data with rounds and anchorIndex
+ * @returns {{isValid: boolean, errors: string[], sanitizedData: Object}}
+ */
+export function validateScheduleData(scheduleData) {
+    const errors = [];
+    let sanitizedData = {
+        rounds: [],
+        anchorIndex: 0
+    };
+
+    if (!scheduleData || typeof scheduleData !== 'object') {
+        return {
+            isValid: false,
+            errors: ['Schedule data must be a valid object'],
+            sanitizedData: null
+        };
+    }
+
+    // Validate anchorIndex
+    if (scheduleData.anchorIndex !== undefined) {
+        if (typeof scheduleData.anchorIndex !== 'number' || !Number.isInteger(scheduleData.anchorIndex) || scheduleData.anchorIndex < 0) {
+            errors.push('Anchor index must be a non-negative integer');
+        } else {
+            sanitizedData.anchorIndex = scheduleData.anchorIndex;
+        }
+    }
+
+    // Validate rounds
+    if (!scheduleData.rounds) {
+        errors.push('Rounds array is required');
+        return {
+            isValid: false,
+            errors,
+            sanitizedData: null
+        };
+    }
+
+    if (!Array.isArray(scheduleData.rounds)) {
+        errors.push('Rounds must be an array');
+        return {
+            isValid: false,
+            errors,
+            sanitizedData: null
+        };
+    }
+
+    // Validate each round
+    for (let i = 0; i < scheduleData.rounds.length; i++) {
+        const roundResult = validateRound(scheduleData.rounds[i], i);
+        if (!roundResult.isValid) {
+            errors.push(...roundResult.errors);
+        }
+        sanitizedData.rounds.push(roundResult.sanitizedRound);
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors,
+        sanitizedData
+    };
+}
+
+/**
+ * Validates a games API request body
+ * @param {Object} requestBody - Request body from games API
+ * @returns {{isValid: boolean, errors: string[], sanitizedData: Object}}
+ */
+export function validateGameRequest(requestBody) {
+    const errors = [];
+
+    if (!requestBody || typeof requestBody !== 'object') {
+        return {
+            isValid: false,
+            errors: ['Request body must be a valid JSON object'],
+            sanitizedData: null
+        };
+    }
+
+    // Use existing schedule validation
+    const scheduleResult = validateScheduleData(requestBody);
+    
+    return {
+        isValid: scheduleResult.isValid,
+        errors: scheduleResult.errors,
+        sanitizedData: scheduleResult.sanitizedData
+    };
+}

@@ -1,11 +1,14 @@
 <script>
     import { teamStyles, teamColours, titleCase } from '$lib/shared/helpers.js';
 
-    let { teamName, teams, className } = $props();
+    let { teamName, className } = $props();
 
-    let teamIndex = $derived(Object.keys(teams).indexOf(teamName));
-    let teamColour = $derived(teamColours[teamIndex % teamColours.length]);
-    let styles = $derived(teamStyles[teamColour] || teamStyles.default);
+    // Extract the colour from the team name (first word)
+    let teamColour = $derived.by(() => {
+        const firstWord = teamName.split(' ')[0].toLowerCase();
+        return teamColours.includes(firstWord) ? firstWord : 'blue'; // default to blue if not found
+    });
+    let styles = $derived(teamStyles[teamColour] || teamStyles.blue);
 </script>
 
 <span
