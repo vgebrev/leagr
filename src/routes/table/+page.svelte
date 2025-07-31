@@ -10,27 +10,38 @@
     let { data } = $props();
     const date = data.date;
 
-    let teams = $state({});
     let standings = $state([]);
 
+    /**
+     * @typedef {Object} WinningTeam
+     * @property {string} name
+     * @property {import('$lib/shared/helpers.js').TeamColour} colour
+     */
+
+    /** @type {WinningTeam} */
     let winningTeam = $state({
-        name: null,
-        colour: null
+        name: '',
+        colour: 'blue'
     });
+
     let celebrating = $state(false);
 
+    /**
+     * Celebrate the winning team.
+     * @param {number} index - The index of the team in the standings.
+     */
     function celebrate(index) {
         if (index !== 0 || !isDateInPast(new Date(date))) return;
         winningTeam.name = standings[index].team;
         winningTeam.colour =
-            teamColours[Object.keys(teams).indexOf(winningTeam.name) % teamColours.length];
+            teamColours[teamColours.indexOf(winningTeam.name.split(' ')[0]) % teamColours.length] ||
+            'default';
         celebrating = true;
     }
 
     onMount(async () => {
         await withLoading(
             async () => {
-                teams = (await api.get('teams', date)) || {};
                 const standingsData = await api.get('standings', date);
                 standings = standingsData.standings || [];
                 if (standings.length > 0) {
@@ -50,7 +61,6 @@
 
 <StandingsTable
     {standings}
-    {teams}
     {date}
     onTeamClick={celebrate} />
 

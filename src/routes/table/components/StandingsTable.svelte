@@ -12,8 +12,12 @@
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
 
-    let { standings = [], teams = {}, date, onTeamClick = null } = $props();
+    let { standings = [], date, onTeamClick = null } = $props();
 
+    /**
+     * Handle team click event
+     * @param {number} index
+     */
     function handleTeamClick(index) {
         if (onTeamClick) {
             onTeamClick(index);
@@ -57,8 +61,7 @@
                             role="button">
                             <TeamBadge
                                 className="w-full"
-                                teamName={team.team}
-                                {teams} />
+                                teamName={team.team} />
                         </div>
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
