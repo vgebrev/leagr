@@ -21,9 +21,7 @@
 </script>
 
 <div class="flex flex-col gap-2">
-    <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">
-        Team Limits
-    </div>
+    <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Team Limits</div>
 
     <div class="grid grid-cols-2 gap-2">
         <div>
