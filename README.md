@@ -22,7 +22,23 @@ For development (needs [Node.js](https://nodejs.org/en)):
 
 - `npm ci` - Ensures dependencies are installed.
 - `npm run dev` - Starts the dev server. The app is available at http://localhost:5173.
+- `npm run dev -- --host` - Starts the dev server and allows access from other devices on your network (useful for mobile testing, or if you're using WSL).
 
+### Subdomain Setup
+
+Since leagues are registered/accessed on subdomains, it's useful to set up your `hosts` file to test locally:
+```bash
+# Add to /etc/hosts (Linux/Mac) or C:\Windows\System32\drivers\etc\hosts (Windows)
+127.0.0.1 leagr.local
+127.0.0.1 league1.leagr.local
+127.0.0.1 league2.leagr.local
+
+# If you're using WSL, you need the WSL Network IP
+172.21.184.1 leagr.local
+172.21.184.1 league1.leagr.local
+```
+
+Then you can access the app at `http://leagr.local:5173`, `http://league1.leagr.local:5173`, etc.
 ### Security Configuration
 
 The application includes rudimentary security features to prevent abuse:
