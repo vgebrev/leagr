@@ -90,6 +90,34 @@
     }
 
     /**
+     * Add knockout tournament games
+     */
+    async function addKnockoutGames() {
+        if (competitionEnded) {
+            setNotification('The competition has ended. Games cannot be changed.', 'warning');
+            return;
+        }
+
+        await withLoading(
+            async () => {
+                const requestData = {
+                    operation: 'generate'
+                };
+
+                await api.post('games/knockout', date, requestData);
+                setNotification('Knockout tournament created successfully!', 'success');
+            },
+            (err) => {
+                console.error('Error creating knockout tournament:', err);
+                setNotification(
+                    err.message || 'Failed to create knockout tournament. Please try again.',
+                    'error'
+                );
+            }
+        );
+    }
+
+    /**
      * Handle match score update
      * @param {number} roundIndex - Index of the round
      * @param {number} matchIndex - Index of the match within the round
@@ -144,7 +172,8 @@
     {competitionEnded}
     {date}
     onGenerateSchedule={generateSchedule}
-    onAddMoreGames={addMoreGames} />
+    onAddMoreGames={addMoreGames}
+    onAddKnockoutGames={addKnockoutGames} />
 
 <!-- Schedule Display Component -->
 <ScheduleDisplay

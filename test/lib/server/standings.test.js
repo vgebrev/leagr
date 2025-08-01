@@ -308,6 +308,163 @@ describe('StandingsManager', () => {
         });
     });
 
+    describe('generateKnockoutBracket', () => {
+        it('should generate bracket for 4 teams with top seeds playing later', () => {
+            const teams = ['Team A', 'Team B', 'Team C', 'Team D']; // A=1st, B=2nd, C=3rd, D=4th
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            expect(result.teams).toEqual(teams);
+            expect(result.bracket).toHaveLength(3); // 2 semis + 1 final
+
+            // Check semi-final order: #2 vs #3 first, then #1 vs #4
+            expect(result.bracket[0]).toEqual({
+                round: 'semi',
+                match: 1,
+                home: 'Team B', // 2nd seed
+                away: 'Team C', // 3rd seed
+                homeScore: null,
+                awayScore: null
+            });
+            expect(result.bracket[1]).toEqual({
+                round: 'semi',
+                match: 2,
+                home: 'Team A', // 1st seed (plays later)
+                away: 'Team D', // 4th seed
+                homeScore: null,
+                awayScore: null
+            });
+
+            // Check final placeholder
+            expect(result.bracket[2]).toEqual({
+                round: 'final',
+                match: 1,
+                home: null,
+                away: null,
+                homeScore: null,
+                awayScore: null
+            });
+        });
+
+        it('should generate bracket for 8 teams with descending seed order', () => {
+            const teams = [
+                'Team A',
+                'Team B',
+                'Team C',
+                'Team D',
+                'Team E',
+                'Team F',
+                'Team G',
+                'Team H'
+            ];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            expect(result.teams).toEqual(teams);
+            expect(result.bracket).toHaveLength(7); // 4 quarters + 2 semis + 1 final
+
+            // Check quarter-finals order: #4 first, #3 second, #2 third, #1 last
+            expect(result.bracket[0]).toEqual({
+                round: 'quarter',
+                match: 1,
+                home: 'Team D', // 4th seed plays first
+                away: 'Team E', // 5th seed
+                homeScore: null,
+                awayScore: null
+            });
+            expect(result.bracket[1]).toEqual({
+                round: 'quarter',
+                match: 2,
+                home: 'Team C', // 3rd seed
+                away: 'Team F', // 6th seed
+                homeScore: null,
+                awayScore: null
+            });
+            expect(result.bracket[2]).toEqual({
+                round: 'quarter',
+                match: 3,
+                home: 'Team B', // 2nd seed
+                away: 'Team G', // 7th seed
+                homeScore: null,
+                awayScore: null
+            });
+            expect(result.bracket[3]).toEqual({
+                round: 'quarter',
+                match: 4,
+                home: 'Team A', // 1st seed plays last
+                away: 'Team H', // 8th seed
+                homeScore: null,
+                awayScore: null
+            });
+        });
+
+        it('should handle 6 teams with byes (reduce to 4)', () => {
+            const teams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E', 'Team F'];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            expect(result.teams).toEqual(['Team A', 'Team B', 'Team C', 'Team D']); // Top 4 only
+            expect(result.bracket).toHaveLength(3); // 2 semis + 1 final
+        });
+
+        it('should handle 3 teams with byes (reduce to 2)', () => {
+            const teams = ['Team A', 'Team B', 'Team C'];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            expect(result.teams).toEqual(['Team A', 'Team B']); // Top 2 only
+            expect(result.bracket).toHaveLength(1); // Final only
+
+            expect(result.bracket[0]).toEqual({
+                round: 'final',
+                match: 1,
+                home: 'Team A',
+                away: 'Team B',
+                homeScore: null,
+                awayScore: null
+            });
+        });
+
+        it('should return empty bracket for less than 2 teams', () => {
+            expect(standingsManager.generateKnockoutBracket([])).toEqual({
+                teams: [],
+                bracket: []
+            });
+            expect(standingsManager.generateKnockoutBracket(['Team A'])).toEqual({
+                teams: [],
+                bracket: []
+            });
+        });
+
+        it('should throw error for invalid input', () => {
+            expect(() => standingsManager.generateKnockoutBracket(null)).toThrow(StandingsError);
+            expect(() => standingsManager.generateKnockoutBracket('invalid')).toThrow(
+                StandingsError
+            );
+        });
+    });
+
+    describe('getKnockoutBracketForDate', () => {
+        it('should generate bracket from standings', async () => {
+            const mockGames = {
+                rounds: [
+                    [
+                        { home: 'Team A', away: 'Team B', homeScore: 3, awayScore: 1 },
+                        { home: 'Team C', away: 'Team D', homeScore: 2, awayScore: 0 }
+                    ]
+                ]
+            };
+            data.get.mockResolvedValue(mockGames);
+
+            const result = await standingsManager.getKnockoutBracketForDate('2024-01-15');
+
+            expect(result.teams).toEqual(['Team A', 'Team C', 'Team B', 'Team D']); // All 4 teams
+            expect(result.bracket).toHaveLength(3); // 2 semis + 1 final
+        });
+
+        it('should throw error for invalid date', async () => {
+            await expect(standingsManager.getKnockoutBracketForDate(null)).rejects.toThrow(
+                StandingsError
+            );
+        });
+    });
+
     describe('Edge cases and validation', () => {
         it('should handle zero scores correctly', () => {
             const matchups = [{ home: 'Team A', away: 'Team B', homeScore: 0, awayScore: 0 }];
