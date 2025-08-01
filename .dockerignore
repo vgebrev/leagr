@@ -9,3 +9,4 @@ node_modules
 Dockerfile
 *.tar
 deploy.ps1
+deploy.sh
