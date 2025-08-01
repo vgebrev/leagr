@@ -1,14 +1,30 @@
 import { error, json } from '@sveltejs/kit';
-import { playerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
+import { validateLeagueForAPI } from '$lib/server/league.js';
+import { createRankingsManager } from '$lib/server/rankings.js';
+import {
+    validateDateParameter,
+    parseRequestBody,
+    validateRequestBody
+} from '$lib/shared/validation.js';
 
-export const GET = async ({ url }) => {
-    const date = url.searchParams.get('date');
-    if (!date) {
-        return error(400, 'Date parameter is required');
+export const GET = async ({ url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
+    }
+
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
     }
 
     try {
-        const gameData = await playerManager.setDate(date).getData();
+        const gameData = await createPlayerManager()
+            .setDate(dateValidation.date)
+            .setLeague(leagueId)
+            .getData({ players: false, teams: true, settings: false });
         return json(gameData.teams);
     } catch (err) {
         console.error('Error fetching teams:', err);
@@ -16,31 +32,92 @@ export const GET = async ({ url }) => {
     }
 };
 
-export const POST = async ({ request, url }) => {
-    const date = url.searchParams.get('date');
-    const body = await request.json();
-
-    if (!date) {
-        return error(400, 'Date parameter is required');
+export const POST = async ({ request, url, locals }) => {
+    const { leagueId, isValid } = validateLeagueForAPI(locals);
+    if (!isValid) {
+        return error(404, 'League not found');
     }
 
-    if (!body) {
-        return error(400, 'Invalid request body');
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
+    }
+
+    const bodyParseResult = await parseRequestBody(request);
+    if (!bodyParseResult.isValid) {
+        return error(400, bodyParseResult.error);
+    }
+
+    // Validate request body structure
+    const bodyValidation = validateRequestBody(bodyParseResult.data, ['method', 'teamConfig']);
+    if (!bodyValidation.isValid) {
+        return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
+    }
+
+    const { method, teamConfig } = bodyParseResult.data;
+
+    if (!['random', 'seeded'].includes(method)) {
+        return error(400, 'Invalid method. Must be "random" or "seeded"');
+    }
+
+    if (!teamConfig.teams || !teamConfig.teamSizes || !Array.isArray(teamConfig.teamSizes)) {
+        return error(400, 'Invalid teamConfig. Must include teams and teamSizes array');
     }
 
     try {
-        // When teams are set, validate and cleanup player consistency
+        // Get player data, settings, and rankings
+        const playerManager = createPlayerManager()
+            .setDate(dateValidation.date)
+            .setLeague(leagueId);
 
-        // Set the teams using the data service (maintain existing functionality)
+        const gameData = await playerManager.getData({
+            players: true,
+            teams: false,
+            settings: true
+        });
+
+        // Get rankings for seeded teams
+        let rankings = null;
+        if (method === 'seeded') {
+            rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
+        }
+
+        // Get eligible players (respecting player limit)
+        const effectivePlayerLimit =
+            gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit;
+        const eligiblePlayers = gameData.players.available.slice(
+            0,
+            Math.min(gameData.players.available.length, effectivePlayerLimit)
+        );
+
+        // Generate teams
+        const teamGenerator = createTeamGenerator()
+            .setSettings(gameData.settings)
+            .setPlayers(eligiblePlayers)
+            .setRankings(rankings);
+
+        const result = teamGenerator.generateTeams(method, teamConfig);
+
+        // Store the generated teams
         const { data } = await import('$lib/server/data.js');
-        await data.set('teams', date, body, {}, true);
+        await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);
 
-        // Then validate and cleanup any inconsistencies
-        const result = await playerManager.setDate(date).validateAndCleanup();
+        // Validate and clean-up any inconsistencies
+        const cleanupResult = await playerManager.validateAndCleanup();
 
-        return json(result.teams);
+        return json({
+            teams: cleanupResult.teams,
+            config: result.config
+        });
     } catch (err) {
-        console.error('Error setting teams:', err);
-        return error(500, 'Failed to set teams');
+        console.error('Error generating teams:', err);
+
+        // Handle known error types with their specific status codes
+        if (err instanceof TeamError || err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+
+        // Handle unexpected errors with a generic message
+        return error(500, 'Failed to generate teams');
     }
 };

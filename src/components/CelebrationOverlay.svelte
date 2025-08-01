@@ -3,6 +3,16 @@
     import { teamStyles } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
+    /**
+     * @typedef {Object} Props
+     * @property {string} teamName
+     * @property {import('$lib/shared/helpers.js').TeamColour} teamColour
+     * @property {boolean} [celebrating]
+     * @property {string} [icon]
+     * @property {string[] | null} [confettiColours]
+     */
+
+    /** @type {Props} */
     let {
         teamName,
         teamColour,
@@ -44,6 +54,9 @@
         setTimeout(shoot, 800);
     }
 
+    /**
+     * @param {string[]} teamColours - Array of hex colour strings for confetti
+     */
     export function fireConfetti(teamColours) {
         const end = Date.now() + 0.5 * 1000;
 
@@ -71,6 +84,7 @@
         })();
     }
 
+    /** @type {number | NodeJS.Timeout | null} */
     let celebrationTimeout = null;
     function celebrate() {
         if (celebrationTimeout) clearTimeout(celebrationTimeout);
@@ -97,7 +111,9 @@
         in:fade={{ duration: 300 }}
         out:fade={{ duration: 500 }}>
         <div
-            class={`rounded-xl px-8 py-6 text-center text-4xl font-bold shadow-lg ${teamStyles[teamColour]?.text ?? teamStyles.default.text} pulse-and-shake`}>
+            class="rounded-xl px-8 py-6 text-center text-4xl font-bold shadow-lg {teamStyles[
+                teamColour
+            ]?.text ?? teamStyles.default.text} pulse-and-shake">
             {icon}
             <div class="mt-2 text-xl uppercase">{teamName}</div>
         </div>

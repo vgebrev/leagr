@@ -1,0 +1,136 @@
+import { data } from './data.js';
+import { getLeagueInfo, updateLeagueInfo } from './league.js';
+import {
+    getEffectiveLeagueSettings,
+    DAY_LEVEL_SETTINGS,
+    LEAGUE_ONLY_SETTINGS
+} from '$lib/shared/defaults.js';
+import { globalSettingsCache, invalidateSettingsCache } from './settingsCache.js';
+
+/**
+ * Get consolidated settings for a league and date (with caching)
+ * Returns league defaults merged with day-specific overrides
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {string} leagueId - League identifier
+ * @returns {Promise<Object>} - Consolidated settings object
+ */
+export async function getConsolidatedSettings(date, leagueId) {
+    // Try cache first
+    const cached = globalSettingsCache.get(leagueId, date);
+    if (cached) {
+        return cached;
+    }
+
+    // Cache miss - load from disk and consolidate
+    // Get league info and effective league settings (with fallback to defaultSettings)
+    const leagueInfo = getLeagueInfo(leagueId);
+    const leagueSettings = getEffectiveLeagueSettings(leagueInfo);
+
+    // Get day-specific settings from the daily file
+    const daySettings = (await data.get('settings', date, leagueId)) || {};
+
+    // Create the response structure with league settings as the base
+    const response = { ...leagueSettings };
+
+    // Add day-specific overrides as a nested object if a date is provided
+    if (date) {
+        // Create a day overrides object with league defaults as fallback
+        const dayOverrides = {};
+
+        // For each day-level setting, use saved value or fallback to league default
+        for (const settingKey of DAY_LEVEL_SETTINGS) {
+            if (Object.prototype.hasOwnProperty.call(daySettings, settingKey)) {
+                dayOverrides[settingKey] = daySettings[settingKey];
+            } else {
+                // Fallback to league setting value
+                dayOverrides[settingKey] = leagueSettings[settingKey];
+            }
+        }
+
+        response[date] = dayOverrides;
+    }
+
+    // Cache the consolidated result
+    globalSettingsCache.set(leagueId, date, response);
+
+    return response;
+}
+
+/**
+ * Save settings to the appropriate location (league info.json or daily file)
+ * @param {string} date - Date in YYYY-MM-DD format
+ * @param {string} leagueId - League identifier
+ * @param {Object} settings - Settings object to save
+ * @returns {Promise<Object>} - Updated consolidated settings
+ */
+export async function saveConsolidatedSettings(date, leagueId, settings) {
+    const leagueInfo = getLeagueInfo(leagueId);
+    if (!leagueInfo) {
+        throw new Error('League not found');
+    }
+
+    // Separate league-level and day-level settings
+    const leagueUpdates = {};
+    const dayUpdates = {};
+
+    for (const [key, value] of Object.entries(settings)) {
+        // Skip the date-specific nested object for now
+        if (key === date) continue;
+
+        if (LEAGUE_ONLY_SETTINGS.includes(key)) {
+            leagueUpdates[key] = value;
+        } else if (DAY_LEVEL_SETTINGS.includes(key)) {
+            // Day-level settings should ALWAYS be saved at league level as the default
+            // This ensures league-level changes are preserved even when day overrides exist
+            leagueUpdates[key] = value;
+        } else {
+            // Default to league level for unknown settings
+            leagueUpdates[key] = value;
+        }
+    }
+
+    // Handle date-specific overrides if present
+    if (settings[date]) {
+        for (const [key, value] of Object.entries(settings[date])) {
+            if (DAY_LEVEL_SETTINGS.includes(key)) {
+                dayUpdates[key] = value;
+            }
+        }
+    }
+
+    // Update league info if there are league-level changes
+    if (Object.keys(leagueUpdates).length > 0) {
+        const updatedLeagueInfo = {
+            ...leagueInfo,
+            settings: {
+                ...leagueInfo.settings,
+                ...leagueUpdates
+            }
+        };
+
+        const success = updateLeagueInfo(leagueId, updatedLeagueInfo);
+        if (!success) {
+            throw new Error('Failed to update league settings');
+        }
+    }
+
+    // Update day-specific settings if there are day-level changes
+    if (Object.keys(dayUpdates).length > 0) {
+        const result = await data.set('settings', date, dayUpdates, {}, true, leagueId);
+        if (!result) {
+            throw new Error('Failed to update day settings');
+        }
+    }
+
+    // Invalidate cache after settings modification
+    if (Object.keys(leagueUpdates).length > 0) {
+        // League-level changes affect all dates for this league
+        invalidateSettingsCache(leagueId);
+    } else if (Object.keys(dayUpdates).length > 0) {
+        // Day-level changes only affect this specific date
+        invalidateSettingsCache(leagueId, date);
+    }
+
+    // Return the updated consolidated settings
+    return await getConsolidatedSettings(date, leagueId);
+}

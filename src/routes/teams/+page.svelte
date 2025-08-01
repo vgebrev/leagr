@@ -9,46 +9,24 @@
     let { data } = $props();
     const date = data.date;
 
-    // Use teams service for all team-related data and operations
+    // Use the Teams service for all team-related data and operations
     let teams = $derived(teamsService.teams);
     let teamConfig = $derived(teamsService.teamConfig);
 
-    // Use players service for player data
+    // Use the Players service for player data
     let waitingList = $derived(playersService.waitingList);
-    let players = $derived(playersService.players);
     let unassignedPlayers = $derived(teamsService.unassignedPlayers);
+    let canModifyList = $derived(playersService.canModifyList);
 
     // Get summary data
-    let playerSummary = $derived(teamsService.getPlayerSummary());
+    let playerSummary = $derived(teamsService.playerSummary);
 
+    /**
+     * Generate teams based on the current configuration and player data.
+     * @param {Object} options
+     */
     async function generateTeams(options) {
         await teamsService.generateTeams(options);
-    }
-
-    async function removePlayer({ player, teamIndex, action }) {
-        await teamsService.removePlayerFromTeam(player, teamIndex, action);
-    }
-
-    async function fillEmptySpotFromWaitingList({ playerIndex, teamIndex }) {
-        await teamsService.fillEmptySpotFromWaitingList(playerIndex, teamIndex);
-    }
-
-    async function fillEmptySpotWithPlayer(data) {
-        if (data.playerName && data.teamName) {
-            // Direct assignment by team name
-            await teamsService.assignPlayerToTeam(data.playerName, data.teamName);
-        } else {
-            // Legacy slot-based assignment
-            await teamsService.fillEmptySpotWithPlayer(
-                data.playerIndex,
-                data.teamIndex,
-                data.selectedPlayer
-            );
-        }
-    }
-
-    async function removePlayerFromList(playerName, list) {
-        await playersService.removePlayer(playerName, list);
     }
 
     onMount(async () => {
@@ -60,17 +38,16 @@
     <PlayerSummary {playerSummary} />
     <TeamGeneration
         {teamConfig}
+        {playerSummary}
         date={teamsService.currentDate}
         canGenerateTeams={teamsService.canGenerateTeams}
         hasExistingTeams={teamsService.hasExistingTeams}
         ongenerate={generateTeams} />
     <TeamsGrid
         {teams}
-        {players}
         {waitingList}
         {unassignedPlayers}
-        onremove={removePlayer}
-        onfillempty={fillEmptySpotFromWaitingList}
-        onfillemptyWithPlayer={fillEmptySpotWithPlayer}
-        onremoveFromList={removePlayerFromList} />
+        {canModifyList}
+        onremove={teamsService.removePlayer.bind(teamsService)}
+        onassign={teamsService.assignPlayerToTeam.bind(teamsService)} />
 </div>

@@ -24,15 +24,29 @@ export function dateTimeString(date) {
     return `${time}, ${datePart}`;
 }
 
-export function isSaturday(date) {
-    if (!date) return false;
-    return date.getDay() === 6;
+export function formatDisplayDate(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+
+    return date.toLocaleDateString('en-US', {
+        weekday: 'long',
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric'
+    });
 }
 
-export function isDateInPast(date, hours = 13) {
+export function isCompetitionDay(date, competitionDays = [6]) {
+    if (!date) return false;
+    if (!competitionDays || !Array.isArray(competitionDays) || competitionDays.length === 0)
+        return true;
+    return competitionDays.includes(date.getDay());
+}
+
+export function isDateInPast(date, hours = 0) {
     if (!date) return false;
     const limit = new Date(date);
-    limit.setDate(limit.getDate());
+    limit.setDate(limit.getDate() + 1); // Add 1 day to check midnight of the following day
     limit.setHours(hours, 0, 0, 0);
     return limit < new Date();
 }
@@ -60,8 +74,25 @@ export function rotateArray(arr, offset) {
     return arr.slice(shift).concat(arr.slice(0, shift));
 }
 
+/**
+ * @typedef {Object} TeamStyle
+ * @property {string} text
+ * @property {string} header
+ * @property {string} row
+ * @property {string} button
+ * @property {string} buttonClass
+ * @property {string[]} confetti
+ */
+
+/**
+ * @typedef {'blue'|'orange'|'green'|'red'|'purple'|'yellow'|'pink'|'default'} TeamColour
+ */
+
+/** @type {Array<string>} */
+
 export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
+/** @type {Record<TeamColour, TeamStyle>} */
 export const teamStyles = {
     blue: {
         text: 'text-blue-100 bg-blue-500',

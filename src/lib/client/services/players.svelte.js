@@ -1,10 +1,13 @@
 import { api } from '$lib/client/services/api-client.svelte.js';
-import { setError } from '$lib/client/stores/error.js';
+import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { get } from 'svelte/store';
+import { defaultSettings } from '$lib/shared/defaults.js';
+import { validatePlayerNameForUI } from '$lib/shared/validation.js';
 
 class PlayersService {
+    #settings = $state(defaultSettings);
+
     // State
     /** @type {string[]} */
     players = $state([]);
@@ -18,28 +21,44 @@ class PlayersService {
     /** @type {string | null} */
     currentDate = $state(null);
 
-    // Derived state - works perfectly in classes!
+    // Derived state
     registrationOpenDate = $derived.by(() => {
         if (!this.currentDate) return null;
-        const limit = new Date(this.currentDate);
-        limit.setDate(limit.getDate() - 2);
-        limit.setHours(7, 30, 0, 0);
+
+        if (!this.#settings.registrationWindow.enabled) return null;
+
+        const [hours, minutes] = this.#settings.registrationWindow.startTime.split(':').map(Number);
+        const limit = $state(new Date(this.currentDate));
+        limit.setDate(limit.getDate() + this.#settings.registrationWindow.startDayOffset);
+        limit.setHours(hours, minutes, 0, 0);
         return limit;
     });
 
     registrationCloseDate = $derived.by(() => {
         if (!this.currentDate) return null;
-        const limit = new Date(this.currentDate);
-        limit.setDate(limit.getDate());
-        limit.setHours(7, 30, 0, 0);
+
+        if (!this.#settings.registrationWindow.enabled) return null;
+
+        const [hours, minutes] = this.#settings.registrationWindow.endTime.split(':').map(Number);
+        const limit = $state(new Date(this.currentDate));
+        limit.setDate(limit.getDate() + this.#settings.registrationWindow.endDayOffset);
+        limit.setHours(hours, minutes, 0, 0);
         return limit;
     });
 
     canModifyList = $derived.by(() => {
+        if (!this.#settings.registrationWindow.enabled) return true;
+
         if (!this.registrationOpenDate || !this.registrationCloseDate) return false;
         const now = new Date();
         return now >= this.registrationOpenDate && now <= this.registrationCloseDate;
     });
+
+    constructor() {
+        settings.subscribe((settings) => {
+            this.#settings = settings;
+        });
+    }
 
     // Methods
     /**
@@ -47,16 +66,41 @@ class PlayersService {
      * @param {string} date - The date to load players for
      */
     async loadPlayers(date) {
-        await withLoading(async () => {
-            this.currentDate = date;
-            const playerData = await api.get('players', date);
-            this.players = playerData.available || [];
-            this.waitingList = playerData.waitingList || [];
-
-            if (this.rankedPlayers.length === 0) {
-                this.rankedPlayers = await api.get('players/ranked');
+        await withLoading(
+            async () => {
+                this.currentDate = date;
+                const playerData = await api.get('players', date);
+                this.players = playerData?.available || [];
+                this.waitingList = playerData?.waitingList || [];
+            },
+            (error) => {
+                setNotification(
+                    error.message || 'Failed to load players. Please try again.',
+                    'error'
+                );
             }
-        });
+        );
+    }
+
+    /**
+     * Load ranked player names (for autocomplete)
+     */
+    async loadRankedPlayerNames() {
+        if (this.rankedPlayers.length > 0) return; // Already loaded
+
+        await withLoading(
+            async () => {
+                this.rankedPlayers = await api.get('players/ranked');
+            },
+            (error) => {
+                console.error('Error loading ranked players:', error);
+                setNotification(
+                    error.message || 'Failed to load player suggestions. Please try again.',
+                    'error'
+                );
+                this.rankedPlayers = [];
+            }
+        );
     }
 
     /**
@@ -66,47 +110,65 @@ class PlayersService {
      * @returns {Promise<boolean>} True if successful
      */
     async addPlayer(name, list = 'available') {
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return false;
+        }
         let success = false;
 
         await withLoading(
             async () => {
-                const trimmedName = name.trim();
+                // Validate and sanitise player name
+                const validation = validatePlayerNameForUI(name);
 
-                if (!trimmedName) {
-                    setError('Player name cannot be empty.');
+                if (!validation.isValid) {
+                    setNotification(validation.errorMessage, 'warning');
                     return;
                 }
 
-                if (this.players.includes(trimmedName) || this.waitingList.includes(trimmedName)) {
-                    setError(`Player ${trimmedName} already added.`);
+                const sanitizedName = validation.sanitizedName;
+
+                if (
+                    this.players.includes(sanitizedName) ||
+                    this.waitingList.includes(sanitizedName)
+                ) {
+                    setNotification(`Player ${sanitizedName} already added.`, 'warning');
                     return;
                 }
 
                 const originalList = list;
-                if (list === 'available' && this.players.length >= get(settings).playerLimit) {
+                const effectivePlayerLimit =
+                    this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+                if (list === 'available' && this.players.length >= effectivePlayerLimit) {
                     list = 'waitingList';
                 }
 
                 const result = await api.post(`players`, this.currentDate, {
-                    playerName: trimmedName,
+                    playerName: sanitizedName,
                     list
                 });
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
 
-                // Show notification if player was auto-redirected to waiting list
+                // Show notification if the player was auto-redirected to the waiting list
                 if (
                     originalList === 'available' &&
-                    (list === 'waitingList' || result.waitingList.includes(trimmedName))
+                    (list === 'waitingList' || result.waitingList.includes(sanitizedName))
                 ) {
-                    setError(`Player limit reached. ${trimmedName} added to waiting list.`);
+                    setNotification(
+                        `Player limit reached. ${sanitizedName} added to waiting list.`,
+                        'info'
+                    );
                 }
 
                 success = true;
             },
             (error) => {
                 console.error('Error adding player:', error);
-                setError('Failed to add player. Please try again.');
+                setNotification(
+                    error.message || 'Failed to add player. Please try again.',
+                    'error'
+                );
             }
         );
 
@@ -119,6 +181,10 @@ class PlayersService {
      * @param {string} [list='available'] - List to remove the player from ('available' or 'waitingList')
      */
     async removePlayer(playerName, list = 'available') {
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return;
+        }
         await withLoading(
             async () => {
                 const index =
@@ -136,7 +202,10 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error removing player:', error);
-                setError('Failed to remove player. Please try again.');
+                setNotification(
+                    error.message || 'Failed to remove player. Please try again.',
+                    'error'
+                );
             }
         );
     }
@@ -150,7 +219,10 @@ class PlayersService {
      */
     async movePlayer(playerName, fromList, toList) {
         if (fromList === toList) return;
-
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return;
+        }
         await withLoading(
             async () => {
                 const result = await api.patch('players', this.currentDate, {
@@ -163,16 +235,20 @@ class PlayersService {
             },
             (error) => {
                 console.error('Error moving player:', error);
-                setError('Failed to move player. Please try again.');
+                setNotification(
+                    error.message || 'Failed to move player. Please try again.',
+                    'error'
+                );
             }
         );
     }
     /**
-     * Reset the players state
+     * Reset the player service state
      */
     reset() {
         this.players = [];
         this.waitingList = [];
+        this.rankedPlayers = [];
         this.currentDate = null;
     }
 }

@@ -1,19 +1,37 @@
 <script>
     import PlayersList from './PlayersList.svelte';
     import { settings } from '$lib/client/stores/settings.js';
-    let { availablePlayers, waitingList, canModifyList, onremove, onmove } = $props();
+    let {
+        availablePlayers,
+        waitingList,
+        canModifyList,
+        onremove,
+        onmove,
+        /** type { string } */
+        date
+    } = $props();
 
-    function canMoveToOtherList(player, sourceList, destinationList) {
+    /**
+     * Checks if a player can be moved to another list based on the current settings.
+     * This function is used to determine if a player can be moved from the waiting list to
+     * the available players list, considering the player limit for the day.
+     * @param {string} sourceList
+     * @param {string} destinationList
+     */
+    function canMoveToOtherList(sourceList, destinationList) {
         if (sourceList === 'waitingList' && destinationList === 'available') {
-            return availablePlayers.length < $settings.playerLimit;
+            const effectivePlayerLimit = $settings[date]?.playerLimit || $settings.playerLimit;
+            return availablePlayers.length < effectivePlayerLimit;
         }
         return true;
     }
+
+    const effectivePlayerLimit = $derived($settings[date]?.playerLimit || $settings.playerLimit);
 </script>
 
 <div class="grid grid-cols-2 gap-2">
     <PlayersList
-        label={`Players (${$settings.playerLimit} max)`}
+        label={`Players (${availablePlayers?.length || 0}/${effectivePlayerLimit})`}
         players={availablePlayers}
         {canModifyList}
         onremove={async (name) => await onremove(name, 'available')}

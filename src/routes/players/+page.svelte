@@ -10,6 +10,7 @@
 
     onMount(async () => {
         await playersService.loadPlayers(data.date);
+        await playersService.loadRankedPlayerNames();
     });
 
     /**
@@ -60,5 +61,6 @@
         waitingList={playersService.waitingList}
         canModifyList={playersService.canModifyList}
         onremove={removePlayer}
-        onmove={movePlayer} />
+        onmove={movePlayer}
+        date={data.date} />
 </div>

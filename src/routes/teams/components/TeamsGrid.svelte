@@ -1,15 +1,11 @@
 <script>
     import TeamTable from './TeamTable.svelte';
-    let {
-        teams,
-        players,
-        waitingList,
-        unassignedPlayers,
-        onremove,
-        onfillempty,
-        onfillemptyWithPlayer,
-        onremoveFromList
-    } = $props();
+    import { teamColours } from '$lib/shared/helpers.js';
+
+    let { teams, waitingList, unassignedPlayers, canModifyList, onremove, onassign } = $props();
+
+    // Combine all assignable players for dropdown selection
+    const assignablePlayers = $derived([...unassignedPlayers, ...waitingList]);
 </script>
 
 <div class="grid grid-cols-2 gap-2">
@@ -17,13 +13,11 @@
         <TeamTable
             {team}
             {teamName}
-            teamIndex={i}
-            {onfillempty}
-            {onfillemptyWithPlayer}
+            color={teamColours[i % teamColours.length]}
+            {canModifyList}
+            {onassign}
             {onremove}
-            {players}
-            waitingList={unassignedPlayers}
-            allWaitingPlayers={waitingList} />
+            {assignablePlayers} />
     {/each}
     {#if (unassignedPlayers?.length > 0 || waitingList?.length > 0) && Object.entries(teams).length > 0}
         <div class="flex flex-col gap-2">
@@ -32,22 +26,20 @@
                     team={unassignedPlayers}
                     color="gray"
                     teamName="Unassigned Players"
-                    players={unassignedPlayers}
-                    availableTeams={Object.keys(teams)}
+                    {canModifyList}
                     allTeams={teams}
-                    onassignToTeam={onfillemptyWithPlayer}
-                    onremovePlayer={onremoveFromList} />
+                    {onassign}
+                    {onremove} />
             {/if}
             {#if waitingList?.length > 0}
                 <TeamTable
                     team={waitingList}
                     color="gray"
                     teamName="Waiting List"
-                    players={waitingList}
-                    availableTeams={Object.keys(teams)}
+                    {canModifyList}
                     allTeams={teams}
-                    onassignToTeam={onfillemptyWithPlayer}
-                    onremovePlayer={onremoveFromList} />
+                    {onassign}
+                    {onremove} />
             {/if}
         </div>
     {/if}

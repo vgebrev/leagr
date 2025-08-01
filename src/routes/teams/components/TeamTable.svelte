@@ -1,55 +1,32 @@
 <script>
-    import { Button, Dropdown, DropdownItem } from 'flowbite-svelte';
-    import {
-        ExclamationCircleSolid,
-        ArrowLeftOutline,
-        DotsVerticalOutline,
-        TrashBinOutline,
-        ClockOutline
-    } from 'flowbite-svelte-icons';
-    import { capitalize, teamColours, teamStyles } from '$lib/shared/helpers.js';
+    import { Button } from 'flowbite-svelte';
+    import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
+    import { capitalize, teamStyles } from '$lib/shared/helpers.js';
+    import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
 
     let {
         team,
-        teamIndex = null,
-        color = null,
+        color = 'default',
         teamName,
+        canModifyList = true,
         onremove = null,
-        onfillempty = null,
-        onfillemptyWithPlayer = null,
-        players,
-        waitingList = [],
-        allWaitingPlayers = [],
-        availableTeams = [],
-        allTeams = {},
-        onassignToTeam = null,
-        onremovePlayer = null
+        onassign = null,
+        assignablePlayers = [],
+        allTeams = {}
     } = $props();
 
-    let teamColour = $derived(color || teamColours[teamIndex % teamColours.length]);
-    const styles = $derived(teamStyles[teamColour] || teamStyles.default);
-
-    // Track dropdown states for each player
-    let removeDropdownOpen = $derived(team.map(() => false));
-    let fillDropdownOpen = $derived(team.map(() => false));
-    let assignDropdownOpen = $derived(team.map(() => false));
-
-    $effect(() => {
-        removeDropdownOpen = team.map(() => false);
-        fillDropdownOpen = team.map(() => false);
-        assignDropdownOpen = team.map(() => false);
-    });
+    const styles = $derived(teamStyles[color] || teamStyles.default);
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
 
     // Get teams with empty slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
-        if (!availableTeams || availableTeams.length === 0) {
+        if (!allTeams || Object.keys(allTeams).length === 0) {
             return [];
         }
 
-        return availableTeams.filter((teamName) => {
+        return Object.keys(allTeams).filter((teamName) => {
             const team = allTeams[teamName];
             if (!team) return false;
             return team.some((player) => player === null);
@@ -58,32 +35,20 @@
 
     function handleRemovePlayer(player, action) {
         if (onremove) {
-            onremove({ player, teamIndex, action });
+            onremove(player, action, teamName);
         }
     }
 
-    function handleFillEmptySpot(playerIndex, selectedPlayer = null) {
-        if (selectedPlayer && onfillemptyWithPlayer) {
-            onfillemptyWithPlayer({ playerIndex, teamIndex, selectedPlayer });
-        } else if (onfillempty) {
-            onfillempty({ playerIndex, teamIndex });
-        }
-    }
-
-    function handleAssignToTeam(player, teamName) {
-        if (onassignToTeam) {
-            // Let the server find the first empty slot in the target team
-            onassignToTeam({
-                playerName: player,
-                teamName: teamName
-            });
+    function handleAssignPlayer(playerName, targetTeamName) {
+        if (onassign) {
+            onassign(playerName, targetTeamName);
         }
     }
 
     function handleRemoveFromList(player) {
-        if (onremovePlayer) {
-            const list = teamName === 'Waiting List' ? 'waitingList' : 'available';
-            onremovePlayer(player, list);
+        // For player list tables - use unified remove operation
+        if (onremove) {
+            onremove(player, 'remove');
         }
     }
 </script>
@@ -96,7 +61,7 @@
                 <th
                     scope="col"
                     class="p-2">
-                    {teamName || `${capitalize(teamColour)} Team`}
+                    {teamName || `${capitalize(color)} Team`}
                 </th>
             </tr>
         </thead>
@@ -105,105 +70,67 @@
                 <tr class={`${styles.row}`}>
                     <td class="m-0 p-2"
                         ><div class="flex">
-                            {#if player && Array.isArray(players) && players.includes(player)}
+                            {#if player}
                                 <span>{player}</span>
-                            {:else if player && Array.isArray(players) && !players.includes(player)}
-                                <span class="flex gap-2 line-through"
-                                    ><ExclamationCircleSolid />{player}</span>
                             {:else}
                                 <span class="flex gap-2 italic"
                                     ><ExclamationCircleSolid /> Empty</span>
                             {/if}
                             {#if isPlayerList && player}
                                 <!-- Dropdown for unassigned/waiting list players -->
-                                <Button
-                                    size="sm"
-                                    class="ms-auto p-0 {styles.buttonClass}"
-                                    type="button"
-                                    outline={true}
-                                    color="alternative"
-                                    onclick={() => {
-                                        assignDropdownOpen[i] = !assignDropdownOpen[i];
-                                    }}><DotsVerticalOutline class="h-4 w-4" /></Button>
-                                <Dropdown
-                                    simple
-                                    isOpen={assignDropdownOpen[i]}>
-                                    {#each teamsWithEmptySlots as teamName (teamName)}
-                                        <DropdownItem
-                                            class="w-full font-normal"
-                                            onclick={() => handleAssignToTeam(player, teamName)}>
-                                            <span class="flex items-center">
-                                                <ArrowLeftOutline class="me-2 h-4 w-4" />
-                                                {capitalize(teamName)}
-                                            </span>
-                                        </DropdownItem>
-                                    {/each}
-                                    <DropdownItem
-                                        class="w-full font-normal"
-                                        onclick={() => handleRemoveFromList(player)}>
-                                        <span class="flex items-center">
-                                            <TrashBinOutline class="me-2 h-4 w-4" />
-                                            Remove
-                                        </span>
-                                    </DropdownItem>
-                                </Dropdown>
+                                {@const actions = [
+                                    ...teamsWithEmptySlots.map((teamName) => ({
+                                        type: 'assign',
+                                        label: capitalize(teamName),
+                                        onclick: () => handleAssignPlayer(player, teamName)
+                                    })),
+                                    {
+                                        type: 'remove',
+                                        label: 'Remove',
+                                        onclick: () => handleRemoveFromList(player)
+                                    }
+                                ]}
+                                <PlayerActionsDropdown
+                                    {actions}
+                                    {canModifyList}
+                                    styleClass={styles.buttonClass} />
                             {:else if onremove && player}
-                                <Button
-                                    size="sm"
-                                    class="ms-auto p-0 {styles.buttonClass}"
-                                    type="button"
-                                    outline={true}
-                                    color="alternative"
-                                    onclick={() => {
-                                        removeDropdownOpen[i] = !removeDropdownOpen[i];
-                                    }}><DotsVerticalOutline class="h-4 w-4" /></Button>
-                                <Dropdown
-                                    simple
-                                    isOpen={removeDropdownOpen[i]}>
-                                    <DropdownItem
-                                        class="w-full font-normal"
-                                        onclick={() => handleRemovePlayer(player, 'waitingList')}>
-                                        <span class="flex items-center">
-                                            <ClockOutline class="me-2 h-4 w-4" />
-                                            Move to waiting list
-                                        </span>
-                                    </DropdownItem>
-                                    <DropdownItem
-                                        class="w-full font-normal"
-                                        onclick={() => handleRemovePlayer(player, 'remove')}>
-                                        <span class="flex items-center">
-                                            <TrashBinOutline class="me-2 h-4 w-4" />
-                                            Remove
-                                        </span>
-                                    </DropdownItem>
-                                </Dropdown>
+                                {@const actions = [
+                                    {
+                                        type: 'move-to-waiting',
+                                        label: 'Move to waiting list',
+                                        onclick: () => handleRemovePlayer(player, 'waitingList')
+                                    },
+                                    {
+                                        type: 'remove',
+                                        label: 'Remove',
+                                        onclick: () => handleRemovePlayer(player, 'remove')
+                                    }
+                                ]}
+                                <PlayerActionsDropdown
+                                    {actions}
+                                    {canModifyList}
+                                    styleClass={styles.buttonClass} />
                             {/if}
-                            {#if onfillempty && !player}
-                                {#if waitingList.length > 0 || allWaitingPlayers.length > 0}
-                                    <Button
-                                        size="sm"
-                                        class="ms-auto p-0 {styles.buttonClass}"
-                                        type="button"
-                                        outline={true}
-                                        color="alternative"
-                                        onclick={() => {
-                                            fillDropdownOpen[i] = !fillDropdownOpen[i];
-                                        }}><DotsVerticalOutline class="h-4 w-4" /></Button>
-                                    <Dropdown
-                                        simple
-                                        isOpen={fillDropdownOpen[i]}>
-                                        {#each [...waitingList, ...allWaitingPlayers] as waitingPlayer (waitingPlayer)}
-                                            <DropdownItem
-                                                class="w-full font-normal"
-                                                onclick={() =>
-                                                    handleFillEmptySpot(i, waitingPlayer)}>
-                                                <span class="flex items-center">
-                                                    <ArrowLeftOutline class="me-2 h-4 w-4" />
-                                                    {waitingPlayer}
-                                                </span>
-                                            </DropdownItem>
-                                        {/each}
-                                    </Dropdown>
+                            {#if onassign && !player}
+                                {#if assignablePlayers.length > 0}
+                                    {@const actions = [
+                                        {
+                                            type: 'assign',
+                                            label: 'Auto-assign first available',
+                                            onclick: () => handleAssignPlayer(null, teamName)
+                                        },
+                                        ...assignablePlayers.map((waitingPlayer) => ({
+                                            type: 'assign',
+                                            label: waitingPlayer,
+                                            onclick: () =>
+                                                handleAssignPlayer(waitingPlayer, teamName)
+                                        }))
+                                    ]}
+                                    <PlayerActionsDropdown
+                                        {actions}
+                                        {canModifyList}
+                                        styleClass={styles.buttonClass} />
                                 {:else}
                                     <Button
                                         size="sm"
