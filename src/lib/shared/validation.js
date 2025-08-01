@@ -1,5 +1,6 @@
 import { reservedLeagueNames } from './reservedLeagueNames.js';
 import { disallowedLeagueNames } from './disallowedLeagueNames.js';
+import { isCompetitionEnded } from './helpers.js';
 
 /**
  * Validate if a string is a valid subdomain
@@ -626,4 +627,28 @@ export function validateGameRequest(requestBody) {
         errors: scheduleResult.errors,
         sanitizedData: scheduleResult.sanitizedData
     };
+}
+
+/**
+ * Validate if competition modification operations are allowed based on timing
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @param {Object} settings - Settings object with registration window configuration
+ * @returns {{isValid: boolean, error?: string}}
+ */
+export function validateCompetitionOperationsAllowed(dateString, settings) {
+    if (!dateString || !settings) {
+        return {
+            isValid: false,
+            error: 'Missing date or settings for validation'
+        };
+    }
+
+    if (isCompetitionEnded(dateString, settings)) {
+        return {
+            isValid: false,
+            error: 'Competition has ended. No modifications allowed.'
+        };
+    }
+
+    return { isValid: true };
 }

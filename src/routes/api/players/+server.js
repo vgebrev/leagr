@@ -5,7 +5,8 @@ import {
     validateDateParameter,
     parseRequestBody,
     validateRequestBody,
-    validateList
+    validateList,
+    validateCompetitionOperationsAllowed
 } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
@@ -56,10 +57,30 @@ export const POST = async ({ request, url, locals }) => {
     }
 
     try {
-        const result = await createPlayerManager()
+        const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(locals.leagueId)
-            .addPlayer(nameValidation.sanitizedName, bodyParseResult.data.list);
+            .setLeague(locals.leagueId);
+
+        // Get settings to validate competition state
+        const gameData = await playerManager.getData({
+            players: false,
+            teams: false,
+            settings: true
+        });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
+
+        const result = await playerManager.addPlayer(
+            nameValidation.sanitizedName,
+            bodyParseResult.data.list
+        );
         return json(result);
     } catch (err) {
         console.error('Error adding player:', err);
@@ -94,10 +115,27 @@ export const DELETE = async ({ request, url, locals }) => {
     }
 
     try {
-        const result = await createPlayerManager()
+        const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(locals.leagueId)
-            .removePlayer(nameValidation.sanitizedName);
+            .setLeague(locals.leagueId);
+
+        // Get settings to validate competition state
+        const gameData = await playerManager.getData({
+            players: false,
+            teams: false,
+            settings: true
+        });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
+
+        const result = await playerManager.removePlayer(nameValidation.sanitizedName);
         return json(result.players);
     } catch (err) {
         console.error('Error removing player:', err);
@@ -148,14 +186,31 @@ export const PATCH = async ({ request, url, locals }) => {
     }
 
     try {
-        const result = await createPlayerManager()
+        const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(locals.leagueId)
-            .movePlayer(
-                nameValidation.sanitizedName,
-                bodyParseResult.data.fromList,
-                bodyParseResult.data.toList
-            );
+            .setLeague(locals.leagueId);
+
+        // Get settings to validate competition state
+        const gameData = await playerManager.getData({
+            players: false,
+            teams: false,
+            settings: true
+        });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
+
+        const result = await playerManager.movePlayer(
+            nameValidation.sanitizedName,
+            bodyParseResult.data.fromList,
+            bodyParseResult.data.toList
+        );
         return json(result);
     } catch (err) {
         console.error('Error moving player:', err);

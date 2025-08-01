@@ -3,9 +3,10 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
+    import { settings } from '$lib/client/stores/settings.js';
     import StandingsTable from './components/StandingsTable.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
-    import { isDateInPast, teamColours } from '$lib/shared/helpers.js';
+    import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
     const date = data.date;
@@ -31,7 +32,7 @@
      * @param {number} index - The index of the team in the standings.
      */
     function celebrate(index) {
-        if (index !== 0 || !isDateInPast(new Date(date))) return;
+        if (index !== 0 || !isCompetitionEnded(date, $settings)) return;
         winningTeam.name = standings[index].team;
         winningTeam.colour =
             teamColours[teamColours.indexOf(winningTeam.name.split(' ')[0]) % teamColours.length] ||

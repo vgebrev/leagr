@@ -11,7 +11,7 @@
         hasTeams = false,
         hasSchedule = false,
         canResetSchedule = true,
-        isPast = false,
+        competitionEnded = false,
         onGenerateSchedule,
         onAddMoreGames,
         date = ''
@@ -71,7 +71,7 @@
 <!-- Main schedule generation button -->
 <Button
     onclick={() => handleGenerateSchedule(false)}
-    disabled={!hasTeams || isPast || (!canResetSchedule && hasSchedule)}>
+    disabled={!hasTeams || competitionEnded || (!canResetSchedule && hasSchedule)}>
     <CalendarMonthSolid class="me-2 h-4 w-4" />
     Schedule Games
 </Button>
@@ -92,7 +92,7 @@
 <!-- Add more games button (only show if there's already a schedule) -->
 {#if hasSchedule}
     <Button
-        disabled={!hasTeams || isPast}
+        disabled={!hasTeams || competitionEnded}
         onclick={handleAddMoreGames}>
         <CirclePlusSolid class="me-2 h-4 w-4" />
         Add More Games

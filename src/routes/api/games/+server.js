@@ -2,7 +2,12 @@ import { error, json } from '@sveltejs/kit';
 import { data } from '$lib/server/data.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { createGameScheduler, GameSchedulerError } from '$lib/server/gameScheduler.js';
-import { validateDateParameter, parseRequestBody } from '$lib/shared/validation.js';
+import {
+    validateDateParameter,
+    parseRequestBody,
+    validateCompetitionOperationsAllowed
+} from '$lib/shared/validation.js';
+import { getConsolidatedSettings } from '$lib/server/settings.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
@@ -52,6 +57,18 @@ export const POST = async ({ request, url, locals }) => {
     }
 
     try {
+        // Get settings for validation
+        const settings = await getConsolidatedSettings(dateValidation.date, leagueId);
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
+
         const gameScheduler = createGameScheduler();
         const requestData = bodyValidation.data;
 

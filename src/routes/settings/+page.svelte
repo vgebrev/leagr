@@ -210,53 +210,57 @@
                     id="competition-days" />
             </div>
 
-            <!-- Registration Window -->
+            <!-- Competition Period -->
             <div class="flex flex-col gap-2">
                 <Toggle
                     bind:checked={leagueSettings.registrationWindow.enabled}
                     onchange={saveLeagueSettings}>
-                    Enable registration time restrictions
+                    Enable competition time controls
                 </Toggle>
 
                 {#if leagueSettings.registrationWindow.enabled}
-                    <div class="flex flex-col gap-2 text-sm text-nowrap">
-                        <div class="flex items-center gap-2">
-                            <span>Opens</span>
+                    <div class="flex flex-col gap-2 text-sm">
+                        <div class="flex items-center gap-1">
+                            <span class="text-right">Registration opens</span>
                             <Input
                                 value={startDaysBeforeUI}
                                 onchange={(e) => updateStartDayOffset(e.target.value)}
                                 type="number"
                                 step={1}
                                 min={0}
-                                class="inline"
+                                class="w-16 shrink-0"
                                 placeholder="2" />
                             <span>days before, at</span>
                             <Input
                                 bind:value={leagueSettings.registrationWindow.startTime}
                                 type="time"
                                 onchange={saveLeagueSettings}
-                                class="inline"
+                                class="w-22 shrink-0"
                                 placeholder="07:30" />
                         </div>
 
-                        <div class="flex items-center gap-2">
-                            <span>Closes</span>
+                        <div class="flex items-center gap-1">
+                            <span class="text-right">Competition ends</span>
                             <Input
                                 value={endDaysBeforeUI}
                                 onchange={(e) => updateEndDayOffset(e.target?.value)}
                                 type="number"
                                 step={1}
                                 min={0}
-                                class="inline"
+                                class="w-16 shrink-0"
                                 placeholder="0" />
                             <span>days before, at</span>
                             <Input
                                 bind:value={leagueSettings.registrationWindow.endTime}
                                 type="time"
                                 onchange={saveLeagueSettings}
-                                class="inline"
-                                placeholder="07:30" />
+                                class="w-22 shrink-0"
+                                placeholder="12:00" />
                         </div>
+                    </div>
+                    <div class="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                        After competition ends, no changes can be made to teams, games, or player
+                        registrations.
                     </div>
                 {/if}
             </div>

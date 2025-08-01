@@ -6,7 +6,8 @@ import { createRankingsManager } from '$lib/server/rankings.js';
 import {
     validateDateParameter,
     parseRequestBody,
-    validateRequestBody
+    validateRequestBody,
+    validateCompetitionOperationsAllowed
 } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
@@ -75,6 +76,15 @@ export const POST = async ({ request, url, locals }) => {
             teams: false,
             settings: true
         });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
 
         // Get rankings for seeded teams
         let rankings = null;

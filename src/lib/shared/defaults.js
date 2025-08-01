@@ -30,7 +30,7 @@ export const defaultSettings = {
         startDayOffset: -2, // Days before competition day
         startTime: '07:30', // Time on start day
         endDayOffset: 0, // Days relative to competition day
-        endTime: '07:30' // Time on end day
+        endTime: '12:00' // Time on end day
     },
     teamGeneration: {
         minTeams: 2,

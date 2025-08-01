@@ -5,7 +5,8 @@ import {
     validateDateParameter,
     parseRequestBody,
     validateRequestBody,
-    validateAndSanitizePlayerName
+    validateAndSanitizePlayerName,
+    validateCompetitionOperationsAllowed
 } from '$lib/shared/validation.js';
 
 export const DELETE = async ({ request, url, locals }) => {
@@ -43,6 +44,22 @@ export const DELETE = async ({ request, url, locals }) => {
         const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
             .setLeague(leagueId);
+
+        // Get settings to validate competition state
+        const gameData = await playerManager.getData({
+            players: false,
+            teams: false,
+            settings: true
+        });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
 
         let result;
         if (bodyParseResult.data.teamName) {
@@ -96,11 +113,31 @@ export const POST = async ({ request, url, locals }) => {
     }
 
     try {
-        // Try to assign player to team (works for both available and waiting list players)
-        const result = await createPlayerManager()
+        const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(leagueId)
-            .fillEmptySlotWithPlayer(bodyParseResult.data.teamName, nameValidation.sanitizedName);
+            .setLeague(leagueId);
+
+        // Get settings to validate competition state
+        const gameData = await playerManager.getData({
+            players: false,
+            teams: false,
+            settings: true
+        });
+
+        // Validate if operations are allowed based on competition end state
+        const operationValidation = validateCompetitionOperationsAllowed(
+            dateValidation.date,
+            gameData.settings
+        );
+        if (!operationValidation.isValid) {
+            return error(400, operationValidation.error);
+        }
+
+        // Try to assign player to team (works for both available and waiting list players)
+        const result = await playerManager.fillEmptySlotWithPlayer(
+            bodyParseResult.data.teamName,
+            nameValidation.sanitizedName
+        );
         return json(result);
     } catch (err) {
         console.error('Error assigning player to team:', err);

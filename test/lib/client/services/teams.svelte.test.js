@@ -72,8 +72,8 @@ describe('TeamsService', () => {
         // Reset service state
         teamsService.reset();
 
-        // Mock canModifyList and isPast to return appropriate values
-        Object.defineProperty(teamsService, 'isPast', {
+        // Mock canModifyList and isCompetitionEnded to return appropriate values
+        Object.defineProperty(teamsService, 'isCompetitionEnded', {
             get: () => false,
             configurable: true
         });
@@ -200,7 +200,7 @@ describe('TeamsService', () => {
         });
 
         it('should not generate if date is in past', async () => {
-            Object.defineProperty(teamsService, 'isPast', {
+            Object.defineProperty(teamsService, 'isCompetitionEnded', {
                 get: () => true,
                 configurable: true
             });
@@ -295,7 +295,7 @@ describe('TeamsService', () => {
         });
 
         it('should not remove if date is in past', async () => {
-            Object.defineProperty(teamsService, 'isPast', {
+            Object.defineProperty(teamsService, 'isCompetitionEnded', {
                 get: () => true,
                 configurable: true
             });

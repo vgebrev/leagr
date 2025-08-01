@@ -27,6 +27,7 @@ For development (needs [Node.js](https://nodejs.org/en)):
 ### Subdomain Setup
 
 Since leagues are registered/accessed on subdomains, it's useful to set up your `hosts` file to test locally:
+
 ```bash
 # Add to /etc/hosts (Linux/Mac) or C:\Windows\System32\drivers\etc\hosts (Windows)
 127.0.0.1 leagr.local
@@ -39,6 +40,7 @@ Since leagues are registered/accessed on subdomains, it's useful to set up your 
 ```
 
 Then you can access the app at `http://leagr.local:5173`, `http://league1.leagr.local:5173`, etc.
+
 ### Security Configuration
 
 The application includes rudimentary security features to prevent abuse:

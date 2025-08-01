@@ -4,7 +4,7 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
-    import { isDateInPast } from '$lib/shared/helpers.js';
+    import { isCompetitionEnded } from '$lib/shared/helpers.js';
     import ScheduleDisplay from './components/ScheduleDisplay.svelte';
     import GameActions from './components/GameActions.svelte';
 
@@ -14,7 +14,7 @@
     const date = data.date;
 
     /** @type {boolean} */
-    let isPast = $derived(isDateInPast(date));
+    let competitionEnded = $derived(isCompetitionEnded(date, $settings));
 
     /** @type {Array<Array<Object>>} */
     let schedule = $state([]);
@@ -49,8 +49,8 @@
      * Generate a new schedule
      */
     async function generateSchedule() {
-        if (isPast) {
-            setNotification('The date is in the past. Games cannot be changed.', 'warning');
+        if (competitionEnded) {
+            setNotification('The competition has ended. Games cannot be changed.', 'warning');
             return;
         }
 
@@ -71,8 +71,8 @@
      * Add more games to the current schedule
      */
     async function addMoreGames() {
-        if (isPast) {
-            setNotification('The date is in the past. Games cannot be changed.', 'warning');
+        if (competitionEnded) {
+            setNotification('The competition has ended. Games cannot be changed.', 'warning');
             return;
         }
 
@@ -141,7 +141,7 @@
     {hasTeams}
     {hasSchedule}
     canResetSchedule={$settings.canResetSchedule}
-    {isPast}
+    {competitionEnded}
     {date}
     onGenerateSchedule={generateSchedule}
     onAddMoreGames={addMoreGames} />
@@ -149,5 +149,5 @@
 <!-- Schedule Display Component -->
 <ScheduleDisplay
     {schedule}
-    disabled={isPast}
+    disabled={competitionEnded}
     onMatchUpdate={handleMatchUpdate} />

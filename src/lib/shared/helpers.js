@@ -51,6 +51,23 @@ export function isDateInPast(date, hours = 0) {
     return limit < new Date();
 }
 
+export function isCompetitionEnded(dateString, settings) {
+    if (!dateString) return false;
+
+    if (!settings || !settings.registrationWindow?.enabled) {
+        return isDateInPast(dateString);
+    }
+
+    const [hours, minutes] = settings.registrationWindow.endTime.split(':').map(Number);
+    const competitionEndDate = new Date(dateString);
+    competitionEndDate.setDate(
+        competitionEndDate.getDate() + settings.registrationWindow.endDayOffset
+    );
+    competitionEndDate.setHours(hours, minutes, 0, 0);
+
+    return new Date() > competitionEndDate;
+}
+
 export function isObject(val) {
     return typeof val === 'object' && val !== null && !Array.isArray(val);
 }

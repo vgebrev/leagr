@@ -4,6 +4,7 @@ import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
+import { isDateInPast } from '$lib/shared/helpers.js';
 
 class PlayersService {
     #settings = $state(defaultSettings);
@@ -47,7 +48,7 @@ class PlayersService {
     });
 
     canModifyList = $derived.by(() => {
-        if (!this.#settings.registrationWindow.enabled) return true;
+        if (!this.#settings.registrationWindow.enabled) return !isDateInPast(this.currentDate);
 
         if (!this.registrationOpenDate || !this.registrationCloseDate) return false;
         const now = new Date();

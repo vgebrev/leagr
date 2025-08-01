@@ -3,7 +3,7 @@ import { playersService } from '$lib/client/services/players.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { isDateInPast } from '$lib/shared/helpers.js';
+import { isCompetitionEnded } from '$lib/shared/helpers.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 
 class TeamsService {
@@ -38,9 +38,9 @@ class TeamsService {
     });
 
     /** @type {boolean} */
-    isPast = $derived.by(() => {
+    isCompetitionEnded = $derived.by(() => {
         if (!this.currentDate) return false;
-        return isDateInPast(this.currentDate);
+        return isCompetitionEnded(this.currentDate, this.#settings);
     });
 
     teamConfig = $derived.by(() => {
@@ -53,7 +53,7 @@ class TeamsService {
     /** @type {boolean} */
     canGenerateTeams = $derived.by(() => {
         return (
-            !this.isPast &&
+            !this.isCompetitionEnded &&
             playersService.canModifyList &&
             (this.#settings.canRegenerateTeams || Object.keys(this.teams).length === 0)
         );
@@ -110,7 +110,7 @@ class TeamsService {
      * @param {Object} options - Configuration object containing team options
      */
     async generateTeams(options) {
-        if (this.isPast || !playersService.canModifyList) {
+        if (this.isCompetitionEnded || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return false;
         }
@@ -154,7 +154,7 @@ class TeamsService {
      * @param {?string} [teamName] - Team name (auto-detected if not provided)
      */
     async removePlayer(playerName, action = 'waitingList', teamName = null) {
-        if (this.isPast || !playersService.canModifyList) {
+        if (this.isCompetitionEnded || !playersService.canModifyList) {
             setNotification('Players cannot be changed.', 'warning');
             return;
         }
@@ -212,7 +212,7 @@ class TeamsService {
      * @param {string} teamName - Team name to assign to
      */
     async assignPlayerToTeam(playerName, teamName) {
-        if (this.isPast || !playersService.canModifyList) {
+        if (this.isCompetitionEnded || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return;
         }
