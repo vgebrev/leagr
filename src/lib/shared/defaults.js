@@ -19,9 +19,32 @@ export const LEAGUE_ONLY_SETTINGS = [
     'seedTeams'
 ];
 
+/** @typedef {Object} DaySettings
+ * @property {number} playerLimit - Maximum number of players for the day
+ */
+
+/** @typedef {Object} LeagueSettings
+ * @property {number[]} competitionDays - Array of weekdays (0=Sunday, 6=Saturday)
+ * @property {Object} registrationWindow - Registration window settings
+ * @property {boolean} registrationWindow.enabled - Whether registration is enabled
+ * @property {number} registrationWindow.startDayOffset - Days before competition day to start registration
+ * @property {string} registrationWindow.startTime - Time on start day (HH:mm)
+ * @property {number} registrationWindow.endDayOffset - Days relative to competition day to end registration
+ * @property {string} registrationWindow.endTime - Time on end day (HH:mm)
+ * @property {Object} teamGeneration - Team generation settings
+ * @property {number} teamGeneration.minTeams - Minimum number of teams
+ * @property {number} teamGeneration.maxTeams - Maximum number of teams
+ * @property {number} teamGeneration.minPlayersPerTeam - Minimum players per team
+ * @property {number} teamGeneration.maxPlayersPerTeam - Maximum players per team
+ * @property {number} playerLimit - Maximum number of players in the league
+ * @property {boolean} canRegenerateTeams - Whether teams can be regenerated
+ * @property {boolean} canResetSchedule - Whether the schedule can be reset
+ * @property {boolean} seedTeams - Whether teams should be seeded
+ */
+
 /**
  * Default league settings
- * @type {{competitionDays: number[], registrationWindow: {enabled: boolean, startDayOffset: number, startTime: string, endDayOffset: number, endTime: string}, teamGeneration: {minTeams: number, maxTeams: number, minPlayersPerTeam: number, maxPlayersPerTeam: number}, playerLimit: number, canRegenerateTeams: boolean, canResetSchedule: boolean, seedTeams: boolean}}
+ * @type {LeagueSettings}
  */
 export const defaultSettings = {
     competitionDays: [6], // Array of weekdays (0=Sunday, 6=Saturday)
@@ -66,7 +89,7 @@ export function getEffectiveLeagueSettings(leagueInfo) {
 /**
  * Extract day-level settings defaults from league settings
  * @param {Object} leagueSettings - League settings object
- * @returns {Object} - Day-level settings with league defaults
+ * @returns {DaySettings} - Day-level settings with league defaults
  */
 export function getDaySettingsDefaults(leagueSettings) {
     const dayDefaults = {};
