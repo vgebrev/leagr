@@ -147,18 +147,33 @@
                         width={chartWidth + padding.left + padding.right}
                         height={chartHeight + padding.top + padding.bottom}
                         class="min-w-full">
-                        <!-- Y-axis labels (ranks) -->
+                        <!-- Y-axis grid lines and labels -->
                         {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter((rank) => rank <= maxRank)] as rank, i (i)}
                             {@const y = padding.top + ((rank - 1) / (maxRank - 1)) * chartHeight}
+                            {@const isMultipleOf10 = rank === 1 || rank % 10 === 0}
+                            {@const isMultipleOf5 = rank % 5 === 0 && !isMultipleOf10}
 
-                            <!-- Left-side rank labels (shifted left for node clearance) -->
-                            <text
-                                x={padding.left - 15}
-                                y={y + 4}
-                                class="fill-gray-600 text-xs dark:fill-gray-400"
-                                text-anchor="end">
-                                {rank}
-                            </text>
+                            <!-- Show labels only for 1, 10, 20, etc. -->
+                            {#if isMultipleOf10}
+                                <!-- Left-side rank labels -->
+                                <text
+                                    x={padding.left - 15}
+                                    y={y + 4}
+                                    class="fill-gray-600 text-xs dark:fill-gray-400"
+                                    text-anchor="end">
+                                    {rank}
+                                </text>
+                                <!-- Right-side rank labels -->
+                                <text
+                                    x={padding.left + chartWidth + 15}
+                                    y={y + 4}
+                                    class="fill-gray-600 text-xs dark:fill-gray-400"
+                                    text-anchor="start">
+                                    {rank}
+                                </text>
+                            {/if}
+
+                            <!-- Grid lines: solid for 1,10,20... dotted for 5,15,25... -->
                             <line
                                 x1={padding.left}
                                 y1={y}
@@ -166,15 +181,8 @@
                                 y2={y}
                                 stroke="currentColor"
                                 stroke-opacity="0.1"
-                                stroke-width="1" />
-                            <!-- Right-side rank labels (shifted right for node clearance) -->
-                            <text
-                                x={padding.left + chartWidth + 15}
-                                y={y + 4}
-                                class="fill-gray-600 text-xs dark:fill-gray-400"
-                                text-anchor="start">
-                                {rank}
-                            </text>
+                                stroke-width="1"
+                                stroke-dasharray={isMultipleOf5 ? "2,2" : "none"} />
                         {/each}
 
                         <!-- Chart area -->
@@ -185,7 +193,7 @@
                                 fill="none"
                                 stroke="currentColor"
                                 stroke-width="2"
-                                class="text-blue-500" />
+                                class="text-primary-500" />
 
                             <!-- Data points -->
                             {#each playerData.rankProgression as point, index (index)}
@@ -197,7 +205,7 @@
                                     cy={y}
                                     r="4"
                                     fill="currentColor"
-                                    class="text-blue-500">
+                                    class="text-primary-700">
                                     <title>
                                         {formatDate(point.date)}: Rank #{point.rank} ({point.points}
                                         pts)
