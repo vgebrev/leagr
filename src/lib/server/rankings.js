@@ -6,6 +6,7 @@ import { getLeagueDataPath } from './league.js';
 const rankingsMutexes = new Map();
 
 const BONUS_MULTIPLIER = 2;
+const KNOCKOUT_MULTIPLIER = 3;
 
 // Hybrid ranking algorithm configuration
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
@@ -182,6 +183,48 @@ export class RankingsManager {
     }
 
     /**
+     * Calculate knockout points for players based on knockout game results
+     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Object} teams - Teams data with player lists
+     * @returns {Object} Player knockout wins count
+     */
+    getKnockoutPoints(knockoutBracket, teams) {
+        const playerKnockoutWins = {};
+
+        if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
+            return playerKnockoutWins;
+        }
+
+        // Process each completed knockout match
+        for (const match of knockoutBracket) {
+            if (match.homeScore !== null && match.awayScore !== null) {
+                let winner = null;
+
+                if (match.homeScore > match.awayScore) {
+                    winner = match.home;
+                } else if (match.awayScore > match.homeScore) {
+                    winner = match.away;
+                }
+                // No points for draws in knockout (shouldn't happen)
+
+                if (winner && teams[winner]) {
+                    // Award knockout win to all players in winning team
+                    for (const player of teams[winner]) {
+                        if (!player) continue;
+
+                        if (!playerKnockoutWins[player]) {
+                            playerKnockoutWins[player] = 0;
+                        }
+                        playerKnockoutWins[player] += 1;
+                    }
+                }
+            }
+        }
+
+        return playerKnockoutWins;
+    }
+
+    /**
      * Apply hybrid ranking algorithm to raw player data
      * @param {Object} rawRankings - Rankings with basic points/appearances
      * @returns {Object} Enhanced rankings with calculated fields
@@ -323,6 +366,10 @@ export class RankingsManager {
                 const teamStats = this.getTeamStats(teamNames, results);
                 const standings = this.getStandings(teamNames, results);
 
+                // Calculate knockout points
+                const knockoutBracket = games?.['knockout-games']?.bracket;
+                const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
+
                 for (const [teamName, players] of teamEntries) {
                     const matchPoints = teamStats[teamName].points;
                     const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
@@ -334,9 +381,13 @@ export class RankingsManager {
                             rankings.players[player] = { points: 0, appearances: 0 };
                         }
 
+                        const knockoutWins = playerKnockoutWins[player] || 0;
+                        const knockoutPoints = knockoutWins * KNOCKOUT_MULTIPLIER;
+
                         rankings.players[player].points += 1; // attendance
                         rankings.players[player].points += matchPoints;
                         rankings.players[player].points += bonusPoints;
+                        rankings.players[player].points += knockoutPoints;
                         rankings.players[player].appearances += 1;
                     }
                 }
