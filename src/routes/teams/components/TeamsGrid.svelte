@@ -13,7 +13,7 @@
         <TeamTable
             {team}
             {teamName}
-            color={teamColours[i % teamColours.length]}
+            color={teamName.split(' ')[0].toLowerCase()}
             {canModifyList}
             {onassign}
             {onremove}

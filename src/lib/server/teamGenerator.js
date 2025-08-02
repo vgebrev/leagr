@@ -102,6 +102,9 @@ export class TeamGenerator {
         const usedNouns = new Set();
         const teamNames = [];
 
+        const colorSlice = teamColours.slice(0, count);
+        const shuffledColours = colorSlice.sort(() => Math.random() - 0.5);
+
         for (let i = 0; i < count; i++) {
             let noun;
             let attempts = 0;
@@ -113,7 +116,7 @@ export class TeamGenerator {
             } while (usedNouns.has(noun) && attempts < 50);
 
             usedNouns.add(noun);
-            const color = teamColours[i % teamColours.length];
+            const color = shuffledColours[i % shuffledColours.length];
             teamNames.push(`${color} ${noun}`);
         }
 
