@@ -122,9 +122,11 @@
     <!-- Rank Progression Chart -->
     {#if playerData.rankProgression && playerData.rankProgression.length > 1}
         {@const maxRank = Math.max(...playerData.rankProgression.map((p) => p.totalPlayers))}
-        {@const chartWidth = 400}
+        {@const minChartWidth = 400}
         {@const chartHeight = 200}
-        {@const padding = { top: 20, right: 20, bottom: 40, left: 40 }}
+        {@const segmentWidth = 60}
+        {@const chartWidth = Math.max(minChartWidth, playerData.rankProgression.length * segmentWidth)}
+        {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
         {@const linePath = generateLinePath(
             playerData.rankProgression,
             chartWidth,
@@ -139,23 +141,16 @@
                     class="overflow-x-auto"
                     bind:this={scrollContainer}>
                     <svg
-                        width={Math.max(
-                            chartWidth + padding.left + padding.right,
-                            playerData.rankProgression.length * 60
-                        )}
+                        width={chartWidth + padding.left + padding.right}
                         height={chartHeight + padding.top + padding.bottom}
                         class="min-w-full">
                         <!-- Y-axis labels (ranks) -->
-                        {#each Array.from({ length: Math.min(10, maxRank) }, (_, i) => {
-                            if (maxRank <= 10) {
-                                return i + 1;
-                            } else {
-                                return i === 0 ? 1 : Math.round(1 + (i * (maxRank - 1)) / 9);
-                            }
-                        }) as rank, i (i)}
+                        {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter(rank => rank <= maxRank)] as rank, i (i)}
                             {@const y = padding.top + ((rank - 1) / (maxRank - 1)) * chartHeight}
+                            
+                            <!-- Left-side rank labels (shifted left for node clearance) -->
                             <text
-                                x={padding.left - 5}
+                                x={padding.left - 15}
                                 y={y + 4}
                                 class="fill-gray-600 text-xs dark:fill-gray-400"
                                 text-anchor="end">
@@ -169,9 +164,9 @@
                                 stroke="currentColor"
                                 stroke-opacity="0.1"
                                 stroke-width="1" />
-                            <!-- Right-side rank labels -->
+                            <!-- Right-side rank labels (shifted right for node clearance) -->
                             <text
-                                x={padding.left + chartWidth + 5}
+                                x={padding.left + chartWidth + 15}
                                 y={y + 4}
                                 class="fill-gray-600 text-xs dark:fill-gray-400"
                                 text-anchor="start">
