@@ -30,8 +30,8 @@
             <Listgroup items={rankingInfo} />
             {#if rankingMetadata}
                 <p class="text-center text-gray-600 dark:text-gray-400">
-                    League Average: {rankingMetadata.globalAverage} pts/game • Full Confidence:
-                    {rankingMetadata.confidenceThreshold}+ games • Total Players: {rankingMetadata.totalPlayers}
+                    League Average: {rankingMetadata.globalAverage} pts/appearance • Full Confidence:
+                    {rankingMetadata.confidenceThreshold}+ appearances • Total Players: {rankingMetadata.totalPlayers}
                 </p>
             {/if}
             <p>Rankings are used to seed players and generate balanced teams.</p>

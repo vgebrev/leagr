@@ -1,12 +1,12 @@
 <script>
     import { TableBodyCell, TableBodyRow } from 'flowbite-svelte';
+    import { goto } from '$app/navigation';
 
-    let { player, data, index, currentSort, onPlayerClick, onSortChange } = $props();
+    let { player, data, index, currentSort, onSortChange } = $props();
 
     function handlePlayerClick() {
-        if (onPlayerClick) {
-            onPlayerClick(index);
-        }
+        // Navigate to player detail page
+        goto(`/rankings/${encodeURIComponent(player)}`);
     }
 
     /** Handles sorting when a column header is clicked.
@@ -33,7 +33,7 @@
     </TableBodyCell>
     <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold text-black dark:text-white">
         <span
-            class="w-full"
+            class="w-full cursor-pointer hover:underline"
             role="button"
             tabindex="0"
             onclick={handlePlayerClick}
