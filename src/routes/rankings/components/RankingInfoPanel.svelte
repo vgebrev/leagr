@@ -7,7 +7,8 @@
     const pointsInfo = [
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
-        'Team Bonus: 2-8pts based on final team position and number of teams'
+        'Team Bonus: 2-8pts based on final team position and number of teams',
+        'Knockout Bonus: 3pts for each knockout match won'
     ];
 
     const rankingInfo = [
