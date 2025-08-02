@@ -1,6 +1,5 @@
 <script>
     import TeamTable from './TeamTable.svelte';
-    import { teamColours } from '$lib/shared/helpers.js';
 
     let { teams, waitingList, unassignedPlayers, canModifyList, onremove, onassign } = $props();
 

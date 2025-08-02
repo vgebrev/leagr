@@ -9,7 +9,7 @@ export const GET = async ({ locals }) => {
     }
 
     const rankingsData = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
-    
+
     // Strip rankingDetail data for API endpoint (only needed for individual player pages)
     const strippedRankings = {
         ...rankingsData,
@@ -23,7 +23,7 @@ export const GET = async ({ locals }) => {
             ])
         )
     };
-    
+
     return json(strippedRankings);
 };
 
@@ -34,7 +34,7 @@ export const POST = async ({ locals }) => {
     }
 
     const rankingsData = await createRankingsManager().setLeague(leagueId).updateRankings();
-    
+
     // Strip rankingDetail data for API endpoint (only needed for individual player pages)
     const strippedRankings = {
         ...rankingsData,
@@ -48,6 +48,6 @@ export const POST = async ({ locals }) => {
             ])
         )
     };
-    
+
     return json(strippedRankings);
 };

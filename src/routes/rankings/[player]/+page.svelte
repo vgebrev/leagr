@@ -125,7 +125,10 @@
         {@const minChartWidth = 400}
         {@const chartHeight = 200}
         {@const segmentWidth = 60}
-        {@const chartWidth = Math.max(minChartWidth, playerData.rankProgression.length * segmentWidth)}
+        {@const chartWidth = Math.max(
+            minChartWidth,
+            playerData.rankProgression.length * segmentWidth
+        )}
         {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
         {@const linePath = generateLinePath(
             playerData.rankProgression,
@@ -145,9 +148,9 @@
                         height={chartHeight + padding.top + padding.bottom}
                         class="min-w-full">
                         <!-- Y-axis labels (ranks) -->
-                        {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter(rank => rank <= maxRank)] as rank, i (i)}
+                        {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter((rank) => rank <= maxRank)] as rank, i (i)}
                             {@const y = padding.top + ((rank - 1) / (maxRank - 1)) * chartHeight}
-                            
+
                             <!-- Left-side rank labels (shifted left for node clearance) -->
                             <text
                                 x={padding.left - 15}
