@@ -5,21 +5,21 @@ A little [SvelteKit 5](https://svelte.dev/) web app to help organise social 5-a-
 Features include:
 
 - **League Management**
-  - Subdomain-based league registration.
-  - Access-controlled league isolation.
-  - [Mailgun](https://www.mailgun.com/) integration for sending email (Access code recovery).
+    - Subdomain-based league registration.
+    - Access-controlled league isolation.
+    - [Mailgun](https://www.mailgun.com/) integration for sending email (Access code recovery).
 - **Player Management**
-  - View and manage player availability.
-  - Waiting list after a limit is reached.
+    - View and manage player availability.
+    - Waiting list after a limit is reached.
 - **Team Management**
-  - Generate random teams, either completely random or using player rankings as seeds.
+    - Generate random teams, either completely random or using player rankings as seeds.
 - **Game Scheduling and Score Tracking**
-  - Generate a round-robin home-away match schedule and track results.
-  - Standings table based on match results.
-  - Knockout tournament generation with teams seeded by standings.
+    - Generate a round-robin home-away match schedule and track results.
+    - Standings table based on match results.
+    - Knockout tournament generation with teams seeded by standings.
 - **Player Rankings**
-  - Cumulative player rankings based on team performances.
-  - Player ranking details and history.
+    - Cumulative player rankings based on team performances.
+    - Player ranking details and history.
 
 ## Environment Setup
 

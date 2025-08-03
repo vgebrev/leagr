@@ -1,0 +1,172 @@
+<script>
+    import { onMount } from 'svelte';
+
+    let { playerData } = $props();
+    let scrollContainer = $state();
+
+    /**
+     * Format date for display
+     * @param {string} date - Date in YYYY-MM-DD format
+     * @returns {string} Formatted date
+     */
+    function formatDate(date) {
+        return new Date(date).toLocaleDateString('en-GB', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    /**
+     * Generate SVG path for the rank progression line
+     */
+    function generateLinePath(progression, width, height, maxRank) {
+        if (!progression || progression.length < 2) return '';
+
+        const points = progression.map((point, index) => {
+            const x = (index / (progression.length - 1)) * width;
+            // Invert Y axis so lower ranks (higher numbers) are at top
+            const y = ((point.rank - 1) / (maxRank - 1)) * height;
+            return `${x},${y}`;
+        });
+
+        return `M ${points.join(' L ')}`;
+    }
+
+    /**
+     * Scroll chart to show latest data
+     */
+    onMount(() => {
+        // Scroll chart to show latest data (right side)
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+        }
+    });
+</script>
+
+{#if playerData.rankProgression && playerData.rankProgression.length > 1}
+    {@const maxRank = Math.max(...playerData.rankProgression.map((p) => p.totalPlayers))}
+    {@const minChartWidth = 400}
+    {@const chartHeight = 200}
+    {@const segmentWidth = 60}
+    {@const chartWidth = Math.max(minChartWidth, playerData.rankProgression.length * segmentWidth)}
+    {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
+    {@const linePath = generateLinePath(
+        playerData.rankProgression,
+        chartWidth,
+        chartHeight,
+        maxRank
+    )}
+    <div class="mb-4">
+        <h2 class="mb-4 text-lg font-semibold">Rank Progression</h2>
+        <div
+            class="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            <div
+                class="overflow-x-auto"
+                bind:this={scrollContainer}>
+                <svg
+                    width={chartWidth + padding.left + padding.right}
+                    height={chartHeight + padding.top + padding.bottom}
+                    class="min-w-full">
+                    <!-- Y-axis grid lines and labels -->
+                    {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter((rank) => rank <= maxRank)] as rank, i (i)}
+                        {@const y = padding.top + ((rank - 1) / (maxRank - 1)) * chartHeight}
+                        {@const isMultipleOf10 = rank === 1 || rank % 10 === 0}
+                        {@const isMultipleOf5 = rank % 5 === 0 && !isMultipleOf10}
+
+                        <!-- Show labels only for 1, 10, 20, etc. -->
+                        {#if isMultipleOf10}
+                            <!-- Left-side rank labels -->
+                            <text
+                                x={padding.left - 15}
+                                y={y + 4}
+                                class="fill-gray-600 text-xs dark:fill-gray-400"
+                                text-anchor="end">
+                                {rank}
+                            </text>
+                            <!-- Right-side rank labels -->
+                            <text
+                                x={padding.left + chartWidth + 15}
+                                y={y + 4}
+                                class="fill-gray-600 text-xs dark:fill-gray-400"
+                                text-anchor="start">
+                                {rank}
+                            </text>
+                        {/if}
+
+                        <!-- Grid lines: solid for 1,10,20... dotted for 5,15,25... -->
+                        <line
+                            x1={padding.left}
+                            y1={y}
+                            x2={padding.left + chartWidth}
+                            y2={y}
+                            stroke="currentColor"
+                            stroke-opacity="0.1"
+                            stroke-width="1"
+                            stroke-dasharray={isMultipleOf5 ? '2,2' : 'none'} />
+                    {/each}
+
+                    <!-- Chart area -->
+                    <g transform="translate({padding.left}, {padding.top})">
+                        <!-- Rank progression line -->
+                        <path
+                            d={linePath}
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            class="text-primary-500" />
+
+                        <!-- Data points -->
+                        {#each playerData.rankProgression as point, index (index)}
+                            {@const x =
+                                (index / (playerData.rankProgression.length - 1)) * chartWidth}
+                            {@const y = ((point.rank - 1) / (maxRank - 1)) * chartHeight}
+                            <circle
+                                cx={x}
+                                cy={y}
+                                r="4"
+                                fill="currentColor"
+                                class="text-primary-700">
+                                <title>
+                                    {formatDate(point.date)}: Rank #{point.rank} ({point.points}
+                                    pts)
+                                </title>
+                            </circle>
+                            <!-- Rank number label -->
+                            <text
+                                {x}
+                                y={y - 8}
+                                class="fill-gray-700 text-xs font-medium dark:fill-gray-300"
+                                text-anchor="middle">
+                                {point.rank}
+                            </text>
+                        {/each}
+                    </g>
+
+                    <!-- X-axis labels (dates) -->
+                    {#each playerData.rankProgression as point, index (index)}
+                        {@const x =
+                            padding.left +
+                            (index / (playerData.rankProgression.length - 1)) * chartWidth}
+                        <text
+                            {x}
+                            y={chartHeight + padding.top + 20}
+                            class="fill-gray-600 text-xs dark:fill-gray-400"
+                            text-anchor="middle"
+                            transform="rotate(-45, {x}, {chartHeight + padding.top + 20})">
+                            {new Date(point.date).toLocaleDateString('en-GB', {
+                                month: 'short',
+                                day: 'numeric'
+                            })}
+                        </text>
+                    {/each}
+                </svg>
+            </div>
+
+            <div class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+                Historical rank progression over {playerData.rankProgression.length} appearances
+            </div>
+        </div>
+    </div>
+{/if}
