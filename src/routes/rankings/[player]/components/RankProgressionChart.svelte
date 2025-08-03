@@ -47,10 +47,12 @@
 
 {#if playerData.rankProgression && playerData.rankProgression.length > 1}
     {@const maxRank = Math.max(...playerData.rankProgression.map((p) => p.totalPlayers))}
-    {@const minChartWidth = 400}
     {@const chartHeight = 200}
     {@const segmentWidth = 60}
-    {@const chartWidth = Math.max(minChartWidth, playerData.rankProgression.length * segmentWidth)}
+    {@const appearanceCount = playerData.rankProgression.length}
+    {@const naturalWidth = appearanceCount * segmentWidth}
+    {@const minChartWidth = appearanceCount <= 5 ? naturalWidth : 400}
+    {@const chartWidth = Math.max(minChartWidth, naturalWidth)}
     {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
     {@const linePath = generateLinePath(
         playerData.rankProgression,
@@ -68,7 +70,7 @@
                 <svg
                     width={chartWidth + padding.left + padding.right}
                     height={chartHeight + padding.top + padding.bottom}
-                    class="min-w-full">
+                    class={appearanceCount <= 5 ? 'w-full' : 'min-w-full'}>
                     <!-- Y-axis grid lines and labels -->
                     {#each [1, ...Array.from({ length: Math.floor(maxRank / 5) }, (_, i) => (i + 1) * 5).filter((rank) => rank <= maxRank)] as rank, i (i)}
                         {@const y = padding.top + ((rank - 1) / (maxRank - 1)) * chartHeight}
