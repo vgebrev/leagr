@@ -31,9 +31,9 @@
     <TableBodyCell class="px-1 py-1.5 text-center">
         {index + 1}
     </TableBodyCell>
-    <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold text-black dark:text-white">
+    <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold">
         <span
-            class="w-full cursor-pointer hover:underline"
+            class="w-full cursor-pointer hover:underline text-black dark:text-white"
             role="button"
             tabindex="0"
             onclick={handlePlayerClick}
