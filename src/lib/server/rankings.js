@@ -6,6 +6,7 @@ import { getLeagueDataPath } from './league.js';
 const rankingsMutexes = new Map();
 
 const BONUS_MULTIPLIER = 2;
+const KNOCKOUT_MULTIPLIER = 3;
 
 // Hybrid ranking algorithm configuration
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
@@ -182,6 +183,48 @@ export class RankingsManager {
     }
 
     /**
+     * Calculate knockout points for players based on knockout game results
+     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Object} teams - Teams data with player lists
+     * @returns {Object} Player knockout wins count
+     */
+    getKnockoutPoints(knockoutBracket, teams) {
+        const playerKnockoutWins = {};
+
+        if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
+            return playerKnockoutWins;
+        }
+
+        // Process each completed knockout match
+        for (const match of knockoutBracket) {
+            if (match.homeScore !== null && match.awayScore !== null) {
+                let winner = null;
+
+                if (match.homeScore > match.awayScore) {
+                    winner = match.home;
+                } else if (match.awayScore > match.homeScore) {
+                    winner = match.away;
+                }
+                // No points for draws in knockout (shouldn't happen)
+
+                if (winner && teams[winner]) {
+                    // Award knockout win to all players in winning team
+                    for (const player of teams[winner]) {
+                        if (!player) continue;
+
+                        if (!playerKnockoutWins[player]) {
+                            playerKnockoutWins[player] = 0;
+                        }
+                        playerKnockoutWins[player] += 1;
+                    }
+                }
+            }
+        }
+
+        return playerKnockoutWins;
+    }
+
+    /**
      * Apply hybrid ranking algorithm to raw player data
      * @param {Object} rawRankings - Rankings with basic points/appearances
      * @returns {Object} Enhanced rankings with calculated fields
@@ -251,6 +294,7 @@ export class RankingsManager {
                 // Original data
                 points: data.points,
                 appearances: data.appearances,
+                rankingDetail: data.rankingDetail || {},
 
                 // Calculated averages
                 rawAverage: parseFloat(rawAverage.toFixed(2)),
@@ -296,7 +340,7 @@ export class RankingsManager {
     }
 
     /**
-     * Update rankings by processing new game data
+     * Update rankings by processing all game data from scratch
      * @returns {Promise<Object>} - Updated rankings
      */
     async updateRankings() {
@@ -305,11 +349,16 @@ export class RankingsManager {
             const files = await fs.readdir(this.getDataPath());
             const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
 
-            const rankings = await this.loadRankingsUnsafe(); // Use the unsafe version to avoid double-mutex
+            // Start fresh each time to ensure data accuracy
+            const rankings = {
+                lastUpdated: null,
+                calculatedDates: [], // Keep for backward compatibility but don't use for limiting
+                players: {}
+            };
 
+            // Process all date files to build comprehensive ranking details
             for (const file of dateFiles) {
                 const date = file.replace('.json', '');
-                if (rankings.calculatedDates.includes(date)) continue;
 
                 const raw = await fs.readFile(path.join(this.getDataPath(), file), 'utf-8');
                 const { teams, games } = JSON.parse(raw);
@@ -323,6 +372,10 @@ export class RankingsManager {
                 const teamStats = this.getTeamStats(teamNames, results);
                 const standings = this.getStandings(teamNames, results);
 
+                // Calculate knockout points
+                const knockoutBracket = games?.['knockout-games']?.bracket;
+                const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
+
                 for (const [teamName, players] of teamEntries) {
                     const matchPoints = teamStats[teamName].points;
                     const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
@@ -331,12 +384,32 @@ export class RankingsManager {
                         if (!player) continue;
 
                         if (!rankings.players[player]) {
-                            rankings.players[player] = { points: 0, appearances: 0 };
+                            rankings.players[player] = {
+                                points: 0,
+                                appearances: 0,
+                                rankingDetail: {}
+                            };
                         }
 
-                        rankings.players[player].points += 1; // attendance
-                        rankings.players[player].points += matchPoints;
-                        rankings.players[player].points += bonusPoints;
+                        const knockoutWins = playerKnockoutWins[player] || 0;
+                        const knockoutPoints = knockoutWins * KNOCKOUT_MULTIPLIER;
+
+                        const appearancePoints = 1;
+                        const totalDatePoints =
+                            appearancePoints + matchPoints + bonusPoints + knockoutPoints;
+
+                        // Store detailed breakdown for this date
+                        rankings.players[player].rankingDetail[date] = {
+                            team: teamName,
+                            appearancePoints,
+                            matchPoints,
+                            bonusPoints,
+                            knockoutPoints,
+                            totalPoints: totalDatePoints
+                        };
+
+                        // Update totals
+                        rankings.players[player].points += totalDatePoints;
                         rankings.players[player].appearances += 1;
                     }
                 }

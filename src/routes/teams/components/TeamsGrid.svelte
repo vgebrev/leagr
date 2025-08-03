@@ -1,6 +1,5 @@
 <script>
     import TeamTable from './TeamTable.svelte';
-    import { teamColours } from '$lib/shared/helpers.js';
 
     let { teams, waitingList, unassignedPlayers, canModifyList, onremove, onassign } = $props();
 
@@ -13,7 +12,7 @@
         <TeamTable
             {team}
             {teamName}
-            color={teamColours[i % teamColours.length]}
+            color={teamName.split(' ')[0].toLowerCase()}
             {canModifyList}
             {onassign}
             {onremove}

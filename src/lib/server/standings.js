@@ -167,6 +167,111 @@ export class StandingsManager {
             throw new StandingsError(`Failed to get knockout seeding: ${error.message}`, 500);
         }
     }
+
+    /**
+     * Generate knockout tournament bracket from seeded teams
+     * @param {Array<string>} teams - Teams in seeding order (1st, 2nd, 3rd, etc.)
+     * @returns {Object} Bracket structure with teams and matches
+     */
+    generateKnockoutBracket(teams) {
+        if (!Array.isArray(teams)) {
+            throw new StandingsError('Teams must be an array', 400);
+        }
+
+        if (teams.length < 2) {
+            return { teams: [], bracket: [] };
+        }
+
+        // Find the largest power of 2 that fits the teams
+        const powerOf2 = Math.pow(2, Math.floor(Math.log2(teams.length)));
+        const tournamentTeams = teams.slice(0, powerOf2);
+
+        const bracket = [];
+
+        // Generate matches by round
+        let currentRound = tournamentTeams.slice();
+        let roundName = this._getRoundName(currentRound.length);
+
+        while (currentRound.length > 1) {
+            const matches = [];
+            const pairings = [];
+
+            // Create standard tournament pairings (1 vs n, 2 vs n-1, etc.)
+            for (let i = 0; i < currentRound.length / 2; i++) {
+                const higherSeed = currentRound[i];
+                const lowerSeed = currentRound[currentRound.length - 1 - i];
+                pairings.push([higherSeed, lowerSeed]);
+            }
+
+            // Create matches in reverse order (top seeds play later)
+            for (let i = pairings.length - 1; i >= 0; i--) {
+                const [home, away] = pairings[i];
+                matches.push({
+                    round: roundName,
+                    match: pairings.length - i,
+                    home,
+                    away,
+                    homeScore: null,
+                    awayScore: null
+                });
+            }
+
+            bracket.push(...matches);
+
+            // Prepare next round with placeholders
+            currentRound = new Array(currentRound.length / 2).fill(null);
+            roundName = this._getRoundName(currentRound.length);
+        }
+
+        return {
+            teams: tournamentTeams,
+            bracket
+        };
+    }
+
+    /**
+     * Get round name based on team count
+     * @param {number} teamCount - Number of teams in round
+     * @returns {string} Round name
+     * @private
+     */
+    _getRoundName(teamCount) {
+        switch (teamCount) {
+            case 2:
+                return 'final';
+            case 4:
+                return 'semi';
+            case 8:
+                return 'quarter';
+            case 16:
+                return 'round-of-16';
+            default:
+                return `round-of-${teamCount}`;
+        }
+    }
+
+    /**
+     * Generate knockout bracket for a specific date
+     * @param {string} date - Date in YYYY-MM-DD format
+     * @param {string|null} leagueId - League identifier
+     * @returns {Promise<Object>} Promise resolving to bracket structure
+     */
+    async getKnockoutBracketForDate(date, leagueId = null) {
+        if (!date || typeof date !== 'string') {
+            throw new StandingsError('Valid date is required', 400);
+        }
+
+        try {
+            const seeding = await this.getKnockoutSeeding(date, leagueId);
+            return this.generateKnockoutBracket(seeding);
+        } catch (error) {
+            if (error instanceof StandingsError) {
+                throw error;
+            }
+
+            throw new StandingsError(`Failed to generate knockout bracket: ${error.message}`, 500);
+        }
+    }
 }
 
 /**

@@ -7,7 +7,8 @@
     const pointsInfo = [
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
-        'Team Bonus: 2-8pts based on final team position and number of teams'
+        'Team Bonus: 2-8pts based on final team position and number of teams',
+        'Knockout Bonus: 3pts for each knockout match won'
     ];
 
     const rankingInfo = [
@@ -29,8 +30,8 @@
             <Listgroup items={rankingInfo} />
             {#if rankingMetadata}
                 <p class="text-center text-gray-600 dark:text-gray-400">
-                    League Average: {rankingMetadata.globalAverage} pts/game • Full Confidence:
-                    {rankingMetadata.confidenceThreshold}+ games • Total Players: {rankingMetadata.totalPlayers}
+                    League Average: {rankingMetadata.globalAverage} pts/appearance • Full Confidence:
+                    {rankingMetadata.confidenceThreshold}+ appearances • Total Players: {rankingMetadata.totalPlayers}
                 </p>
             {/if}
             <p>Rankings are used to seed players and generate balanced teams.</p>

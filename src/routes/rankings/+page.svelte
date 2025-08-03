@@ -3,7 +3,6 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
@@ -34,10 +33,6 @@
         })
     );
 
-    let celebrating = $state(false);
-    /** @type {string} */
-    let winner = $state('');
-
     async function updateRankings() {
         await withLoading(
             async () => {
@@ -51,13 +46,6 @@
                 );
             }
         );
-    }
-
-    /** @param {number} index */
-    function celebrate(index) {
-        if (index !== 0) return;
-        winner = sortedPlayers[index][0];
-        celebrating = true;
     }
 
     /** Handle sort change event
@@ -87,13 +75,6 @@
     <RankingsTable
         {sortedPlayers}
         currentSort={sortBy}
-        onSortChange={handleSortChange}
-        onPlayerClick={celebrate} />
+        onSortChange={handleSortChange} />
     <RankingActions onUpdate={updateRankings} />
 </div>
-<CelebrationOverlay
-    bind:celebrating
-    teamName={winner}
-    teamColour="default"
-    icon="🥇"
-    confettiColours={['#efb100', '#fff085']} />

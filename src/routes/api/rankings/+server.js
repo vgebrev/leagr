@@ -9,7 +9,22 @@ export const GET = async ({ locals }) => {
     }
 
     const rankingsData = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
-    return json(rankingsData);
+
+    // Strip rankingDetail data for API endpoint (only needed for individual player pages)
+    const strippedRankings = {
+        ...rankingsData,
+        players: Object.fromEntries(
+            Object.entries(rankingsData.players).map(([name, playerData]) => [
+                name,
+                {
+                    ...playerData,
+                    rankingDetail: undefined
+                }
+            ])
+        )
+    };
+
+    return json(strippedRankings);
 };
 
 export const POST = async ({ locals }) => {
@@ -19,5 +34,20 @@ export const POST = async ({ locals }) => {
     }
 
     const rankingsData = await createRankingsManager().setLeague(leagueId).updateRankings();
-    return json(rankingsData);
+
+    // Strip rankingDetail data for API endpoint (only needed for individual player pages)
+    const strippedRankings = {
+        ...rankingsData,
+        players: Object.fromEntries(
+            Object.entries(rankingsData.players).map(([name, playerData]) => [
+                name,
+                {
+                    ...playerData,
+                    rankingDetail: undefined
+                }
+            ])
+        )
+    };
+
+    return json(strippedRankings);
 };
