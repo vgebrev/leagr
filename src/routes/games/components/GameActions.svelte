@@ -6,7 +6,6 @@
         ExclamationCircleSolid,
         UsersGroupSolid
     } from 'flowbite-svelte-icons';
-    import TrophyIcon from '$components/TrophyIcon.svelte';
 
     let {
         hasTeams = false,
@@ -15,7 +14,6 @@
         competitionEnded = false,
         onGenerateSchedule,
         onAddMoreGames,
-        onAddKnockoutGames,
         date = ''
     } = $props();
 
@@ -27,7 +25,7 @@
      */
     async function handleGenerateSchedule(forceRegenerate = false) {
         if (hasSchedule && !forceRegenerate && !canResetSchedule) {
-            return; // Already has schedule and can't reset
+            return; // Already has a schedule and can't reset
         }
 
         if (hasSchedule && !forceRegenerate) {
@@ -48,15 +46,6 @@
     async function handleAddMoreGames() {
         if (onAddMoreGames) {
             await onAddMoreGames();
-        }
-    }
-
-    /**
-     * Handle adding knockout games
-     */
-    async function handleAddKnockoutGames() {
-        if (onAddKnockoutGames) {
-            await onAddKnockoutGames();
         }
     }
 </script>
@@ -107,13 +96,5 @@
         onclick={handleAddMoreGames}>
         <CirclePlusSolid class="me-2 h-4 w-4" />
         Add More Games
-    </Button>
-
-    <!-- Add knockout games button (only show if there's already a schedule) -->
-    <Button
-        disabled={!hasTeams || competitionEnded}
-        onclick={handleAddKnockoutGames}>
-        <TrophyIcon class="me-2 h-4 w-4" />
-        Add Knockout Games
     </Button>
 {/if}

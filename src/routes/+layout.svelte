@@ -62,7 +62,7 @@
     });
 
     // Pages that need the date selector
-    const datePages = ['/players', '/teams', '/games', '/table', '/settings'];
+    const datePages = ['/players', '/teams', '/games', '/knockout', '/table', '/settings'];
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
 
     // Pages that should be accessible without authentication

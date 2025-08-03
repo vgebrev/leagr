@@ -33,7 +33,7 @@
     </TableBodyCell>
     <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold">
         <span
-            class="w-full cursor-pointer hover:underline text-black dark:text-white"
+            class="w-full cursor-pointer text-black hover:underline dark:text-white"
             role="button"
             tabindex="0"
             onclick={handlePlayerClick}

@@ -9,11 +9,7 @@
         Alert,
         Button
     } from 'flowbite-svelte';
-    import {
-        CalendarMonthSolid,
-        ExclamationCircleSolid,
-        RectangleListSolid
-    } from 'flowbite-svelte-icons';
+    import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
 
     let { standings = [], date, onTeamClick = null } = $props();
@@ -30,10 +26,6 @@
 </script>
 
 {#if standings.length > 0}
-    <div class="mb-2 flex items-center gap-2">
-        <RectangleListSolid class="h-5 w-5" />
-        <h3 class="text-lg font-semibold">League Table</h3>
-    </div>
     <Table
         class="w-full text-xs"
         shadow>

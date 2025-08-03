@@ -7,6 +7,7 @@
         RectangleListSolid,
         AwardSolid
     } from 'flowbite-svelte-icons';
+    import TrophyIcon from '$components/TrophyIcon.svelte';
     import { page } from '$app/state';
     let { date } = $props();
     let activeUrl = $derived(`${page.url.pathname}${page.url.search}`);
@@ -15,7 +16,7 @@
 <BottomNav
     {activeUrl}
     position="fixed"
-    classes={{ inner: 'grid-cols-5' }}
+    classes={{ inner: 'grid-cols-6' }}
     class="z-10 shrink-0">
     <BottomNavItem
         btnName="Players"
@@ -40,6 +41,13 @@
         href="/table?date={date}">
         <RectangleListSolid class="group-hover:text-primary-600 dark:group-hover:text-primary-500"
         ></RectangleListSolid>
+    </BottomNavItem>
+    <BottomNavItem
+        class="-ml-2"
+        btnName="Cup"
+        href="/knockout?date={date}">
+        <TrophyIcon class="group-hover:text-primary-600 dark:group-hover:text-primary-500 !h-5 !w-5"
+        ></TrophyIcon>
     </BottomNavItem>
     <BottomNavItem
         btnName="Rankings"
