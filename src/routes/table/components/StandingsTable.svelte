@@ -29,12 +29,11 @@
     }
 </script>
 
-<div class="mb-2 flex items-center gap-2">
-    <RectangleListSolid class="h-5 w-5" />
-    <h3 class="text-lg font-semibold">League Table</h3>
-</div>
-
 {#if standings.length > 0}
+    <div class="mb-2 flex items-center gap-2">
+        <RectangleListSolid class="h-5 w-5" />
+        <h3 class="text-lg font-semibold">League Table</h3>
+    </div>
     <Table
         class="w-full text-xs"
         shadow>
