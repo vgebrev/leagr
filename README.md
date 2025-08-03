@@ -1,18 +1,25 @@
 # Leagr
 
-A little [SvelteKit 5](https://svelte.dev/) web app to help organise social 5-a-side leagues.
+A little [SvelteKit 5](https://svelte.dev/) web app to help organise social 5-a-side [football] leagues.
 
 Features include:
 
-- Subdomain-based league registration.
-- Access-controlled league isolation.
-- [Mailgun](https://www.mailgun.com/) integration for sending email (Access code recovery).
-- View and manage player availability.
-- Waiting list after a limit is reached.
-- Generate random teams, either completely random or using player rankings as seeds.
-- Generate a round-robin home-away match schedule and track results.
-- Standings table based on match results.
-- Cumulative player rankings based on team performances.
+- **League Management**
+  - Subdomain-based league registration.
+  - Access-controlled league isolation.
+  - [Mailgun](https://www.mailgun.com/) integration for sending email (Access code recovery).
+- **Player Management**
+  - View and manage player availability.
+  - Waiting list after a limit is reached.
+- **Team Management**
+  - Generate random teams, either completely random or using player rankings as seeds.
+- **Game Scheduling and Score Tracking**
+  - Generate a round-robin home-away match schedule and track results.
+  - Standings table based on match results.
+  - Knockout tournament generation with teams seeded by standings.
+- **Player Rankings**
+  - Cumulative player rankings based on team performances.
+  - Player ranking details and history.
 
 ## Environment Setup
 
@@ -22,7 +29,7 @@ For development (needs [Node.js](https://nodejs.org/en)):
 
 - `npm ci` - Ensures dependencies are installed.
 - `npm run dev` - Starts the dev server. The app is available at http://localhost:5173.
-- `npm run dev -- --host` - Starts the dev server and allows access from other devices on your network (useful for mobile testing, or if you're using WSL).
+- `npm run dev -- --host` - Starts the dev server and allows access from other devices on your network (useful for mobile testing, or if you're using [WSL](https://learn.microsoft.com/en-us/windows/wsl/)).
 
 ### Subdomain Setup
 
@@ -57,7 +64,7 @@ The application includes rudimentary security features to prevent abuse:
 - Must be provided via `X-API-KEY` header
 - Example: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
 
-#### Access Code Authorization
+#### Access Code Authorisation
 
 - Each league has a unique access code
 - To access the league, the access code must be provided in a "code" query parameter, or the user is redirected to a login page
@@ -96,7 +103,7 @@ docker run -d \
   leagr:latest
 ```
 
-Expose the app to the internet by configuring your web server or reverse proxy (e.g., Nginx, Apache) to forward requests to port 3000.
+Expose the app to the internet by configuring your web server or reverse proxy (e.g. Nginx, Apache) to forward requests to port 3000.
 
 **Environment Variables:**
 
