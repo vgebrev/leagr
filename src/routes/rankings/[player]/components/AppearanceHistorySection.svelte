@@ -7,9 +7,7 @@
 <div>
     <div class="mb-4">
         <h2 class="text-lg font-semibold">Appearance History</h2>
-        <p class="text-sm text-gray-600 dark:text-gray-400">
-            Detailed breakdown of points earned per appearance
-        </p>
+        <p class="text-sm text-gray-500">Detailed breakdown of points earned per appearance</p>
     </div>
 
     {#if playerData.sortedDetails.length === 0}

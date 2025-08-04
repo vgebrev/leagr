@@ -1,4 +1,4 @@
-import { error } from '@sveltejs/kit';
+import { json, error } from '@sveltejs/kit';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
@@ -79,8 +79,8 @@ async function calculateHistoricalRanks(rankings, player, sortedDetails, ranking
     return progression;
 }
 
-/** @type {import('./$types').PageServerLoad} */
-export async function load({ params, locals }) {
+/** @type {import('./$types').RequestHandler} */
+export async function GET({ params, locals }) {
     const { player } = params;
 
     if (!player) {
@@ -118,7 +118,7 @@ export async function load({ params, locals }) {
             rankingsManager
         );
 
-        return {
+        return json({
             player,
             playerData: {
                 ...playerData,
@@ -126,7 +126,7 @@ export async function load({ params, locals }) {
                 rankProgression
             },
             rankingMetadata: rankings.rankingMetadata
-        };
+        });
     } catch (err) {
         if (err.status) {
             throw err;
