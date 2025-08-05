@@ -1,5 +1,6 @@
 <script>
     import { TableBodyCell, TableBodyRow } from 'flowbite-svelte';
+    import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
 
     let { player, data, index, currentSort, onSortChange } = $props();
@@ -29,7 +30,27 @@
 
 <TableBodyRow>
     <TableBodyCell class="px-1 py-1.5 text-center">
-        {index + 1}
+        <div class="flex items-center justify-evenly gap-1">
+            <span>{index + 1}</span>
+            {#if data.rankMovement > 0}
+                <span
+                    class="flex items-center text-xs text-green-500"
+                    title="Moved up {data.rankMovement} places">
+                    <AngleUpOutline class="h-4 w-4 shrink-0" /><sub>{data.rankMovement}</sub>
+                </span>
+            {:else if data.rankMovement < 0}
+                <span
+                    class="flex items-center text-xs text-red-500"
+                    title="Moved down {Math.abs(data.rankMovement)} places">
+                    <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
+                        >{Math.abs(data.rankMovement)}</sub>
+                </span>
+            {:else}
+                <span
+                    class="text-xs text-gray-500"
+                    title="No rank movement"><MinusOutline class="h-4 w-4 shrink-0" /></span>
+            {/if}
+        </div>
     </TableBodyCell>
     <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold">
         <span

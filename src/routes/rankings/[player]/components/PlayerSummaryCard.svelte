@@ -1,4 +1,6 @@
 <script>
+    import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
+
     let { playerData } = $props();
 </script>
 
@@ -7,7 +9,28 @@
     <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
         <div class="text-center">
             <div class="text-sm text-gray-600 dark:text-gray-400">Current Rank</div>
-            <div class="text-2xl font-bold">#{playerData.rank}</div>
+            <div class="flex items-center justify-center gap-2">
+                <div class="text-2xl font-bold">#{playerData.rank}</div>
+                {#if playerData.rankMovement > 0}
+                    <span
+                        class="flex items-center text-sm text-green-500"
+                        title="Moved up {playerData.rankMovement} places">
+                        <AngleUpOutline class="h-4 w-4 shrink-0" /><sub
+                            >{playerData.rankMovement}</sub>
+                    </span>
+                {:else if playerData.rankMovement < 0}
+                    <span
+                        class="flex items-center text-sm text-red-500"
+                        title="Moved down {Math.abs(playerData.rankMovement)} places">
+                        <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
+                            >{Math.abs(playerData.rankMovement)}</sub>
+                    </span>
+                {:else}
+                    <span
+                        class="text-sm text-gray-500"
+                        title="No rank movement"><MinusOutline class="h-4 w-4 shrink-0" /></span>
+                {/if}
+            </div>
         </div>
         <div class="text-center">
             <div class="text-sm text-gray-600 dark:text-gray-400">Ranking Points</div>

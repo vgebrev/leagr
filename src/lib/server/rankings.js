@@ -349,6 +349,9 @@ export class RankingsManager {
             const files = await fs.readdir(this.getDataPath());
             const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
 
+            // Load previous rankings to track movement
+            const previousRankings = await this.loadRankingsUnsafe();
+
             // Start fresh each time to ensure data accuracy
             const rankings = {
                 lastUpdated: null,
@@ -421,8 +424,46 @@ export class RankingsManager {
             // Apply hybrid ranking algorithm to the raw data
             const enhancedRankings = this.calculateEnhancedRankings(rankings);
 
+            // Add movement data by comparing with previous rankings
+            this.calculateMovementData(enhancedRankings, previousRankings);
+
             await this.saveRankingsUnsafe(enhancedRankings); // Use the unsafe version to avoid double-mutex
             return enhancedRankings;
+        });
+    }
+
+    /**
+     * Calculate movement data by comparing current and previous rankings
+     * @param {Object} currentRankings - Current enhanced rankings
+     * @param {Object} previousRankings - Previous rankings data
+     */
+    calculateMovementData(currentRankings, previousRankings) {
+        // If no previous rankings exist, everyone is new
+        if (!previousRankings || !previousRankings.players) {
+            Object.values(currentRankings.players).forEach((player) => {
+                player.previousRank = null;
+                player.rankMovement = 0;
+                player.isNew = true;
+            });
+            return;
+        }
+
+        // Compare ranks between current and previous
+        Object.entries(currentRankings.players).forEach(([playerName, currentData]) => {
+            const previousData = previousRankings.players[playerName];
+
+            if (!previousData || typeof previousData.rank !== 'number') {
+                // New player
+                currentData.previousRank = null;
+                currentData.rankMovement = 0;
+                currentData.isNew = true;
+            } else {
+                // Existing player - calculate movement
+                currentData.previousRank = previousData.rank;
+                // Movement is negative when rank improves (goes down in number)
+                currentData.rankMovement = previousData.rank - currentData.rank;
+                currentData.isNew = false;
+            }
         });
     }
 
