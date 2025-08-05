@@ -1,29 +1,14 @@
 <script>
     import { onMount } from 'svelte';
-    import { Tooltip } from 'flowbite-svelte';
+    import RankProgressionChartNode from './RankProgressionChartNode.svelte';
 
     let { playerData } = $props();
     let scrollContainer = $state();
 
     /**
-     * Format date for display
-     * @param {string} date - Date in YYYY-MM-DD format
-     * @returns {string} Formatted date
-     */
-    function formatDate(date) {
-        return new Date(date).toLocaleDateString('en-GB', {
-            weekday: 'short',
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
-    }
-
-    /**
-     * Scroll chart to show latest data
+     * Scroll chart to show the latest data
      */
     onMount(() => {
-        // Scroll chart to show latest data (right side)
         if (scrollContainer) {
             scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
         }
@@ -119,34 +104,11 @@
                             {@const x =
                                 (index / (playerData.rankProgression.length - 1)) * chartWidth}
                             {@const y = ((point.rank - 1) / (maxRank - 1)) * chartHeight}
-                            {@const played = point.played !== false}
-                            <!-- Default to true for backward compatibility -->
-                            <circle
-                                cx={x}
-                                cy={y}
-                                r="4"
-                                fill={played ? 'currentColor' : 'white'}
-                                class={played
-                                    ? 'text-primary-700 dark:text-primary-700'
-                                    : 'dark:fill-gray-800'}
-                                stroke={played ? 'none' : 'currentColor'}
-                                stroke-width={played ? '0' : '2'}
-                                id="chart-point-{index}">
-                            </circle>
-                            <Tooltip triggeredBy="#chart-point-{index}">
-                                {formatDate(point.date)}: Rank #{point.rank} ({point.points}
-                                ranking pts) {played ? '' : '(No appearance)'}
-                            </Tooltip>
-                            <!-- Rank number label -->
-                            <text
+                            <RankProgressionChartNode
+                                {point}
                                 {x}
-                                y={y - 8}
-                                class={played
-                                    ? 'fill-gray-700 text-xs font-medium dark:fill-gray-300'
-                                    : 'fill-gray-400 text-xs font-medium dark:fill-gray-500'}
-                                text-anchor="middle">
-                                {point.rank}
-                            </text>
+                                {y}
+                                {playerData} />
                         {/each}
                     </g>
 

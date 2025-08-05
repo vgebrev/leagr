@@ -22,6 +22,7 @@
         class="ml-2 truncate text-xl font-semibold"
         id="league-name">{displayInfo.name}</span>
     <Tooltip
+        class="shadow-lg"
         triggeredBy="#league-name"
         transition={scale}>{displayInfo.name}</Tooltip>
 </div>

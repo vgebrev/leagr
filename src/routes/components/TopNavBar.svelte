@@ -57,6 +57,7 @@
                 onclick={shareCurrentPage}
                 id="share-button"><ShareAllOutline /></button>
             <Tooltip
+                class="shadow-lg"
                 triggeredBy="#share-button"
                 transition={scale}>Share link</Tooltip>
             <a
@@ -64,6 +65,7 @@
                 href={`/settings?date=${date}`}
                 id="settings-link"><AdjustmentsHorizontalSolid /></a>
             <Tooltip
+                class="shadow-lg"
                 triggeredBy="#settings-link"
                 transition={scale}>Settings</Tooltip>
         {/if}
@@ -71,6 +73,7 @@
             color="alternative"
             id="theme-picker" />
         <Tooltip
+            class="shadow-lg"
             triggeredBy="#theme-picker"
             transition={scale}>Toggle theme</Tooltip>
     </div>

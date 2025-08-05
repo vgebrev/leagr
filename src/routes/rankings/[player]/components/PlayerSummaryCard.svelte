@@ -1,6 +1,7 @@
 <script>
     import { Tooltip } from 'flowbite-svelte';
     import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
+    import { scale } from 'svelte/transition';
 
     let { playerData } = $props();
 </script>
@@ -19,8 +20,10 @@
                         <AngleUpOutline class="h-4 w-4 shrink-0" /><sub
                             >{playerData.rankMovement}</sub>
                     </span>
-                    <Tooltip triggeredBy="#player-rank-up"
-                        >Moved up {playerData.rankMovement} places</Tooltip>
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#player-rank-up"
+                        transition={scale}>Moved up {playerData.rankMovement} places</Tooltip>
                 {:else if playerData.rankMovement < 0}
                     <span
                         class="flex items-center text-sm text-red-500"
@@ -28,13 +31,19 @@
                         <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
                             >{Math.abs(playerData.rankMovement)}</sub>
                     </span>
-                    <Tooltip triggeredBy="#player-rank-down"
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#player-rank-down"
+                        transition={scale}
                         >Moved down {Math.abs(playerData.rankMovement)} places</Tooltip>
                 {:else}
                     <span
                         class="text-sm text-gray-500"
                         id="player-rank-same"><MinusOutline class="h-4 w-4 shrink-0" /></span>
-                    <Tooltip triggeredBy="#player-rank-same">No rank movement</Tooltip>
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#player-rank-same"
+                        transition={scale}>No rank movement</Tooltip>
                 {/if}
             </div>
         </div>

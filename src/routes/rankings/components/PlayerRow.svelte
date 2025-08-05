@@ -2,6 +2,7 @@
     import { TableBodyCell, TableBodyRow, Tooltip } from 'flowbite-svelte';
     import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
+    import { scale } from 'svelte/transition';
 
     let { player, data, index, currentSort, onSortChange } = $props();
 
@@ -47,8 +48,10 @@
                     id="rank-up-{sanitizeId(player)}">
                     <AngleUpOutline class="h-4 w-4 shrink-0" /><sub>{data.rankMovement}</sub>
                 </span>
-                <Tooltip triggeredBy="#rank-up-{sanitizeId(player)}"
-                    >Moved up {data.rankMovement} places</Tooltip>
+                <Tooltip
+                    class="shadow-lg"
+                    triggeredBy="#rank-up-{sanitizeId(player)}"
+                    transition={scale}>Moved up {data.rankMovement} places</Tooltip>
             {:else if data.rankMovement < 0}
                 <span
                     class="flex items-center text-xs text-red-500"
@@ -56,14 +59,19 @@
                     <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
                         >{Math.abs(data.rankMovement)}</sub>
                 </span>
-                <Tooltip triggeredBy="#rank-down-{sanitizeId(player)}"
-                    >Moved down {Math.abs(data.rankMovement)} places</Tooltip>
+                <Tooltip
+                    class="shadow-lg"
+                    triggeredBy="#rank-down-{sanitizeId(player)}"
+                    transition={scale}>Moved down {Math.abs(data.rankMovement)} places</Tooltip>
             {:else}
                 <span
                     class="text-xs text-gray-500"
                     id="rank-same-{sanitizeId(player)}"
                     ><MinusOutline class="h-4 w-4 shrink-0" /></span>
-                <Tooltip triggeredBy="#rank-same-{sanitizeId(player)}">No rank movement</Tooltip>
+                <Tooltip
+                    class="shadow-lg"
+                    triggeredBy="#rank-same-{sanitizeId(player)}"
+                    transition={scale}>No rank movement</Tooltip>
             {/if}
         </div>
     </TableBodyCell>
