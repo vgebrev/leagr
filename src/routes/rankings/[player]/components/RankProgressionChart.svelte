@@ -3,6 +3,9 @@
     import RankProgressionChartNode from './RankProgressionChartNode.svelte';
 
     let { playerData } = $props();
+
+    // Use details for chart progression (already in chronological order)
+    const progression = $derived(playerData.details || []);
     let scrollContainer = $state();
 
     /**
@@ -15,11 +18,11 @@
     });
 </script>
 
-{#if playerData.rankProgression && playerData.rankProgression.length > 1}
-    {@const maxRank = Math.max(...playerData.rankProgression.map((p) => p.totalPlayers))}
+{#if progression && progression.length > 1}
+    {@const maxRank = Math.max(...progression.map((p) => p.totalPlayers))}
     {@const chartHeight = 200}
     {@const segmentWidth = 60}
-    {@const appearanceCount = playerData.rankProgression.length}
+    {@const appearanceCount = progression.length}
     {@const naturalWidth = appearanceCount * segmentWidth}
     {@const minChartWidth = appearanceCount <= 5 ? naturalWidth : 400}
     {@const chartWidth = Math.max(minChartWidth, naturalWidth)}
@@ -76,14 +79,11 @@
                     <!-- Chart area -->
                     <g transform="translate({padding.left}, {padding.top})">
                         <!-- Rank progression lines (individual segments) -->
-                        {#each playerData.rankProgression.slice(0, -1) as point, index (point.date)}
-                            {@const nextPoint = playerData.rankProgression[index + 1]}
-                            {@const x1 =
-                                (index / (playerData.rankProgression.length - 1)) * chartWidth}
+                        {#each progression.slice(0, -1) as point, index (point.date)}
+                            {@const nextPoint = progression[index + 1]}
+                            {@const x1 = (index / (progression.length - 1)) * chartWidth}
                             {@const y1 = ((point.rank - 1) / (maxRank - 1)) * chartHeight}
-                            {@const x2 =
-                                ((index + 1) / (playerData.rankProgression.length - 1)) *
-                                chartWidth}
+                            {@const x2 = ((index + 1) / (progression.length - 1)) * chartWidth}
                             {@const y2 = ((nextPoint.rank - 1) / (maxRank - 1)) * chartHeight}
                             {@const currentPlayed = point.played !== false}
                             {@const nextPlayed = nextPoint.played !== false}
@@ -100,23 +100,19 @@
                         {/each}
 
                         <!-- Data points -->
-                        {#each playerData.rankProgression as point, index (index)}
-                            {@const x =
-                                (index / (playerData.rankProgression.length - 1)) * chartWidth}
+                        {#each progression as point, index (point.date)}
+                            {@const x = (index / (progression.length - 1)) * chartWidth}
                             {@const y = ((point.rank - 1) / (maxRank - 1)) * chartHeight}
                             <RankProgressionChartNode
                                 {point}
                                 {x}
-                                {y}
-                                {playerData} />
+                                {y} />
                         {/each}
                     </g>
 
                     <!-- X-axis labels (dates) -->
-                    {#each playerData.rankProgression as point, index (index)}
-                        {@const x =
-                            padding.left +
-                            (index / (playerData.rankProgression.length - 1)) * chartWidth}
+                    {#each progression as point, index (point.date)}
+                        {@const x = padding.left + (index / (progression.length - 1)) * chartWidth}
                         <text
                             {x}
                             y={chartHeight + padding.top + 20}
@@ -133,7 +129,7 @@
             </div>
 
             <div class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-                Complete rank progression over {playerData.rankProgression.length} sessions
+                Complete rank progression over {progression.length} sessions
                 <br />
                 <span class="text-xs">Filled circles: played • Empty circles: missed session</span>
             </div>

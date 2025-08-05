@@ -3,11 +3,10 @@
     import AppearanceCard from './AppearanceCard.svelte';
     import { scale } from 'svelte/transition';
 
-    let { point, x, y, playerData } = $props();
+    let { point, x, y } = $props();
     const played = point.played !== false;
-    const appearanceDetail = played
-        ? playerData.sortedDetails.find((d) => d.date === point.date)
-        : null;
+    // For popover content, use the same point data since it includes all necessary fields
+    const appearanceDetail = played ? point : null;
 
     /**
      * Format date for display
@@ -53,7 +52,7 @@
 <!-- Popover for this node -->
 <Popover
     trigger="hover"
-    title="Rank #{point.rank} • {point.points} Ranking Points"
+    title="Rank #{point.rank} • {point.rankingPoints} Ranking Points"
     transition={scale}
     class="drop-shadow-lg">
     {#if played && appearanceDetail}
