@@ -340,45 +340,49 @@ export class RankingsManager {
     }
 
     /**
-     * Update rankings by processing all game data from scratch
+     * Update rankings by processing all game data from scratch with complete history tracking
      * @returns {Promise<Object>} - Updated rankings
      */
     async updateRankings() {
         const mutex = this.getRankingsMutex();
         return await mutex.runExclusive(async () => {
             const files = await fs.readdir(this.getDataPath());
-            const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f));
+            const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort(); // Process chronologically
 
-            // Load previous rankings to track movement
-            const previousRankings = await this.loadRankingsUnsafe();
+            // Track all players we've seen and their cumulative data
+            const playerTracker = new Map();
+            const allCalculatedDates = [];
 
-            // Start fresh each time to ensure data accuracy
-            const rankings = {
-                lastUpdated: null,
-                calculatedDates: [], // Keep for backward compatibility but don't use for limiting
-                players: {}
-            };
-
-            // Process all date files to build comprehensive ranking details
+            // Process each date file chronologically
             for (const file of dateFiles) {
                 const date = file.replace('.json', '');
+                allCalculatedDates.push(date);
 
                 const raw = await fs.readFile(path.join(this.getDataPath(), file), 'utf-8');
                 const { teams, games } = JSON.parse(raw);
 
                 const teamEntries = Object.entries(teams ?? {});
                 const rounds = games?.rounds ?? [];
-                if (!teamEntries.length || !rounds.length) continue;
 
+                // Skip dates with no data
+                if (!teamEntries.length || !rounds.length) {
+                    // Still need to update ranks for existing players (no appearances)
+                    this.updateRanksForDate(date, playerTracker, new Set());
+                    continue;
+                }
+
+                // Process game data for this date
                 const teamNames = teamEntries.map(([name]) => name);
                 const results = this.getMatchResults(rounds);
                 const teamStats = this.getTeamStats(teamNames, results);
                 const standings = this.getStandings(teamNames, results);
-
-                // Calculate knockout points
                 const knockoutBracket = games?.['knockout-games']?.bracket;
                 const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
 
+                // Track players who appeared this date
+                const playersWhoAppeared = new Set();
+
+                // Update player data for those who appeared
                 for (const [teamName, players] of teamEntries) {
                     const matchPoints = teamStats[teamName].points;
                     const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
@@ -386,23 +390,26 @@ export class RankingsManager {
                     for (const player of players) {
                         if (!player) continue;
 
-                        if (!rankings.players[player]) {
-                            rankings.players[player] = {
+                        playersWhoAppeared.add(player);
+
+                        // Initialize player if first appearance
+                        if (!playerTracker.has(player)) {
+                            playerTracker.set(player, {
                                 points: 0,
                                 appearances: 0,
                                 rankingDetail: {}
-                            };
+                            });
                         }
 
+                        const playerData = playerTracker.get(player);
                         const knockoutWins = playerKnockoutWins[player] || 0;
                         const knockoutPoints = knockoutWins * KNOCKOUT_MULTIPLIER;
-
                         const appearancePoints = 1;
                         const totalDatePoints =
                             appearancePoints + matchPoints + bonusPoints + knockoutPoints;
 
-                        // Store detailed breakdown for this date
-                        rankings.players[player].rankingDetail[date] = {
+                        // Store appearance data for this date
+                        playerData.rankingDetail[date] = {
                             team: teamName,
                             appearancePoints,
                             matchPoints,
@@ -411,59 +418,112 @@ export class RankingsManager {
                             totalPoints: totalDatePoints
                         };
 
-                        // Update totals
-                        rankings.players[player].points += totalDatePoints;
-                        rankings.players[player].appearances += 1;
+                        // Update cumulative totals
+                        playerData.points += totalDatePoints;
+                        playerData.appearances += 1;
                     }
                 }
 
-                rankings.calculatedDates.push(date);
-                rankings.lastUpdated = date;
+                // Calculate and store ranks for all tracked players on this date
+                this.updateRanksForDate(date, playerTracker, playersWhoAppeared);
             }
 
-            // Apply hybrid ranking algorithm to the raw data
+            // Convert tracker to final rankings format
+            const rankings = {
+                lastUpdated: allCalculatedDates[allCalculatedDates.length - 1] || null,
+                calculatedDates: allCalculatedDates,
+                players: Object.fromEntries(playerTracker)
+            };
+
+            // Apply hybrid ranking algorithm to get final enhanced data
             const enhancedRankings = this.calculateEnhancedRankings(rankings);
 
-            // Add movement data by comparing with previous rankings
-            this.calculateMovementData(enhancedRankings, previousRankings);
+            // Calculate movement from complete history
+            this.calculateMovementFromHistory(enhancedRankings);
 
-            await this.saveRankingsUnsafe(enhancedRankings); // Use the unsafe version to avoid double-mutex
+            await this.saveRankingsUnsafe(enhancedRankings);
             return enhancedRankings;
         });
     }
 
     /**
-     * Calculate movement data by comparing current and previous rankings
-     * @param {Object} currentRankings - Current enhanced rankings
-     * @param {Object} previousRankings - Previous rankings data
+     * Calculate and store ranks for all tracked players on a specific date
+     * @param {string} date - The date to calculate ranks for
+     * @param {Map} playerTracker - Map of all player data
+     * @param {Set} playersWhoAppeared - Set of players who appeared this date
      */
-    calculateMovementData(currentRankings, previousRankings) {
-        // If no previous rankings exist, everyone is new
-        if (!previousRankings || !previousRankings.players) {
-            Object.values(currentRankings.players).forEach((player) => {
-                player.previousRank = null;
-                player.rankMovement = 0;
-                player.isNew = true;
-            });
-            return;
-        }
+    updateRanksForDate(date, playerTracker, playersWhoAppeared) {
+        // Create snapshot of all players' cumulative data up to this date
+        const playersForRanking = {};
 
-        // Compare ranks between current and previous
-        Object.entries(currentRankings.players).forEach(([playerName, currentData]) => {
-            const previousData = previousRankings.players[playerName];
+        playerTracker.forEach((playerData, playerName) => {
+            playersForRanking[playerName] = {
+                points: playerData.points,
+                appearances: playerData.appearances,
+                rankingDetail: {} // Not needed for ranking calculation
+            };
+        });
 
-            if (!previousData || typeof previousData.rank !== 'number') {
-                // New player
-                currentData.previousRank = null;
-                currentData.rankMovement = 0;
-                currentData.isNew = true;
-            } else {
-                // Existing player - calculate movement
-                currentData.previousRank = previousData.rank;
-                // Movement is negative when rank improves (goes down in number)
-                currentData.rankMovement = previousData.rank - currentData.rank;
-                currentData.isNew = false;
+        // Calculate enhanced rankings for this snapshot
+        const enhancedSnapshot = this.calculateEnhancedRankings({
+            players: playersForRanking
+        });
+
+        // Store rank and total players count for each player
+        Object.entries(enhancedSnapshot.players).forEach(([playerName, data]) => {
+            const playerData = playerTracker.get(playerName);
+
+            // Ensure an entry exists for this date
+            if (!playerData.rankingDetail[date]) {
+                // If player didn't appear this date, create non-appearance entry
+                if (!playersWhoAppeared.has(playerName)) {
+                    playerData.rankingDetail[date] = {
+                        team: null,
+                        appearancePoints: null,
+                        matchPoints: null,
+                        bonusPoints: null,
+                        knockoutPoints: null,
+                        totalPoints: null
+                    };
+                } else {
+                    // Player appeared but entry wasn't created yet (edge case)
+                    playerData.rankingDetail[date] = {};
+                }
             }
+
+            // Add rank data to the entry (whether appearance or non-appearance)
+            playerData.rankingDetail[date].rank = data.rank;
+            playerData.rankingDetail[date].totalPlayers =
+                enhancedSnapshot.rankingMetadata.totalPlayers;
+        });
+    }
+
+    /**
+     * Calculate movement data using complete ranking history
+     * @param {Object} enhancedRankings - Enhanced rankings with complete history
+     */
+    calculateMovementFromHistory(enhancedRankings) {
+        Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+            const dates = Object.keys(playerData.rankingDetail).sort();
+
+            if (dates.length < 2) {
+                // New player or only one date
+                playerData.previousRank = null;
+                playerData.rankMovement = 0;
+                playerData.isNew = true;
+                return;
+            }
+
+            // Get the last two dates for movement calculation
+            const currentDate = dates[dates.length - 1];
+            const previousDate = dates[dates.length - 2];
+
+            const currentRank = playerData.rankingDetail[currentDate].rank;
+            const previousRank = playerData.rankingDetail[previousDate].rank;
+
+            playerData.previousRank = previousRank;
+            playerData.rankMovement = previousRank - currentRank; // Positive = moved up
+            playerData.isNew = false;
         });
     }
 

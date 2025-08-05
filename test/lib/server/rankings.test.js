@@ -265,129 +265,233 @@ describe('RankingsManager - Knockout Points', () => {
         });
     });
 
-    describe('Movement Calculation', () => {
+    describe('Movement Calculation (Legacy Tests - now using history-based method)', () => {
         it('should calculate correct movement for existing players', () => {
-            const currentRankings = {
+            const enhancedRankings = {
                 players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 },
-                    Charlie: { rank: 3 }
+                    Alice: {
+                        rank: 1,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 3 },
+                            '2024-01-02': { rank: 1 }
+                        }
+                    },
+                    Bob: {
+                        rank: 2,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 1 },
+                            '2024-01-02': { rank: 2 }
+                        }
+                    },
+                    Charlie: {
+                        rank: 3,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 2 },
+                            '2024-01-02': { rank: 3 }
+                        }
+                    }
                 }
             };
 
-            const previousRankings = {
-                players: {
-                    Alice: { rank: 3 },
-                    Bob: { rank: 1 },
-                    Charlie: { rank: 2 }
-                }
-            };
-
-            rankingsManager.calculateMovementData(currentRankings, previousRankings);
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
 
             // Alice moved up from rank 3 to rank 1 (movement = +2)
-            expect(currentRankings.players.Alice.rankMovement).toBe(2);
-            expect(currentRankings.players.Alice.previousRank).toBe(3);
-            expect(currentRankings.players.Alice.isNew).toBe(false);
+            expect(enhancedRankings.players.Alice.rankMovement).toBe(2);
+            expect(enhancedRankings.players.Alice.previousRank).toBe(3);
+            expect(enhancedRankings.players.Alice.isNew).toBe(false);
 
             // Bob moved down from rank 1 to rank 2 (movement = -1)
-            expect(currentRankings.players.Bob.rankMovement).toBe(-1);
-            expect(currentRankings.players.Bob.previousRank).toBe(1);
-            expect(currentRankings.players.Bob.isNew).toBe(false);
+            expect(enhancedRankings.players.Bob.rankMovement).toBe(-1);
+            expect(enhancedRankings.players.Bob.previousRank).toBe(1);
+            expect(enhancedRankings.players.Bob.isNew).toBe(false);
 
             // Charlie moved down from rank 2 to rank 3 (movement = -1)
-            expect(currentRankings.players.Charlie.rankMovement).toBe(-1);
-            expect(currentRankings.players.Charlie.previousRank).toBe(2);
-            expect(currentRankings.players.Charlie.isNew).toBe(false);
+            expect(enhancedRankings.players.Charlie.rankMovement).toBe(-1);
+            expect(enhancedRankings.players.Charlie.previousRank).toBe(2);
+            expect(enhancedRankings.players.Charlie.isNew).toBe(false);
         });
 
         it('should mark new players correctly', () => {
-            const currentRankings = {
+            const enhancedRankings = {
                 players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 },
-                    NewPlayer: { rank: 3 }
+                    Alice: {
+                        rank: 1,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 1 },
+                            '2024-01-02': { rank: 1 }
+                        }
+                    },
+                    Bob: {
+                        rank: 2,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 2 },
+                            '2024-01-02': { rank: 2 }
+                        }
+                    },
+                    NewPlayer: {
+                        rank: 3,
+                        rankingDetail: {
+                            '2024-01-02': { rank: 3 } // Only one entry = new player
+                        }
+                    }
                 }
             };
 
-            const previousRankings = {
-                players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 }
-                }
-            };
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
 
-            rankingsManager.calculateMovementData(currentRankings, previousRankings);
-
-            expect(currentRankings.players.NewPlayer.isNew).toBe(true);
-            expect(currentRankings.players.NewPlayer.rankMovement).toBe(0);
-            expect(currentRankings.players.NewPlayer.previousRank).toBeNull();
+            expect(enhancedRankings.players.NewPlayer.isNew).toBe(true);
+            expect(enhancedRankings.players.NewPlayer.rankMovement).toBe(0);
+            expect(enhancedRankings.players.NewPlayer.previousRank).toBeNull();
         });
 
-        it('should handle no previous rankings', () => {
-            const currentRankings = {
+        it('should handle no previous rankings (empty history)', () => {
+            const enhancedRankings = {
                 players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 }
+                    Alice: {
+                        rank: 1,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 1 } // Only one entry
+                        }
+                    },
+                    Bob: {
+                        rank: 2,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 2 } // Only one entry
+                        }
+                    }
                 }
             };
 
-            rankingsManager.calculateMovementData(currentRankings, null);
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
 
-            expect(currentRankings.players.Alice.isNew).toBe(true);
-            expect(currentRankings.players.Alice.rankMovement).toBe(0);
-            expect(currentRankings.players.Alice.previousRank).toBeNull();
+            expect(enhancedRankings.players.Alice.isNew).toBe(true);
+            expect(enhancedRankings.players.Alice.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Alice.previousRank).toBeNull();
 
-            expect(currentRankings.players.Bob.isNew).toBe(true);
-            expect(currentRankings.players.Bob.rankMovement).toBe(0);
-            expect(currentRankings.players.Bob.previousRank).toBeNull();
-        });
-
-        it('should handle players with no previous rank data', () => {
-            const currentRankings = {
-                players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 }
-                }
-            };
-
-            const previousRankings = {
-                players: {
-                    Alice: { rank: 2 },
-                    Bob: {} // Missing rank data
-                }
-            };
-
-            rankingsManager.calculateMovementData(currentRankings, previousRankings);
-
-            expect(currentRankings.players.Alice.rankMovement).toBe(1);
-            expect(currentRankings.players.Alice.isNew).toBe(false);
-
-            expect(currentRankings.players.Bob.isNew).toBe(true);
-            expect(currentRankings.players.Bob.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Bob.isNew).toBe(true);
+            expect(enhancedRankings.players.Bob.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Bob.previousRank).toBeNull();
         });
 
         it('should handle same rank (no movement)', () => {
-            const currentRankings = {
+            const enhancedRankings = {
                 players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 }
+                    Alice: {
+                        rank: 1,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 1 },
+                            '2024-01-02': { rank: 1 }
+                        }
+                    },
+                    Bob: {
+                        rank: 2,
+                        rankingDetail: {
+                            '2024-01-01': { rank: 2 },
+                            '2024-01-02': { rank: 2 }
+                        }
+                    }
                 }
             };
 
-            const previousRankings = {
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
+
+            expect(enhancedRankings.players.Alice.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Bob.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Alice.isNew).toBe(false);
+            expect(enhancedRankings.players.Bob.isNew).toBe(false);
+        });
+    });
+
+    describe('Complete Ranking History', () => {
+        it('should store rank for every date from first appearance onwards', () => {
+            const playerTracker = new Map();
+
+            // Simulate player appearing for first time on date1
+            playerTracker.set('Alice', {
+                points: 10,
+                appearances: 1,
+                rankingDetail: {
+                    '2024-01-01': {
+                        team: 'Red Team',
+                        totalPoints: 10,
+                        rank: 1,
+                        totalPlayers: 2
+                    }
+                }
+            });
+
+            playerTracker.set('Bob', {
+                points: 5,
+                appearances: 1,
+                rankingDetail: {
+                    '2024-01-01': {
+                        team: 'Blue Team',
+                        totalPoints: 5,
+                        rank: 2,
+                        totalPlayers: 2
+                    }
+                }
+            });
+
+            // Update for date2 where only Bob appears
+            const playersWhoAppeared = new Set(['Bob']);
+            rankingsManager.updateRanksForDate('2024-01-02', playerTracker, playersWhoAppeared);
+
+            // Alice should have non-appearance entry for date2
+            const aliceDetail = playerTracker.get('Alice').rankingDetail['2024-01-02'];
+            expect(aliceDetail.team).toBeNull();
+            expect(aliceDetail.totalPoints).toBeNull();
+            expect(aliceDetail.rank).toBeDefined();
+            expect(aliceDetail.totalPlayers).toBeDefined();
+
+            // Bob should have appearance entry but team data would be set elsewhere
+            const bobDetail = playerTracker.get('Bob').rankingDetail['2024-01-02'];
+            expect(bobDetail.rank).toBeDefined();
+        });
+
+        it('should calculate movement from complete history', () => {
+            const enhancedRankings = {
                 players: {
-                    Alice: { rank: 1 },
-                    Bob: { rank: 2 }
+                    Alice: {
+                        rankingDetail: {
+                            '2024-01-01': { rank: 3 },
+                            '2024-01-02': { rank: 1 }
+                        }
+                    },
+                    Bob: {
+                        rankingDetail: {
+                            '2024-01-01': { rank: 1 }
+                        }
+                    }
                 }
             };
 
-            rankingsManager.calculateMovementData(currentRankings, previousRankings);
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
 
-            expect(currentRankings.players.Alice.rankMovement).toBe(0);
-            expect(currentRankings.players.Bob.rankMovement).toBe(0);
-            expect(currentRankings.players.Alice.isNew).toBe(false);
-            expect(currentRankings.players.Bob.isNew).toBe(false);
+            // Alice moved up from rank 3 to rank 1 (+2)
+            expect(enhancedRankings.players.Alice.rankMovement).toBe(2);
+            expect(enhancedRankings.players.Alice.previousRank).toBe(3);
+            expect(enhancedRankings.players.Alice.isNew).toBe(false);
+
+            // Bob only has one entry, so is considered new
+            expect(enhancedRankings.players.Bob.isNew).toBe(true);
+            expect(enhancedRankings.players.Bob.rankMovement).toBe(0);
+        });
+
+        it('should handle empty ranking detail in movement calculation', () => {
+            const enhancedRankings = {
+                players: {
+                    Alice: {
+                        rankingDetail: {}
+                    }
+                }
+            };
+
+            rankingsManager.calculateMovementFromHistory(enhancedRankings);
+
+            expect(enhancedRankings.players.Alice.isNew).toBe(true);
+            expect(enhancedRankings.players.Alice.rankMovement).toBe(0);
+            expect(enhancedRankings.players.Alice.previousRank).toBeNull();
         });
     });
 });

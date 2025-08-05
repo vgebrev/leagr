@@ -3,77 +3,37 @@ import { createRankingsManager } from '$lib/server/rankings.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
 /**
- * Calculate historical rank progression for a player
- * @param {Object} rankings - Full rankings data
- * @param {string} player - Player name
- * @param {Array} sortedDetails - Player's session details sorted by date
- * @param {Object} rankingsManager - Rankings manager instance
- * @returns {Promise<Array>} Array of rank progression points
+ * Extract rank progression from complete ranking history
+ * @param {Object} playerData - Player data with complete rankingDetail
+ * @returns {Array} Array of rank progression points
  */
-async function calculateHistoricalRanks(rankings, player, sortedDetails, rankingsManager) {
+function extractRankProgression(playerData) {
     const progression = [];
 
-    // Get all unique dates in chronological order (oldest first)
-    const playerDates = sortedDetails.map((d) => d.date).reverse();
+    // Get all dates and sort chronologically (oldest first)
+    const dates = Object.keys(playerData.rankingDetail).sort();
 
-    for (const targetDate of playerDates) {
-        // Calculate cumulative points for all players up to this date
-        const playersAtDate = {};
+    let cumulativePoints = 0;
+    let appearances = 0;
 
-        Object.entries(rankings.players).forEach(([playerName, playerData]) => {
-            let cumulativePoints = 0;
-            let appearances = 0;
+    for (const date of dates) {
+        const entry = playerData.rankingDetail[date];
 
-            // Sum points from all sessions up to and including targetDate
-            Object.entries(playerData.rankingDetail || {}).forEach(([date, detail]) => {
-                if (date <= targetDate) {
-                    cumulativePoints += detail.totalPoints;
-                    appearances += 1;
-                }
-            });
-
-            if (appearances > 0) {
-                playersAtDate[playerName] = {
-                    points: cumulativePoints,
-                    appearances: appearances,
-                    rawAverage: cumulativePoints / appearances
-                };
-            }
-        });
-
-        // Apply ranking algorithm to get ranking points for this date
-        const enhancedPlayersAtDate = rankingsManager.calculateEnhancedRankings({
-            players: Object.fromEntries(
-                Object.entries(playersAtDate).map(([name, data]) => [
-                    name,
-                    {
-                        points: data.points,
-                        appearances: data.appearances,
-                        rankingDetail: {} // Not needed for ranking calculation
-                    }
-                ])
-            )
-        });
-
-        // Sort players by ranking points (same logic as main rankings)
-        const sortedPlayers = Object.entries(enhancedPlayersAtDate.players).sort((a, b) => {
-            if (b[1].rankingPoints !== a[1].rankingPoints)
-                return b[1].rankingPoints - a[1].rankingPoints;
-            return b[1].points - a[1].points;
-        });
-
-        // Find our player's rank
-        const playerRank = sortedPlayers.findIndex(([playerName]) => playerName === player) + 1;
-
-        if (playerRank > 0) {
-            progression.push({
-                date: targetDate,
-                rank: playerRank,
-                totalPlayers: sortedPlayers.length,
-                points: playersAtDate[player].points,
-                appearances: playersAtDate[player].appearances
-            });
+        // Update cumulative totals if this was an appearance
+        if (entry.totalPoints !== null) {
+            cumulativePoints += entry.totalPoints;
+            appearances += 1;
         }
+
+        // Add progression point
+        progression.push({
+            date: date,
+            rank: entry.rank,
+            totalPlayers: entry.totalPlayers,
+            points: cumulativePoints,
+            appearances: appearances,
+            played: entry.team !== null // Visual indicator for chart
+        });
     }
 
     return progression;
@@ -105,18 +65,14 @@ export async function GET({ params, locals }) {
             throw error(404, `Player "${player}" not found in rankings`);
         }
 
-        // Sort ranking details by date (newest first)
+        // Sort ranking details by date (newest first) - ONLY include actual appearances
         const sortedDetails = Object.entries(playerData.rankingDetail || {})
+            .filter(([, detail]) => detail.team !== null) // Only appearances
             .sort(([a], [b]) => b.localeCompare(a))
             .map(([date, detail]) => ({ date, ...detail }));
 
-        // Calculate historical rank progression
-        const rankProgression = await calculateHistoricalRanks(
-            rankings,
-            player,
-            sortedDetails,
-            rankingsManager
-        );
+        // Extract rank progression from complete history
+        const rankProgression = extractRankProgression(playerData);
 
         return json({
             player,
