@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { Tooltip } from 'flowbite-svelte';
 
     let { playerData } = $props();
     let scrollContainer = $state();
@@ -129,12 +130,13 @@
                                     ? 'text-primary-700 dark:text-primary-700'
                                     : 'dark:fill-gray-800'}
                                 stroke={played ? 'none' : 'currentColor'}
-                                stroke-width={played ? '0' : '2'}>
-                                <title>
-                                    {formatDate(point.date)}: Rank #{point.rank} ({point.points}
-                                    pts) {played ? '' : '(No appearance)'}
-                                </title>
+                                stroke-width={played ? '0' : '2'}
+                                id="chart-point-{index}">
                             </circle>
+                            <Tooltip triggeredBy="#chart-point-{index}">
+                                {formatDate(point.date)}: Rank #{point.rank} ({point.points}
+                                pts) {played ? '' : '(No appearance)'}
+                            </Tooltip>
                             <!-- Rank number label -->
                             <text
                                 {x}

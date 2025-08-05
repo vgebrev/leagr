@@ -1,9 +1,18 @@
 <script>
-    import { TableBodyCell, TableBodyRow } from 'flowbite-svelte';
+    import { TableBodyCell, TableBodyRow, Tooltip } from 'flowbite-svelte';
     import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
 
     let { player, data, index, currentSort, onSortChange } = $props();
+
+    /**
+     * Sanitize player name for use as CSS selector ID
+     * @param {string} name - Player name
+     * @returns {string} - Sanitized name safe for CSS selectors
+     */
+    function sanitizeId(name) {
+        return name.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9-_]/g, '');
+    }
 
     function handlePlayerClick() {
         // Navigate to player detail page
@@ -35,20 +44,25 @@
             {#if data.rankMovement > 0}
                 <span
                     class="flex items-center text-xs text-green-500"
-                    title="Moved up {data.rankMovement} places">
+                    id="rank-up-{sanitizeId(player)}">
                     <AngleUpOutline class="h-4 w-4 shrink-0" /><sub>{data.rankMovement}</sub>
                 </span>
+                <Tooltip triggeredBy="#rank-up-{sanitizeId(player)}"
+                    >Moved up {data.rankMovement} places</Tooltip>
             {:else if data.rankMovement < 0}
                 <span
                     class="flex items-center text-xs text-red-500"
-                    title="Moved down {Math.abs(data.rankMovement)} places">
+                    id="rank-down-{sanitizeId(player)}">
                     <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
                         >{Math.abs(data.rankMovement)}</sub>
                 </span>
+                <Tooltip triggeredBy="#rank-down-{sanitizeId(player)}"
+                    >Moved down {Math.abs(data.rankMovement)} places</Tooltip>
             {:else}
                 <span
                     class="text-xs text-gray-500"
-                    title="No rank movement"><MinusOutline class="h-4 w-4 shrink-0" /></span>
+                    id="rank-same-{sanitizeId(player)}"><MinusOutline class="h-4 w-4 shrink-0" /></span>
+                <Tooltip triggeredBy="#rank-same-{sanitizeId(player)}">No rank movement</Tooltip>
             {/if}
         </div>
     </TableBodyCell>
