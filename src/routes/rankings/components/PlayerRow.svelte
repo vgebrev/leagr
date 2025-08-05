@@ -61,7 +61,8 @@
             {:else}
                 <span
                     class="text-xs text-gray-500"
-                    id="rank-same-{sanitizeId(player)}"><MinusOutline class="h-4 w-4 shrink-0" /></span>
+                    id="rank-same-{sanitizeId(player)}"
+                    ><MinusOutline class="h-4 w-4 shrink-0" /></span>
                 <Tooltip triggeredBy="#rank-same-{sanitizeId(player)}">No rank movement</Tooltip>
             {/if}
         </div>

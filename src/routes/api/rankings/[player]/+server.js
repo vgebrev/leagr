@@ -30,7 +30,8 @@ function extractRankProgression(playerData) {
             date: date,
             rank: entry.rank,
             totalPlayers: entry.totalPlayers,
-            points: cumulativePoints,
+            points: entry.rankingPoints || cumulativePoints, // Use ranking points for consistency with rank calculation
+            gameplayPoints: cumulativePoints, // Keep original for potential other uses
             appearances: appearances,
             played: entry.team !== null // Visual indicator for chart
         });

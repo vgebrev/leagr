@@ -135,7 +135,7 @@
                             </circle>
                             <Tooltip triggeredBy="#chart-point-{index}">
                                 {formatDate(point.date)}: Rank #{point.rank} ({point.points}
-                                pts) {played ? '' : '(No appearance)'}
+                                ranking pts) {played ? '' : '(No appearance)'}
                             </Tooltip>
                             <!-- Rank number label -->
                             <text

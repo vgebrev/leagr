@@ -495,6 +495,7 @@ export class RankingsManager {
             playerData.rankingDetail[date].rank = data.rank;
             playerData.rankingDetail[date].totalPlayers =
                 enhancedSnapshot.rankingMetadata.totalPlayers;
+            playerData.rankingDetail[date].rankingPoints = data.rankingPoints;
         });
     }
 
