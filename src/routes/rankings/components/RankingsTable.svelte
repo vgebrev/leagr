@@ -10,8 +10,9 @@
     class="w-full text-xs"
     shadow>
     <TableHead>
-        <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
-        <TableHeadCell class="px-1 py-1.5 font-bold text-black dark:text-white">
+        <TableHeadCell class="w-8 px-0.5 py-1 text-center text-xs">#</TableHeadCell>
+        <TableHeadCell
+            class="max-w-32 overflow-hidden px-0.5 py-1 text-xs font-bold text-ellipsis whitespace-nowrap text-black dark:text-white">
             Player
         </TableHeadCell>
         <SortableTableHeader

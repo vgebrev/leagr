@@ -61,10 +61,12 @@
     });
 </script>
 
-<StandingsTable
-    {standings}
-    {date}
-    onTeamClick={celebrate} />
+<div class="overflow-x-auto">
+    <StandingsTable
+        {standings}
+        {date}
+        onTeamClick={celebrate} />
+</div>
 
 <CelebrationOverlay
     bind:celebrating

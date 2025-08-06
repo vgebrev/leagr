@@ -27,11 +27,13 @@
 
 {#if standings.length > 0}
     <Table
-        class="w-full text-xs"
+        class="w-full min-w-fit text-xs"
         shadow>
         <TableHead>
             <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 text-center">Team</TableHeadCell>
+            <TableHeadCell
+                class="max-w-32 overflow-hidden px-1 py-1.5 text-center text-ellipsis whitespace-nowrap"
+                >Team</TableHeadCell>
             <TableHeadCell class="px-1 py-1.5 text-center">P</TableHeadCell>
             <TableHeadCell class="px-1 py-1.5 text-center">W</TableHeadCell>
             <TableHeadCell class="px-1 py-1.5 text-center">D</TableHeadCell>
@@ -48,9 +50,9 @@
                     <TableBodyCell class="px-1 py-1.5 text-center">
                         {index + 1}
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center"
+                    <TableBodyCell class="max-w-32 overflow-hidden px-1 py-1.5 text-center"
                         ><div
-                            class="flex justify-between"
+                            class="flex justify-between overflow-hidden"
                             onclick={() => handleTeamClick(index)}
                             onkeydown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
@@ -60,7 +62,7 @@
                             tabindex="0"
                             role="button">
                             <TeamBadge
-                                className="w-full"
+                                className="w-full overflow-hidden text-ellipsis whitespace-nowrap"
                                 teamName={team.team} />
                         </div>
                     </TableBodyCell>

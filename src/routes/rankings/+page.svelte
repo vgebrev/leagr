@@ -72,9 +72,11 @@
 
 <div class="flex flex-col gap-2">
     <RankingInfoPanel rankingMetadata={rankings.rankingMetadata} />
-    <RankingsTable
-        {sortedPlayers}
-        currentSort={sortBy}
-        onSortChange={handleSortChange} />
+    <div class="overflow-x-auto">
+        <RankingsTable
+            {sortedPlayers}
+            currentSort={sortBy}
+            onSortChange={handleSortChange} />
+    </div>
     <RankingActions onUpdate={updateRankings} />
 </div>

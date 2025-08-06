@@ -75,9 +75,9 @@
             {/if}
         </div>
     </TableBodyCell>
-    <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold">
+    <TableBodyCell class="text-bold flex px-1 py-1.5 font-bold max-w-24 overflow-hidden">
         <span
-            class="w-full cursor-pointer text-black hover:underline dark:text-white"
+            class="cursor-pointer text-black hover:underline dark:text-white overflow-hidden text-ellipsis whitespace-nowrap"
             role="button"
             tabindex="0"
             onclick={handlePlayerClick}
