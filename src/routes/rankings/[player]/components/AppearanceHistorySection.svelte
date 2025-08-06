@@ -36,7 +36,7 @@
         <!-- Summary Footer -->
         <div class="mt-2 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             <div class="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                {`${labelPrefix} Totals`}
+                {`${labelPrefix} Appearances Totals`}
             </div>
             <div class="grid grid-cols-5 text-sm">
                 <div class="shrink-0 text-center">
