@@ -100,6 +100,7 @@
         ><ExclamationCircleSolid /><span>
             Schedule some <Button
                 color="alternative"
+                class="align-middle"
                 href="/games?date={date}"
                 size="xs"
                 ><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button> and enter

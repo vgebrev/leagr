@@ -214,6 +214,7 @@
             ><ExclamationCircleSolid /><span>
                 The knockout cup phase is only available after some league <Button
                     color="alternative"
+                    class="align-middle"
                     href="/games?date={date}"
                     size="xs"
                     ><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button> have
@@ -234,7 +235,7 @@
                 <span
                     >A knockout cup is already in progress. Are you sure you want to reset it?</span>
                 <Button
-                    size="sm"
+                    size="xs"
                     onclick={() => handleAddKnockoutGames(true)}>
                     Yes
                 </Button>

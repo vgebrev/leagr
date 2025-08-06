@@ -56,7 +56,9 @@
     transition={scale}
     class="drop-shadow-lg">
     {#if played && appearanceDetail}
-        <AppearanceCard detail={appearanceDetail} />
+        <AppearanceCard
+            detail={appearanceDetail}
+            hasBorder={false} />
     {:else}
         <div class="p-3 text-center text-gray-500 dark:text-gray-400">
             <p class="font-medium">Did not play</p>

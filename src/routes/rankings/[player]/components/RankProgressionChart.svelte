@@ -2,7 +2,7 @@
     import { onMount } from 'svelte';
     import RankProgressionChartNode from './RankProgressionChartNode.svelte';
 
-    let { playerData } = $props();
+    let { playerData, limitDropdown } = $props();
 
     // Use details for chart progression (already in chronological order)
     const progression = $derived(playerData.details || []);
@@ -28,7 +28,10 @@
     {@const chartWidth = Math.max(minChartWidth, naturalWidth)}
     {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
     <div class="mb-2">
-        <h2 class="mb-2 text-lg font-semibold">Rank Progression</h2>
+        <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-lg font-semibold">Rank Progression</h2>
+            {@render limitDropdown?.()}
+        </div>
         <div
             class="w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
             <div

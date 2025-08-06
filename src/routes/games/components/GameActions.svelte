@@ -58,6 +58,7 @@
             Make some
             <Button
                 color="alternative"
+                class="align-middle"
                 href="/teams?date={date}"
                 size="xs">
                 <UsersGroupSolid class="me-2 h-4 w-4" />
@@ -82,7 +83,8 @@
         <ExclamationCircleSolid />
         <span>Games have already been scheduled. Are you sure you want to reset the schedule?</span>
         <Button
-            size="sm"
+            size="xs"
+            class="align-middle"
             onclick={() => handleGenerateSchedule(true)}>
             Yes
         </Button>

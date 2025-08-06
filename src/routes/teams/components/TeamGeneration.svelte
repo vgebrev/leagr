@@ -77,6 +77,7 @@
                 ><ExclamationCircleSolid /><span
                     >More <Button
                         color="alternative"
+                        class="align-middle"
                         href="/players?date={date}"
                         size="xs"><UserSolid class="me-2 h-4 w-4"></UserSolid>Players</Button> are needed
                     to make teams.</span
@@ -92,7 +93,8 @@
         ><ExclamationCircleSolid /><span
             >Teams have already been generated. Are you sure you want to regenerate them?</span>
         <Button
-            size="sm"
+            size="xs"
+            class="align-middle"
             onclick={() => handleGenerate(true)}>Yes</Button
         ></Alert>
 {/if}

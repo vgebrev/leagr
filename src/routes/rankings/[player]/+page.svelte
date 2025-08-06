@@ -27,11 +27,11 @@
     let dropdownOpen = $state(false);
 
     const limitOptions = [
-        { value: 5, label: '5' },
-        { value: 10, label: '10' },
-        { value: 25, label: '25' },
-        { value: 50, label: '50' },
-        { value: null, label: 'All' }
+        { value: 5, label: 'last 5' },
+        { value: 10, label: 'last 10' },
+        { value: 25, label: 'last 25' },
+        { value: 50, label: 'last 50' },
+        { value: null, label: 'all' }
     ];
 
     /**
@@ -101,44 +101,44 @@
 
 <div class="container mx-auto">
     <!-- Header -->
-    <div class="mb-2 flex items-center justify-between">
-        <div>
-            <h1 class="text-xl font-bold">{player || 'Loading...'}</h1>
-            <h6 class="text-gray-500">Player Profile</h6>
-        </div>
-
-        {#if playerData}
-            <div class="flex items-center gap-2">
-                <span class="text-sm text-gray-600 dark:text-gray-400">Show last:</span>
-                <Button
-                    color="light"
-                    size="sm"
-                    class="flex items-center gap-1">
-                    {limitOptions.find((opt) => opt.value === selectedLimit)?.label} appearances
-                    <ChevronDownOutline class="h-4 w-4" />
-                </Button>
-                <Dropdown
-                    simple
-                    class="w-20"
-                    bind:isOpen={dropdownOpen}>
-                    {#each limitOptions as option, i (i)}
-                        <DropdownItem
-                            onclick={() => handleLimitChange(option.value)}
-                            classes={{ anchor: 'w-full' }}
-                            class={selectedLimit === option.value
-                                ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-600'
-                                : ''}>
-                            <span class="w-full">{option.label}</span>
-                        </DropdownItem>
-                    {/each}
-                </Dropdown>
-            </div>
-        {/if}
+    <div class="mb-2">
+        <h1 class="text-xl font-bold">{player || 'Loading...'}</h1>
+        <h6 class="text-gray-500">Player Profile</h6>
     </div>
 
     {#if playerData}
         <PlayerSummaryCard {playerData} />
-        <RankProgressionChart {playerData} />
+        <RankProgressionChart {playerData}>
+            {#snippet limitDropdown()}
+                {#if playerData}
+                    <div class="flex items-center gap-1">
+                        <span class="text-xs">Show</span>
+                        <Button
+                            color="light"
+                            size="xs"
+                            class="flex items-center gap-1">
+                            {limitOptions.find((opt) => opt.value === selectedLimit)?.label} appearances
+                            <ChevronDownOutline class="h-4 w-4" />
+                        </Button>
+                        <Dropdown
+                            simple
+                            class="w-20"
+                            bind:isOpen={dropdownOpen}>
+                            {#each limitOptions as option, i (i)}
+                                <DropdownItem
+                                    onclick={() => handleLimitChange(option.value)}
+                                    classes={{ anchor: 'w-full' }}
+                                    class={selectedLimit === option.value
+                                        ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-600'
+                                        : ''}>
+                                    <span class="w-full">{option.label}</span>
+                                </DropdownItem>
+                            {/each}
+                        </Dropdown>
+                    </div>
+                {/if}
+            {/snippet}
+        </RankProgressionChart>
         <AppearanceHistorySection
             {playerData}
             limit={selectedLimit} />

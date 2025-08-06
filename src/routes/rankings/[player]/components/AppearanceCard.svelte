@@ -1,9 +1,9 @@
 <script>
-    import { Card, Badge } from 'flowbite-svelte';
+    import { Badge } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
     import { goto } from '$app/navigation';
 
-    let { detail } = $props();
+    let { detail, hasBorder = true } = $props();
 
     /**
      * Format date for display
@@ -28,7 +28,10 @@
     }
 </script>
 
-<Card class="p-4">
+<div
+    class="rounded-lg bg-white p-2 dark:bg-gray-800 {hasBorder
+        ? 'border border-gray-200 shadow-md dark:border-gray-700'
+        : ''}">
     <!-- Date and Team Header -->
     <div class="mb-3 flex items-center justify-between gap-2">
         <div class="shrink-0 text-sm font-semibold">
@@ -96,4 +99,4 @@
             {detail.totalPoints}
         </Badge>
     </div>
-</Card>
+</div>
