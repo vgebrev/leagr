@@ -8,6 +8,7 @@
         AwardSolid
     } from 'flowbite-svelte-icons';
     import { settings } from '$lib/client/stores/settings.js';
+    import TrophyIcon from '$components/TrophyIcon.svelte';
 
     let { data } = $props();
 
@@ -54,22 +55,25 @@
         ><span>
             2. Add your name and any +1s to the <Button
                 color="alternative"
+                class="align-middle"
                 href="/players?date={data.date}"
                 size="xs"><UserSolid class="me-2 h-4 w-4"></UserSolid>Players</Button> list.
         </span>
     </ListgroupItem>
     <ListgroupItem
         ><span
-            >3. We'll make random <Button
+            >3. Make random <Button
                 color="alternative"
+                class="align-middle"
                 href="/teams?date={data.date}"
                 size="xs"><UsersGroupSolid class="me-2 h-4 w-4"></UsersGroupSolid>Teams</Button>
-            the day before we play.</span>
+            before play.</span>
     </ListgroupItem>
     <ListgroupItem>
         <span
             >4. Schedule <Button
                 color="alternative"
+                class="align-middle"
                 href="/games?date={data.date}"
                 size="xs"
                 ><CalendarMonthSolid class="me-2 h-4 w-4"></CalendarMonthSolid>Games</Button>
@@ -77,8 +81,9 @@
     </ListgroupItem>
     <ListgroupItem
         ><span
-            >5. Check out the <Button
+            >5. Check out the standings <Button
                 color="alternative"
+                class="align-middle"
                 href="/table?date={data.date}"
                 size="xs"
                 ><RectangleListSolid class="me-2 h-4 w-4"></RectangleListSolid>Table</Button> after the
@@ -86,8 +91,18 @@
     </ListgroupItem>
     <ListgroupItem
         ><span
-            >6. After the day is done, we'll update the <Button
+            >6. Go for glory in the single-elimination knockout <Button
                 color="alternative"
+                class="align-middle"
+                href="/knockout?date={data.date}"
+                size="xs"><TrophyIcon class="me-2 h-3 w-3"></TrophyIcon>Cup</Button> seeded by the final
+            league standings.</span>
+    </ListgroupItem>
+    <ListgroupItem
+        ><span
+            >7. After the day is done, update the <Button
+                color="alternative"
+                class="align-middle"
                 href="/rankings?date={data.date}"
                 size="xs"><AwardSolid class="me-2 h-4 w-4"></AwardSolid>Rankings</Button> and use them
             to seed teams for balance (as well as bragging rights).</span>

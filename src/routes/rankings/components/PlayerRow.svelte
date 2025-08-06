@@ -17,7 +17,7 @@
 
     function handlePlayerClick() {
         // Navigate to player detail page
-        goto(`/rankings/${encodeURIComponent(player)}`);
+        goto(`/rankings/${player}`);
     }
 
     /** Handles sorting when a column header is clicked.
