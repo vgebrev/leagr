@@ -7,8 +7,8 @@
 </script>
 
 <div
-    class="mb-4 w-full rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+    class="mb-2 w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+    <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
         <div class="text-center">
             <div class="text-sm text-gray-600 dark:text-gray-400">Current Rank</div>
             <div class="flex items-center justify-center gap-2">
@@ -62,14 +62,16 @@
     </div>
 
     {#if playerData.rawAverage && playerData.weightedAverage}
-        <div
-            class="mt-4 grid grid-cols-3 gap-4 border-t border-t-gray-200 pt-4 dark:border-t-gray-700">
+        <div class="mt-2 grid grid-cols-3 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             <div class="text-center">
                 <div class="text-sm text-gray-600 dark:text-gray-400">Raw Average</div>
                 <div class="text-lg font-semibold">{playerData.rawAverage}</div>
             </div>
             <div class="text-center">
-                <div class="text-sm text-gray-600 dark:text-gray-400">Weighted Average</div>
+                <div
+                    class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-400">
+                    Weighted Average
+                </div>
                 <div class="text-lg font-semibold">{playerData.weightedAverage}</div>
             </div>
             <div class="text-center">

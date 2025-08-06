@@ -27,10 +27,10 @@
     {@const minChartWidth = appearanceCount <= 5 ? naturalWidth : 400}
     {@const chartWidth = Math.max(minChartWidth, naturalWidth)}
     {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
-    <div class="mb-4">
-        <h2 class="mb-4 text-lg font-semibold">Rank Progression</h2>
+    <div class="mb-2">
+        <h2 class="mb-2 text-lg font-semibold">Rank Progression</h2>
         <div
-            class="w-full rounded-lg border border-gray-200 bg-white p-4 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            class="w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
             <div
                 class="overflow-x-auto"
                 bind:this={scrollContainer}>

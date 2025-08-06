@@ -27,11 +27,11 @@
     let dropdownOpen = $state(false);
 
     const limitOptions = [
-        { value: null, label: 'All' },
         { value: 5, label: '5' },
         { value: 10, label: '10' },
         { value: 25, label: '25' },
-        { value: 50, label: '50' }
+        { value: 50, label: '50' },
+        { value: null, label: 'All' }
     ];
 
     /**
@@ -101,7 +101,7 @@
 
 <div class="container mx-auto">
     <!-- Header -->
-    <div class="mb-4 flex items-center justify-between">
+    <div class="mb-2 flex items-center justify-between">
         <div>
             <h1 class="text-xl font-bold">{player || 'Loading...'}</h1>
             <h6 class="text-gray-500">Player Profile</h6>
@@ -139,7 +139,9 @@
     {#if playerData}
         <PlayerSummaryCard {playerData} />
         <RankProgressionChart {playerData} />
-        <AppearanceHistorySection {playerData} limit={selectedLimit} />
+        <AppearanceHistorySection
+            {playerData}
+            limit={selectedLimit} />
     {:else if loadingError}
         <Alert class="flex items-center border">
             <ExclamationCircleSolid />

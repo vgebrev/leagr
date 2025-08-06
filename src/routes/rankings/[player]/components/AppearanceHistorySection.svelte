@@ -16,7 +16,7 @@
 </script>
 
 <div>
-    <div class="mb-4">
+    <div class="mb-2">
         <h2 class="text-lg font-semibold">Appearance History</h2>
         <p class="text-sm text-gray-500">Detailed breakdown of points earned per appearance</p>
     </div>
@@ -27,18 +27,18 @@
         </div>
     {:else}
         <!-- Session Cards Grid -->
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-2">
             {#each appearances as detail (detail.date)}
                 <AppearanceCard {detail} />
             {/each}
         </div>
 
         <!-- Summary Footer -->
-        <div class="mt-4 border-t border-t-gray-200 pt-4 dark:border-t-gray-700">
+        <div class="mt-2 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             <div class="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
                 {`${labelPrefix} Totals`}
             </div>
-            <div class="grid grid-cols-5 gap-2 text-sm">
+            <div class="grid grid-cols-5 text-sm">
                 <div class="shrink-0 text-center">
                     <div
                         class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
