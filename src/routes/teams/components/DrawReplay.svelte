@@ -261,8 +261,6 @@
         const teamStyle = teamStyles[teamColor] || teamStyles.default || teamStyles.blue;
         const colors = teamStyle.confetti || ['#999999', '#ffffff'];
 
-        const end = Date.now() + 0.2 * 1000; // 0.2 seconds instead of 0.5
-
         // Create confetti canvas attached to the modal container
         const container = document.querySelector('.draw-replay-container');
         if (!container) return;
@@ -283,7 +281,6 @@
         });
 
         // Calculate the origin based on the flying player position (as fractions 0-1)
-        const containerRect = container.getBoundingClientRect();
         const originX = (flyingPlayerPosition.x + 40) / container.offsetWidth; // +40 to get center of player div
         const originY = (flyingPlayerPosition.y + 15) / container.offsetHeight; // +15 to get center of player div
 
