@@ -13,6 +13,7 @@ Features include:
     - Waiting list after a limit is reached.
 - **Team Management**
     - Generate random teams, either completely random or using player rankings as seeds.
+    - Replay team draws for dramatic effect.
 - **Game Scheduling and Score Tracking**
     - Generate a round-robin home-away match schedule and track results.
     - Standings table based on match results.
