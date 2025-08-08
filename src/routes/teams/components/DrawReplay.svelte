@@ -8,10 +8,11 @@
     } from 'flowbite-svelte-icons';
     import TeamTable from './TeamTable.svelte';
     import { onMount } from 'svelte';
-    import { scale } from 'svelte/transition';
+    import { scale, fade } from 'svelte/transition';
     import ArrowRotateIcon from '$components/Icons/ArrowRotateIcon.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
     import { SvelteSet } from 'svelte/reactivity';
+    import confetti from 'canvas-confetti';
 
     let { drawHistory, open = $bindable(false) } = $props();
 
@@ -131,6 +132,8 @@
         // Start flying animation after a short delay
         createTimeout(() => {
             startFlyingAnimation(step.player, step.toTeam, step.fromPot);
+            // Fire confetti towards the end of the flying animation when player lands
+            fireStepConfetti(step.toTeam);
         }, 400);
 
         createTimeout(() => {
@@ -252,6 +255,77 @@
         activeTimeouts = [];
     }
 
+    // Fire a short confetti burst in team colors
+    function fireStepConfetti(teamName) {
+        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const teamStyle = teamStyles[teamColor] || teamStyles.default || teamStyles.blue;
+        const colors = teamStyle.confetti || ['#999999', '#ffffff'];
+
+        const end = Date.now() + 0.2 * 1000; // 0.2 seconds instead of 0.5
+
+        // Create confetti canvas attached to the modal container
+        const container = document.querySelector('.draw-replay-container');
+        if (!container) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.style.position = 'absolute';
+        canvas.style.top = '0';
+        canvas.style.left = '0';
+        canvas.style.width = '100%';
+        canvas.style.height = '100%';
+        canvas.style.pointerEvents = 'none';
+        canvas.style.zIndex = '10';
+        container.appendChild(canvas);
+
+        const myConfetti = confetti.create(canvas, {
+            resize: true,
+            useWorker: true
+        });
+
+        // Calculate the origin based on the flying player position (as fractions 0-1)
+        const containerRect = container.getBoundingClientRect();
+        const originX = (flyingPlayerPosition.x + 40) / container.offsetWidth; // +40 to get center of player div
+        const originY = (flyingPlayerPosition.y + 15) / container.offsetHeight; // +15 to get center of player div
+
+        // Shoot stars effect with team colors
+        const defaults = {
+            spread: 360,
+            ticks: 50,
+            gravity: 0.9,
+            decay: 0.94,
+            startVelocity: 30,
+            colors: colors,
+            origin: { x: originX, y: originY }
+        };
+
+        function shoot() {
+            myConfetti({
+                ...defaults,
+                particleCount: 20, // Reduced from 40 for shorter burst
+                scalar: 1.2,
+                shapes: ['star']
+            });
+
+            myConfetti({
+                ...defaults,
+                particleCount: 40, // Reduced from 80 for shorter burst
+                scalar: 0.75,
+                shapes: ['circle']
+            });
+        }
+
+        // Fire 3 bursts with small delays
+        setTimeout(shoot, 100);
+        setTimeout(shoot, 200);
+
+        // Clean up the canvas after animation
+        setTimeout(() => {
+            if (container.contains(canvas)) {
+                container.removeChild(canvas);
+            }
+        }, 1000);
+    }
+
     onMount(() => {
         return () => {
             if (intervalId) clearInterval(intervalId);
@@ -275,12 +349,13 @@
         // Clean up when closing
         reset();
     }}>
-    <div class="draw-replay-container relative p-2">
+    <div class="draw-replay-container relative overflow-hidden p-2">
         <!-- Flying Player Animation -->
         {#if isFlying && animatingPlayer}
             <div
                 class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-[1400ms] ease-in-out {flyingPlayerClasses}"
-                style="left: {flyingPlayerPosition.x}px; top: {flyingPlayerPosition.y}px;">
+                style="left: {flyingPlayerPosition.x}px; top: {flyingPlayerPosition.y}px;"
+                transition:fade>
                 <div class="rounded-lg px-4 py-2 text-sm font-bold shadow-xl">
                     {animatingPlayer}
                 </div>
