@@ -4,12 +4,21 @@
         AdjustmentsHorizontalSolid,
         ExclamationCircleSolid,
         UsersGroupSolid,
-        UserSolid
+        UserSolid,
+        ClapperboardPlaySolid
     } from 'flowbite-svelte-icons';
     import { settings } from '$lib/client/stores/settings.js';
 
-    let { teamConfig, date, canGenerateTeams, hasExistingTeams, ongenerate, playerSummary } =
-        $props();
+    let {
+        teamConfig,
+        date,
+        canGenerateTeams,
+        hasExistingTeams,
+        ongenerate,
+        playerSummary,
+        drawHistory,
+        onreplay
+    } = $props();
 
     let selectedTeamConfig = $state(null);
     let confirmRegenerate = $state(false);
@@ -85,9 +94,19 @@
         {/if}
     {/if}
 </div>
-<Button
-    onclick={() => handleGenerate(false)}
-    disabled={!canGenerateTeams}><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
+<div class="flex flex-col gap-2">
+    <Button
+        onclick={() => handleGenerate(false)}
+        disabled={!canGenerateTeams}
+        ><UsersGroupSolid class="me-2 h-4 w-4" /> Generate Teams</Button>
+
+    {#if drawHistory && hasExistingTeams}
+        <Button
+            color="alternative"
+            onclick={() => onreplay?.(drawHistory)}
+            ><ClapperboardPlaySolid class="me-2 h-4 w-4" /> Replay Draw</Button>
+    {/if}
+</div>
 {#if confirmRegenerate}
     <Alert class="flex items-center border"
         ><ExclamationCircleSolid /><span

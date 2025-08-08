@@ -6,7 +6,7 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
     import KnockoutBracket from './components/KnockoutBracket.svelte';
-    import TrophyIcon from '$components/TrophyIcon.svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';

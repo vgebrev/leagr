@@ -1,6 +1,6 @@
 <script>
     import { Button } from 'flowbite-svelte';
-    import { ExclamationCircleSolid, ArrowLeftOutline } from 'flowbite-svelte-icons';
+    import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
 
@@ -73,8 +73,7 @@
                             {#if player}
                                 <span>{player}</span>
                             {:else}
-                                <span class="flex gap-2 italic"
-                                    ><ExclamationCircleSolid /> Empty</span>
+                                <span class="flex gap-2 italic opacity-50">Empty</span>
                             {/if}
                             {#if isPlayerList && player}
                                 <!-- Dropdown for unassigned/waiting list players -->

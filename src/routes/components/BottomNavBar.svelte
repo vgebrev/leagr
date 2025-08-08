@@ -7,7 +7,7 @@
         RectangleListSolid,
         AwardSolid
     } from 'flowbite-svelte-icons';
-    import TrophyIcon from '$components/TrophyIcon.svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import { page } from '$app/state';
     let { date } = $props();
     let activeUrl = $derived(`${page.url.pathname}${page.url.search}`);

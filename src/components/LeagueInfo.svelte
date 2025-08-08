@@ -1,7 +1,7 @@
 <script>
     import { Tooltip } from 'flowbite-svelte';
     import { scale } from 'svelte/transition';
-    import LeagueIcon from './LeagueIcon.svelte';
+    import LeagueIcon from './Icons/LeagueIcon.svelte';
 
     let { leagueInfo } = $props();
 

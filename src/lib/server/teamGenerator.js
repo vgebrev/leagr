@@ -20,6 +20,9 @@ export class TeamGenerator {
         this.settings = null;
         this.players = [];
         this.rankings = null;
+        this.recordHistory = false;
+        this.drawHistory = [];
+        this.initialPots = [];
     }
 
     /**
@@ -49,6 +52,18 @@ export class TeamGenerator {
      */
     setRankings(rankings) {
         this.rankings = rankings;
+        return this;
+    }
+
+    /**
+     * Enable history recording for replay functionality
+     * @param {boolean} enabled - Whether to record draw history
+     * @returns {TeamGenerator} - Fluent interface
+     */
+    setHistoryRecording(enabled) {
+        this.recordHistory = enabled;
+        this.drawHistory = [];
+        this.initialPots = [];
         return this;
     }
 
@@ -124,6 +139,25 @@ export class TeamGenerator {
     }
 
     /**
+     * Record a step in the draw history
+     * @param {string} player - Player name being assigned
+     * @param {number} fromPot - Index of the pot the player is coming from
+     * @param {string} toTeam - Team name the player is assigned to
+     * @param {number} potPlayersRemaining - Number of players remaining in the pot
+     */
+    recordDrawStep(player, fromPot, toTeam, potPlayersRemaining) {
+        if (!this.recordHistory) return;
+
+        this.drawHistory.push({
+            step: this.drawHistory.length + 1,
+            player,
+            fromPot,
+            toTeam,
+            potPlayersRemaining
+        });
+    }
+
+    /**
      * Generate teams using random distribution
      * @param {Object} config - Team configuration { teams, teamSizes }
      * @returns {Object} Generated teams object
@@ -138,8 +172,54 @@ export class TeamGenerator {
         const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
         const teamNames = this.generateTeamNames(teamSizes.length);
 
+        // Record initial pot for history (in original registration order)
+        if (this.recordHistory) {
+            this.initialPots = [
+                {
+                    name: 'All Players',
+                    players: this.players.map((name) => ({
+                        name,
+                        rankingPoints: null
+                    }))
+                }
+            ];
+        }
+
+        // Initialize empty teams
         for (let i = 0; i < teamSizes.length; i++) {
-            teams[teamNames[i]] = shuffledPlayers.splice(0, teamSizes[i]);
+            teams[teamNames[i]] = [];
+        }
+
+        // Assign players using round-robin approach
+        let playerIndex = 0;
+        const maxTeamSize = Math.max(...teamSizes);
+
+        // Round-robin assignment: for each round, assign one player to each team that still needs players
+        for (let round = 0; round < maxTeamSize && playerIndex < shuffledPlayers.length; round++) {
+            for (
+                let teamIndex = 0;
+                teamIndex < teamNames.length && playerIndex < shuffledPlayers.length;
+                teamIndex++
+            ) {
+                const teamName = teamNames[teamIndex];
+
+                // Skip this team if it's already full
+                if (teams[teamName].length >= teamSizes[teamIndex]) {
+                    continue;
+                }
+
+                const player = shuffledPlayers[playerIndex];
+                teams[teamName].push(player);
+
+                this.recordDrawStep(
+                    player,
+                    0, // Single pot index
+                    teamName,
+                    shuffledPlayers.length - playerIndex - 1
+                );
+
+                playerIndex++;
+            }
         }
 
         return teams;
@@ -178,12 +258,37 @@ export class TeamGenerator {
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
 
+        // Record initial pots for history (in ranking order)
+        if (this.recordHistory) {
+            this.initialPots = [];
+            let playerIndex = 0;
+            let potNumber = 1;
+
+            // Create pots based on the seeded algorithm structure
+            while (playerIndex < sortedPlayers.length) {
+                const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
+                const potPlayers = sortedPlayers.slice(playerIndex, playerIndex + potSize);
+
+                this.initialPots.push({
+                    name: `Pot ${potNumber}`,
+                    players: potPlayers.map((name) => ({
+                        name,
+                        rankingPoints: this.rankings?.players?.[name]?.rankingPoints || 0
+                    }))
+                });
+
+                playerIndex += potSize;
+                potNumber++;
+            }
+        }
+
         // Initialise teams
         for (let i = 0; i < numTeams; i++) {
             teams[teamNames[i]] = [];
         }
 
         let playerIndex = 0;
+        let currentPotIndex = 0;
 
         // Fill teams round by round until all are complete
         while (
@@ -199,32 +304,45 @@ export class TeamGenerator {
 
             let potPlayerIndex = 0;
 
-            // Distribute players from this pot to teams that still need players
-            for (
-                let teamIndex = 0;
-                teamIndex < numTeams && potPlayerIndex < currentPot.length;
-                teamIndex++
-            ) {
-                const teamName = teamNames[teamIndex];
-                const currentTeamSize = teams[teamName].length;
-                const targetTeamSize = teamSizes[teamIndex];
+            // Use round-robin distribution within this pot - keep cycling through teams until pot is empty
+            while (potPlayerIndex < currentPot.length) {
+                let assignedThisRound = false;
 
-                // Skip if the team is already full
-                if (currentTeamSize >= targetTeamSize) continue;
+                // Go through each team once per round
+                for (
+                    let teamIndex = 0;
+                    teamIndex < numTeams && potPlayerIndex < currentPot.length;
+                    teamIndex++
+                ) {
+                    const teamName = teamNames[teamIndex];
+                    const currentTeamSize = teams[teamName].length;
+                    const targetTeamSize = teamSizes[teamIndex];
 
-                // Determine how many players to assign (1 or 2, but no more than available in pot)
-                const remainingSpots = targetTeamSize - currentTeamSize;
-                const availableInPot = currentPot.length - potPlayerIndex;
-                const playersToAssign = Math.min(2, remainingSpots, availableInPot);
+                    // Skip if the team is already full
+                    if (currentTeamSize >= targetTeamSize) continue;
 
-                // Assign players from pot to this team
-                for (let p = 0; p < playersToAssign; p++) {
-                    teams[teamName].push(currentPot[potPlayerIndex++]);
+                    // Assign exactly 1 player per team per round (round-robin)
+                    const player = currentPot[potPlayerIndex];
+                    teams[teamName].push(player);
+
+                    this.recordDrawStep(
+                        player,
+                        currentPotIndex,
+                        teamName,
+                        currentPot.length - potPlayerIndex - 1
+                    );
+
+                    potPlayerIndex++;
+                    assignedThisRound = true;
                 }
+
+                // Safety check: if no players were assigned this round, break to avoid infinite loop
+                if (!assignedThisRound) break;
             }
 
             // Move to the next batch of players
             playerIndex += potSize;
+            currentPotIndex++;
         }
 
         return teams;
@@ -257,12 +375,16 @@ export class TeamGenerator {
             );
         }
 
+        // Reset history before generation
+        this.drawHistory = [];
+        this.initialPots = [];
+
         const teams =
             method === 'seeded'
                 ? this.generateSeededTeams(config)
                 : this.generateRandomTeams(config);
 
-        return {
+        const result = {
             teams,
             config: {
                 method,
@@ -271,6 +393,17 @@ export class TeamGenerator {
                 playersUsed: config.teamSizes.reduce((sum, size) => sum + size, 0)
             }
         };
+
+        // Include draw history if recording is enabled
+        if (this.recordHistory) {
+            result.drawHistory = {
+                drawHistory: this.drawHistory,
+                initialPots: this.initialPots,
+                method
+            };
+        }
+
+        return result;
     }
 }
 

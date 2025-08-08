@@ -1,6 +1,15 @@
 import { getStoredAccessCode, removeStoredAccessCode } from './auth.js';
 import { goto } from '$app/navigation';
 
+class HttpError extends Error {
+    constructor(message, status, body) {
+        super(message);
+        this.name = 'HttpError';
+        this.status = status;
+        this.body = body;
+    }
+}
+
 const baseUrl = '/api';
 let apiKey = $state('');
 let leagueId = $state('');
@@ -55,7 +64,11 @@ async function get(key, date) {
         const errorData = await response
             .json()
             .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
     }
     return await response.json();
 }
@@ -72,7 +85,11 @@ async function post(key, date, value) {
         const errorData = await response
             .json()
             .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
     }
 
     return await response.json();
@@ -90,7 +107,11 @@ async function postDirect(endpoint, value) {
         const errorData = await response
             .json()
             .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
     }
 
     return await response.json();
@@ -108,7 +129,11 @@ async function remove(key, date, value) {
         const errorData = await response
             .json()
             .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
     }
     return await response.json();
 }
@@ -125,7 +150,11 @@ async function patch(key, date, value) {
         const errorData = await response
             .json()
             .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
-        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
     }
     return await response.json();
 }

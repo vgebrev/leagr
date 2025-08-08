@@ -145,7 +145,7 @@ describe('TeamGenerator', () => {
         it('should include color and noun in each name', () => {
             const names = teamGenerator.generateTeamNames(2);
             names.forEach((name) => {
-                expect(name).toMatch(/^\w+ \w+$/); // Format: "Color Noun"
+                expect(name).toMatch(/^[\w-]+ [\w-]+$/); // Format: "Color Noun" (allows hyphens)
                 expect(name.split(' ')).toHaveLength(2);
             });
         });

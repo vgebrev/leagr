@@ -19,6 +19,9 @@ class TeamsService {
     /** @type {Object | null} */
     leagueInfo = $state(null);
 
+    /** @type {Object | null} */
+    drawHistory = $state(null);
+
     /** @type {boolean} */
     hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
 
@@ -132,6 +135,10 @@ class TeamsService {
                 });
 
                 this.teams = result.teams || {};
+
+                // Load draw history for the newly generated teams
+                await this.loadDrawHistory();
+
                 success = true;
             },
             (err) => {
@@ -277,6 +284,9 @@ class TeamsService {
 
                 // Load team configurations
                 await this.loadTeamConfigurations();
+
+                // Load draw history for replay (if available)
+                await this.loadDrawHistory();
             },
             (err) => {
                 console.error('Error fetching teams data:', err);
@@ -289,11 +299,42 @@ class TeamsService {
     }
 
     /**
+     * Load draw history for replay functionality
+     */
+    async loadDrawHistory() {
+        if (!this.currentDate) return;
+
+        await withLoading(
+            async () => {
+                try {
+                    this.drawHistory = await api.get('teams/draw-history', this.currentDate);
+                } catch (err) {
+                    // Draw history is optional - don't show error if not found
+                    if (err.status === 404 || err.message?.includes('No draw history found')) {
+                        this.drawHistory = null;
+                    } else {
+                        throw err;
+                    }
+                }
+            },
+            (err) => {
+                console.error('Error loading draw history:', err);
+                setNotification(
+                    err.message || 'Failed to load draw history. Please try again.',
+                    'error'
+                );
+                this.drawHistory = null;
+            }
+        );
+    }
+
+    /**
      * Reset the teams service state
      */
     reset() {
         this.teams = {};
         this.currentDate = null;
+        this.drawHistory = null;
         this.#teamConfigurations = [];
     }
 

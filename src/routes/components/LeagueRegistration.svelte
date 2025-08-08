@@ -1,6 +1,6 @@
 <script>
     import { Alert, Button, Input, Label, Radio } from 'flowbite-svelte';
-    import LeagueIcon from '$components/LeagueIcon.svelte';
+    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import { isValidSubdomain, generateAccessCode } from '$lib/shared/validation.js';
     import { capitalize } from '$lib/shared/helpers.js';
     import { leaguesService } from '$lib/client/services/leagues.svelte.js';

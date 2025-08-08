@@ -3,6 +3,7 @@ import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { data } from '$lib/server/data.js';
 import {
     validateDateParameter,
     parseRequestBody,
@@ -100,17 +101,29 @@ export const POST = async ({ request, url, locals }) => {
             Math.min(gameData.players.available.length, effectivePlayerLimit)
         );
 
-        // Generate teams
+        // Generate teams with history recording enabled
         const teamGenerator = createTeamGenerator()
             .setSettings(gameData.settings)
             .setPlayers(eligiblePlayers)
-            .setRankings(rankings);
+            .setRankings(rankings)
+            .setHistoryRecording(true);
 
         const result = teamGenerator.generateTeams(method, teamConfig);
 
-        // Store the generated teams
-        const { data } = await import('$lib/server/data.js');
+        // Store the generated teams and draw history
         await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);
+
+        // Store draw history if it exists
+        if (result.drawHistory) {
+            await data.set(
+                'drawHistory',
+                dateValidation.date,
+                result.drawHistory,
+                {},
+                true,
+                leagueId
+            );
+        }
 
         // Validate and clean-up any inconsistencies
         const cleanupResult = await playerManager.validateAndCleanup();
