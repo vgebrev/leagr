@@ -12,10 +12,15 @@
         onremove = null,
         onassign = null,
         assignablePlayers = [],
-        allTeams = {}
+        allTeams = {},
+        size = 'md'
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
+    const sizeStyles = {
+        sm: 'text-xs px-2 py-1',
+        md: 'text-sm p-2'
+    };
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
@@ -60,7 +65,7 @@
             <tr>
                 <th
                     scope="col"
-                    class="p-2">
+                    class={sizeStyles[size]}>
                     {teamName || `${capitalize(color)} Team`}
                 </th>
             </tr>
@@ -68,7 +73,7 @@
         <tbody>
             {#each team as player, i (i)}
                 <tr class={`${styles.row}`}>
-                    <td class="m-0 p-2"
+                    <td class="m-0 {sizeStyles[size]}"
                         ><div class="flex">
                             {#if player}
                                 <span>{player}</span>

@@ -394,7 +394,8 @@
                         canModifyList={false}
                         onremove={null}
                         onassign={null}
-                        assignablePlayers={[]} />
+                        assignablePlayers={[]}
+                        size="sm" />
                 {/each}
             </div>
         </div>
