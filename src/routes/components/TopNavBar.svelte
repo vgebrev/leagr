@@ -1,5 +1,5 @@
 <script>
-    import { AdjustmentsHorizontalSolid, ShareAllOutline } from 'flowbite-svelte-icons';
+    import { AdjustmentsHorizontalSolid, ForwardOutline } from 'flowbite-svelte-icons';
     import { DarkMode, Navbar, NavBrand, Spinner, Tooltip } from 'flowbite-svelte';
     import { scale } from 'svelte/transition';
     import { isLoading } from '$lib/client/stores/loading.js';
@@ -55,7 +55,7 @@
             <button
                 class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-400 dark:hover:bg-gray-700"
                 onclick={shareCurrentPage}
-                id="share-button"><ShareAllOutline /></button>
+                id="share-button"><ForwardOutline /></button>
             <Tooltip
                 class="shadow-lg"
                 triggeredBy="#share-button"
