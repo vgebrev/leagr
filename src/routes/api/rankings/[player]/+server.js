@@ -39,7 +39,9 @@ function createUnifiedDetails(playerData, limit = null) {
                       matchPoints: entry.matchPoints || 0,
                       bonusPoints: entry.bonusPoints || 0,
                       knockoutPoints: entry.knockoutPoints || 0,
-                      totalPoints: entry.totalPoints || 0
+                      totalPoints: entry.totalPoints || 0,
+                      leagueWinner: entry.leagueWinner || false,
+                      cupWinner: entry.cupWinner || false
                   }
                 : {})
         });

@@ -3,6 +3,8 @@
     import { setNotification } from '$lib/client/stores/notification.js';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
+    import { Button } from 'flowbite-svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
@@ -72,6 +74,14 @@
 
 <div class="flex flex-col gap-2">
     <RankingInfoPanel rankingMetadata={rankings.rankingMetadata} />
+    <Button
+        href="/champions"
+        color="primary"
+        size="sm"
+        class="flex items-center gap-2">
+        <TrophyIcon class="h-4 w-4" />
+        Champions Hall
+    </Button>
     <div class="overflow-x-auto">
         <RankingsTable
             {sortedPlayers}

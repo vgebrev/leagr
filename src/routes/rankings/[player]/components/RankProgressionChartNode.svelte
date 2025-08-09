@@ -1,6 +1,8 @@
 <script>
     import { Popover } from 'flowbite-svelte';
-    import AppearanceCard from './AppearanceCard.svelte';
+    import AppearanceCard from '$components/AppearanceCard.svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import { scale } from 'svelte/transition';
 
     let { point, x, y } = $props();
@@ -47,6 +49,47 @@
         text-anchor="middle">
         {point.rank}
     </text>
+
+    <!-- Championship trophy icons -->
+    {#if played && (point.leagueWinner || point.cupWinner)}
+        <g>
+            {#if point.leagueWinner && point.cupWinner}
+                <!-- Both league and cup winner - show both icons side by side centered -->
+                <foreignObject
+                    x={x - 14}
+                    y={y + 8}
+                    width="12"
+                    height="12">
+                    <CrownIcon class="h-3 w-3 text-yellow-500" />
+                </foreignObject>
+                <foreignObject
+                    x={x + 2}
+                    y={y + 8}
+                    width="12"
+                    height="12">
+                    <TrophyIcon class="h-3 w-3 text-amber-600" />
+                </foreignObject>
+            {:else if point.leagueWinner}
+                <!-- League winner only -->
+                <foreignObject
+                    x={x - 6}
+                    y={y + 8}
+                    width="12"
+                    height="12">
+                    <CrownIcon class="h-3 w-3 text-yellow-500" />
+                </foreignObject>
+            {:else if point.cupWinner}
+                <!-- Cup winner only -->
+                <foreignObject
+                    x={x - 6}
+                    y={y + 8}
+                    width="12"
+                    height="12">
+                    <TrophyIcon class="h-3 w-3 text-amber-600" />
+                </foreignObject>
+            {/if}
+        </g>
+    {/if}
 </g>
 
 <!-- Popover for this node -->

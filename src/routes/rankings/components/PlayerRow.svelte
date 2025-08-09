@@ -34,7 +34,7 @@
      * @returns {string} The class string for the column header.
      */
     function getSortClass(sortBy) {
-        return `cursor-default px-1 py-1.5 text-center ${currentSort === sortBy ? 'font-bold text-black dark:text-white' : ''}`;
+        return `cursor-default px-1 py-1.5 text-center ${currentSort === sortBy ? 'font-bold text-gray-900 dark:text-gray-100' : ''}`;
     }
 </script>
 
@@ -77,7 +77,7 @@
     </TableBodyCell>
     <TableBodyCell class="text-bold flex max-w-24 overflow-hidden px-1 py-1.5 font-bold">
         <span
-            class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-black hover:underline dark:text-white"
+            class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
             role="button"
             tabindex="0"
             onclick={handlePlayerClick}

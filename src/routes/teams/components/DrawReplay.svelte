@@ -105,7 +105,7 @@
 
     function play() {
         if (currentStep >= drawHistory.drawHistory.length) {
-            currentStep = 0;
+            reset();
         }
 
         isPlaying = true;
@@ -333,7 +333,7 @@
 
 <Modal
     bind:open
-    fullscreen
+    transition={scale}
     class="h-full overflow-hidden p-0"
     classes={{
         body: 'bg-white dark:bg-gray-800 p-0 h-full'

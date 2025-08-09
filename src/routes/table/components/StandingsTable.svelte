@@ -27,7 +27,7 @@
 
 {#if standings.length > 0}
     <Table
-        class="w-full min-w-fit text-xs"
+        classes={{ div: 'w-full min-w-fit text-xs' }}
         shadow>
         <TableHead>
             <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>

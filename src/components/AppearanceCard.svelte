@@ -1,6 +1,8 @@
 <script>
     import { Badge } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import { goto } from '$app/navigation';
 
     let { detail, hasBorder = true } = $props();
@@ -36,6 +38,26 @@
     <div class="mb-3 flex items-center justify-between gap-2">
         <div class="shrink-0 text-sm font-semibold">
             {formatDate(detail.date)}
+            {#if detail.leagueWinner || detail.cupWinner}
+                <div class="mt-1 flex gap-1">
+                    {#if detail.leagueWinner}
+                        <Badge
+                            color="yellow"
+                            class="flex items-center gap-1 text-xs">
+                            <CrownIcon class="h-3 w-3" />
+                            League
+                        </Badge>
+                    {/if}
+                    {#if detail.cupWinner}
+                        <Badge
+                            color="orange"
+                            class="flex items-center gap-1 text-xs">
+                            <TrophyIcon class="h-3 w-3" />
+                            Cup
+                        </Badge>
+                    {/if}
+                </div>
+            {/if}
         </div>
         <div class="flex w-full items-center justify-end space-x-2">
             <button

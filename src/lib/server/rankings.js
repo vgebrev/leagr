@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
+import { createStandingsManager } from './standings.js';
 
 const rankingsMutexes = new Map();
 
@@ -359,7 +360,8 @@ export class RankingsManager {
                 allCalculatedDates.push(date);
 
                 const raw = await fs.readFile(path.join(this.getDataPath(), file), 'utf-8');
-                const { teams, games } = JSON.parse(raw);
+                const sessionData = JSON.parse(raw);
+                const { teams, games } = sessionData;
 
                 const teamEntries = Object.entries(teams ?? {});
                 const rounds = games?.rounds ?? [];
@@ -418,6 +420,9 @@ export class RankingsManager {
                             totalPoints: totalDatePoints
                         };
 
+                        // Add championship flags
+                        this.addChampionshipFlags(playerData.rankingDetail[date], sessionData);
+
                         // Update cumulative totals
                         playerData.points += totalDatePoints;
                         playerData.appearances += 1;
@@ -440,6 +445,13 @@ export class RankingsManager {
 
             // Calculate movement from complete history
             this.calculateMovementFromHistory(enhancedRankings);
+
+            // Add championship counts to each player
+            Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+                const championships = this.countChampionships(playerData.rankingDetail);
+                playerData.leagueWins = championships.leagueWins;
+                playerData.cupWins = championships.cupWins;
+            });
 
             await this.saveRankingsUnsafe(enhancedRankings);
             return enhancedRankings;
@@ -546,6 +558,96 @@ export class RankingsManager {
 
         // Need to enhance the raw data
         return this.calculateEnhancedRankings(rawRankings);
+    }
+
+    /**
+     * Get the league winner from session data
+     * @param {Object} sessionData - Session data containing games and teams
+     * @returns {string|null} - Winning team name or null if no winner
+     */
+    getLeagueWinner(sessionData) {
+        if (!sessionData.games?.rounds || !Array.isArray(sessionData.games.rounds)) {
+            return null;
+        }
+
+        // Flatten rounds to get all matches
+        const allMatches = sessionData.games.rounds.flat();
+
+        // Check if we have any completed matches
+        const hasCompletedMatches = allMatches.some(
+            (match) => match.homeScore !== null && match.awayScore !== null
+        );
+
+        if (!hasCompletedMatches) {
+            return null;
+        }
+
+        try {
+            const standingsManager = createStandingsManager();
+            const standings = standingsManager.calculateStandings(allMatches);
+
+            // Return the first team (highest points)
+            return standings.length > 0 ? standings[0].team : null;
+        } catch (error) {
+            console.error('Error calculating league winner:', error);
+            return null;
+        }
+    }
+
+    /**
+     * Get the cup winner from session data
+     * @param {Object} sessionData - Session data containing knockout games
+     * @returns {string|null} - Winning team name or null if no winner
+     */
+    getCupWinner(sessionData) {
+        if (!sessionData.games?.['knockout-games']?.bracket) {
+            return null;
+        }
+
+        const bracket = sessionData.games['knockout-games'].bracket;
+
+        // Find the final match
+        const finalMatch = bracket.find((match) => match.round === 'final');
+
+        if (!finalMatch || finalMatch.homeScore === null || finalMatch.awayScore === null) {
+            return null;
+        }
+
+        // Return winner of final match
+        return finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
+    }
+
+    /**
+     * Add championship flags to a ranking detail entry
+     * @param {Object} rankingDetail - Ranking detail entry to modify
+     * @param {Object} sessionData - Session data for determining winners
+     * @returns {Object} - Modified ranking detail with championship flags
+     */
+    addChampionshipFlags(rankingDetail, sessionData) {
+        const leagueWinner = this.getLeagueWinner(sessionData);
+        const cupWinner = this.getCupWinner(sessionData);
+
+        rankingDetail.leagueWinner = rankingDetail.team === leagueWinner;
+        rankingDetail.cupWinner = rankingDetail.team === cupWinner;
+
+        return rankingDetail;
+    }
+
+    /**
+     * Count championships from ranking detail entries
+     * @param {Object} rankingDetail - Object containing ranking details by date
+     * @returns {Object} - Object with leagueWins and cupWins counts
+     */
+    countChampionships(rankingDetail) {
+        let leagueWins = 0;
+        let cupWins = 0;
+
+        Object.values(rankingDetail).forEach((entry) => {
+            if (entry.leagueWinner === true) leagueWins++;
+            if (entry.cupWinner === true) cupWins++;
+        });
+
+        return { leagueWins, cupWins };
     }
 }
 

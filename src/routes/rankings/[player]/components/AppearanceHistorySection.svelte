@@ -1,5 +1,5 @@
 <script>
-    import AppearanceCard from './AppearanceCard.svelte';
+    import AppearanceCard from '$components/AppearanceCard.svelte';
 
     let { playerData, limit = null } = $props();
 
