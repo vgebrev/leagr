@@ -20,7 +20,8 @@ Features include:
     - Knockout tournament generation with teams seeded by standings.
 - **Player Rankings**
     - Cumulative player rankings based on team performances.
-    - Player ranking details and history.
+    - Player profile - ranking details and history.
+    - Championship hall: tracks league and cup winners.
 
 ## Environment Setup
 

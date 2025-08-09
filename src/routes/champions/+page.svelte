@@ -24,7 +24,7 @@
     let loading = $state(true);
     let error = $state(false);
     let celebrating = $state(false);
-    let topChampion = $derived(champions[0].playerName || '');
+    let topChampion = $derived(champions.length > 0 ? champions[0].playerName : '');
     /**
      * Load champions data
      */
@@ -63,9 +63,7 @@
 <!-- Header -->
 <div class="mb-2">
     <h5 class="flex items-center text-lg font-bold">Champions Hall</h5>
-    <p class="text-sm text-gray-500">
-        Players who have won at least one league or cup championship
-    </p>
+    <p class="text-sm text-gray-500">Players who have won at least one league or knockout cup</p>
 </div>
 
 {#if loading}
