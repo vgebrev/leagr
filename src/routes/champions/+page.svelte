@@ -15,6 +15,7 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import AppearanceCard from '$components/AppearanceCard.svelte';
+    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -22,7 +23,8 @@
     let champions = $state([]);
     let loading = $state(true);
     let error = $state(false);
-
+    let celebrating = $state(false);
+    let topChampion = $derived(champions[0].playerName || '');
     /**
      * Load champions data
      */
@@ -40,6 +42,15 @@
             }
         );
         loading = false;
+    }
+
+    /**
+     * Handle click on top champion's name
+     */
+    function handleTopChampionClick() {
+        if (champions.length > 0) {
+            celebrating = true;
+        }
     }
 
     onMount(loadChampions);
@@ -88,8 +99,15 @@
             {#each champions as champion, index (index)}
                 <TableBodyRow>
                     <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 font-medium text-gray-900 dark:text-gray-100"
-                        >{champion.playerName}</TableBodyCell>
+                    <TableBodyCell class="px-1 py-1.5 font-medium text-gray-900 dark:text-gray-100">
+                        {#if index === 0}
+                            <button onclick={handleTopChampionClick}>
+                                {champion.playerName}
+                            </button>
+                        {:else}
+                            {champion.playerName}
+                        {/if}
+                    </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
                         {#if champion.leagueWins > 0}
                             <button
@@ -143,3 +161,10 @@
         </TableBody>
     </Table>
 {/if}
+
+<CelebrationOverlay
+    bind:celebrating
+    teamName={topChampion}
+    teamColour="default"
+    icon="👑"
+    confettiColours={['#fbbf24', '#fde047', '#facc15']} />
