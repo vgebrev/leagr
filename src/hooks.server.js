@@ -7,8 +7,8 @@ const RATE_RULES = [
     {
         verb: 'POST',
         routePattern: /^\/api\/players(?:\/|$)/,
-        maxRequests: 60, //1,
-        duration: 60 * 1000, //60 * 60 * 1000, // 1 hour
+        maxRequests: 1,
+        duration: 60 * 60 * 1000, // 1 hour
         message:
             "You've already added a player recently. Please use the share link to invite other players."
     },
