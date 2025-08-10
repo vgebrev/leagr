@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createDisciplineManager } from '$lib/server/discipline.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import {
     validateDateParameter,
@@ -64,14 +65,26 @@ export const DELETE = async ({ request, url, locals }) => {
         let result;
         if (bodyParseResult.data.teamName) {
             // Player is in a team - use removePlayerFromTeam
+            // For no-shows, use 'remove' action to completely remove player like a normal removal
+            const effectiveAction = action === 'no-show' ? 'remove' : action;
             result = await playerManager.removePlayerFromTeam(
                 nameValidation.sanitizedName,
                 bodyParseResult.data.teamName,
-                action
+                effectiveAction
             );
         } else {
             // Player is unassigned/waiting - use simple removePlayer for complete removal
             result = await playerManager.removePlayer(nameValidation.sanitizedName);
+        }
+
+        // Handle no-show discipline tracking
+        if (action === 'no-show') {
+            const disciplineManager = createDisciplineManager().setLeague(leagueId);
+            await disciplineManager.incrementNoShow(nameValidation.sanitizedName);
+            await disciplineManager.updateSuspensionReadinessIfNeeded(
+                nameValidation.sanitizedName,
+                gameData.settings
+            );
         }
 
         return json(result);

@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
 import {
     validateAndSanitizePlayerName,
     validateDateParameter,
@@ -56,27 +57,61 @@ export const POST = async ({ request, url, locals }) => {
         return error(400, `Invalid list parameter: ${listValidation.errors.join(', ')}`);
     }
 
-    try {
-        const playerManager = createPlayerManager()
-            .setDate(dateValidation.date)
-            .setLeague(locals.leagueId);
+    const playerManager = createPlayerManager()
+        .setDate(dateValidation.date)
+        .setLeague(locals.leagueId);
 
-        // Get settings to validate competition state
-        const gameData = await playerManager.getData({
+    // Get settings to validate competition state and suspension
+    let gameData;
+    try {
+        gameData = await playerManager.getData({
             players: false,
             teams: false,
             settings: true
         });
-
-        // Validate if operations are allowed based on competition end state
-        const operationValidation = validateCompetitionOperationsAllowed(
-            dateValidation.date,
-            gameData.settings
-        );
-        if (!operationValidation.isValid) {
-            return error(400, operationValidation.error);
+    } catch (err) {
+        console.error('Error fetching game data:', err);
+        if (err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
         }
+        return error(500, 'Failed to fetch game data');
+    }
 
+    // Validate if operations are allowed based on competition end state
+    const operationValidation = validateCompetitionOperationsAllowed(
+        dateValidation.date,
+        gameData.settings
+    );
+    if (!operationValidation.isValid) {
+        return error(400, operationValidation.error);
+    }
+
+    // Evaluate suspension before allowing signup
+    let suspension;
+    try {
+        suspension = await createDisciplineManager()
+            .setLeague(locals.leagueId)
+            .evaluateSuspensionOnSignup(
+                nameValidation.sanitizedName,
+                dateValidation.date,
+                gameData.settings
+            );
+    } catch (err) {
+        console.error('Error checking suspension:', err);
+        if (err instanceof DisciplineError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to check suspension status');
+    }
+
+    if (suspension.suspended) {
+        return error(
+            400,
+            suspension.reason || 'Player is suspended for this session due to repeated no-shows.'
+        );
+    }
+
+    try {
         const result = await playerManager.addPlayer(
             nameValidation.sanitizedName,
             bodyParseResult.data.list

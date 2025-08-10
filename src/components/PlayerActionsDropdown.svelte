@@ -7,10 +7,11 @@
         ThumbsUpOutline,
         ArrowLeftOutline
     } from 'flowbite-svelte-icons';
+    import InvisibleFaceIcon from '$components/Icons/InvisibleFaceIcon.svelte';
 
     /**
      * @typedef {Object} PlayerAction
-     * @property {'remove'|'move-to-waiting'|'move-to-active'|'assign'} type - The action type that determines the icon
+     * @property {'remove'|'no-show'|'move-to-waiting'|'move-to-active'|'assign'} type - The action type that determines the icon
      * @property {string} label - The display text for the action
      * @property {() => void} onclick - The function to call when the action is clicked
      * @property {boolean} [disabled] - Whether the action is disabled (optional)
@@ -32,6 +33,7 @@
     // Internal icon mapping for action types
     const iconMap = {
         remove: TrashBinOutline,
+        'no-show': InvisibleFaceIcon,
         'move-to-waiting': ClockOutline,
         'move-to-active': ThumbsUpOutline,
         assign: ArrowLeftOutline
@@ -56,7 +58,7 @@
     {#each actions as action, i (i)}
         {@const Icon = iconMap[action.type]}
         <DropdownItem
-            classes={{ anchor: 'w-full font-normal' }}
+            class="w-full font-normal"
             onclick={action.onclick}
             disabled={action.disabled}>
             <span class="flex items-center">

@@ -109,6 +109,11 @@
                                         type: 'remove',
                                         label: 'Remove',
                                         onclick: () => handleRemovePlayer(player, 'remove')
+                                    },
+                                    {
+                                        type: 'no-show',
+                                        label: 'No-show',
+                                        onclick: () => handleRemovePlayer(player, 'no-show')
                                     }
                                 ]}
                                 <PlayerActionsDropdown

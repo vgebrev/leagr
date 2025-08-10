@@ -16,7 +16,8 @@ export const LEAGUE_ONLY_SETTINGS = [
     'teamGeneration',
     'canRegenerateTeams',
     'canResetSchedule',
-    'seedTeams'
+    'seedTeams',
+    'discipline'
 ];
 
 /** @typedef {Object} DaySettings
@@ -40,6 +41,9 @@ export const LEAGUE_ONLY_SETTINGS = [
  * @property {boolean} canRegenerateTeams - Whether teams can be regenerated
  * @property {boolean} canResetSchedule - Whether the schedule can be reset
  * @property {boolean} seedTeams - Whether teams should be seeded
+ * @property {Object} discipline - Discipline system settings
+ * @property {boolean} discipline.enabled - Whether discipline system is enabled
+ * @property {number} discipline.noShowThreshold - Number of no-shows before suspension
  */
 
 /**
@@ -64,7 +68,11 @@ export const defaultSettings = {
     playerLimit: 24,
     canRegenerateTeams: false,
     canResetSchedule: false,
-    seedTeams: true
+    seedTeams: true,
+    discipline: {
+        enabled: true,
+        noShowThreshold: 2
+    }
 };
 
 export const defaultPlayers = {
