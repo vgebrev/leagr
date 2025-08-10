@@ -28,3 +28,6 @@ vite.config.ts.timestamp-*
 
 #IIS
 /web.config
+
+# AI Agents
+/.junie
