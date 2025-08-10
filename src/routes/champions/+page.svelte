@@ -144,7 +144,7 @@
                                     {#each champion.cupSessions as session, sessionIndex (sessionIndex)}
                                         <AppearanceCard
                                             detail={session}
-                                            hasBorder={true} />
+                                            hasBorder={false} />
                                     {/each}
                                 </div>
                             </Popover>
