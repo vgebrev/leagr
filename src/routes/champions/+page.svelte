@@ -116,7 +116,7 @@
                             </button>
                             <Popover
                                 triggeredBy="#league-{index}"
-                                class="max-h-3/4 overflow-y-auto text-sm">
+                                class="max-h-1/2 overflow-y-auto text-sm">
                                 <div class="flex flex-col gap-2">
                                     {#each champion.leagueSessions as session, sessionIndex (sessionIndex)}
                                         <AppearanceCard
@@ -139,7 +139,7 @@
                             </button>
                             <Popover
                                 triggeredBy="#cup-{index}"
-                                class="max-h-3/4 overflow-y-auto text-sm">
+                                class="max-h-1/2 overflow-y-auto text-sm">
                                 <div class="flex flex-col gap-2">
                                     {#each champion.cupSessions as session, sessionIndex (sessionIndex)}
                                         <AppearanceCard
