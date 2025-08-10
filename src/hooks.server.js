@@ -2,8 +2,24 @@ import { getLeagueInfo } from '$lib/server/league.js';
 import { initializeEmailService } from '$lib/server/email.js';
 
 const rateLimitMap = new Map();
-const RATE_LIMIT_DURATION = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX_REQUESTS = 60;
+// Rule-based rate limiting configuration (first match wins)
+const RATE_RULES = [
+    {
+        verb: 'POST',
+        routePattern: /^\/api\/players(?:\/|$)/,
+        maxRequests: 1,
+        duration: 60 * 60 * 1000, // 1 hour
+        message:
+            "You've already added a player recently. Please use the share link to invite other players."
+    },
+    {
+        verb: '*',
+        routePattern: /^\/api\//,
+        maxRequests: 60,
+        duration: 60 * 1000, // 1 minute
+        message: 'Too many requests.'
+    }
+];
 
 const allowedOrigin = process.env.ALLOWED_ORIGIN || import.meta.env.VITE_ALLOWED_ORIGIN;
 const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
@@ -62,20 +78,30 @@ const getIp = (event) => {
     );
 };
 
-function checkRateLimit(ip) {
-    const currentTime = Date.now();
-    const requestData = rateLimitMap.get(ip) || { count: 0, firstRequestTime: currentTime };
+function pickRateRule(method, path) {
+    const m = method.toUpperCase();
+    for (const rule of RATE_RULES) {
+        if ((rule.verb === '*' || rule.verb.toUpperCase() === m) && rule.routePattern.test(path)) {
+            return rule;
+        }
+    }
+    return null;
+}
 
-    if (currentTime - requestData.firstRequestTime > RATE_LIMIT_DURATION) {
-        requestData.count = 1;
-        requestData.firstRequestTime = currentTime;
+function isRateLimitedFor(rule, key) {
+    const now = Date.now();
+    const mapKey = `${rule.verb}:${rule.routePattern}:${key}`;
+    const data = rateLimitMap.get(mapKey) || { count: 0, firstRequestTime: now };
+
+    if (now - data.firstRequestTime > rule.duration) {
+        data.count = 1;
+        data.firstRequestTime = now;
     } else {
-        requestData.count += 1;
+        data.count += 1;
     }
 
-    rateLimitMap.set(ip, requestData);
-
-    return requestData.count > RATE_LIMIT_MAX_REQUESTS;
+    rateLimitMap.set(mapKey, data);
+    return data.count > rule.maxRequests;
 }
 
 function isOriginAllowed(request) {
@@ -120,10 +146,6 @@ export const handle = async ({ event, resolve }) => {
     const ip = getIp(event);
     const { url, request } = event;
 
-    if (checkRateLimit(ip)) {
-        return new Response(JSON.stringify({ message: 'Too many requests.' }), { status: 429 });
-    }
-
     if (request.method === 'OPTIONS') {
         const { allowed, origin } = isOriginAllowed(request);
         return new Response(null, {
@@ -131,7 +153,7 @@ export const handle = async ({ event, resolve }) => {
             headers: {
                 'Access-Control-Allow-Origin': allowed ? origin || '*' : 'null',
                 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,X-API-KEY',
+                'Access-Control-Allow-Headers': 'Content-Type,X-API-KEY,X-CLIENT-ID',
                 'Access-Control-Max-Age': '86400'
             }
         });
@@ -153,6 +175,23 @@ export const handle = async ({ event, resolve }) => {
 
         if (!checkApiKey(request)) {
             return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
+        }
+
+        // Require client identification for all API endpoints
+        const clientId = request.headers.get('x-client-id');
+        if (!clientId) {
+            return new Response(JSON.stringify({ message: 'Unidentified Client' }), {
+                status: 400
+            });
+        }
+
+        // Apply rule-based rate limiting (first matching rule)
+        const rule = pickRateRule(request.method, url.pathname);
+        if (rule) {
+            const composite = `${ip}|${clientId}`;
+            if (isRateLimitedFor(rule, composite)) {
+                return new Response(JSON.stringify({ message: rule.message }), { status: 429 });
+            }
         }
 
         // Check access code for API requests (except public league endpoints)

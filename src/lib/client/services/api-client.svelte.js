@@ -13,6 +13,7 @@ class HttpError extends Error {
 const baseUrl = '/api';
 let apiKey = $state('');
 let leagueId = $state('');
+let clientId = $state('');
 
 export function setApiKey(key) {
     apiKey = key;
@@ -22,11 +23,48 @@ export function setLeagueId(id) {
     leagueId = id;
 }
 
+export function setClientId(id) {
+    clientId = id;
+}
+
+// Ensure a stable client ID exists in browser localStorage and is set in memory
+function ensureClientIdInitialized() {
+    if (clientId) return;
+    if (typeof window === 'undefined') return;
+    try {
+        const key = 'leagr_client_id';
+        let id = window.localStorage.getItem(key);
+        if (!id) {
+            const rnd =
+                typeof crypto !== 'undefined' && crypto.randomUUID
+                    ? crypto.randomUUID()
+                    : `${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`;
+            id = `lcid_${rnd}`;
+            window.localStorage.setItem(key, id);
+        }
+        clientId = id;
+    } catch {
+        // If storage fails, we simply won't send the client-id; server will reject accordingly
+    }
+}
+
+// Attempt initialization at module import time (browser only)
+if (typeof window !== 'undefined') {
+    ensureClientIdInitialized();
+}
+
 function getAuthHeaders() {
+    // Be defensive: ensure client ID is initialized before building headers
+    ensureClientIdInitialized();
+
     const headers = {
         'Content-Type': 'application/json',
         'x-api-key': apiKey
     };
+
+    if (clientId) {
+        headers['x-client-id'] = clientId;
+    }
 
     // Add access code to the "Authorization" header if we have a league context
     if (leagueId) {
