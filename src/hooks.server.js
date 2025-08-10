@@ -185,7 +185,7 @@ export const handle = async ({ event, resolve }) => {
             });
         }
 
-        // Apply rule-based rate limiting (first matching rule)
+        // Apply rule-based rate-limiting (first matching rule)
         const rule = pickRateRule(request.method, url.pathname);
         if (rule) {
             const composite = `${ip}|${clientId}`;

@@ -1,6 +1,4 @@
 <script>
-    import { Button } from 'flowbite-svelte';
-    import { ArrowLeftOutline } from 'flowbite-svelte-icons';
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
 
@@ -141,13 +139,10 @@
                                         {canModifyList}
                                         styleClass={styles.buttonClass} />
                                 {:else}
-                                    <Button
-                                        size="sm"
-                                        class="ms-auto p-0 {styles.buttonClass} opacity-50"
-                                        type="button"
-                                        outline={true}
-                                        color="alternative"
-                                        disabled><ArrowLeftOutline class="h-4 w-4" /></Button>
+                                    <PlayerActionsDropdown
+                                        actions={[]}
+                                        canModifyList={false}
+                                        styleClass={styles.buttonClass} />
                                 {/if}
                             {/if}
                         </div></td>
