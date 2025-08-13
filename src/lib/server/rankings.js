@@ -4,6 +4,7 @@ import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 import { createStandingsManager } from './standings.js';
 import { createDisciplineManager } from './discipline.js';
+import * as fuzzball from 'fuzzball';
 
 const rankingsMutexes = new Map();
 
@@ -438,7 +439,10 @@ export class RankingsManager {
                             await disciplineManager.clearNoShowsIfAppeared(player, date);
                         } catch (error) {
                             // Log but don't fail rankings update if discipline clearing fails
-                            console.error(`Failed to clear no-shows for player ${player} on date ${date}:`, error);
+                            console.error(
+                                `Failed to clear no-shows for player ${player} on date ${date}:`,
+                                error
+                            );
                         }
                     }
                 }
@@ -662,6 +666,37 @@ export class RankingsManager {
         });
 
         return { leagueWins, cupWins };
+    }
+
+    /**
+     * Check if a player name is similar to any existing ranked players (fuzzy matching)
+     * @param {string} playerName - Player name to check
+     * @param {number} threshold - Similarity threshold (0-100, default 80)
+     * @returns {Promise<Object>} - Similar player match result
+     */
+    async checkSimilarRankedPlayer(playerName, threshold = 80) {
+        const rankings = await this.loadRankings();
+        const rankedPlayerNames = Object.keys(rankings.players || {});
+
+        for (const rankedPlayerName of rankedPlayerNames) {
+            // Calculate similarity between the input name and ranked player name
+            const similarity = fuzzball.ratio(
+                playerName.toLowerCase().trim(),
+                rankedPlayerName.toLowerCase().trim()
+            );
+
+            // Only suggest if similarity is high but not 100% (exact match)
+            // This helps with typos but doesn't suggest for exact matches
+            if (similarity >= threshold && similarity < 100) {
+                return {
+                    hasSimilar: true,
+                    suggestedPlayer: rankedPlayerName,
+                    similarity: similarity
+                };
+            }
+        }
+
+        return { hasSimilar: false };
     }
 }
 

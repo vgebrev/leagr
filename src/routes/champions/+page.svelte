@@ -56,10 +56,6 @@
     onMount(loadChampions);
 </script>
 
-<svelte:head>
-    <title>Champions Hall | Leagr</title>
-</svelte:head>
-
 <!-- Header -->
 <div class="mb-2">
     <h5 class="flex items-center text-lg font-bold">Champions Hall</h5>

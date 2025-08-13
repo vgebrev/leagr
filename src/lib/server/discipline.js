@@ -3,6 +3,7 @@ import path from 'path';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
+import * as fuzzball from 'fuzzball';
 
 const disciplineMutexes = new Map();
 
@@ -159,7 +160,6 @@ export class DisciplineManager {
         });
     }
 
-
     /**
      * Check if player should be suspended based on no-shows
      * @param {string} playerName - Player name
@@ -222,7 +222,7 @@ export class DisciplineManager {
             disciplineData.players[playerName].suspensions.push(suspension);
             disciplineData.players[playerName].totalSuspensions += 1;
             // Clear active no-shows after suspension is applied
-            const clearedDates = disciplineData.players[playerName].activeNoShows.map(date => ({
+            const clearedDates = disciplineData.players[playerName].activeNoShows.map((date) => ({
                 date: date,
                 clearedOn: new Date().toISOString().split('T')[0]
             }));
@@ -258,6 +258,53 @@ export class DisciplineManager {
     }
 
     /**
+     * Check if a player name is similar to any suspended players or players with active no-shows (fuzzy matching)
+     * @param {string} playerName - Player name to check
+     * @param {string} sessionDate - Session date
+     * @param {number} threshold - Similarity threshold (0-100, default 85)
+     * @returns {Promise<Object>} - Fuzzy match result
+     */
+    async checkFuzzySuspensionMatch(playerName, sessionDate, threshold = 85) {
+        const disciplineData = await this.loadDisciplineData();
+
+        for (const [disciplinePlayerName, record] of Object.entries(disciplineData.players || {})) {
+            // Filter active no-shows to only include those on or before the current date
+            const relevantNoShows = (record.activeNoShows || []).filter(
+                (noShowDate) => noShowDate <= sessionDate
+            );
+
+            // Check if this player has a suspension for the current date
+            const suspensionForDate = record.suspensions.find((s) => s.date === sessionDate);
+
+            // Only check players who are either suspended or have active no-shows
+            if (suspensionForDate || relevantNoShows.length > 0) {
+                // Calculate similarity between the input name and discipline player name
+                const similarity = fuzzball.ratio(
+                    playerName.toLowerCase().trim(),
+                    disciplinePlayerName.toLowerCase().trim()
+                );
+
+                // Only flag as suspicious if similarity is high but not 100% (exact match)
+                // This allows legitimate players to sign up (to trigger suspension or clear no-shows)
+                // but blocks potential circumvention attempts
+                if (similarity >= threshold && similarity < 100) {
+                    return {
+                        isMatch: true,
+                        matchedPlayer: disciplinePlayerName,
+                        similarity: similarity,
+                        isSuspended: !!suspensionForDate,
+                        hasActiveNoShows: relevantNoShows.length > 0,
+                        activeNoShowCount: relevantNoShows.length,
+                        suspension: suspensionForDate || null
+                    };
+                }
+            }
+        }
+
+        return { isMatch: false };
+    }
+
+    /**
      * Evaluate suspension on signup attempt
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Date of the session they're trying to join
@@ -269,6 +316,27 @@ export class DisciplineManager {
         const currentSuspension = await this.isPlayerSuspended(playerName, sessionDate);
         if (currentSuspension.suspended) {
             return currentSuspension;
+        }
+
+        // Check for fuzzy match against suspended players or players with active no-shows (prevent circumvention)
+        const fuzzyMatch = await this.checkFuzzySuspensionMatch(playerName, sessionDate);
+        if (fuzzyMatch.isMatch) {
+            let reason;
+            if (fuzzyMatch.isSuspended) {
+                reason = `Player name is too similar to suspended player "${fuzzyMatch.matchedPlayer}". If you are a different person, please use a more distinctive name or contact an administrator.`;
+            } else if (fuzzyMatch.hasActiveNoShows) {
+                reason = `Player name is too similar to "${fuzzyMatch.matchedPlayer}" who is on the suspension watch list. If you are a different person, please use a more distinctive name or contact an administrator.`;
+            }
+
+            return {
+                suspended: true,
+                reason: reason,
+                fuzzyMatch: true,
+                similarity: fuzzyMatch.similarity,
+                matchedPlayer: fuzzyMatch.matchedPlayer,
+                isSuspended: fuzzyMatch.isSuspended,
+                hasActiveNoShows: fuzzyMatch.hasActiveNoShows
+            };
         }
 
         // Check if player should be suspended based on no-show count
@@ -306,18 +374,23 @@ export class DisciplineManager {
         return await mutex.runExclusive(async () => {
             const disciplineData = await this.loadDisciplineDataUnsafe();
 
-            if (!disciplineData.players[playerName] || !disciplineData.players[playerName].activeNoShows?.length) {
+            if (
+                !disciplineData.players[playerName] ||
+                !disciplineData.players[playerName].activeNoShows?.length
+            ) {
                 return null; // No active no-shows to clear
             }
 
             const player = disciplineData.players[playerName];
-            const latestNoShowDate = Math.max(...player.activeNoShows.map(date => new Date(date).getTime()));
+            const latestNoShowDate = Math.max(
+                ...player.activeNoShows.map((date) => new Date(date).getTime())
+            );
             const appearanceTime = new Date(appearanceDate).getTime();
 
             // Only clear if appearance is after the latest no-show
             if (appearanceTime > latestNoShowDate) {
                 // Move all active no-shows to cleared list
-                const clearedDates = player.activeNoShows.map(date => ({
+                const clearedDates = player.activeNoShows.map((date) => ({
                     date: date,
                     clearedOn: appearanceDate
                 }));

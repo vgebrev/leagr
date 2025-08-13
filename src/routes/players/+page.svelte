@@ -11,6 +11,7 @@
     onMount(async () => {
         await playersService.loadPlayers(data.date);
         await playersService.loadRankedPlayerNames();
+        await playersService.loadSuspensions();
     });
 
     /**
@@ -59,6 +60,7 @@
     <PlayersGrid
         availablePlayers={playersService.players}
         waitingList={playersService.waitingList}
+        suspendedPlayers={playersService.suspendedPlayers}
         canModifyList={playersService.canModifyList}
         onremove={removePlayer}
         onmove={movePlayer}

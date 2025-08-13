@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
+import { createRankingsManager } from '$lib/server/rankings.js';
 import {
     validateAndSanitizePlayerName,
     validateDateParameter,
@@ -111,12 +112,35 @@ export const POST = async ({ request, url, locals }) => {
         );
     }
 
+    // Check for similar ranked players (for helpful suggestions)
+    let similarPlayer = null;
+    try {
+        const rankingsManager = createRankingsManager().setLeague(locals.leagueId);
+        const similarCheck = await rankingsManager.checkSimilarRankedPlayer(
+            nameValidation.sanitizedName
+        );
+        if (similarCheck.hasSimilar) {
+            similarPlayer = {
+                suggestedName: similarCheck.suggestedPlayer,
+                similarity: similarCheck.similarity
+            };
+        }
+    } catch (err) {
+        // Don't fail the registration if similar player check fails
+        console.warn('Error checking similar players:', err);
+    }
+
     try {
         const result = await playerManager.addPlayer(
             nameValidation.sanitizedName,
             bodyParseResult.data.list
         );
-        return json(result);
+
+        // Include similar player suggestion in the response
+        return json({
+            ...result,
+            ...(similarPlayer && { similarPlayer })
+        });
     } catch (err) {
         console.error('Error adding player:', err);
         if (err instanceof PlayerError) {

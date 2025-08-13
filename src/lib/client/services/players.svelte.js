@@ -22,6 +22,9 @@ class PlayersService {
     /** @type {string | null} */
     currentDate = $state(null);
 
+    /** @type {Array} */
+    suspendedPlayers = $state([]);
+
     // Derived state
     registrationOpenDate = $derived.by(() => {
         if (!this.currentDate) return null;
@@ -79,6 +82,29 @@ class PlayersService {
                     error.message || 'Failed to load players. Please try again.',
                     'error'
                 );
+            }
+        );
+    }
+
+    /**
+     * Load discipline/suspension data for the current date
+     */
+    async loadSuspensions() {
+        if (!this.currentDate) return;
+
+        await withLoading(
+            async () => {
+                const disciplineData = await api.get('discipline', this.currentDate);
+                // Always create a new array reference to ensure reactivity
+                this.suspendedPlayers = [...(disciplineData?.players || [])];
+            },
+            (error) => {
+                console.error('Error loading suspension data:', error);
+                setNotification(
+                    error.message || 'Failed to load suspension data. Please try again.',
+                    'error'
+                );
+                this.suspendedPlayers = [];
             }
         );
     }
@@ -151,6 +177,14 @@ class PlayersService {
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
 
+                // Show notification if a similar player was found
+                if (result.similarPlayer) {
+                    setNotification(
+                        `"${sanitizedName}" has been added but did you mean "${result.similarPlayer.suggestedName}"?`,
+                        'info'
+                    );
+                }
+
                 // Show notification if the player was auto-redirected to the waiting list
                 if (
                     originalList === 'available' &&
@@ -164,12 +198,15 @@ class PlayersService {
 
                 success = true;
             },
-            (error) => {
+            async (error) => {
                 console.error('Error adding player:', error);
                 setNotification(
                     error.message || 'Failed to add player. Please try again.',
                     'error'
                 );
+
+                // Reload suspensions when there's an error (likely a suspension was triggered)
+                await this.loadSuspensions();
             }
         );
 
@@ -250,6 +287,7 @@ class PlayersService {
         this.players = [];
         this.waitingList = [];
         this.rankedPlayers = [];
+        this.suspendedPlayers = [];
         this.currentDate = null;
     }
 }

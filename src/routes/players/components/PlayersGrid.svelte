@@ -1,9 +1,11 @@
 <script>
     import PlayersList from './PlayersList.svelte';
+    import SuspensionsList from './SuspensionsList.svelte';
     import { settings } from '$lib/client/stores/settings.js';
     let {
         availablePlayers,
         waitingList,
+        suspendedPlayers = [],
         canModifyList,
         onremove,
         onmove,
@@ -30,24 +32,31 @@
 </script>
 
 <div class="grid grid-cols-2 gap-2">
-    <PlayersList
-        label={`Players (${availablePlayers?.length || 0}/${effectivePlayerLimit})`}
-        players={availablePlayers}
-        {canModifyList}
-        onremove={async (name) => await onremove(name, 'available')}
-        {onmove}
-        sourceList="available"
-        destinationList="waitingList"
-        moveLabel="Move to waiting list"
-        {canMoveToOtherList} />
-    <PlayersList
-        label="Waiting list"
-        players={waitingList}
-        {canModifyList}
-        onremove={async (name) => await onremove(name, 'waitingList')}
-        {onmove}
-        sourceList="waitingList"
-        destinationList="available"
-        moveLabel="Move to active list"
-        {canMoveToOtherList} />
+    <div>
+        <PlayersList
+            label={`Players (${availablePlayers?.length || 0}/${effectivePlayerLimit})`}
+            players={availablePlayers}
+            {canModifyList}
+            onremove={async (name) => await onremove(name, 'available')}
+            {onmove}
+            sourceList="available"
+            destinationList="waitingList"
+            moveLabel="Move to waiting list"
+            {canMoveToOtherList} />
+    </div>
+    <div class="flex flex-col gap-2">
+        <PlayersList
+            label="Waiting list"
+            players={waitingList}
+            {canModifyList}
+            onremove={async (name) => await onremove(name, 'waitingList')}
+            {onmove}
+            sourceList="waitingList"
+            destinationList="available"
+            moveLabel="Move to active list"
+            {canMoveToOtherList} />
+        {#if suspendedPlayers && suspendedPlayers.length > 0}
+            <SuspensionsList {suspendedPlayers} />
+        {/if}
+    </div>
 </div>
