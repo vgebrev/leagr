@@ -117,7 +117,8 @@ export class DisciplineManager {
         const disciplineData = await this.loadDisciplineData();
         return (
             disciplineData.players[playerName] || {
-                noShows: 0,
+                activeNoShows: [],
+                clearedNoShows: [],
                 suspensions: [],
                 totalSuspensions: 0
             }
@@ -125,11 +126,12 @@ export class DisciplineManager {
     }
 
     /**
-     * Increment no-show count for a player
+     * Record a no-show for a player on a specific date
      * @param {string} playerName - Player name
+     * @param {string} sessionDate - Date of the no-show (YYYY-MM-DD format)
      * @returns {Promise<Object>} - Updated discipline data
      */
-    async incrementNoShow(playerName) {
+    async recordNoShow(playerName, sessionDate) {
         if (!this.leagueId) {
             throw new DisciplineError('League ID must be set before operations', 400);
         }
@@ -140,17 +142,23 @@ export class DisciplineManager {
 
             if (!disciplineData.players[playerName]) {
                 disciplineData.players[playerName] = {
-                    noShows: 0,
+                    activeNoShows: [],
+                    clearedNoShows: [],
                     suspensions: [],
                     totalSuspensions: 0
                 };
             }
 
-            disciplineData.players[playerName].noShows += 1;
+            // Add the no-show date if not already present
+            if (!disciplineData.players[playerName].activeNoShows.includes(sessionDate)) {
+                disciplineData.players[playerName].activeNoShows.push(sessionDate);
+            }
+
             await this.saveDisciplineDataUnsafe(disciplineData);
             return disciplineData;
         });
     }
+
 
     /**
      * Check if player should be suspended based on no-shows
@@ -169,10 +177,11 @@ export class DisciplineManager {
         const threshold =
             disciplineSettings.noShowThreshold || defaultSettings.discipline.noShowThreshold;
 
-        if (playerRecord.noShows >= threshold) {
+        const activeNoShowCount = playerRecord.activeNoShows?.length || 0;
+        if (activeNoShowCount >= threshold) {
             return {
                 shouldSuspend: true,
-                reason: `Player has ${playerRecord.noShows} no-shows (threshold: ${threshold})`
+                reason: `Player has ${activeNoShowCount} active no-shows (threshold: ${threshold})`
             };
         }
 
@@ -197,7 +206,8 @@ export class DisciplineManager {
 
             if (!disciplineData.players[playerName]) {
                 disciplineData.players[playerName] = {
-                    noShows: 0,
+                    activeNoShows: [],
+                    clearedNoShows: [],
                     suspensions: [],
                     totalSuspensions: 0
                 };
@@ -211,8 +221,13 @@ export class DisciplineManager {
 
             disciplineData.players[playerName].suspensions.push(suspension);
             disciplineData.players[playerName].totalSuspensions += 1;
-            // Reset no-show count after suspension is applied
-            disciplineData.players[playerName].noShows = 0;
+            // Clear active no-shows after suspension is applied
+            const clearedDates = disciplineData.players[playerName].activeNoShows.map(date => ({
+                date: date,
+                clearedOn: new Date().toISOString().split('T')[0]
+            }));
+            disciplineData.players[playerName].clearedNoShows.push(...clearedDates);
+            disciplineData.players[playerName].activeNoShows = [];
 
             await this.saveDisciplineDataUnsafe(disciplineData);
             return disciplineData;
@@ -274,6 +289,47 @@ export class DisciplineManager {
         }
 
         return { suspended: false };
+    }
+
+    /**
+     * Clear active no-shows for a player if they have appeared after their latest no-show
+     * @param {string} playerName - Player name
+     * @param {string} appearanceDate - Date when player appeared (YYYY-MM-DD format)
+     * @returns {Promise<Object>} - Updated discipline data or null if no changes
+     */
+    async clearNoShowsIfAppeared(playerName, appearanceDate) {
+        if (!this.leagueId) {
+            throw new DisciplineError('League ID must be set before operations', 400);
+        }
+
+        const mutex = this.getDisciplineMutex();
+        return await mutex.runExclusive(async () => {
+            const disciplineData = await this.loadDisciplineDataUnsafe();
+
+            if (!disciplineData.players[playerName] || !disciplineData.players[playerName].activeNoShows?.length) {
+                return null; // No active no-shows to clear
+            }
+
+            const player = disciplineData.players[playerName];
+            const latestNoShowDate = Math.max(...player.activeNoShows.map(date => new Date(date).getTime()));
+            const appearanceTime = new Date(appearanceDate).getTime();
+
+            // Only clear if appearance is after the latest no-show
+            if (appearanceTime > latestNoShowDate) {
+                // Move all active no-shows to cleared list
+                const clearedDates = player.activeNoShows.map(date => ({
+                    date: date,
+                    clearedOn: appearanceDate
+                }));
+                player.clearedNoShows.push(...clearedDates);
+                player.activeNoShows = [];
+
+                await this.saveDisciplineDataUnsafe(disciplineData);
+                return disciplineData;
+            }
+
+            return null; // No clearing needed
+        });
     }
 
     /**

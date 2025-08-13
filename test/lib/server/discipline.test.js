@@ -56,7 +56,7 @@ describe('DisciplineManager', () => {
         });
 
         it('should create and save discipline data', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
 
             // Verify file was created
             const fileExists = await fs
@@ -67,7 +67,7 @@ describe('DisciplineManager', () => {
 
             // Verify file content
             const content = JSON.parse(await fs.readFile(disciplinePath, 'utf-8'));
-            expect(content.players.TestPlayer.noShows).toBe(1);
+            expect(content.players.TestPlayer.activeNoShows).toEqual(['2025-01-15']);
             expect(content.lastUpdated).toBeDefined();
         });
     });
@@ -76,23 +76,24 @@ describe('DisciplineManager', () => {
         it('should return default player record for new player', async () => {
             const record = await disciplineManager.getPlayerRecord('NewPlayer');
             expect(record).toEqual({
-                noShows: 0,
+                activeNoShows: [],
+                clearedNoShows: [],
                 suspensions: [],
                 totalSuspensions: 0
             });
         });
 
-        it('should increment no-show count for player', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
+        it('should record no-show date for player', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
             const record = await disciplineManager.getPlayerRecord('TestPlayer');
-            expect(record.noShows).toBe(1);
+            expect(record.activeNoShows).toEqual(['2025-01-15']);
         });
 
         it('should handle multiple no-shows for same player', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
             const record = await disciplineManager.getPlayerRecord('TestPlayer');
-            expect(record.noShows).toBe(2);
+            expect(record.activeNoShows).toEqual(['2025-01-15', '2025-01-16']);
         });
     });
 
@@ -105,8 +106,8 @@ describe('DisciplineManager', () => {
         };
 
         it('should not suspend if discipline system is disabled', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
 
             const disabledSettings = { discipline: { enabled: false } };
             const result = await disciplineManager.shouldSuspend('TestPlayer', disabledSettings);
@@ -115,7 +116,7 @@ describe('DisciplineManager', () => {
         });
 
         it('should not suspend if below threshold', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
 
             const result = await disciplineManager.shouldSuspend('TestPlayer', mockSettings);
             expect(result.shouldSuspend).toBe(false);
@@ -123,17 +124,17 @@ describe('DisciplineManager', () => {
         });
 
         it('should suspend if at threshold', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
 
             const result = await disciplineManager.shouldSuspend('TestPlayer', mockSettings);
             expect(result.shouldSuspend).toBe(true);
-            expect(result.reason).toContain('Player has 2 no-shows (threshold: 2)');
+            expect(result.reason).toContain('Player has 2 active no-shows (threshold: 2)');
         });
 
         it('should use default threshold if not specified in settings', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
 
             const emptySettings = { discipline: { enabled: true } };
             const result = await disciplineManager.shouldSuspend('TestPlayer', emptySettings);
@@ -142,15 +143,18 @@ describe('DisciplineManager', () => {
     });
 
     describe('Suspension Application', () => {
-        it('should apply suspension and reset no-show count', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+        it('should apply suspension and clear active no-shows', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-13');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-14');
 
             const sessionDate = '2025-01-15';
             await disciplineManager.applySuspension('TestPlayer', sessionDate);
 
             const record = await disciplineManager.getPlayerRecord('TestPlayer');
-            expect(record.noShows).toBe(0); // Reset after suspension
+            expect(record.activeNoShows).toEqual([]); // Cleared after suspension
+            expect(record.clearedNoShows).toHaveLength(2); // Moved to cleared list
+            expect(record.clearedNoShows[0].date).toBe('2025-01-13');
+            expect(record.clearedNoShows[1].date).toBe('2025-01-14');
             expect(record.totalSuspensions).toBe(1);
             expect(record.suspensions).toHaveLength(1);
             expect(record.suspensions[0].date).toBe(sessionDate);
@@ -223,8 +227,8 @@ describe('DisciplineManager', () => {
         });
 
         it('should apply new suspension if player reaches no-show threshold', async () => {
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-13');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-14');
 
             const sessionDate = '2025-01-15';
             const result = await disciplineManager.evaluateSuspensionOnSignup(
@@ -241,7 +245,7 @@ describe('DisciplineManager', () => {
 
             // Verify suspension was actually applied
             const record = await disciplineManager.getPlayerRecord('TestPlayer');
-            expect(record.noShows).toBe(0); // Reset after suspension
+            expect(record.activeNoShows).toEqual([]); // Cleared after suspension
             expect(record.totalSuspensions).toBe(1);
         });
     });
@@ -255,8 +259,8 @@ describe('DisciplineManager', () => {
                 }
             };
 
-            await disciplineManager.incrementNoShow('TestPlayer');
-            await disciplineManager.incrementNoShow('TestPlayer');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-13');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-14');
 
             // Capture console.warn output
             const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -273,8 +277,8 @@ describe('DisciplineManager', () => {
 
     describe('Data Retrieval', () => {
         it('should return all discipline records', async () => {
-            await disciplineManager.incrementNoShow('Player1');
-            await disciplineManager.incrementNoShow('Player2');
+            await disciplineManager.recordNoShow('Player1', '2025-01-13');
+            await disciplineManager.recordNoShow('Player2', '2025-01-14');
             await disciplineManager.applySuspension('Player1', '2025-01-15');
 
             const allRecords = await disciplineManager.getAllRecords();
@@ -282,20 +286,80 @@ describe('DisciplineManager', () => {
             expect(allRecords.players.Player1).toBeDefined();
             expect(allRecords.players.Player2).toBeDefined();
             expect(allRecords.players.Player1.totalSuspensions).toBe(1);
-            expect(allRecords.players.Player2.noShows).toBe(1);
+            expect(allRecords.players.Player2.activeNoShows).toEqual(['2025-01-14']);
+        });
+    });
+
+    describe('No-Show Clearing', () => {
+        it('should clear active no-shows when player appears after latest no-show', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-13');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-14');
+
+            const result = await disciplineManager.clearNoShowsIfAppeared(
+                'TestPlayer',
+                '2025-01-16'
+            );
+
+            expect(result).toBeDefined();
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.activeNoShows).toEqual([]);
+            expect(record.clearedNoShows).toHaveLength(2);
+            expect(record.clearedNoShows[0].date).toBe('2025-01-13');
+            expect(record.clearedNoShows[0].clearedOn).toBe('2025-01-16');
+            expect(record.clearedNoShows[1].date).toBe('2025-01-14');
+            expect(record.clearedNoShows[1].clearedOn).toBe('2025-01-16');
+        });
+
+        it('should not clear no-shows if appearance is before latest no-show', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
+
+            const result = await disciplineManager.clearNoShowsIfAppeared(
+                'TestPlayer',
+                '2025-01-14'
+            );
+
+            expect(result).toBeNull();
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.activeNoShows).toEqual(['2025-01-15', '2025-01-16']);
+            expect(record.clearedNoShows).toEqual([]);
+        });
+
+        it('should return null if player has no active no-shows', async () => {
+            const result = await disciplineManager.clearNoShowsIfAppeared(
+                'TestPlayer',
+                '2025-01-16'
+            );
+
+            expect(result).toBeNull();
+        });
+
+        it('should not duplicate no-show dates', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15'); // Same date
+
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.activeNoShows).toEqual(['2025-01-15']); // No duplicate
         });
     });
 
     describe('Concurrency Safety', () => {
-        it('should handle concurrent no-show increments safely', async () => {
+        it('should handle concurrent no-show records safely', async () => {
             const promises = Array(5)
                 .fill(null)
-                .map(() => disciplineManager.incrementNoShow('TestPlayer'));
+                .map((_, i) => disciplineManager.recordNoShow('TestPlayer', `2025-01-${15 + i}`));
 
             await Promise.all(promises);
 
             const record = await disciplineManager.getPlayerRecord('TestPlayer');
-            expect(record.noShows).toBe(5);
+            expect(record.activeNoShows).toHaveLength(5);
+            expect(record.activeNoShows).toEqual([
+                '2025-01-15',
+                '2025-01-16',
+                '2025-01-17',
+                '2025-01-18',
+                '2025-01-19'
+            ]);
         });
     });
 });

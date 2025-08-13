@@ -80,7 +80,7 @@ export const DELETE = async ({ request, url, locals }) => {
         // Handle no-show discipline tracking
         if (action === 'no-show') {
             const disciplineManager = createDisciplineManager().setLeague(leagueId);
-            await disciplineManager.incrementNoShow(nameValidation.sanitizedName);
+            await disciplineManager.recordNoShow(nameValidation.sanitizedName, dateValidation.date);
             await disciplineManager.updateSuspensionReadinessIfNeeded(
                 nameValidation.sanitizedName,
                 gameData.settings

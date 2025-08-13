@@ -3,6 +3,7 @@ import path from 'path';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 import { createStandingsManager } from './standings.js';
+import { createDisciplineManager } from './discipline.js';
 
 const rankingsMutexes = new Map();
 
@@ -426,6 +427,19 @@ export class RankingsManager {
                         // Update cumulative totals
                         playerData.points += totalDatePoints;
                         playerData.appearances += 1;
+                    }
+                }
+
+                // Clear active no-shows for players who appeared after their latest no-show
+                if (playersWhoAppeared.size > 0) {
+                    const disciplineManager = createDisciplineManager().setLeague(this.leagueId);
+                    for (const player of playersWhoAppeared) {
+                        try {
+                            await disciplineManager.clearNoShowsIfAppeared(player, date);
+                        } catch (error) {
+                            // Log but don't fail rankings update if discipline clearing fails
+                            console.error(`Failed to clear no-shows for player ${player} on date ${date}:`, error);
+                        }
                     }
                 }
 
