@@ -50,7 +50,7 @@
     }
 </script>
 
-<div class="flex min-h-[calc(100vh-17rem)] flex-col gap-2">
+<div class="flex min-h-[calc(100dvh-16rem)] flex-col gap-2">
     <div class="flex flex-col gap-2">
         <PlayerRegistrationForm
             bind:playerName
