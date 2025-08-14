@@ -433,7 +433,10 @@ export class RankingsManager {
 
                 // Clear active no-shows for players who appeared after their latest no-show
                 // Only do this if discipline system is enabled
-                if (playersWhoAppeared.size > 0 && sessionData.settings?.discipline?.enabled !== false) {
+                if (
+                    playersWhoAppeared.size > 0 &&
+                    sessionData.settings?.discipline?.enabled !== false
+                ) {
                     const disciplineManager = createDisciplineManager().setLeague(this.leagueId);
                     for (const player of playersWhoAppeared) {
                         try {

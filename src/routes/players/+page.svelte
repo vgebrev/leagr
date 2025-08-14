@@ -12,7 +12,7 @@
     let { data } = $props();
     let playerName = $state('');
     let showSuspensionsModal = $state(false);
-    
+
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 

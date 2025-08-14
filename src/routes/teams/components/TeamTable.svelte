@@ -23,7 +23,7 @@
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
-    
+
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 
@@ -112,11 +112,16 @@
                                         label: 'Remove',
                                         onclick: () => handleRemovePlayer(player, 'remove')
                                     },
-                                    ...(isDisciplineEnabled ? [{
-                                        type: 'no-show',
-                                        label: 'No-show',
-                                        onclick: () => handleRemovePlayer(player, 'no-show')
-                                    }] : [])
+                                    ...(isDisciplineEnabled
+                                        ? [
+                                              {
+                                                  type: 'no-show',
+                                                  label: 'No-show',
+                                                  onclick: () =>
+                                                      handleRemovePlayer(player, 'no-show')
+                                              }
+                                          ]
+                                        : [])
                                 ]}
                                 <PlayerActionsDropdown
                                     {actions}
