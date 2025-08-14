@@ -1,11 +1,9 @@
 <script>
     import PlayersList from './PlayersList.svelte';
-    import SuspensionsList from './SuspensionsList.svelte';
     import { settings } from '$lib/client/stores/settings.js';
     let {
         availablePlayers,
         waitingList,
-        suspendedPlayers = [],
         canModifyList,
         onremove,
         onmove,
@@ -55,8 +53,5 @@
             destinationList="available"
             moveLabel="Move to active list"
             {canMoveToOtherList} />
-        {#if suspendedPlayers && suspendedPlayers.length > 0}
-            <SuspensionsList {suspendedPlayers} />
-        {/if}
     </div>
 </div>

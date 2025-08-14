@@ -25,7 +25,7 @@ Features include:
 - **Player Rankings**
     - Cumulative player rankings based on team performances.
     - Player profile - ranking details and history.
-    - Championship hall: tracks league and cup winners.
+    - Champions hall: tracks league and cup winners.
 
 ## Environment Setup
 

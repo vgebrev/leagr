@@ -4,9 +4,13 @@
     import PlayerRegistrationForm from './components/PlayerRegistrationForm.svelte';
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
     import PlayersGrid from './components/PlayersGrid.svelte';
+    import SuspensionsModal from './components/SuspensionsModal.svelte';
+    import { Button } from 'flowbite-svelte';
+    import { BanOutline } from 'flowbite-svelte-icons';
 
     let { data } = $props();
     let playerName = $state('');
+    let showSuspensionsModal = $state(false);
 
     onMount(async () => {
         await playersService.loadPlayers(data.date);
@@ -46,23 +50,41 @@
     }
 </script>
 
-<div class="flex flex-col gap-2">
-    <PlayerRegistrationForm
-        bind:playerName
-        rankedPlayers={playersService.rankedPlayers}
-        canModifyList={playersService.canModifyList}
-        onadd={addPlayer} />
+<div class="flex min-h-[calc(100vh-17rem)] flex-col gap-2">
+    <div class="flex flex-col gap-2">
+        <PlayerRegistrationForm
+            bind:playerName
+            rankedPlayers={playersService.rankedPlayers}
+            canModifyList={playersService.canModifyList}
+            onadd={addPlayer} />
 
-    <RegistrationAlerts
-        registrationOpenDate={playersService.registrationOpenDate}
-        registrationCloseDate={playersService.registrationCloseDate} />
+        <RegistrationAlerts
+            registrationOpenDate={playersService.registrationOpenDate}
+            registrationCloseDate={playersService.registrationCloseDate} />
 
-    <PlayersGrid
-        availablePlayers={playersService.players}
-        waitingList={playersService.waitingList}
-        suspendedPlayers={playersService.suspendedPlayers}
-        canModifyList={playersService.canModifyList}
-        onremove={removePlayer}
-        onmove={movePlayer}
-        date={data.date} />
+        <PlayersGrid
+            availablePlayers={playersService.players}
+            waitingList={playersService.waitingList}
+            canModifyList={playersService.canModifyList}
+            onremove={removePlayer}
+            onmove={movePlayer}
+            date={data.date} />
+    </div>
+
+    {#if playersService.suspendedPlayers && playersService.suspendedPlayers.length > 0}
+        <div class="mt-auto pt-2">
+            <Button
+                class="w-full"
+                color="alternative"
+                size="sm"
+                onclick={() => (showSuspensionsModal = true)}>
+                <BanOutline class="me-2 h-6 w-6 shrink-0" />
+                Suspensions
+            </Button>
+        </div>
+    {/if}
 </div>
+
+<SuspensionsModal
+    suspendedPlayers={playersService.suspendedPlayers}
+    bind:open={showSuspensionsModal} />
