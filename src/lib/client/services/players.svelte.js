@@ -92,6 +92,12 @@ class PlayersService {
     async loadSuspensions() {
         if (!this.currentDate) return;
 
+        // Only load suspensions if discipline system is enabled
+        if (this.#settings.discipline?.enabled === false) {
+            this.suspendedPlayers = [];
+            return;
+        }
+
         await withLoading(
             async () => {
                 const disciplineData = await api.get('discipline', this.currentDate);

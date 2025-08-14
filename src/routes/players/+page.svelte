@@ -7,10 +7,14 @@
     import SuspensionsModal from './components/SuspensionsModal.svelte';
     import { Button } from 'flowbite-svelte';
     import { BanOutline } from 'flowbite-svelte-icons';
+    import { settings } from '$lib/client/stores/settings.js';
 
     let { data } = $props();
     let playerName = $state('');
     let showSuspensionsModal = $state(false);
+    
+    // Check if discipline system is enabled
+    const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 
     onMount(async () => {
         await playersService.loadPlayers(data.date);
@@ -50,7 +54,7 @@
     }
 </script>
 
-<div class="flex min-h-[calc(100dvh-16rem)] flex-col gap-2">
+<div class="flex flex-col gap-2">
     <div class="flex flex-col gap-2">
         <PlayerRegistrationForm
             bind:playerName
@@ -71,8 +75,8 @@
             date={data.date} />
     </div>
 
-    {#if playersService.suspendedPlayers && playersService.suspendedPlayers.length > 0}
-        <div class="mt-auto pt-2">
+    {#if isDisciplineEnabled && playersService.suspendedPlayers && playersService.suspendedPlayers.length > 0}
+        <div class="mt-auto">
             <Button
                 class="w-full"
                 color="alternative"

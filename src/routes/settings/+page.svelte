@@ -12,6 +12,7 @@
     import CompetitionDaysSettings from './components/CompetitionDaysSettings.svelte';
     import CompetitionTimeControls from './components/CompetitionTimeControls.svelte';
     import TeamLimitsSettings from './components/TeamLimitsSettings.svelte';
+    import DisciplineSettings from './components/DisciplineSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
 
     let { data } = $props();
@@ -159,6 +160,10 @@
                 onUpdateEndDayOffset={updateEndDayOffset} />
 
             <TeamLimitsSettings
+                {leagueSettings}
+                onSave={saveLeagueSettings} />
+
+            <DisciplineSettings
                 {leagueSettings}
                 onSave={saveLeagueSettings} />
         </div>

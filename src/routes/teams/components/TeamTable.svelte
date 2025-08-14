@@ -1,6 +1,7 @@
 <script>
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
+    import { settings } from '$lib/client/stores/settings.js';
 
     let {
         team,
@@ -22,6 +23,9 @@
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
+    
+    // Check if discipline system is enabled
+    const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 
     // Get teams with empty slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
@@ -108,11 +112,11 @@
                                         label: 'Remove',
                                         onclick: () => handleRemovePlayer(player, 'remove')
                                     },
-                                    {
+                                    ...(isDisciplineEnabled ? [{
                                         type: 'no-show',
                                         label: 'No-show',
                                         onclick: () => handleRemovePlayer(player, 'no-show')
-                                    }
+                                    }] : [])
                                 ]}
                                 <PlayerActionsDropdown
                                     {actions}
