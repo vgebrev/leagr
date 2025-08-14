@@ -105,7 +105,7 @@
     onMount(async () => {
         // Prevent body scroll on settings page to avoid double scrollbar
         document.body.style.overflow = 'hidden';
-        
+
         await withLoading(
             async () => {
                 const hierarchicalSettings = await api.get('settings', date);
@@ -125,7 +125,7 @@
                 );
             }
         );
-        
+
         // Cleanup: restore body scroll when leaving page
         return () => {
             document.body.style.overflow = '';
