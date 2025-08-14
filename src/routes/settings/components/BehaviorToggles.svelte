@@ -14,7 +14,7 @@
     let { leagueSettings, onSave } = $props();
 </script>
 
-<div class="mt-4 space-y-3">
+<div class="mt-4 space-y-3 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <Toggle
         bind:checked={leagueSettings.canRegenerateTeams}
         onchange={onSave}>

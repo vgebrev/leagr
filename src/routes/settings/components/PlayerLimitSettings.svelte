@@ -25,7 +25,7 @@
 </script>
 
 <form onsubmit={handleSubmit}>
-    <div class="flex flex-col gap-2">
+    <div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
         <Label for="league-player-limit">Default Player Limit</Label>
         <div class="flex gap-2">
             <Input

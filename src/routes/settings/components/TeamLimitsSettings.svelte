@@ -20,7 +20,7 @@
     let { leagueSettings, onSave } = $props();
 </script>
 
-<div class="flex flex-col gap-2">
+<div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <div class="text-sm font-semibold text-gray-700 dark:text-gray-200">Team Limits</div>
 
     <div class="grid grid-cols-2 gap-2">
