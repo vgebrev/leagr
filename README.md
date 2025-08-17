@@ -125,3 +125,7 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 - Replace `a1b2c3d4-e5f6-7890-abcd-ef1234567890` with a secure, randomly generated API key
 - Replace the allowed origins, app URL with your actual domain(s)
 - Replace Mailgun credentials with your actual Mailgun account details
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
