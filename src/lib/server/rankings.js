@@ -104,6 +104,38 @@ export class RankingsManager {
     }
 
     /**
+     * Check if session has any completed games (games with scores)
+     * @param {Object} sessionData - Session data containing games
+     * @returns {boolean} - True if there are completed games
+     */
+    hasCompletedGames(sessionData) {
+        const { games } = sessionData;
+        const rounds = games?.rounds ?? [];
+
+        // Check league games
+        for (const round of rounds) {
+            for (const game of round) {
+                const { homeScore, awayScore } = game;
+                if (homeScore != null && awayScore != null) {
+                    return true;
+                }
+            }
+        }
+
+        // Check knockout games
+        const knockoutBracket = games?.['knockout-games']?.bracket;
+        if (knockoutBracket && Array.isArray(knockoutBracket)) {
+            for (const match of knockoutBracket) {
+                if (match.homeScore != null && match.awayScore != null) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Extract match results from game rounds
      * @param {Array} rounds - Game rounds data
      * @returns {Array} - Match results
@@ -359,7 +391,6 @@ export class RankingsManager {
             // Process each date file chronologically
             for (const file of dateFiles) {
                 const date = file.replace('.json', '');
-                allCalculatedDates.push(date);
 
                 const raw = await fs.readFile(path.join(this.getDataPath(), file), 'utf-8');
                 const sessionData = JSON.parse(raw);
@@ -368,12 +399,13 @@ export class RankingsManager {
                 const teamEntries = Object.entries(teams ?? {});
                 const rounds = games?.rounds ?? [];
 
-                // Skip dates with no data
-                if (!teamEntries.length || !rounds.length) {
-                    // Still need to update ranks for existing players (no appearances)
-                    this.updateRanksForDate(date, playerTracker, new Set());
+                // Skip dates with no completed games - don't add to calculatedDates and don't process rankings
+                if (!teamEntries.length || !rounds.length || !this.hasCompletedGames(sessionData)) {
                     continue;
                 }
+
+                // Only add to calculatedDates if we're actually processing this date
+                allCalculatedDates.push(date);
 
                 // Process game data for this date
                 const teamNames = teamEntries.map(([name]) => name);

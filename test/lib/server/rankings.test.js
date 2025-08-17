@@ -494,4 +494,98 @@ describe('RankingsManager - Knockout Points', () => {
             expect(enhancedRankings.players.Alice.previousRank).toBeNull();
         });
     });
+
+    describe('hasCompletedGames', () => {
+        it('should return true when session has completed league games', () => {
+            const sessionData = {
+                games: {
+                    rounds: [
+                        [
+                            {
+                                home: 'Red Team',
+                                away: 'Blue Team',
+                                homeScore: 2,
+                                awayScore: 1
+                            }
+                        ]
+                    ]
+                }
+            };
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(true);
+        });
+
+        it('should return true when session has completed knockout games', () => {
+            const sessionData = {
+                games: {
+                    rounds: [],
+                    'knockout-games': {
+                        bracket: [
+                            {
+                                round: 'final',
+                                home: 'Red Team',
+                                away: 'Blue Team',
+                                homeScore: 1,
+                                awayScore: 0
+                            }
+                        ]
+                    }
+                }
+            };
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(true);
+        });
+
+        it('should return false when session has no games at all', () => {
+            const sessionData = {
+                games: {
+                    rounds: []
+                }
+            };
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(false);
+        });
+
+        it('should return false when session has games but no scores', () => {
+            const sessionData = {
+                games: {
+                    rounds: [
+                        [
+                            {
+                                home: 'Red Team',
+                                away: 'Blue Team',
+                                homeScore: null,
+                                awayScore: null
+                            }
+                        ]
+                    ]
+                }
+            };
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(false);
+        });
+
+        it('should return false when session data is empty', () => {
+            const sessionData = {};
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(false);
+        });
+
+        it('should return false when session has teams but no games structure', () => {
+            const sessionData = {
+                teams: {
+                    'Red Team': ['Alice'],
+                    'Blue Team': ['Bob']
+                }
+            };
+
+            const result = rankingsManager.hasCompletedGames(sessionData);
+            expect(result).toBe(false);
+        });
+    });
 });
