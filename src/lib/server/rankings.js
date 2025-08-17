@@ -9,7 +9,7 @@ import * as fuzzball from 'fuzzball';
 const rankingsMutexes = new Map();
 
 const BONUS_MULTIPLIER = 2;
-const KNOCKOUT_MULTIPLIER = 3;
+const KNOCKOUT_MULTIPLIER = 4;
 
 // Hybrid ranking algorithm configuration
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
@@ -421,7 +421,8 @@ export class RankingsManager {
                 // Update player data for those who appeared
                 for (const [teamName, players] of teamEntries) {
                     const matchPoints = teamStats[teamName].points;
-                    const bonusPoints = (teamNames.length - standings[teamName]) * BONUS_MULTIPLIER;
+                    const bonusPoints =
+                        (teamNames.length - 1 - standings[teamName]) * BONUS_MULTIPLIER;
 
                     for (const player of players) {
                         if (!player) continue;

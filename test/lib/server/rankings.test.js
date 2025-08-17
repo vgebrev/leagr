@@ -171,24 +171,24 @@ describe('RankingsManager - Knockout Points', () => {
             const rawRankings = {
                 players: {
                     Alice: {
-                        points: 10,
+                        points: 6,
                         appearances: 2,
                         rankingDetail: {
                             '2024-01-01': {
                                 team: 'Red Team',
                                 appearancePoints: 1,
                                 matchPoints: 3,
-                                bonusPoints: 2,
+                                bonusPoints: 0,
                                 knockoutPoints: 0,
-                                totalPoints: 6
+                                totalPoints: 4
                             },
                             '2024-01-02': {
                                 team: 'Blue Team',
                                 appearancePoints: 1,
                                 matchPoints: 1,
-                                bonusPoints: 2,
+                                bonusPoints: 0,
                                 knockoutPoints: 0,
-                                totalPoints: 4
+                                totalPoints: 2
                             }
                         }
                     }
@@ -202,9 +202,9 @@ describe('RankingsManager - Knockout Points', () => {
                 team: 'Red Team',
                 appearancePoints: 1,
                 matchPoints: 3,
-                bonusPoints: 2,
+                bonusPoints: 0,
                 knockoutPoints: 0,
-                totalPoints: 6
+                totalPoints: 4
             });
         });
 
@@ -212,16 +212,16 @@ describe('RankingsManager - Knockout Points', () => {
             const rawRankings = {
                 players: {
                     Alice: {
-                        points: 15,
+                        points: 13,
                         appearances: 1,
                         rankingDetail: {
                             '2024-01-01': {
                                 team: 'Red Team',
                                 appearancePoints: 1,
                                 matchPoints: 6,
-                                bonusPoints: 4,
+                                bonusPoints: 2,
                                 knockoutPoints: 4,
-                                totalPoints: 15
+                                totalPoints: 13
                             }
                         }
                     }
@@ -231,7 +231,7 @@ describe('RankingsManager - Knockout Points', () => {
             const enhanced = rankingsManager.calculateEnhancedRankings(rawRankings);
 
             expect(enhanced.players['Alice'].rankingDetail['2024-01-01'].knockoutPoints).toBe(4);
-            expect(enhanced.players['Alice'].points).toBe(15);
+            expect(enhanced.players['Alice'].points).toBe(13);
             expect(enhanced.players['Alice'].appearances).toBe(1);
         });
     });
@@ -259,9 +259,9 @@ describe('RankingsManager - Knockout Points', () => {
             // Alice should have 1 knockout win
             expect(playerKnockoutWins['Alice']).toBe(1);
 
-            // With KNOCKOUT_MULTIPLIER = 3, knockout points should be 3
-            const knockoutPoints = playerKnockoutWins['Alice'] * 3;
-            expect(knockoutPoints).toBe(3);
+            // With KNOCKOUT_MULTIPLIER = 4, knockout points should be 4
+            const knockoutPoints = playerKnockoutWins['Alice'] * 4;
+            expect(knockoutPoints).toBe(4);
         });
     });
 
