@@ -389,6 +389,7 @@
 
 <Modal
     bind:open
+    fullscreen
     transition={scale}
     class="h-full overflow-hidden p-0"
     classes={{

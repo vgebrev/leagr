@@ -240,15 +240,33 @@ export class TeamGenerator {
         const teams = {};
         const teamNames = this.generateTeamNames(numTeams);
 
+        // Calculate default ranking for unranked players (pulled average * max sessions played)
+        const defaultRanking =
+            this.rankings?.rankingMetadata?.globalAverage &&
+            this.rankings?.rankingMetadata?.maxAppearances &&
+            this.rankings?.rankingMetadata?.minAverage !== undefined
+                ? (() => {
+                      // Pull global average towards minimum average with 0.5 factor
+                      const pulledAverage =
+                          this.rankings.rankingMetadata.globalAverage -
+                          0.5 *
+                              (this.rankings.rankingMetadata.globalAverage -
+                                  this.rankings.rankingMetadata.minAverage);
+                      const result = pulledAverage * this.rankings.rankingMetadata.maxAppearances;
+                      return parseFloat(result.toFixed(1));
+                  })()
+                : 0;
+
         // Sort players by ranking points first, then total points, then appearances
         const sortedPlayers = [...this.players].sort((a, b) => {
             const playerA = this.rankings?.players?.[a];
             const playerB = this.rankings?.players?.[b];
 
-            if (playerA?.rankingPoints !== undefined && playerB?.rankingPoints !== undefined) {
-                if (playerA.rankingPoints !== playerB.rankingPoints) {
-                    return playerB.rankingPoints - playerA.rankingPoints;
-                }
+            const rankingA = playerA?.rankingPoints ?? defaultRanking;
+            const rankingB = playerB?.rankingPoints ?? defaultRanking;
+
+            if (rankingA !== rankingB) {
+                return rankingB - rankingA;
             }
 
             if ((playerA?.points || 0) !== (playerB?.points || 0)) {
@@ -273,7 +291,8 @@ export class TeamGenerator {
                     name: `Pot ${potNumber}`,
                     players: potPlayers.map((name) => ({
                         name,
-                        rankingPoints: this.rankings?.players?.[name]?.rankingPoints || 0
+                        rankingPoints:
+                            this.rankings?.players?.[name]?.rankingPoints || defaultRanking
                     }))
                 });
 
