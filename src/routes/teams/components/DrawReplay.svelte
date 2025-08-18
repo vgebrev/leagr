@@ -1,5 +1,13 @@
 <script>
-    import { Button, Modal, Listgroup, ListgroupItem, ButtonGroup, Tooltip } from 'flowbite-svelte';
+    import {
+        Button,
+        Modal,
+        Listgroup,
+        ListgroupItem,
+        ButtonGroup,
+        Tooltip,
+        Toggle
+    } from 'flowbite-svelte';
     import {
         PlaySolid,
         PauseSolid,
@@ -19,6 +27,7 @@
     let isPlaying = $state(false);
     let currentStep = $state(0);
     let intervalId = null;
+    let showPlayerRankings = $state(true);
 
     // Animation state for visual transitions
     let animatingPlayer = $state(null);
@@ -67,6 +76,19 @@
         return completedAnimations;
     });
 
+    // Helper function to get player ranking points from initialPots
+    function getPlayerRankingPoints(playerName) {
+        if (!drawHistory?.initialPots) return null;
+
+        for (const pot of drawHistory.initialPots) {
+            const player = pot.players.find((p) => p.name === playerName);
+            if (player && player.rankingPoints !== null) {
+                return player.rankingPoints;
+            }
+        }
+        return null;
+    }
+
     // Current teams state (players get added as they're assigned, using completedSteps for delayed updates)
     let currentTeams = $derived.by(() => {
         if (!drawHistory?.drawHistory) return {};
@@ -101,6 +123,40 @@
         }
 
         return teams;
+    });
+
+    // Enhanced teams data with ranking information for display
+    let currentTeamsWithRankings = $derived.by(() => {
+        const teamsWithRankings = {};
+
+        Object.entries(currentTeams).forEach(([teamName, players]) => {
+            // Calculate total team ranking points for players that have been assigned
+            let totalRankingPoints = 0;
+            let assignedPlayerCount = 0;
+
+            const playersWithRankings = players.map((player) => {
+                if (player) {
+                    const rankingPoints = getPlayerRankingPoints(player);
+                    if (rankingPoints !== null) {
+                        totalRankingPoints += rankingPoints;
+                        assignedPlayerCount++;
+                    }
+                    return {
+                        name: player,
+                        rankingPoints
+                    };
+                } else {
+                    return null;
+                }
+            });
+
+            teamsWithRankings[teamName] = {
+                players: playersWithRankings,
+                totalRankingPoints: assignedPlayerCount > 0 ? totalRankingPoints : 0
+            };
+        });
+
+        return teamsWithRankings;
     });
 
     function play() {
@@ -399,6 +455,14 @@
                     <ArrowRotateIcon class="!h-3 !w-3" />
                 </Button>
             </ButtonGroup>
+
+            <div class="flex items-center gap-2">
+                <Toggle
+                    bind:checked={showPlayerRankings}
+                    size="small">
+                    Show Rankings
+                </Toggle>
+            </div>
             <Tooltip
                 triggeredBy="#play-button"
                 transition={scale}
@@ -458,16 +522,17 @@
         <!-- Teams Section -->
         <div class="teams-section">
             <div class="teams-container grid grid-cols-2 gap-2">
-                {#each Object.entries(currentTeams) as [teamName, players], i (i)}
+                {#each Object.entries(currentTeamsWithRankings) as [teamName, teamData], i (i)}
                     <TeamTable
-                        team={players}
+                        team={teamData.players}
                         {teamName}
                         color={teamName.split(' ')[0].toLowerCase()}
                         canModifyList={false}
                         onremove={null}
                         onassign={null}
                         assignablePlayers={[]}
-                        size="sm" />
+                        size="sm"
+                        {showPlayerRankings} />
                 {/each}
             </div>
         </div>

@@ -12,7 +12,8 @@
         onassign = null,
         assignablePlayers = [],
         allTeams = {},
-        size = 'md'
+        size = 'md',
+        showPlayerRankings = false
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
@@ -26,6 +27,23 @@
 
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
+
+    // Calculate team total ranking points when showPlayerRankings is enabled
+    const teamTotalRankingPoints = $derived.by(() => {
+        if (!showPlayerRankings || !team) return 0;
+
+        let total = 0;
+        let assignedPlayerCount = 0;
+
+        team.forEach((player) => {
+            if (player && player.rankingPoints !== null && player.rankingPoints !== undefined) {
+                total += player.rankingPoints;
+                assignedPlayerCount++;
+            }
+        });
+
+        return assignedPlayerCount > 0 ? total : 0;
+    });
 
     // Get teams with empty slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
@@ -62,13 +80,22 @@
 
 <div class="relative overflow-hidden rounded-md shadow-md">
     <table
-        class={`w-full text-left text-sm rtl:text-right ${styles.text} border-collapse overflow-hidden rounded-md`}>
+        class={`w-full text-left text-sm ${styles.text} border-collapse overflow-hidden rounded-md`}>
         <thead class={`text-xs uppercase ${styles.header}`}>
             <tr>
                 <th
                     scope="col"
                     class={sizeStyles[size]}>
-                    {teamName || `${capitalize(color)} Team`}
+                    <div class="flex items-center gap-1 overflow-hidden">
+                        <div>
+                            {teamName || `${capitalize(color)} Team`}
+                        </div>
+                        {#if showPlayerRankings && teamTotalRankingPoints > 0}
+                            <div class="ml-auto opacity-50">
+                                {teamTotalRankingPoints.toFixed(1)}
+                            </div>
+                        {/if}
+                    </div>
                 </th>
             </tr>
         </thead>
@@ -78,22 +105,38 @@
                     <td class="m-0 {sizeStyles[size]}"
                         ><div class="flex">
                             {#if player}
-                                <span>{player}</span>
+                                {#if showPlayerRankings && player.name}
+                                    <!-- Enhanced player display with rankings -->
+                                    <span>
+                                        {player.name}
+                                    </span>
+                                    {#if player.rankingPoints !== null}<span
+                                            class="ms-auto opacity-50">{player.rankingPoints}</span
+                                        >{/if}
+                                {:else}
+                                    <!-- Standard player display (backwards compatibility) -->
+                                    <span
+                                        >{typeof player === 'string'
+                                            ? player
+                                            : player.name || player}</span>
+                                {/if}
                             {:else}
                                 <span class="flex gap-2 italic opacity-50">Empty</span>
                             {/if}
                             {#if isPlayerList && player}
                                 <!-- Dropdown for unassigned/waiting list players -->
+                                {@const playerName =
+                                    typeof player === 'string' ? player : player.name || player}
                                 {@const actions = [
                                     ...teamsWithEmptySlots.map((teamName) => ({
                                         type: 'assign',
                                         label: capitalize(teamName),
-                                        onclick: () => handleAssignPlayer(player, teamName)
+                                        onclick: () => handleAssignPlayer(playerName, teamName)
                                     })),
                                     {
                                         type: 'remove',
                                         label: 'Remove',
-                                        onclick: () => handleRemoveFromList(player)
+                                        onclick: () => handleRemoveFromList(playerName)
                                     }
                                 ]}
                                 <PlayerActionsDropdown
@@ -101,16 +144,18 @@
                                     {canModifyList}
                                     styleClass={styles.buttonClass} />
                             {:else if onremove && player}
+                                {@const playerName =
+                                    typeof player === 'string' ? player : player.name || player}
                                 {@const actions = [
                                     {
                                         type: 'move-to-waiting',
                                         label: 'Move to waiting list',
-                                        onclick: () => handleRemovePlayer(player, 'waitingList')
+                                        onclick: () => handleRemovePlayer(playerName, 'waitingList')
                                     },
                                     {
                                         type: 'remove',
                                         label: 'Remove',
-                                        onclick: () => handleRemovePlayer(player, 'remove')
+                                        onclick: () => handleRemovePlayer(playerName, 'remove')
                                     },
                                     ...(isDisciplineEnabled
                                         ? [
@@ -118,7 +163,7 @@
                                                   type: 'no-show',
                                                   label: 'No-show',
                                                   onclick: () =>
-                                                      handleRemovePlayer(player, 'no-show')
+                                                      handleRemovePlayer(playerName, 'no-show')
                                               }
                                           ]
                                         : [])
