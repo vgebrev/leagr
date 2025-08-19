@@ -1,7 +1,7 @@
 {
     "name": "leagr",
     "private": true,
-    "version": "2.5.7",
+    "version": "2.5.8",
     "description": "A SvelteKit application for managing a social (football) leagues.",
     "author": "Veli Gebrev",
     "type": "module",
