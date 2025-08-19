@@ -28,8 +28,8 @@
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 
-    // Calculate team total ranking points when showPlayerRankings is enabled
-    const teamTotalRankingPoints = $derived.by(() => {
+    // Calculate team average ranking points when showPlayerRankings is enabled
+    const teamAverageRankingPoints = $derived.by(() => {
         if (!showPlayerRankings || !team) return 0;
 
         let total = 0;
@@ -42,7 +42,7 @@
             }
         });
 
-        return assignedPlayerCount > 0 ? total : 0;
+        return assignedPlayerCount > 0 ? total / assignedPlayerCount : 0;
     });
 
     // Get teams with empty slots for player assignment
@@ -90,9 +90,9 @@
                         <div>
                             {teamName || `${capitalize(color)} Team`}
                         </div>
-                        {#if showPlayerRankings && teamTotalRankingPoints > 0}
+                        {#if showPlayerRankings && teamAverageRankingPoints > 0}
                             <div class="ml-auto opacity-50">
-                                {teamTotalRankingPoints.toFixed(1)}
+                                {teamAverageRankingPoints.toFixed(1)}
                             </div>
                         {/if}
                     </div>

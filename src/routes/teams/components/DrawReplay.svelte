@@ -461,7 +461,7 @@
                 <Toggle
                     bind:checked={showPlayerRankings}
                     size="small">
-                    Show Rankings
+                    Show ELO
                 </Toggle>
             </div>
             <Tooltip
@@ -505,7 +505,7 @@
                                             class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
                                             {player.name}
                                         </div>
-                                        {#if player.rankingPoints !== null}
+                                        {#if player.rankingPoints !== null && showPlayerRankings}
                                             <div
                                                 class="text-xs font-light whitespace-nowrap opacity-70">
                                                 {player.rankingPoints}

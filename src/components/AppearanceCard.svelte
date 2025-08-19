@@ -121,4 +121,15 @@
             {detail.totalPoints}
         </Badge>
     </div>
+
+    <!-- ELO Rating (if available) -->
+    {#if detail.eloRating}
+        <div
+            class="mt-2 flex justify-between border-t border-t-gray-200 pt-2 text-sm dark:border-t-gray-700">
+            <span class="text-gray-600 dark:text-gray-400">ELO Rating:</span>
+            <Badge color="blue">
+                {detail.eloRating}
+            </Badge>
+        </div>
+    {/if}
 </div>

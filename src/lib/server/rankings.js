@@ -15,6 +15,13 @@ const KNOCKOUT_MULTIPLIER = 4;
 const CONFIDENCE_FRACTION = 0.66; // Full confidence at 66% of max appearances
 const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below the threshold
 
+// ELO rating configuration
+const ELO_BASELINE_RATING = 1000;
+const ELO_K_LEAGUE = 10;
+const ELO_K_CUP = 7;
+const ELO_DECAY_RATE = 0.02; // 2% per week
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * Server-side rankings management service
  */
@@ -116,7 +123,7 @@ export class RankingsManager {
         for (const round of rounds) {
             for (const game of round) {
                 const { homeScore, awayScore } = game;
-                if (homeScore != null && awayScore != null) {
+                if (homeScore !== null && awayScore !== null) {
                     return true;
                 }
             }
@@ -126,7 +133,7 @@ export class RankingsManager {
         const knockoutBracket = games?.['knockout-games']?.bracket;
         if (knockoutBracket && Array.isArray(knockoutBracket)) {
             for (const match of knockoutBracket) {
-                if (match.homeScore != null && match.awayScore != null) {
+                if (match.homeScore !== null && match.awayScore !== null) {
                     return true;
                 }
             }
@@ -145,7 +152,7 @@ export class RankingsManager {
         for (const round of rounds) {
             for (const game of round) {
                 const { home, away, homeScore, awayScore } = game;
-                if (homeScore != null && awayScore != null) {
+                if (homeScore !== null && awayScore !== null) {
                     results.push({ home, away, homeScore, awayScore });
                 }
             }
@@ -167,6 +174,11 @@ export class RankingsManager {
         }
 
         for (const { home, away, homeScore, awayScore } of results) {
+            // Skip games with teams that aren't in the current teams list (from team regeneration)
+            if (!stats[home] || !stats[away]) {
+                continue;
+            }
+
             // Points
             if (homeScore > awayScore) {
                 stats[home].points += 3;
@@ -260,6 +272,235 @@ export class RankingsManager {
     }
 
     /**
+     * Process ELO ratings for all games in a session
+     * @param {Map} playerTracker - Map of all player data
+     * @param {Object} teams - Teams data with player lists
+     * @param {Array} rounds - Game rounds data
+     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {string} date - Current session date
+     */
+    processEloRatings(playerTracker, teams, rounds, knockoutBracket, date) {
+        // Apply ELO decay to all players before processing games for this date
+        this.applyEloDecayToAllPlayers(playerTracker, date);
+
+        // Process ELO ratings for league games
+        for (const round of rounds) {
+            for (const game of round) {
+                const { home, away, homeScore, awayScore } = game;
+                if (homeScore !== null && awayScore !== null) {
+                    const homeTeam = teams[home] || [];
+                    const awayTeam = teams[away] || [];
+                    this.updateEloRatingsForGame(
+                        playerTracker,
+                        homeTeam,
+                        awayTeam,
+                        homeScore,
+                        awayScore,
+                        'league'
+                    );
+                }
+            }
+        }
+
+        // Process ELO ratings for knockout games
+        if (knockoutBracket && Array.isArray(knockoutBracket)) {
+            for (const match of knockoutBracket) {
+                if (match.homeScore !== null && match.awayScore !== null) {
+                    const homeTeam = teams[match.home] || [];
+                    const awayTeam = teams[match.away] || [];
+                    this.updateEloRatingsForGame(
+                        playerTracker,
+                        homeTeam,
+                        awayTeam,
+                        match.homeScore,
+                        match.awayScore,
+                        'cup'
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * Calculate expected score for team A vs team B in ELO system
+     * @param {number} ratingA - Team A average rating
+     * @param {number} ratingB - Team B average rating
+     * @returns {number} - Expected score for team A (0-1)
+     */
+    calculateExpectedScore(ratingA, ratingB) {
+        return 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
+    }
+
+    /**
+     * Calculate actual score based on game result
+     * @param {number} homeScore - Home team score
+     * @param {number} awayScore - Away team score
+     * @returns {number} - Actual score for home team (0, 0.5, or 1)
+     */
+    calculateActualScore(homeScore, awayScore) {
+        if (homeScore > awayScore) return 1;
+        if (homeScore < awayScore) return 0;
+        return 0.5; // Draw
+    }
+
+    /**
+     * Calculate team average ELO rating from player ratings
+     * @param {string[]} players - Array of player names (may contain nulls)
+     * @param {Object} playerRatings - Player rankings data
+     * @returns {number} - Average ELO rating of team (ignoring nulls)
+     */
+    calculateTeamEloRating(players, playerRatings) {
+        const validPlayers = players.filter((player) => player !== null && player !== undefined);
+        if (validPlayers.length === 0) return ELO_BASELINE_RATING;
+
+        const totalRating = validPlayers.reduce((sum, player) => {
+            const playerData = playerRatings[player];
+            const eloData = playerData?.elo || { rating: ELO_BASELINE_RATING };
+            return sum + eloData.rating;
+        }, 0);
+
+        return totalRating / validPlayers.length;
+    }
+
+    /**
+     * Apply weekly decay to a player's ELO rating
+     * @param {number} currentRating - Current player rating
+     * @param {number} weeksElapsed - Number of whole weeks since last decay
+     * @returns {number} - New rating after decay
+     */
+    applyEloDecay(currentRating, weeksElapsed) {
+        if (weeksElapsed <= 0) return currentRating;
+
+        const decayFactor = Math.pow(1 - ELO_DECAY_RATE, weeksElapsed);
+        return ELO_BASELINE_RATING + (currentRating - ELO_BASELINE_RATING) * decayFactor;
+    }
+
+    /**
+     * Calculate weeks elapsed between two dates
+     * @param {string} fromDate - Start date (YYYY-MM-DD)
+     * @param {string} toDate - End date (YYYY-MM-DD)
+     * @returns {number} - Whole weeks elapsed
+     */
+    calculateWeeksElapsed(fromDate, toDate) {
+        const fromMs = new Date(fromDate).getTime();
+        const toMs = new Date(toDate).getTime();
+        const msElapsed = toMs - fromMs;
+        return Math.floor(msElapsed / MS_PER_WEEK);
+    }
+
+    /**
+     * Update player ELO ratings based on game result
+     * @param {Object} playerTracker - Map of all player data
+     * @param {string[]} homeTeam - Home team player names
+     * @param {string[]} awayTeam - Away team player names
+     * @param {number} homeScore - Home team score
+     * @param {number} awayScore - Away team score
+     * @param {string} phase - Game phase ('league' or cup-related)
+     */
+    updateEloRatingsForGame(playerTracker, homeTeam, awayTeam, homeScore, awayScore, phase) {
+        // Filter out null players
+        const homePlayersValid = homeTeam.filter((p) => p !== null && p !== undefined);
+        const awayPlayersValid = awayTeam.filter((p) => p !== null && p !== undefined);
+
+        if (homePlayersValid.length === 0 || awayPlayersValid.length === 0) {
+            return; // Skip games with no valid players
+        }
+
+        // Ensure all players exist and have ELO data
+        [...homePlayersValid, ...awayPlayersValid].forEach((playerName) => {
+            if (!playerTracker.has(playerName)) {
+                playerTracker.set(playerName, {
+                    points: 0,
+                    appearances: 0,
+                    rankingDetail: {}
+                });
+            }
+
+            const playerData = playerTracker.get(playerName);
+            if (!playerData.elo) {
+                playerData.elo = {
+                    rating: ELO_BASELINE_RATING,
+                    lastDecayAt: null,
+                    gamesPlayed: 0
+                };
+            }
+        });
+
+        // Convert playerTracker to simple object for rating calculation
+        const playerRatings = {};
+        playerTracker.forEach((data, name) => {
+            playerRatings[name] = data;
+        });
+
+        // Calculate team ratings
+        const homeRating = this.calculateTeamEloRating(homeTeam, playerRatings);
+        const awayRating = this.calculateTeamEloRating(awayTeam, playerRatings);
+
+        // Calculate expected scores
+        const homeExpected = this.calculateExpectedScore(homeRating, awayRating);
+        const awayExpected = 1 - homeExpected;
+
+        // Calculate actual scores
+        const homeActual = this.calculateActualScore(homeScore, awayScore);
+        const awayActual = 1 - homeActual;
+
+        // Determine K factor based on phase
+        const kFactor = phase === 'league' ? ELO_K_LEAGUE : ELO_K_CUP;
+
+        // Update home team players
+        homePlayersValid.forEach((playerName) => {
+            const playerData = playerTracker.get(playerName);
+            playerData.elo.rating += kFactor * (homeActual - homeExpected);
+            playerData.elo.gamesPlayed++;
+        });
+
+        // Update away team players
+        awayPlayersValid.forEach((playerName) => {
+            const playerData = playerTracker.get(playerName);
+            playerData.elo.rating += kFactor * (awayActual - awayExpected);
+            playerData.elo.gamesPlayed++;
+        });
+    }
+
+    /**
+     * Apply ELO decay to all players since their last decay date
+     * @param {Map} playerTracker - Map of all player data
+     * @param {string} currentDate - Current session date (YYYY-MM-DD)
+     */
+    applyEloDecayToAllPlayers(playerTracker, currentDate) {
+        playerTracker.forEach((playerData) => {
+            if (!playerData.elo) {
+                playerData.elo = {
+                    rating: ELO_BASELINE_RATING,
+                    lastDecayAt: null,
+                    gamesPlayed: 0
+                };
+                return;
+            }
+
+            let lastDecayDate = playerData.elo.lastDecayAt;
+
+            // If never decayed before, use their first session date as the baseline
+            if (!lastDecayDate) {
+                const rankingDetailDates = Object.keys(playerData.rankingDetail || {}).sort();
+                if (rankingDetailDates.length > 0) {
+                    lastDecayDate = rankingDetailDates[0]; // First session date
+                } else {
+                    // No ranking detail yet, use current date (no decay)
+                    lastDecayDate = currentDate;
+                }
+            }
+
+            const weeksElapsed = this.calculateWeeksElapsed(lastDecayDate, currentDate);
+
+            if (weeksElapsed > 0) {
+                playerData.elo.rating = this.applyEloDecay(playerData.elo.rating, weeksElapsed);
+                playerData.elo.lastDecayAt = currentDate;
+            }
+        });
+    }
+
+    /**
      * Apply hybrid ranking algorithm to raw player data
      * @param {Object} rawRankings - Rankings with basic points/appearances
      * @returns {Object} Enhanced rankings with calculated fields
@@ -330,6 +571,9 @@ export class RankingsManager {
                 points: data.points,
                 appearances: data.appearances,
                 rankingDetail: data.rankingDetail || {},
+
+                // ELO data
+                elo: data.elo || null,
 
                 // Calculated averages
                 rawAverage: parseFloat(rawAverage.toFixed(2)),
@@ -415,6 +659,9 @@ export class RankingsManager {
                 const knockoutBracket = games?.['knockout-games']?.bracket;
                 const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
 
+                // Process ELO ratings for all games in this session
+                this.processEloRatings(playerTracker, teams, rounds, knockoutBracket, date);
+
                 // Track players who appeared this date
                 const playersWhoAppeared = new Set();
 
@@ -452,7 +699,10 @@ export class RankingsManager {
                             matchPoints,
                             bonusPoints,
                             knockoutPoints,
-                            totalPoints: totalDatePoints
+                            totalPoints: totalDatePoints,
+                            eloRating: playerData.elo
+                                ? Math.round(playerData.elo.rating)
+                                : ELO_BASELINE_RATING
                         };
 
                         // Add championship flags
@@ -550,11 +800,18 @@ export class RankingsManager {
                         matchPoints: null,
                         bonusPoints: null,
                         knockoutPoints: null,
-                        totalPoints: null
+                        totalPoints: null,
+                        eloRating: playerData.elo
+                            ? Math.round(playerData.elo.rating)
+                            : ELO_BASELINE_RATING
                     };
                 } else {
                     // Player appeared but entry wasn't created yet (edge case)
-                    playerData.rankingDetail[date] = {};
+                    playerData.rankingDetail[date] = {
+                        eloRating: playerData.elo
+                            ? Math.round(playerData.elo.rating)
+                            : ELO_BASELINE_RATING
+                    };
                 }
             }
 

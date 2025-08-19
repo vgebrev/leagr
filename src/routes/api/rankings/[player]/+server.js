@@ -41,7 +41,8 @@ function createUnifiedDetails(playerData, limit = null) {
                       knockoutPoints: entry.knockoutPoints || 0,
                       totalPoints: entry.totalPoints || 0,
                       leagueWinner: entry.leagueWinner || false,
-                      cupWinner: entry.cupWinner || false
+                      cupWinner: entry.cupWinner || false,
+                      eloRating: entry.eloRating || 1000
                   }
                 : {})
         });

@@ -13,7 +13,7 @@ Features include:
     - Waiting list after a limit is reached.
     - Moving players between lists.
 - **Team Management**
-    - Generate random teams, either completely random or using player rankings as seeds.
+    - Generate random teams, either completely random or using player ELO as seeds.
     - Replay team draws for dramatic effect.
     - Players can be moved from a team to the waiting list (and vice versa), removed, or marked as a no-show.
 - **Discipline**
@@ -23,7 +23,8 @@ Features include:
     - Standings table based on match results.
     - Knockout tournament generation with teams seeded by standings.
 - **Player Rankings**
-    - Cumulative player rankings based on team performances.
+    - Cumulative player rankings based on team performances and consistency.
+    - Player ELO tracks individual matches for long-term team balance optimisation.
     - Player profile - ranking details and history.
     - Champions hall: tracks league and cup winners.
 

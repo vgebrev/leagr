@@ -240,30 +240,25 @@ export class TeamGenerator {
         const teams = {};
         const teamNames = this.generateTeamNames(numTeams);
 
-        // Calculate default ranking for unranked players (pulled average * max sessions played)
-        const defaultRanking =
-            this.rankings?.rankingMetadata?.globalAverage &&
-            this.rankings?.rankingMetadata?.maxAppearances &&
-            this.rankings?.rankingMetadata?.minAverage !== undefined
-                ? (() => {
-                      // Pull global average towards minimum average with 0.5 factor
-                      const pulledAverage =
-                          this.rankings.rankingMetadata.globalAverage -
-                          0.5 *
-                              (this.rankings.rankingMetadata.globalAverage -
-                                  this.rankings.rankingMetadata.minAverage);
-                      const result = pulledAverage * this.rankings.rankingMetadata.maxAppearances;
-                      return parseFloat(result.toFixed(1));
-                  })()
-                : 0;
+        // Default ELO rating for unranked players
+        const defaultElo = 1000;
 
-        // Sort players by ranking points first, then total points, then appearances
+        // Sort players by ELO rating first, then ranking points, then total points, then appearances
         const sortedPlayers = [...this.players].sort((a, b) => {
             const playerA = this.rankings?.players?.[a];
             const playerB = this.rankings?.players?.[b];
 
-            const rankingA = playerA?.rankingPoints ?? defaultRanking;
-            const rankingB = playerB?.rankingPoints ?? defaultRanking;
+            // Use ELO rating as primary sort criterion
+            const eloA = playerA?.elo?.rating ?? defaultElo;
+            const eloB = playerB?.elo?.rating ?? defaultElo;
+
+            if (eloA !== eloB) {
+                return eloB - eloA;
+            }
+
+            // Fall back to ranking points for ties
+            const rankingA = playerA?.rankingPoints ?? 0;
+            const rankingB = playerB?.rankingPoints ?? 0;
 
             if (rankingA !== rankingB) {
                 return rankingB - rankingA;
@@ -291,8 +286,9 @@ export class TeamGenerator {
                     name: `Pot ${potNumber}`,
                     players: potPlayers.map((name) => ({
                         name,
-                        rankingPoints:
-                            this.rankings?.players?.[name]?.rankingPoints || defaultRanking
+                        rankingPoints: this.rankings?.players?.[name]?.elo?.rating
+                            ? Math.round(this.rankings.players[name].elo.rating)
+                            : defaultElo
                     }))
                 });
 
