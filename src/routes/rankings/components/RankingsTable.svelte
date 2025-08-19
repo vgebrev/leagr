@@ -21,15 +21,22 @@
             {currentSort}
             onSort={onSortChange} />
         <SortableTableHeader
+            column="elo"
+            label="ELO"
+            {currentSort}
+            onSort={onSortChange} />
+        <SortableTableHeader
             column="points"
             label="Points"
             {currentSort}
-            onSort={onSortChange} />
+            onSort={onSortChange}
+            className="hidden md:table-cell px-1 py-1.5 text-center" />
         <SortableTableHeader
             column="rawAverage"
             label="Pts/App"
             {currentSort}
-            onSort={onSortChange} />
+            onSort={onSortChange}
+            className="hidden md:table-cell px-1 py-1.5 text-center" />
         <SortableTableHeader
             column="rankingPoints"
             label="Ranking Pts"

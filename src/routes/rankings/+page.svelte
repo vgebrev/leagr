@@ -29,6 +29,11 @@
                 if (b[1].appearances !== a[1].appearances)
                     return b[1].appearances - a[1].appearances;
                 return b[1].points - a[1].points;
+            } else if (sortBy === 'elo') {
+                const aElo = a[1].elo?.rating || 0;
+                const bElo = b[1].elo?.rating || 0;
+                if (bElo !== aElo) return bElo - aElo;
+                return b[1].rankingPoints - a[1].rankingPoints;
             } else {
                 return 0;
             }

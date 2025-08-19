@@ -92,7 +92,17 @@
             onclick={() => handleSort('appearances')}>
             {data.appearances}</span>
     </TableBodyCell>
-    <TableBodyCell class={getSortClass('points')}>
+    <TableBodyCell class={getSortClass('elo')}>
+        <span
+            class="w-full"
+            role="button"
+            aria-label="Sort by ELO rating"
+            tabindex="0"
+            onkeydown={() => handleSort('elo')}
+            onclick={() => handleSort('elo')}>
+            {data.elo?.rating ? Math.round(data.elo.rating) : '-'}</span>
+    </TableBodyCell>
+    <TableBodyCell class="hidden md:table-cell {getSortClass('points')}">
         <span
             class="w-full"
             role="button"
@@ -101,7 +111,7 @@
             onkeydown={() => handleSort('points')}
             onclick={() => handleSort('points')}>{data.points}</span>
     </TableBodyCell>
-    <TableBodyCell class={getSortClass('rawAverage')}>
+    <TableBodyCell class="hidden md:table-cell {getSortClass('rawAverage')}">
         <span
             class="w-full"
             role="button"
