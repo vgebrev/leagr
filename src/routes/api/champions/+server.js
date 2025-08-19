@@ -36,7 +36,10 @@ export async function GET({ locals }) {
                     .sort((a, b) => b.date.localeCompare(a.date)) // Sort by date descending
             }))
             .sort((a, b) => {
-                // Sort by league wins descending, then cup wins descending
+                // Sort by total championships first, then league wins, then cup wins
+                if (b.totalChampionships !== a.totalChampionships) {
+                    return b.totalChampionships - a.totalChampionships;
+                }
                 if (b.leagueWins !== a.leagueWins) {
                     return b.leagueWins - a.leagueWins;
                 }
