@@ -102,7 +102,7 @@
     {/if}
 
     {#if playerData.elo}
-        <div class="mt-2 grid grid-cols-3 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
+        <div class="mt-2 grid grid-cols-2 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             <div class="text-center">
                 <div class="text-sm text-gray-600 dark:text-gray-400">ELO Rating</div>
                 <div class="text-lg font-semibold">{Math.round(playerData.elo.rating)}</div>
@@ -110,12 +110,6 @@
             <div class="text-center">
                 <div class="text-sm text-gray-600 dark:text-gray-400">ELO Games</div>
                 <div class="text-lg font-semibold">{playerData.elo.gamesPlayed}</div>
-            </div>
-            <div class="text-center">
-                <div class="text-sm text-gray-600 dark:text-gray-400">Last Decay</div>
-                <div class="text-lg font-semibold">
-                    {playerData.elo.lastDecayAt || 'Never'}
-                </div>
             </div>
         </div>
     {/if}
