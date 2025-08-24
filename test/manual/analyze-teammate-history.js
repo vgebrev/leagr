@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 
-import { createTeammateHistoryTracker } from '../src/lib/server/teammateHistory.js';
+import { createTeammateHistoryTracker } from '../../src/lib/server/teammateHistory.js';
 import { join } from 'path';
 import { writeFile } from 'fs/promises';
 

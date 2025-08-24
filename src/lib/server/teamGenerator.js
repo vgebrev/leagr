@@ -509,8 +509,8 @@ export class TeamGenerator {
         // Looser ELO delta target for more pairing variety
         const targetEloDelta = 20;
         const maxIterations = 75; // Increased iterations to find constraint-satisfying solutions
-        const varianceWeight = 20; // Increased weight for pairing penalty in scoring
-        const hardConstraintLimit = 5; // Completely reject teams with pairs having 4+ previous pairings
+        const varianceWeight = 15; // Increased weight for pairing penalty in scoring
+        const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
 
         let bestTeams = null;
         let bestScore = Infinity; // Now tracking combined score instead of just ELO delta
@@ -554,7 +554,7 @@ export class TeamGenerator {
             }
 
             // Stop early if we achieve excellent balance and no penalized pairings
-            if (eloDelta <= targetEloDelta && pairingPenalty <= 0) {
+            if (eloDelta <= targetEloDelta && pairingPenalty <= -5) {
                 break; // Perfect balance with no penalized pairings!
             }
         }

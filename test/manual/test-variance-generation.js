@@ -4,8 +4,8 @@
 import { readFile } from 'fs/promises';
 
 // Import with relative paths to avoid module resolution issues
-import { nouns } from '../src/lib/shared/nouns.js';
-import { teamColours } from '../src/lib/shared/helpers.js';
+import { nouns } from '../../src/lib/shared/nouns.js';
+import { teamColours } from '../../src/lib/shared/helpers.js';
 
 // Inline the TeamGenerator class to avoid import issues
 class TeamGenerator {
@@ -237,7 +237,7 @@ async function testVarianceGeneration() {
     try {
         // Load teammate history from pirates league
         const historyData = JSON.parse(
-            await readFile('data/pirates/teammate-history.json', 'utf8')
+            await readFile('../../data/pirates/teammate-history.json', 'utf8')
         );
 
         // Mock settings
