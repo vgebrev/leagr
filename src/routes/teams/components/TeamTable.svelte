@@ -188,11 +188,15 @@
                                                 onclick: () => handleAssignPlayer(null, teamName)
                                             },
                                             ...assignablePlayers.map((waitingPlayer) => {
-                                                const playerName = typeof waitingPlayer === 'string' ? waitingPlayer : waitingPlayer.name || waitingPlayer;
+                                                const playerName =
+                                                    typeof waitingPlayer === 'string'
+                                                        ? waitingPlayer
+                                                        : waitingPlayer.name || waitingPlayer;
                                                 return {
                                                     type: 'assign',
                                                     label: playerName,
-                                                    onclick: () => handleAssignPlayer(playerName, teamName)
+                                                    onclick: () =>
+                                                        handleAssignPlayer(playerName, teamName)
                                                 };
                                             })
                                         ]}

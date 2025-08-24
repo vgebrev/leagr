@@ -127,10 +127,13 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Validate and clean-up any inconsistencies
-        const cleanupResult = await playerManager.validateAndCleanup();
+        await playerManager.validateAndCleanup();
+
+        // Get the enhanced data with ELO ratings for the response
+        const enhancedData = await playerManager.getAllDataWithElo();
 
         return json({
-            teams: cleanupResult.teams,
+            teams: enhancedData.teams,
             config: result.config
         });
     } catch (err) {

@@ -42,7 +42,7 @@
 
     let showReplay = $state(false);
     let replayData = $state(null);
-    let showPlayerRankings = $state(false);
+    let showPlayerRankings = $state(true);
 
     function handleReplay(history) {
         replayData = history;

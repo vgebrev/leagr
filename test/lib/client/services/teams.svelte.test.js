@@ -99,9 +99,7 @@ describe('TeamsService', () => {
                         { name: 'Alice', elo: 1200 },
                         { name: 'Bob', elo: 1100 }
                     ],
-                    waitingList: [
-                        { name: 'Dave', elo: 1000 }
-                    ]
+                    waitingList: [{ name: 'Dave', elo: 1000 }]
                 }
             };
             const mockConfigData = {
