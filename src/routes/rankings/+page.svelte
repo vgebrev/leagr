@@ -4,6 +4,7 @@
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { Button } from 'flowbite-svelte';
+    import { page } from '$app/state';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
@@ -11,6 +12,12 @@
 
     let rankings = $state({ players: {}, rankingMetadata: {} });
     let sortBy = $state('rankingPoints'); // Default to ranking points
+
+    // Preserve date parameter when navigating to champions
+    let championsUrl = $derived.by(() => {
+        const dateParam = page.url.searchParams.get('date');
+        return dateParam ? `/champions?date=${dateParam}` : '/champions';
+    });
 
     let sortedPlayers = $derived(
         Object.entries(rankings.players ?? {}).sort((a, b) => {
@@ -80,7 +87,7 @@
 <div class="flex flex-col gap-2">
     <RankingInfoPanel rankingMetadata={rankings.rankingMetadata} />
     <Button
-        href="/champions"
+        href={championsUrl}
         color="primary"
         size="sm"
         class="flex items-center gap-2">
