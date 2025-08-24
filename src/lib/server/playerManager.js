@@ -1,6 +1,7 @@
 import { data } from './data.js';
 import { defaultPlayers } from '$lib/shared/defaults.js';
 import { getConsolidatedSettings } from './settings.js';
+import { createRankingsManager } from './rankings.js';
 
 /**
  * Custom error class for player operations that preserves HTTP status codes
@@ -499,6 +500,97 @@ export class PlayerManager {
         }
 
         return result;
+    }
+
+    /**
+     * Helper method to enhance player list with ELO data
+     * @param {string[]} players - Array of player names (can include null values for teams)
+     * @param {Object} rankings - Enhanced rankings data
+     * @returns {Object[]} Array of player objects with name and elo (preserving nulls)
+     */
+    #enhancePlayersWithElo(players, rankings) {
+        return players.map((playerName) => {
+            if (playerName === null) {
+                return null; // Preserve null slots for teams
+            }
+
+            // Get ELO from before the session date (most recent prior ranking detail)
+            const playerRanking = rankings.players?.[playerName];
+            let elo = 1000; // Default for new players
+
+            if (playerRanking?.rankingDetail) {
+                // Find the most recent ranking detail entry before the session date
+                const rankingDates = Object.keys(playerRanking.rankingDetail)
+                    .filter((date) => date < this.date)
+                    .sort();
+
+                if (rankingDates.length > 0) {
+                    const mostRecentPriorDate = rankingDates[rankingDates.length - 1];
+                    elo = playerRanking.rankingDetail[mostRecentPriorDate]?.eloRating ?? 1000;
+                } else if (playerRanking.elo?.rating) {
+                    // Fallback to current ELO if no prior ranking detail exists
+                    elo = Math.round(playerRanking.elo.rating);
+                }
+            }
+
+            return {
+                name: playerName,
+                elo
+            };
+        });
+    }
+
+    /**
+     * Get teams data enhanced with player ELO information
+     * @returns {Promise<Object>} Teams object with player objects containing name and elo
+     */
+    async getTeamsWithElo() {
+        // Get basic teams data
+        const gameData = await this.getData({ players: false, teams: true, settings: false });
+
+        // Load rankings to get player ELO ratings
+        const rankings = await createRankingsManager()
+            .setLeague(this.leagueId)
+            .loadEnhancedRankings();
+
+        // Enhance teams with ELO data using the helper method
+        const enhancedTeams = {};
+        for (const [teamName, players] of Object.entries(gameData.teams)) {
+            enhancedTeams[teamName] = this.#enhancePlayersWithElo(players, rankings);
+        }
+
+        return enhancedTeams;
+    }
+
+    /**
+     * Get all data enhanced with player ELO information for team management UI
+     * @returns {Promise<{teams: Object, players: {available: Object[], waitingList: Object[]}}>}
+     */
+    async getAllDataWithElo() {
+        // Get basic game data
+        const gameData = await this.getData({ players: true, teams: true, settings: false });
+
+        // Load rankings to get player ELO ratings
+        const rankings = await createRankingsManager()
+            .setLeague(this.leagueId)
+            .loadEnhancedRankings();
+
+        // Enhance teams with ELO data using the helper method
+        const enhancedTeams = {};
+        for (const [teamName, players] of Object.entries(gameData.teams)) {
+            enhancedTeams[teamName] = this.#enhancePlayersWithElo(players, rankings);
+        }
+
+        // Enhance available and waiting list players with ELO data
+        const enhancedPlayers = {
+            available: this.#enhancePlayersWithElo(gameData.players.available, rankings),
+            waitingList: this.#enhancePlayersWithElo(gameData.players.waitingList, rankings)
+        };
+
+        return {
+            teams: enhancedTeams,
+            players: enhancedPlayers
+        };
     }
 
     /**

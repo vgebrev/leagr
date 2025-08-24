@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { validateLeagueForAPI } from '$lib/server/league.js';
 import { data } from '$lib/server/data.js';
 import {
     validateDateParameter,
@@ -23,11 +23,12 @@ export const GET = async ({ url, locals }) => {
     }
 
     try {
-        const gameData = await createPlayerManager()
+        const enhancedData = await createPlayerManager()
             .setDate(dateValidation.date)
             .setLeague(leagueId)
-            .getData({ players: false, teams: true, settings: false });
-        return json(gameData.teams);
+            .getAllDataWithElo();
+
+        return json(enhancedData);
     } catch (err) {
         console.error('Error fetching teams:', err);
         return error(500, 'Failed to fetch teams');

@@ -76,14 +76,15 @@
         return completedAnimations;
     });
 
-    // Helper function to get player ranking points from initialPots
-    function getPlayerRankingPoints(playerName) {
+    // Helper function to get player ELO from initialPots (with fallback to rankingPoints for legacy data)
+    function getPlayerElo(playerName) {
         if (!drawHistory?.initialPots) return null;
 
         for (const pot of drawHistory.initialPots) {
             const player = pot.players.find((p) => p.name === playerName);
-            if (player && player.rankingPoints !== null) {
-                return player.rankingPoints;
+            if (player) {
+                // Use ELO if available, fallback to rankingPoints for legacy data
+                return player.elo ?? player.rankingPoints ?? null;
             }
         }
         return null;
@@ -136,14 +137,14 @@
 
             const playersWithRankings = players.map((player) => {
                 if (player) {
-                    const rankingPoints = getPlayerRankingPoints(player);
-                    if (rankingPoints !== null) {
-                        totalRankingPoints += rankingPoints;
+                    const elo = getPlayerElo(player);
+                    if (elo !== null) {
+                        totalRankingPoints += elo;
                         assignedPlayerCount++;
                     }
                     return {
                         name: player,
-                        rankingPoints
+                        elo
                     };
                 } else {
                     return null;
@@ -505,10 +506,10 @@
                                             class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
                                             {player.name}
                                         </div>
-                                        {#if player.rankingPoints !== null && showPlayerRankings}
+                                        {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
                                             <div
                                                 class="text-xs font-light whitespace-nowrap opacity-70">
-                                                {player.rankingPoints}
+                                                {player.elo ?? player.rankingPoints}
                                             </div>
                                         {/if}
                                     </div>

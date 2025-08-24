@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { Toggle } from 'flowbite-svelte';
     import { teamsService } from '$lib/client/services/teams.svelte.js';
     import { playersService } from '$lib/client/services/players.svelte.js';
     import PlayerSummary from './components/PlayerSummary.svelte';
@@ -15,9 +16,17 @@
     let teamConfig = $derived(teamsService.teamConfig);
     let drawHistory = $derived(teamsService.drawHistory);
 
-    // Use the Players service for player data
-    let waitingList = $derived(playersService.waitingList);
-    let unassignedPlayers = $derived(teamsService.unassignedPlayers);
+    // Use enhanced player data with ELO when available, fallback to legacy format
+    let waitingList = $derived(
+        teamsService.waitingListWithElo.length > 0
+            ? teamsService.waitingListWithElo
+            : playersService.waitingList
+    );
+    let unassignedPlayers = $derived(
+        teamsService.unassignedPlayersWithElo.length > 0
+            ? teamsService.unassignedPlayersWithElo
+            : teamsService.unassignedPlayers
+    );
     let canModifyList = $derived(playersService.canModifyList);
 
     // Get summary data
@@ -33,6 +42,7 @@
 
     let showReplay = $state(false);
     let replayData = $state(null);
+    let showPlayerRankings = $state(false);
 
     function handleReplay(history) {
         replayData = history;
@@ -55,11 +65,23 @@
         hasExistingTeams={teamsService.hasExistingTeams}
         ongenerate={generateTeams}
         onreplay={handleReplay} />
+
+    {#if Object.keys(teams).length > 0}
+        <div class="mb-2 flex items-center gap-2">
+            <Toggle
+                bind:checked={showPlayerRankings}
+                size="small">
+                Show ELO
+            </Toggle>
+        </div>
+    {/if}
+
     <TeamsGrid
         {teams}
         {waitingList}
         {unassignedPlayers}
         {canModifyList}
+        {showPlayerRankings}
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)} />
 

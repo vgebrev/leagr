@@ -177,10 +177,15 @@ export class TeamGenerator {
             this.initialPots = [
                 {
                     name: 'All Players',
-                    players: this.players.map((name) => ({
-                        name,
-                        rankingPoints: null
-                    }))
+                    players: this.players.map((name) => {
+                        const playerRanking = this.rankings?.players?.[name];
+                        return {
+                            name,
+                            elo: playerRanking?.elo?.rating
+                                ? Math.round(playerRanking.elo.rating)
+                                : 1000
+                        };
+                    })
                 }
             ];
         }
@@ -286,7 +291,7 @@ export class TeamGenerator {
                     name: `Pot ${potNumber}`,
                     players: potPlayers.map((name) => ({
                         name,
-                        rankingPoints: this.rankings?.players?.[name]?.elo?.rating
+                        elo: this.rankings?.players?.[name]?.elo?.rating
                             ? Math.round(this.rankings.players[name].elo.rating)
                             : defaultElo
                     }))

@@ -22,6 +22,12 @@ class TeamsService {
     /** @type {Object | null} */
     drawHistory = $state(null);
 
+    /** @type {Object[]} Enhanced waiting list players with ELO data */
+    waitingListWithElo = $state([]);
+
+    /** @type {Object[]} Enhanced available players with ELO data */
+    availablePlayersWithElo = $state([]);
+
     /** @type {boolean} */
     hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
 
@@ -62,21 +68,30 @@ class TeamsService {
         );
     });
 
-    /** @type {string[]} */
-    unassignedPlayers = $derived.by(() => {
-        const assignedPlayers = $state(new Set());
+    /** @type {Object[]} */
+    unassignedPlayersWithElo = $derived.by(() => {
+        const assignedPlayerNames = $state(new Set());
 
         // Collect all players currently assigned to teams
         Object.values(this.teams).forEach((team) => {
             team.forEach((player) => {
                 if (player) {
-                    assignedPlayers.add(player);
+                    // Handle both string players and player objects with name property
+                    const playerName = typeof player === 'string' ? player : player.name || player;
+                    assignedPlayerNames.add(playerName);
                 }
             });
         });
 
-        // Return available players not assigned to any team
-        return playersService.players.filter((player) => !assignedPlayers.has(player));
+        // Return enhanced available players not assigned to any team
+        return this.availablePlayersWithElo.filter(
+            (playerObj) => !assignedPlayerNames.has(playerObj.name)
+        );
+    });
+
+    /** @type {string[]} Legacy unassigned players for backward compatibility */
+    unassignedPlayers = $derived.by(() => {
+        return this.unassignedPlayersWithElo.map((p) => p.name);
     });
 
     constructor() {
@@ -193,8 +208,12 @@ class TeamsService {
                 if (result) {
                     // Update local state with server response
                     this.teams = result.teams;
-                    playersService.players = result.players.available;
-                    playersService.waitingList = result.players.waitingList;
+                    // Store enhanced player data with ELO
+                    this.availablePlayersWithElo = result.players.available;
+                    this.waitingListWithElo = result.players.waitingList;
+                    // Extract player names for legacy playersService
+                    playersService.players = result.players.available.map((p) => p.name);
+                    playersService.waitingList = result.players.waitingList.map((p) => p.name);
 
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();
@@ -247,8 +266,12 @@ class TeamsService {
                 if (result) {
                     // Update local state with server response
                     this.teams = result.teams;
-                    playersService.players = result.players.available;
-                    playersService.waitingList = result.players.waitingList;
+                    // Store enhanced player data with ELO
+                    this.availablePlayersWithElo = result.players.available;
+                    this.waitingListWithElo = result.players.waitingList;
+                    // Extract player names for legacy playersService
+                    playersService.players = result.players.available.map((p) => p.name);
+                    playersService.waitingList = result.players.waitingList.map((p) => p.name);
 
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();
@@ -276,11 +299,24 @@ class TeamsService {
             async () => {
                 this.currentDate = date;
 
-                // Load players first (teams depend on this)
-                await playersService.loadPlayers(date);
+                // Load teams data with enhanced player information
+                const teamsData = await api.get('teams', date);
+                if (teamsData) {
+                    // Extract teams and enhanced player data
+                    this.teams = teamsData.teams || {};
+                    this.availablePlayersWithElo = teamsData.players?.available || [];
+                    this.waitingListWithElo = teamsData.players?.waitingList || [];
 
-                // Load existing teams data
-                this.teams = (await api.get('teams', date)) || {};
+                    // Update playersService with extracted names for backward compatibility
+                    playersService.players = this.availablePlayersWithElo.map((p) => p.name);
+                    playersService.waitingList = this.waitingListWithElo.map((p) => p.name);
+                } else {
+                    // Fallback: load basic player data if teams API fails
+                    await playersService.loadPlayers(date);
+                    this.teams = {};
+                    this.availablePlayersWithElo = [];
+                    this.waitingListWithElo = [];
+                }
 
                 // Load team configurations
                 await this.loadTeamConfigurations();
@@ -336,6 +372,8 @@ class TeamsService {
         this.currentDate = null;
         this.drawHistory = null;
         this.#teamConfigurations = [];
+        this.waitingListWithElo = [];
+        this.availablePlayersWithElo = [];
     }
 
     /**

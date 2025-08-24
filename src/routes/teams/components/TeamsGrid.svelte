@@ -1,7 +1,15 @@
 <script>
     import TeamTable from './TeamTable.svelte';
 
-    let { teams, waitingList, unassignedPlayers, canModifyList, onremove, onassign } = $props();
+    let {
+        teams,
+        waitingList,
+        unassignedPlayers,
+        canModifyList,
+        onremove,
+        onassign,
+        showPlayerRankings = false
+    } = $props();
 
     // Combine all assignable players for dropdown selection
     const assignablePlayers = $derived([...unassignedPlayers, ...waitingList]);
@@ -16,7 +24,8 @@
             {canModifyList}
             {onassign}
             {onremove}
-            {assignablePlayers} />
+            {assignablePlayers}
+            {showPlayerRankings} />
     {/each}
     {#if (unassignedPlayers?.length > 0 || waitingList?.length > 0) && Object.entries(teams).length > 0}
         <div class="flex flex-col gap-2">
@@ -28,7 +37,8 @@
                     {canModifyList}
                     allTeams={teams}
                     {onassign}
-                    {onremove} />
+                    {onremove}
+                    {showPlayerRankings} />
             {/if}
             {#if waitingList?.length > 0}
                 <TeamTable
@@ -38,7 +48,8 @@
                     {canModifyList}
                     allTeams={teams}
                     {onassign}
-                    {onremove} />
+                    {onremove}
+                    {showPlayerRankings} />
             {/if}
         </div>
     {/if}

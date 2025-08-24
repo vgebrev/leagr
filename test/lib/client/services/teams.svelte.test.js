@@ -90,8 +90,19 @@ describe('TeamsService', () => {
     describe('loadTeams', () => {
         it('should load teams data and dependencies', async () => {
             const mockTeamsData = {
-                'Team A': ['Alice', 'Bob'],
-                'Team B': ['Charlie', null]
+                teams: {
+                    'Team A': ['Alice', 'Bob'],
+                    'Team B': ['Charlie', null]
+                },
+                players: {
+                    available: [
+                        { name: 'Alice', elo: 1200 },
+                        { name: 'Bob', elo: 1100 }
+                    ],
+                    waitingList: [
+                        { name: 'Dave', elo: 1000 }
+                    ]
+                }
             };
             const mockConfigData = {
                 playerCount: 4,
@@ -99,16 +110,19 @@ describe('TeamsService', () => {
             };
 
             mockApi.get
-                .mockResolvedValueOnce(mockTeamsData) // teams data
+                .mockResolvedValueOnce(mockTeamsData) // enhanced teams data
                 .mockResolvedValueOnce(mockConfigData); // configurations
 
             await teamsService.loadTeams('2025-01-25');
 
-            expect(mockPlayersService.loadPlayers).toHaveBeenCalledWith('2025-01-25');
             expect(mockApi.get).toHaveBeenCalledWith('teams', '2025-01-25');
             expect(mockApi.get).toHaveBeenCalledWith('teams/configurations', '2025-01-25');
             expect(teamsService.currentDate).toBe('2025-01-25');
-            expect(teamsService.teams).toEqual(mockTeamsData);
+            expect(teamsService.teams).toEqual(mockTeamsData.teams);
+            expect(teamsService.availablePlayersWithElo).toEqual(mockTeamsData.players.available);
+            expect(teamsService.waitingListWithElo).toEqual(mockTeamsData.players.waitingList);
+            expect(mockPlayersService.players).toEqual(['Alice', 'Bob']);
+            expect(mockPlayersService.waitingList).toEqual(['Dave']);
         });
 
         it('should handle missing teams data gracefully', async () => {
@@ -118,7 +132,10 @@ describe('TeamsService', () => {
 
             await teamsService.loadTeams('2025-01-25');
 
+            expect(mockPlayersService.loadPlayers).toHaveBeenCalledWith('2025-01-25');
             expect(teamsService.teams).toEqual({});
+            expect(teamsService.availablePlayersWithElo).toEqual([]);
+            expect(teamsService.waitingListWithElo).toEqual([]);
         });
 
         it('should handle API errors', async () => {
@@ -256,8 +273,11 @@ describe('TeamsService', () => {
                     'Team B': ['Charlie', null]
                 },
                 players: {
-                    available: ['Alice', 'Charlie'],
-                    waitingList: ['Bob']
+                    available: [
+                        { name: 'Alice', elo: 1000 },
+                        { name: 'Charlie', elo: 1000 }
+                    ],
+                    waitingList: [{ name: 'Bob', elo: 1000 }]
                 }
             };
 
@@ -272,14 +292,20 @@ describe('TeamsService', () => {
                 action: 'waitingList'
             });
             expect(teamsService.teams).toEqual(mockResult.teams);
-            expect(mockPlayersService.players).toEqual(mockResult.players.available);
-            expect(mockPlayersService.waitingList).toEqual(mockResult.players.waitingList);
+            expect(mockPlayersService.players).toEqual(['Alice', 'Charlie']);
+            expect(mockPlayersService.waitingList).toEqual(['Bob']);
         });
 
         it('should auto-detect team name when not provided', async () => {
             const mockResult = {
                 teams: { 'Team A': ['Alice', null], 'Team B': ['Charlie', null] },
-                players: { available: ['Alice', 'Charlie'], waitingList: ['Bob'] }
+                players: {
+                    available: [
+                        { name: 'Alice', elo: 1000 },
+                        { name: 'Charlie', elo: 1000 }
+                    ],
+                    waitingList: [{ name: 'Bob', elo: 1000 }]
+                }
             };
 
             mockApi.remove.mockResolvedValue(mockResult);
@@ -328,7 +354,11 @@ describe('TeamsService', () => {
                     'Team B': ['Charlie', null]
                 },
                 players: {
-                    available: ['Alice', 'Bob', 'Charlie'],
+                    available: [
+                        { name: 'Alice', elo: 1000 },
+                        { name: 'Bob', elo: 1000 },
+                        { name: 'Charlie', elo: 1000 }
+                    ],
                     waitingList: []
                 }
             };
@@ -343,8 +373,8 @@ describe('TeamsService', () => {
                 teamName: 'Team A'
             });
             expect(teamsService.teams).toEqual(mockResult.teams);
-            expect(mockPlayersService.players).toEqual(mockResult.players.available);
-            expect(mockPlayersService.waitingList).toEqual(mockResult.players.waitingList);
+            expect(mockPlayersService.players).toEqual(['Alice', 'Bob', 'Charlie']);
+            expect(mockPlayersService.waitingList).toEqual([]);
         });
 
         it('should auto-select first unassigned player if none specified', async () => {
@@ -355,7 +385,14 @@ describe('TeamsService', () => {
 
             const mockResult = {
                 teams: { 'Team A': ['Alice', 'Bob'], 'Team B': ['Charlie', null] },
-                players: { available: ['Alice', 'Bob', 'Charlie'], waitingList: [] }
+                players: {
+                    available: [
+                        { name: 'Alice', elo: 1000 },
+                        { name: 'Bob', elo: 1000 },
+                        { name: 'Charlie', elo: 1000 }
+                    ],
+                    waitingList: []
+                }
             };
 
             mockApi.post.mockResolvedValue(mockResult);

@@ -62,19 +62,18 @@ export const DELETE = async ({ request, url, locals }) => {
             return error(400, operationValidation.error);
         }
 
-        let result;
         if (bodyParseResult.data.teamName) {
             // Player is in a team - use removePlayerFromTeam
             // For no-shows, use 'remove' action to completely remove player like a normal removal
             const effectiveAction = action === 'no-show' ? 'remove' : action;
-            result = await playerManager.removePlayerFromTeam(
+            await playerManager.removePlayerFromTeam(
                 nameValidation.sanitizedName,
                 bodyParseResult.data.teamName,
                 effectiveAction
             );
         } else {
             // Player is unassigned/waiting - use simple removePlayer for complete removal
-            result = await playerManager.removePlayer(nameValidation.sanitizedName);
+            await playerManager.removePlayer(nameValidation.sanitizedName);
         }
 
         // Handle no-show discipline tracking (only if discipline system is enabled)
@@ -87,7 +86,9 @@ export const DELETE = async ({ request, url, locals }) => {
             );
         }
 
-        return json(result);
+        // Return enhanced data with ELO information for both teams and players
+        const enhancedData = await playerManager.getAllDataWithElo();
+        return json(enhancedData);
     } catch (err) {
         console.error('Error removing player from team:', err);
         if (err instanceof PlayerError) {
@@ -147,11 +148,14 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Try to assign player to team (works for both available and waiting list players)
-        const result = await playerManager.fillEmptySlotWithPlayer(
+        await playerManager.fillEmptySlotWithPlayer(
             bodyParseResult.data.teamName,
             nameValidation.sanitizedName
         );
-        return json(result);
+
+        // Return enhanced data with ELO information for both teams and players
+        const enhancedData = await playerManager.getAllDataWithElo();
+        return json(enhancedData);
     } catch (err) {
         console.error('Error assigning player to team:', err);
         if (err instanceof PlayerError) {
