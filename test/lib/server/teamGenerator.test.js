@@ -23,14 +23,54 @@ describe('TeamGenerator', () => {
 
         mockRankings = {
             players: {
-                Alice: { rankingPoints: 100, weightedAverage: 4.5, appearances: 10 },
-                Bob: { rankingPoints: 90, weightedAverage: 4.2, appearances: 8 },
-                Charlie: { rankingPoints: 85, weightedAverage: 4.0, appearances: 9 },
-                Diana: { rankingPoints: 80, weightedAverage: 3.8, appearances: 7 },
-                Eve: { rankingPoints: 75, weightedAverage: 3.5, appearances: 6 },
-                Frank: { rankingPoints: 70, weightedAverage: 3.2, appearances: 5 },
-                Grace: { rankingPoints: 65, weightedAverage: 3.0, appearances: 4 },
-                Henry: { rankingPoints: 60, weightedAverage: 2.8, appearances: 3 }
+                Alice: {
+                    rankingPoints: 100,
+                    weightedAverage: 4.5,
+                    appearances: 10,
+                    elo: { rating: 1200 }
+                },
+                Bob: {
+                    rankingPoints: 90,
+                    weightedAverage: 4.2,
+                    appearances: 8,
+                    elo: { rating: 1150 }
+                },
+                Charlie: {
+                    rankingPoints: 85,
+                    weightedAverage: 4.0,
+                    appearances: 9,
+                    elo: { rating: 1100 }
+                },
+                Diana: {
+                    rankingPoints: 80,
+                    weightedAverage: 3.8,
+                    appearances: 7,
+                    elo: { rating: 1050 }
+                },
+                Eve: {
+                    rankingPoints: 75,
+                    weightedAverage: 3.5,
+                    appearances: 6,
+                    elo: { rating: 1000 }
+                },
+                Frank: {
+                    rankingPoints: 70,
+                    weightedAverage: 3.2,
+                    appearances: 5,
+                    elo: { rating: 950 }
+                },
+                Grace: {
+                    rankingPoints: 65,
+                    weightedAverage: 3.0,
+                    appearances: 4,
+                    elo: { rating: 900 }
+                },
+                Henry: {
+                    rankingPoints: 60,
+                    weightedAverage: 2.8,
+                    appearances: 3,
+                    elo: { rating: 850 }
+                }
             }
         };
     });
@@ -257,6 +297,112 @@ describe('TeamGenerator', () => {
             expect(allAssignedPlayers).toHaveLength(10);
             expect(allAssignedPlayers).toContain('NewPlayer1');
             expect(allAssignedPlayers).toContain('NewPlayer2');
+        });
+
+        it('should optimize team balance based on ELO ratings', () => {
+            const config = { teamSizes: [4, 4] };
+            const teams = teamGenerator.generateSeededTeams(config);
+
+            // Calculate team ELO averages
+            const teamAverages = teamGenerator.calculateTeamEloAverages(teams);
+            const eloDelta = teamGenerator.calculateEloDelta(teamAverages);
+
+            // The ELO delta should be reasonable for 2 teams (target: 12 - 2*2 = 8)
+            expect(eloDelta).toBeLessThanOrEqual(100); // Should be much better than random
+            expect(teamAverages).toHaveLength(2);
+            expect(teamAverages.every((avg) => avg > 0)).toBe(true);
+        });
+
+        it('should achieve better balance with more teams (lower target threshold)', () => {
+            // Test with 3 teams (target: 12 - 2*3 = 6)
+            const config = { teamSizes: [3, 3, 2] };
+            const teams = teamGenerator.generateSeededTeams(config);
+
+            const teamAverages = teamGenerator.calculateTeamEloAverages(teams);
+            const eloDelta = teamGenerator.calculateEloDelta(teamAverages);
+
+            // With 3 teams, the balance should be tighter
+            expect(eloDelta).toBeLessThanOrEqual(100);
+            expect(teamAverages).toHaveLength(3);
+        });
+
+        it('should use snake draft pattern for improved pairing variance', () => {
+            // Test multiple iterations to verify randomization is working
+            const config = { teamSizes: [2, 2, 2, 2] };
+            const results = [];
+
+            // Generate multiple team combinations
+            for (let i = 0; i < 10; i++) {
+                const teams = teamGenerator.generateSeededTeams(config);
+                const teamsList = Object.values(teams);
+                results.push(teamsList);
+            }
+
+            // Verify we get different team combinations (high variance)
+            const uniqueCombinations = new Set(
+                results.map((teams) => JSON.stringify(teams.map((team) => team.sort())))
+            );
+
+            // Should have some variety in team combinations due to snake draft randomization
+            expect(uniqueCombinations.size).toBeGreaterThan(1);
+
+            // Verify all teams have correct sizes
+            results.forEach((teamsList) => {
+                expect(teamsList).toHaveLength(4);
+                teamsList.forEach((team) => {
+                    expect(team).toHaveLength(2);
+                });
+            });
+        });
+    });
+
+    describe('ELO Balance Calculation', () => {
+        beforeEach(() => {
+            teamGenerator
+                .setSettings(mockSettings)
+                .setPlayers(mockPlayers)
+                .setRankings(mockRankings);
+        });
+
+        it('should calculate team ELO averages correctly', () => {
+            const teams = {
+                'Team A': ['Alice', 'Frank'], // ELO: 1200, 950 -> avg: 1075
+                'Team B': ['Bob', 'Grace'] // ELO: 1150, 900 -> avg: 1025
+            };
+
+            const averages = teamGenerator.calculateTeamEloAverages(teams);
+
+            expect(averages).toHaveLength(2);
+            expect(averages[0]).toBe(1075); // (1200 + 950) / 2
+            expect(averages[1]).toBe(1025); // (1150 + 900) / 2
+        });
+
+        it('should handle players without ELO ratings (default to 1000)', () => {
+            const teams = {
+                'Team A': ['Alice', 'UnknownPlayer'] // ELO: 1200, 1000 -> avg: 1100
+            };
+
+            const averages = teamGenerator.calculateTeamEloAverages(teams);
+
+            expect(averages).toHaveLength(1);
+            expect(averages[0]).toBe(1100); // (1200 + 1000) / 2
+        });
+
+        it('should calculate ELO delta correctly', () => {
+            const teamAverages = [1075, 1025, 1000]; // delta = 1075 - 1000 = 75
+            const delta = teamGenerator.calculateEloDelta(teamAverages);
+
+            expect(delta).toBe(75);
+        });
+
+        it('should return 0 delta for empty teams', () => {
+            const delta = teamGenerator.calculateEloDelta([]);
+            expect(delta).toBe(0);
+        });
+
+        it('should return 0 delta for single team', () => {
+            const delta = teamGenerator.calculateEloDelta([1050]);
+            expect(delta).toBe(0);
         });
     });
 

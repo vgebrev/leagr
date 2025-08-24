@@ -2,6 +2,7 @@ import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { data } from '$lib/server/data.js';
 import {
@@ -94,6 +95,21 @@ export const POST = async ({ request, url, locals }) => {
             rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
         }
 
+        // Load teammate history for variance-conscious team generation
+        let teammateHistory = null;
+        if (method === 'seeded') {
+            try {
+                const historyTracker = createTeammateHistoryTracker();
+                const { historyData } = await historyTracker.updateTeammateHistory(leagueId, 12);
+                teammateHistory = historyData;
+            } catch (error) {
+                console.warn(
+                    'Failed to load teammate history, proceeding without variance consideration:',
+                    error.message
+                );
+            }
+        }
+
         // Get eligible players (respecting player limit)
         const effectivePlayerLimit =
             gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit;
@@ -107,6 +123,7 @@ export const POST = async ({ request, url, locals }) => {
             .setSettings(gameData.settings)
             .setPlayers(eligiblePlayers)
             .setRankings(rankings)
+            .setTeammateHistory(teammateHistory)
             .setHistoryRecording(true);
 
         const result = teamGenerator.generateTeams(method, teamConfig);
