@@ -462,6 +462,110 @@ export class TeamGenerator {
     }
 
     /**
+     * Optimize teams using within-pot swaps to improve variance and balance
+     * @param {Object} teams - Current team assignments
+     * @param {Array} sortedPlayers - Players sorted by ELO (same order used in generation)
+     * @param {number} maxSwaps - Maximum number of swaps to attempt (default: 200)
+     * @param {number} eloDeltaCap - Maximum allowed ELO delta after swaps (default: 20)
+     * @returns {Object} Optimized teams object
+     */
+    optimizeTeamsWithSwaps(teams, sortedPlayers, maxSwaps = 200, eloDeltaCap = 20) {
+        if (!this.teammateHistory || !this.initialPots || this.initialPots.length === 0) {
+            return teams; // Need history and pot structure for optimization
+        }
+
+        const teamNames = Object.keys(teams);
+        let optimizedTeams = structuredClone(teams);
+        let swapsAttempted = 0;
+        let improvementsMade = true;
+
+        while (improvementsMade && swapsAttempted < maxSwaps) {
+            improvementsMade = false;
+            const currentScore = this.calculatePairingPenalty(optimizedTeams);
+            const currentEloDelta = this.calculateEloDelta(
+                this.calculateTeamEloAverages(optimizedTeams)
+            );
+
+            // Try swaps within each pot using existing pot structure
+            for (
+                let potIndex = 0;
+                potIndex < this.initialPots.length && swapsAttempted < maxSwaps;
+                potIndex++
+            ) {
+                const pot = this.initialPots[potIndex];
+
+                // Group pot players by their current team assignment
+                const playersByTeam = {};
+                pot.players.forEach(({ name: playerName }) => {
+                    // Find which team this player is currently in
+                    const currentTeam = teamNames.find((team) =>
+                        optimizedTeams[team].includes(playerName)
+                    );
+                    if (currentTeam) {
+                        if (!playersByTeam[currentTeam]) playersByTeam[currentTeam] = [];
+                        playersByTeam[currentTeam].push(playerName);
+                    }
+                });
+
+                const teamsInPot = Object.keys(playersByTeam);
+
+                // Try all team pairs within this pot
+                for (let i = 0; i < teamsInPot.length && swapsAttempted < maxSwaps; i++) {
+                    for (let j = i + 1; j < teamsInPot.length && swapsAttempted < maxSwaps; j++) {
+                        const teamA = teamsInPot[i];
+                        const teamB = teamsInPot[j];
+                        const playersA = playersByTeam[teamA];
+                        const playersB = playersByTeam[teamB];
+
+                        // Try swapping each player from team A with each player from team B in this pot
+                        for (const playerA of playersA) {
+                            for (const playerB of playersB) {
+                                swapsAttempted++;
+
+                                // Create test swap
+                                const testTeams = structuredClone(optimizedTeams);
+                                const teamAIndex = testTeams[teamA].indexOf(playerA);
+                                const teamBIndex = testTeams[teamB].indexOf(playerB);
+
+                                // Perform swap
+                                testTeams[teamA][teamAIndex] = playerB;
+                                testTeams[teamB][teamBIndex] = playerA;
+
+                                // Check if swap improves things
+                                const testEloDelta = this.calculateEloDelta(
+                                    this.calculateTeamEloAverages(testTeams)
+                                );
+                                const testScore = this.calculatePairingPenalty(testTeams);
+
+                                // Accept swap if:
+                                // 1. ELO delta stays within cap
+                                // 2. Pairing score improves (or if tied, ELO delta improves)
+                                if (
+                                    testEloDelta <= eloDeltaCap &&
+                                    (testScore < currentScore ||
+                                        (testScore === currentScore &&
+                                            testEloDelta < currentEloDelta))
+                                ) {
+                                    optimizedTeams = testTeams;
+                                    improvementsMade = true;
+
+                                    // Break out of inner loops to restart with new baseline
+                                    break;
+                                }
+                            }
+                            if (improvementsMade) break;
+                        }
+                        if (improvementsMade) break;
+                    }
+                    if (improvementsMade) break;
+                }
+                if (improvementsMade) break;
+            }
+        }
+        return optimizedTeams;
+    }
+
+    /**
      * Generate teams using seeded distribution based on rankings
      * @param {Object} config - Team configuration { teams, teamSizes }
      * @returns {Object} Generated teams object
@@ -547,7 +651,7 @@ export class TeamGenerator {
             // Track the best result (lowest combined score)
             if (totalScore < bestScore) {
                 bestScore = totalScore;
-                bestTeams = JSON.parse(JSON.stringify(teams)); // Deep copy
+                bestTeams = structuredClone(teams);
                 if (this.recordHistory) {
                     bestDrawHistory = [...this.drawHistory];
                 }
@@ -608,7 +712,7 @@ export class TeamGenerator {
 
                 if (totalScore < bestScore) {
                     bestScore = totalScore;
-                    bestTeams = JSON.parse(JSON.stringify(teams));
+                    bestTeams = structuredClone(teams);
                     if (this.recordHistory) {
                         bestDrawHistory = [...this.drawHistory];
                     }
@@ -623,6 +727,11 @@ export class TeamGenerator {
 
         if (!bestTeams) {
             throw new Error('Failed to generate valid team configuration even with fallback');
+        }
+
+        // Apply post-generation swap optimization if we have teammate history
+        if (this.teammateHistory && Object.keys(bestTeams).length >= 2) {
+            bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers);
         }
 
         return bestTeams;

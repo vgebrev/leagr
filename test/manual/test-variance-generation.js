@@ -237,7 +237,7 @@ async function testVarianceGeneration() {
     try {
         // Load teammate history from pirates league
         const historyData = JSON.parse(
-            await readFile('../../data/pirates/teammate-history.json', 'utf8')
+            await readFile('./data/pirates/teammate-history.json', 'utf8')
         );
 
         // Mock settings
