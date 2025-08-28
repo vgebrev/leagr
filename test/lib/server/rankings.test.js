@@ -164,6 +164,105 @@ describe('RankingsManager - Knockout Points', () => {
             expect(result[null]).toBeUndefined();
             expect(result['']).toBeUndefined();
         });
+
+        it('should award points for bye matches - team vs BYE', () => {
+            const teams = {
+                'Red Team': ['Alice', 'Bob'],
+                BYE: []
+            };
+
+            const knockoutBracket = [
+                {
+                    round: 'semi',
+                    home: 'Red Team',
+                    away: 'BYE',
+                    bye: true,
+                    homeScore: null,
+                    awayScore: null
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            // Red Team players should get knockout points for bye match
+            expect(result['Alice']).toBe(1);
+            expect(result['Bob']).toBe(1);
+        });
+
+        it('should award points for bye matches - BYE vs team', () => {
+            const teams = {
+                'Blue Team': ['Charlie', 'David'],
+                BYE: []
+            };
+
+            const knockoutBracket = [
+                {
+                    round: 'semi',
+                    home: 'BYE',
+                    away: 'Blue Team',
+                    bye: true,
+                    homeScore: null,
+                    awayScore: null
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            // Blue Team players should get knockout points for bye match
+            expect(result['Charlie']).toBe(1);
+            expect(result['David']).toBe(1);
+        });
+
+        it('should handle mix of bye matches and regular matches', () => {
+            const teams = {
+                'Red Team': ['Alice', 'Bob'],
+                'Blue Team': ['Charlie', 'David'],
+                'Green Team': ['Eve', 'Frank'],
+                BYE: []
+            };
+
+            const knockoutBracket = [
+                // First semi: Red Team gets bye
+                {
+                    round: 'semi',
+                    home: 'Red Team',
+                    away: 'BYE',
+                    bye: true,
+                    homeScore: null,
+                    awayScore: null
+                },
+                // Second semi: Blue Team wins regular match
+                {
+                    round: 'semi',
+                    home: 'Blue Team',
+                    away: 'Green Team',
+                    homeScore: 2,
+                    awayScore: 1
+                },
+                // Final: Red Team wins
+                {
+                    round: 'final',
+                    home: 'Red Team',
+                    away: 'Blue Team',
+                    homeScore: 3,
+                    awayScore: 1
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            // Red Team won 2 matches (bye semi + final)
+            expect(result['Alice']).toBe(2);
+            expect(result['Bob']).toBe(2);
+
+            // Blue Team won 1 match (semi)
+            expect(result['Charlie']).toBe(1);
+            expect(result['David']).toBe(1);
+
+            // Green Team won nothing
+            expect(result['Eve']).toBeUndefined();
+            expect(result['Frank']).toBeUndefined();
+        });
     });
 
     describe('Ranking Detail Structure', () => {
@@ -892,6 +991,62 @@ describe('RankingsManager - Knockout Points', () => {
 
                 // Bob should have null ELO data
                 expect(enhanced.players.Bob.elo).toBeNull();
+            });
+        });
+
+        describe('ELO processing with knockout bye matches', () => {
+            it('should skip ELO processing for bye matches', () => {
+                const playerTracker = new Map();
+
+                // Initialize players with baseline ratings
+                playerTracker.set('Alice', {
+                    elo: { rating: 1000, gamesPlayed: 0, lastDecayAt: null }
+                });
+                playerTracker.set('Bob', {
+                    elo: { rating: 1000, gamesPlayed: 0, lastDecayAt: null }
+                });
+
+                const teams = {
+                    'Red Team': ['Alice', 'Bob'],
+                    'Blue Team': ['Charlie', 'David']
+                };
+
+                const knockoutBracket = [
+                    // Bye match - should not affect ELO
+                    {
+                        round: 'semi',
+                        home: 'Red Team',
+                        away: 'BYE',
+                        bye: true,
+                        homeScore: null,
+                        awayScore: null
+                    },
+                    // Regular match - should affect ELO
+                    {
+                        round: 'semi',
+                        home: 'Blue Team',
+                        away: 'Green Team',
+                        homeScore: 2,
+                        awayScore: 1
+                    }
+                ];
+
+                // Process ELO for knockout matches
+                rankingsManager.processEloRatings(
+                    playerTracker,
+                    teams,
+                    [],
+                    knockoutBracket,
+                    '2024-01-01'
+                );
+
+                // Red Team players should have unchanged ELO (bye match)
+                const alice = playerTracker.get('Alice');
+                const bob = playerTracker.get('Bob');
+                expect(alice.elo.rating).toBe(1000); // Unchanged
+                expect(alice.elo.gamesPlayed).toBe(0); // No game played
+                expect(bob.elo.rating).toBe(1000); // Unchanged
+                expect(bob.elo.gamesPlayed).toBe(0); // No game played
             });
         });
     });

@@ -182,9 +182,8 @@ export class StandingsManager {
             return { teams: [], bracket: [] };
         }
 
-        // Find the largest power of 2 that fits the teams
-        const powerOf2 = Math.pow(2, Math.floor(Math.log2(teams.length)));
-        const tournamentTeams = teams.slice(0, powerOf2);
+        // Determine whether to round up (with byes) or round down (eliminate teams)
+        const tournamentTeams = this.#adjustTeamsForBracket(teams);
 
         const bracket = [];
 
@@ -206,20 +205,40 @@ export class StandingsManager {
             // Create matches in reverse order (top seeds play later)
             for (let i = pairings.length - 1; i >= 0; i--) {
                 const [home, away] = pairings[i];
-                matches.push({
+                const match = {
                     round: roundName,
                     match: pairings.length - i,
                     home,
                     away,
                     homeScore: null,
                     awayScore: null
-                });
+                };
+
+                // Mark bye matches
+                if (home === 'BYE' || away === 'BYE') {
+                    match.bye = true;
+                }
+
+                matches.push(match);
             }
 
             bracket.push(...matches);
 
-            // Prepare next round with placeholders
-            currentRound = new Array(currentRound.length / 2).fill(null);
+            // Prepare next round, automatically advancing teams with byes
+            const nextRound = [];
+            for (let i = 0; i < matches.length; i++) {
+                const match = matches[i];
+                if (match.bye) {
+                    // Automatically advance the non-bye team
+                    const advancingTeam = match.home === 'BYE' ? match.away : match.home;
+                    nextRound.push(advancingTeam);
+                } else {
+                    // Regular match - winner TBD
+                    nextRound.push(null);
+                }
+            }
+
+            currentRound = nextRound;
             roundName = this._getRoundName(currentRound.length);
         }
 
@@ -227,6 +246,41 @@ export class StandingsManager {
             teams: tournamentTeams,
             bracket
         };
+    }
+
+    /**
+     * Adjust team count for tournament bracket (round up with byes or round down by elimination)
+     * @param {Array<string>} teams - Original teams array
+     * @returns {Array<string>} Adjusted teams array with byes if needed
+     * @private
+     */
+    #adjustTeamsForBracket(teams) {
+        const teamCount = teams.length;
+
+        // Find the nearest powers of 2
+        const lowerPowerOf2 = Math.pow(2, Math.floor(Math.log2(teamCount)));
+        const upperPowerOf2 = Math.pow(2, Math.ceil(Math.log2(teamCount)));
+
+        // If already a power of 2, no adjustment needed
+        if (teamCount === lowerPowerOf2) {
+            return [...teams];
+        }
+
+        // Calculate byes needed to reach upper power of 2
+        const byesNeeded = upperPowerOf2 - teamCount;
+        const halfTeamCount = teamCount * 0.5;
+
+        if (byesNeeded <= halfTeamCount) {
+            // Round up: add byes to reach upper power of 2
+            const adjustedTeams = [...teams];
+            for (let i = 0; i < byesNeeded; i++) {
+                adjustedTeams.push('BYE');
+            }
+            return adjustedTeams;
+        } else {
+            // Round down: eliminate teams to reach lower power of 2
+            return teams.slice(0, lowerPowerOf2);
+        }
     }
 
     /**

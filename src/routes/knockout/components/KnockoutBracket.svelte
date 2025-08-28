@@ -75,7 +75,7 @@
      * @param {Event} event - Input event
      */
     function handleScoreChange(match, team, event) {
-        if (disabled || !onMatchUpdate) return;
+        if (isScoreInputDisabled(match) || !onMatchUpdate) return;
 
         const value = event.target.value;
         const numericValue = value === '' ? null : parseInt(value, 10);
@@ -130,6 +130,26 @@
             return match.awayScore < match.homeScore;
         }
     }
+
+    /**
+     * Check if score input should be disabled for a match
+     * @param {Object} match - Match object
+     * @returns {boolean} True if score input should be disabled
+     */
+    function isScoreInputDisabled(match) {
+        // Disable if component is disabled
+        if (disabled) return true;
+
+        // Disable if it's a bye match
+        if (match.bye) return true;
+
+        // Disable if either team is null/TBD or BYE
+        if (!match.home || !match.away || match.home === 'BYE' || match.away === 'BYE') {
+            return true;
+        }
+
+        return false;
+    }
 </script>
 
 {#if bracket && bracket.teams.length > 0}
@@ -168,12 +188,16 @@
                                         }}
                                         tabindex="0"
                                         role="button">
-                                        {#if match.home}
+                                        {#if match.home && match.home !== 'BYE'}
                                             <TeamBadge
                                                 teamName={match.home}
                                                 className="text-sm w-full {isLoser(match, 'home')
                                                     ? 'line-through opacity-50'
                                                     : ''}" />
+                                        {:else if match.home === 'BYE'}
+                                            <span
+                                                class="w-full text-center text-sm text-gray-400 italic"
+                                                >BYE</span>
                                         {:else}
                                             <span
                                                 class="w-full text-center text-sm text-gray-400 italic"
@@ -187,7 +211,7 @@
                                         value={match.homeScore ?? ''}
                                         size="sm"
                                         class="w-12 text-center"
-                                        disabled={disabled || !match.home}
+                                        disabled={isScoreInputDisabled(match)}
                                         onchange={(e) => handleScoreChange(match, 'home', e)}
                                         onfocus={(e) => e.target.select()} />
                                 </div>
@@ -204,12 +228,16 @@
                                         }}
                                         tabindex="0"
                                         role="button">
-                                        {#if match.away}
+                                        {#if match.away && match.away !== 'BYE'}
                                             <TeamBadge
                                                 teamName={match.away}
                                                 className="text-sm w-full {isLoser(match, 'away')
                                                     ? 'line-through opacity-50'
                                                     : ''}" />
+                                        {:else if match.away === 'BYE'}
+                                            <span
+                                                class="w-full text-center text-sm text-gray-400 italic"
+                                                >BYE</span>
                                         {:else}
                                             <span
                                                 class="w-full text-center text-sm text-gray-400 italic"
@@ -223,7 +251,7 @@
                                         value={match.awayScore ?? ''}
                                         size="sm"
                                         class="w-12 text-center"
-                                        disabled={disabled || !match.away}
+                                        disabled={isScoreInputDisabled(match)}
                                         onchange={(e) => handleScoreChange(match, 'away', e)}
                                         onfocus={(e) => e.target.select()} />
                                 </div>

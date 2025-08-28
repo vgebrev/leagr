@@ -242,28 +242,32 @@ export class RankingsManager {
             return playerKnockoutWins;
         }
 
-        // Process each completed knockout match
+        // Process each knockout match (completed games and bye matches)
         for (const match of knockoutBracket) {
-            if (match.homeScore !== null && match.awayScore !== null) {
-                let winner = null;
+            let winner = null;
 
+            if (match.bye) {
+                // Bye match: automatically advance the non-bye team
+                winner = match.home === 'BYE' ? match.away : match.home;
+            } else if (match.homeScore !== null && match.awayScore !== null) {
+                // Regular completed match: determine winner by score
                 if (match.homeScore > match.awayScore) {
                     winner = match.home;
                 } else if (match.awayScore > match.homeScore) {
                     winner = match.away;
                 }
                 // No points for draws in knockout (shouldn't happen)
+            }
 
-                if (winner && teams[winner]) {
-                    // Award knockout win to all players in winning team
-                    for (const player of teams[winner]) {
-                        if (!player) continue;
+            if (winner && teams[winner]) {
+                // Award knockout win to all players in winning team
+                for (const player of teams[winner]) {
+                    if (!player) continue;
 
-                        if (!playerKnockoutWins[player]) {
-                            playerKnockoutWins[player] = 0;
-                        }
-                        playerKnockoutWins[player] += 1;
+                    if (!playerKnockoutWins[player]) {
+                        playerKnockoutWins[player] = 0;
                     }
+                    playerKnockoutWins[player] += 1;
                 }
             }
         }

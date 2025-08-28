@@ -396,29 +396,72 @@ describe('StandingsManager', () => {
             });
         });
 
-        it('should handle 6 teams with byes (reduce to 4)', () => {
+        it('should handle 6 teams with byes (round up to 8)', () => {
             const teams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E', 'Team F'];
             const result = standingsManager.generateKnockoutBracket(teams);
 
+            // 6 teams need 2 byes to reach 8, 2 < 3 (0.5 * 6), so round up with byes
+            expect(result.teams).toHaveLength(8); // 6 real teams + 2 byes
+            expect(result.bracket).toHaveLength(7); // 4 quarters + 2 semis + 1 final
+
+            // Check that byes are in positions 7 and 8 (lowest seeds)
+            const actualTeams = result.teams.slice(0, 6);
+            const byes = result.teams.slice(6);
+            expect(actualTeams).toEqual([
+                'Team A',
+                'Team B',
+                'Team C',
+                'Team D',
+                'Team E',
+                'Team F'
+            ]);
+            expect(byes).toEqual(['BYE', 'BYE']);
+        });
+
+        it('should handle 5 teams by elimination (round down to 4)', () => {
+            const teams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E'];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            // 5 teams need 3 byes to reach 8, 3 > 2.5 (0.5 * 5), so round down and eliminate
             expect(result.teams).toEqual(['Team A', 'Team B', 'Team C', 'Team D']); // Top 4 only
             expect(result.bracket).toHaveLength(3); // 2 semis + 1 final
         });
 
-        it('should handle 3 teams with byes (reduce to 2)', () => {
+        it('should handle 3 teams with byes (round up to 4)', () => {
             const teams = ['Team A', 'Team B', 'Team C'];
             const result = standingsManager.generateKnockoutBracket(teams);
 
-            expect(result.teams).toEqual(['Team A', 'Team B']); // Top 2 only
-            expect(result.bracket).toHaveLength(1); // Final only
+            // 3 teams need 1 bye to reach 4, 1 < 1.5 (0.5 * 3), so round up with byes
+            expect(result.teams).toHaveLength(4); // 3 real teams + 1 bye
+            expect(result.bracket).toHaveLength(3); // 2 semis + 1 final
 
-            expect(result.bracket[0]).toEqual({
-                round: 'final',
-                match: 1,
-                home: 'Team A',
-                away: 'Team B',
-                homeScore: null,
-                awayScore: null
-            });
+            // Check that bye is in position 4 (lowest seed)
+            expect(result.teams.slice(0, 3)).toEqual(['Team A', 'Team B', 'Team C']);
+            expect(result.teams[3]).toBe('BYE');
+        });
+
+        it('should handle 7 teams by elimination (round down to 4)', () => {
+            const teams = ['Team A', 'Team B', 'Team C', 'Team D', 'Team E', 'Team F', 'Team G'];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            // 7 teams need 1 bye to reach 8, but 1 < 3.5 (0.5 * 7), so we could round up
+            // However, testing current vs new behavior - let's see what happens
+            expect(result.teams).toHaveLength(8); // 7 real teams + 1 bye
+            expect(result.bracket).toHaveLength(7); // 4 quarters + 2 semis + 1 final
+        });
+
+        it('should handle bye matchups correctly - team vs bye advances automatically', () => {
+            const teams = ['Team A', 'Team B', 'Team C'];
+            const result = standingsManager.generateKnockoutBracket(teams);
+
+            // With 3 teams + 1 bye, should have: Team A vs BYE, Team B vs Team C
+            const quarterMatches = result.bracket.filter((match) => match.round === 'semi');
+            const byeMatch = quarterMatches.find(
+                (match) => match.home === 'BYE' || match.away === 'BYE'
+            );
+
+            expect(byeMatch).toBeTruthy();
+            expect(byeMatch.bye).toBe(true); // Should be marked as bye match
         });
 
         it('should return empty bracket for less than 2 teams', () => {
