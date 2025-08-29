@@ -14,6 +14,7 @@ const baseUrl = '/api';
 let apiKey = $state('');
 let leagueId = $state('');
 let clientId = $state('');
+let adminCode = $state('');
 
 export function setApiKey(key) {
     apiKey = key;
@@ -21,6 +22,18 @@ export function setApiKey(key) {
 
 export function setLeagueId(id) {
     leagueId = id;
+}
+
+export function getLeagueId() {
+    return leagueId;
+}
+
+export function setAdminCode(code) {
+    adminCode = code || '';
+}
+
+export function clearAdminCode() {
+    adminCode = '';
 }
 
 export function setClientId(id) {
@@ -64,6 +77,10 @@ function getAuthHeaders() {
 
     if (clientId) {
         headers['x-client-id'] = clientId;
+    }
+
+    if (adminCode) {
+        headers['x-admin-code'] = adminCode;
     }
 
     // Add access code to the "Authorization" header if we have a league context

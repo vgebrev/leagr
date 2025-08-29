@@ -5,6 +5,7 @@ import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
 import { isDateInPast } from '$lib/shared/helpers.js';
+import { markOwned } from '$lib/client/ownership.js';
 
 class PlayersService {
     #settings = $state(defaultSettings);
@@ -182,6 +183,9 @@ class PlayersService {
                 });
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
+
+                // Mark this player as owned by this client for UI affordances
+                markOwned(this.currentDate, sanitizedName);
 
                 // Show notification if a similar player was found
                 if (result.similarPlayer) {

@@ -13,7 +13,8 @@
         assignablePlayers = [],
         allTeams = {},
         size = 'md',
-        showPlayerRankings = false
+        showPlayerRankings = false,
+        date = null
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
@@ -80,6 +81,12 @@
             onremove(player, 'remove');
         }
     }
+
+    import { ownsPlayer } from '$lib/client/ownership.js';
+    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '$lib/client/services/auth.js';
+    const leagueId = $derived(getLeagueId());
+    const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 </script>
 
 <div class="relative overflow-hidden rounded-md shadow-md">
@@ -146,7 +153,8 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        {canModifyList}
+                                        canModifyList={canModifyList &&
+                                            (isAdmin || ownsPlayer(date, playerName))}
                                         styleClass={styles.buttonClass} />
                                 {:else if onremove && player}
                                     {@const playerName =
@@ -176,7 +184,8 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        {canModifyList}
+                                        canModifyList={canModifyList &&
+                                            (isAdmin || ownsPlayer(date, playerName))}
                                         styleClass={styles.buttonClass} />
                                 {/if}
                                 {#if onassign && !player}

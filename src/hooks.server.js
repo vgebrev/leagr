@@ -7,7 +7,7 @@ const RATE_RULES = [
     {
         verb: 'POST',
         routePattern: /^\/api\/players(?:\/|$)/,
-        maxRequests: 1000,
+        maxRequests: 1,
         duration: 60 * 60 * 1000, // 1 hour
         message:
             "You've already added a player recently. Please use the share link to invite other players."
@@ -153,7 +153,8 @@ export const handle = async ({ event, resolve }) => {
             headers: {
                 'Access-Control-Allow-Origin': allowed ? origin || '*' : 'null',
                 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type,X-API-KEY,X-CLIENT-ID',
+                'Access-Control-Allow-Headers':
+                    'Content-Type,X-API-KEY,X-CLIENT-ID,X-ADMIN-CODE,Authorization',
                 'Access-Control-Max-Age': '86400'
             }
         });
@@ -170,7 +171,8 @@ export const handle = async ({ event, resolve }) => {
 
     if (url.pathname.startsWith('/api/')) {
         if (!allowed) {
-            return new Response(JSON.stringify({ message: 'Forbidden' }), { status: 403 });
+            // Use 401 so the client does not treat this as a league auth failure (403 triggers logout)
+            return new Response(JSON.stringify({ message: 'Origin not allowed' }), { status: 401 });
         }
 
         if (!checkApiKey(request)) {
@@ -217,6 +219,15 @@ export const handle = async ({ event, resolve }) => {
                 });
             }
         }
+
+        // Admin claim via header (optional): when provided and matches, elevate privileges
+        // If adminCode not configured, fallback to accessCode as admin for backward-compat
+        const suppliedAdminCode = request.headers.get('x-admin-code');
+        const expectedAdminCode = event.locals.leagueInfo?.adminCode; // strict: do not fallback to accessCode
+        event.locals.isAdmin = Boolean(
+            suppliedAdminCode && expectedAdminCode && suppliedAdminCode === expectedAdminCode
+        );
+        event.locals.clientId = clientId;
     }
 
     const response = await resolve(event);

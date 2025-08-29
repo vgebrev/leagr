@@ -82,6 +82,7 @@
         {unassignedPlayers}
         {canModifyList}
         {showPlayerRankings}
+        {date}
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)} />
 

@@ -1,6 +1,7 @@
 <script>
     import { onMount } from 'svelte';
     import { Accordion, AccordionItem } from 'flowbite-svelte';
+    import { ShieldCheckOutline } from 'flowbite-svelte-icons';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { withLoading } from '$lib/client/stores/loading.js';
@@ -14,11 +15,21 @@
     import TeamLimitsSettings from './components/TeamLimitsSettings.svelte';
     import DisciplineSettings from './components/DisciplineSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
+    import {
+        getStoredAdminCode,
+        storeAdminCode,
+        removeStoredAdminCode,
+        validateAdminCode
+    } from '$lib/client/services/auth.js';
+    import { setAdminCode } from '$lib/client/services/api-client.svelte.js';
+    import { Input, Button, Label } from 'flowbite-svelte';
 
     let { data } = $props();
     const date = data.date;
     let leagueSettings = $state({ ...defaultSettings });
     let daySettings = $state(getDaySettingsDefaults(defaultSettings));
+    let adminCodeInput = $state('');
+    let hasAdmin = $state(false);
 
     /**
      * Updates the start day offset for the registration window.
@@ -126,6 +137,19 @@
             }
         );
 
+        // Initialize admin state from storage
+        const stored = getStoredAdminCode(data.leagueId);
+        if (stored) {
+            adminCodeInput = stored;
+            setAdminCode(stored);
+            // Confirm with server
+            hasAdmin = await validateAdminCode();
+            if (!hasAdmin) {
+                removeStoredAdminCode(data.leagueId);
+                adminCodeInput = '';
+            }
+        }
+
         // Cleanup: restore body scroll when leaving page
         return () => {
             document.body.style.overflow = '';
@@ -134,51 +158,106 @@
 </script>
 
 <Accordion>
+    {#if hasAdmin}
+        <AccordionItem
+            open
+            classes={{ button: 'p-2', content: 'p-2' }}>
+            {#snippet header()}
+                <span class="font-semibold text-gray-700 dark:text-gray-200">
+                    Settings for {formatDisplayDate(date)}
+                </span>
+            {/snippet}
+            <DaySettings
+                {date}
+                {daySettings}
+                {leagueSettings}
+                onSave={saveDaySettings} />
+        </AccordionItem>
+        <AccordionItem classes={{ button: 'p-2', content: 'p-2' }}>
+            {#snippet header()}
+                <span class="font-semibold text-gray-700 dark:text-gray-200">League Settings</span>
+            {/snippet}
+            <div class="section-dividers flex flex-col gap-2">
+                <PlayerLimitSettings
+                    {leagueSettings}
+                    onSave={saveLeagueSettings} />
+
+                <CompetitionDaysSettings
+                    {leagueSettings}
+                    onSave={saveLeagueSettings} />
+
+                <CompetitionTimeControls
+                    {leagueSettings}
+                    onSave={saveLeagueSettings}
+                    onUpdateStartDayOffset={updateStartDayOffset}
+                    onUpdateEndDayOffset={updateEndDayOffset} />
+
+                <TeamLimitsSettings
+                    {leagueSettings}
+                    onSave={saveLeagueSettings} />
+
+                <DisciplineSettings
+                    {leagueSettings}
+                    onSave={saveLeagueSettings} />
+            </div>
+
+            <BehaviorToggles
+                {leagueSettings}
+                onSave={saveLeagueSettings} />
+        </AccordionItem>
+    {/if}
     <AccordionItem
-        open
-        classes={{ button: 'p-2', content: 'p-2' }}>
+        classes={{ button: 'p-2', content: 'p-2' }}
+        open={!hasAdmin}>
         {#snippet header()}
-            <span class="font-semibold text-gray-700 dark:text-gray-200">
-                Settings for {formatDisplayDate(date)}
-            </span>
+            <span class="font-semibold text-gray-700 dark:text-gray-200">Admin</span>
         {/snippet}
-        <DaySettings
-            {date}
-            {daySettings}
-            {leagueSettings}
-            onSave={saveDaySettings} />
-    </AccordionItem>
-    <AccordionItem classes={{ button: 'p-2', content: 'p-2' }}>
-        {#snippet header()}
-            <span class="font-semibold text-gray-700 dark:text-gray-200">League Settings</span>
-        {/snippet}
-        <div class="section-dividers flex flex-col gap-2">
-            <PlayerLimitSettings
-                {leagueSettings}
-                onSave={saveLeagueSettings} />
+        <div class="flex flex-col gap-2">
+            <Label
+                for="admin-code"
+                class="text-gray-700 dark:text-gray-200">Admin Code</Label>
+            <div class="flex w-full gap-2">
+                <Input
+                    id="admin-code"
+                    class="w-full"
+                    placeholder="Enter admin code"
+                    bind:value={adminCodeInput} />
 
-            <CompetitionDaysSettings
-                {leagueSettings}
-                onSave={saveLeagueSettings} />
-
-            <CompetitionTimeControls
-                {leagueSettings}
-                onSave={saveLeagueSettings}
-                onUpdateStartDayOffset={updateStartDayOffset}
-                onUpdateEndDayOffset={updateEndDayOffset} />
-
-            <TeamLimitsSettings
-                {leagueSettings}
-                onSave={saveLeagueSettings} />
-
-            <DisciplineSettings
-                {leagueSettings}
-                onSave={saveLeagueSettings} />
+                {#if hasAdmin}
+                    <Button
+                        color="primary"
+                        size="sm"
+                        class="shrink-0"
+                        onclick={() => {
+                            removeStoredAdminCode(data.leagueId);
+                            adminCodeInput = '';
+                            hasAdmin = false;
+                            setNotification('Admin privileges removed for this device.', 'info');
+                        }}><ShieldCheckOutline class="me-2 h-4 w-4" /> Release Admin</Button>
+                {:else}
+                    <Button
+                        color="primary"
+                        size="sm"
+                        class="shrink-0"
+                        onclick={async () => {
+                            if (!adminCodeInput) return;
+                            storeAdminCode(data.leagueId, adminCodeInput);
+                            const ok = await validateAdminCode();
+                            hasAdmin = ok;
+                            if (ok) {
+                                setNotification(
+                                    'Admin privileges claimed for this device.',
+                                    'success'
+                                );
+                            } else {
+                                removeStoredAdminCode(data.leagueId);
+                                adminCodeInput = '';
+                                setNotification('Invalid admin code.', 'error');
+                            }
+                        }}><ShieldCheckOutline class="me-2 h-4 w-4" /> Claim Admin</Button>
+                {/if}
+            </div>
         </div>
-
-        <BehaviorToggles
-            {leagueSettings}
-            onSave={saveLeagueSettings} />
     </AccordionItem>
 </Accordion>
 

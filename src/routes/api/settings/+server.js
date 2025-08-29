@@ -19,6 +19,11 @@ export const POST = async ({ request, url, locals }) => {
         return error(404, 'League not found');
     }
 
+    // Require admin privileges to update settings. Use 401 to avoid client logout redirect.
+    if (!locals.isAdmin) {
+        return error(401, 'Admin privileges required to update settings');
+    }
+
     const date = url.searchParams.get('date');
     const body = await request.json();
     if (!body) {

@@ -2,6 +2,10 @@
  * League authentication service for managing access codes
  */
 import { api } from './api-client.svelte.js';
+import {
+    setAdminCode as setAdminHeader,
+    clearAdminCode as clearAdminHeader
+} from './api-client.svelte.js';
 
 /**
  * Get the stored access code for a league from localStorage
@@ -63,6 +67,16 @@ export async function validateAccessCode(accessCode) {
     }
 }
 
+export async function validateAdminCode() {
+    try {
+        const response = await api.postDirect('leagues/authenticate-admin', {});
+        return response.success === true;
+    } catch (error) {
+        console.error('Admin code validation error:', error);
+        return false;
+    }
+}
+
 /**
  * Check if a user is authenticated for a league by checking localStorage
  * @param {string} leagueId - The league identifier
@@ -74,6 +88,37 @@ export function isAuthenticated(leagueId) {
     }
 
     return !!getStoredAccessCode(leagueId);
+}
+
+// Admin code helpers (stored per league)
+export function getStoredAdminCode(leagueId) {
+    if (typeof window === 'undefined') return null;
+    try {
+        return localStorage.getItem(`${leagueId}/adminCode`);
+    } catch (e) {
+        console.error('Error reading admin code from localStorage:', e);
+        return null;
+    }
+}
+
+export function storeAdminCode(leagueId, code) {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.setItem(`${leagueId}/adminCode`, code);
+        setAdminHeader(code);
+    } catch (e) {
+        console.error('Error storing admin code in localStorage:', e);
+    }
+}
+
+export function removeStoredAdminCode(leagueId) {
+    if (typeof window === 'undefined') return;
+    try {
+        localStorage.removeItem(`${leagueId}/adminCode`);
+        clearAdminHeader();
+    } catch (e) {
+        console.error('Error removing admin code from localStorage:', e);
+    }
 }
 
 /**

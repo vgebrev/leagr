@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createDisciplineManager } from '$lib/server/discipline.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import {
@@ -44,7 +45,15 @@ export const DELETE = async ({ request, url, locals }) => {
     try {
         const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(leagueId);
+            .setLeague(leagueId)
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    leagueId,
+                    locals.clientId,
+                    locals.isAdmin
+                )
+            );
 
         // Get settings to validate competition state
         const gameData = await playerManager.getData({
@@ -129,7 +138,15 @@ export const POST = async ({ request, url, locals }) => {
     try {
         const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(leagueId);
+            .setLeague(leagueId)
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    leagueId,
+                    locals.clientId,
+                    locals.isAdmin
+                )
+            );
 
         // Get settings to validate competition state
         const gameData = await playerManager.getData({

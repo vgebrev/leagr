@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import {
@@ -60,7 +61,16 @@ export const POST = async ({ request, url, locals }) => {
 
     const playerManager = createPlayerManager()
         .setDate(dateValidation.date)
-        .setLeague(locals.leagueId);
+        .setLeague(locals.leagueId)
+        .setAccessControl(
+            createPlayerAccessControl().setContext(
+                dateValidation.date,
+                locals.leagueId,
+                // hooks set clientId in locals
+                locals.clientId,
+                locals.isAdmin
+            )
+        );
 
     // Get settings to validate competition state and suspension
     let gameData;
@@ -176,7 +186,15 @@ export const DELETE = async ({ request, url, locals }) => {
     try {
         const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(locals.leagueId);
+            .setLeague(locals.leagueId)
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    locals.leagueId,
+                    locals.clientId,
+                    locals.isAdmin
+                )
+            );
 
         // Get settings to validate competition state
         const gameData = await playerManager.getData({
@@ -247,7 +265,15 @@ export const PATCH = async ({ request, url, locals }) => {
     try {
         const playerManager = createPlayerManager()
             .setDate(dateValidation.date)
-            .setLeague(locals.leagueId);
+            .setLeague(locals.leagueId)
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    locals.leagueId,
+                    locals.clientId,
+                    locals.isAdmin
+                )
+            );
 
         // Get settings to validate competition state
         const gameData = await playerManager.getData({

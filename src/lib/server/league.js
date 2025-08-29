@@ -98,11 +98,12 @@ export class LeagueService {
      * @param {string} leagueData.name - League name
      * @param {string} leagueData.icon - League icon
      * @param {string} leagueData.accessCode - League access code
+     * @param {string} [leagueData.adminCode] - Optional admin code (defaults to accessCode if not provided)
      * @param {string} [leagueData.ownerEmail] - Optional owner email
      * @returns {Promise<Object>} - Success response with league data
      * @throws {LeagueError} - Validation or creation errors
      */
-    async createLeague({ subdomain, name, icon, accessCode, ownerEmail }) {
+    async createLeague({ subdomain, name, icon, accessCode, adminCode, ownerEmail }) {
         // Validate required fields
         if (!subdomain || !name || !icon || !accessCode) {
             throw new LeagueError(
@@ -135,6 +136,7 @@ export class LeagueService {
             name,
             icon,
             accessCode,
+            adminCode: (adminCode && adminCode.trim()) || accessCode,
             ...(ownerEmail && { ownerEmail })
         };
 

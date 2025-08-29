@@ -8,7 +8,8 @@
         canModifyList,
         onremove,
         onassign,
-        showPlayerRankings = false
+        showPlayerRankings = false,
+        date = null
     } = $props();
 
     // Combine all assignable players for dropdown selection
@@ -25,7 +26,8 @@
             {onassign}
             {onremove}
             {assignablePlayers}
-            {showPlayerRankings} />
+            {showPlayerRankings}
+            {date} />
     {/each}
     {#if (unassignedPlayers?.length > 0 || waitingList?.length > 0) && Object.entries(teams).length > 0}
         <div class="flex flex-col gap-2">
@@ -38,7 +40,8 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
-                    {showPlayerRankings} />
+                    {showPlayerRankings}
+                    {date} />
             {/if}
             {#if waitingList?.length > 0}
                 <TeamTable
@@ -49,7 +52,8 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
-                    {showPlayerRankings} />
+                    {showPlayerRankings}
+                    {date} />
             {/if}
         </div>
     {/if}

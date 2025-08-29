@@ -304,6 +304,9 @@ export class PlayerManager {
     // Private fields for caching
     #dataCache = null;
     #cacheKey = null; // Tracks what data is cached (date-league combination)
+    #owners = null; // { [playerName]: ownerId }
+    #ownersDirty = false;
+    #accessControl = null;
 
     constructor() {
         this.date = null;
@@ -355,6 +358,52 @@ export class PlayerManager {
     }
 
     /**
+     * Attach access control for ownership enforcement
+     * @param {import('./playerAccessControl.js').PlayerAccessControl} access
+     */
+    setAccessControl(access) {
+        this.#accessControl = access;
+        return this;
+    }
+
+    async #loadOwners() {
+        if (this.#owners === null) {
+            this.#owners = (await data.get('playerOwners', this.date, this.leagueId)) || {};
+        }
+        return this.#owners;
+    }
+
+    #setOwnerIfAbsentSync(playerName) {
+        if (!this.#accessControl) return;
+        if (!this.#owners) this.#owners = {};
+        if (!this.#owners[playerName]) {
+            const oid = this.#accessControl.deriveOwnerId();
+            if (oid) {
+                this.#owners[playerName] = oid;
+                this.#ownersDirty = true;
+            }
+        }
+    }
+
+    #deleteOwnerSync(playerName) {
+        if (!this.#owners) return;
+        if (this.#owners[playerName]) {
+            delete this.#owners[playerName];
+            this.#ownersDirty = true;
+        }
+    }
+
+    #ensureOwnerOrAdminSync(playerName) {
+        if (!this.#accessControl) return; // no enforcement without access control
+        const ownerId = this.#owners?.[playerName];
+        const allowed = this.#accessControl.isOwner(ownerId);
+        if (!allowed) {
+            // Use 401 so client does not clear league access on 403
+            throw new PlayerError('You are not allowed to modify this player.', 401);
+        }
+    }
+
+    /**
      * Execute an atomic transaction on player state
      * @param {function(PlayerState): PlayerState} operation - Function that takes current state and returns new state
      * @returns {Promise<{players: Object, teams: Object}>} - The updated game data
@@ -365,6 +414,11 @@ export class PlayerManager {
 
         // Create the current state
         const currentState = new PlayerState(players, teams, settings);
+
+        // Ensure owners mapping is available only when access control is enabled
+        if (this.#accessControl) {
+            await this.#loadOwners();
+        }
 
         // Apply operation to get the new state
         const newState = operation(currentState);
@@ -397,12 +451,22 @@ export class PlayerManager {
             });
         }
 
+        if (this.#ownersDirty) {
+            operations.push({
+                key: 'playerOwners',
+                value: this.#owners,
+                defaultValue: {},
+                overwrite: true
+            });
+        }
+
         // Execute all saves in a single atomic operation
         if (operations.length > 0) {
             try {
                 await data.setMany(operations, this.date, this.leagueId);
                 // Invalidate cache after successful save
                 this.#invalidateCache();
+                this.#ownersDirty = false;
             } catch (saveError) {
                 // Log the specific save error for debugging
                 console.error('Failed to save player/team data atomically:', saveError);
@@ -597,9 +661,12 @@ export class PlayerManager {
      * Add player to available list or waiting list based on the player limit
      */
     async addPlayer(playerName, targetList = 'auto') {
-        const result = await this.executeTransaction((state) =>
-            state.addPlayer(playerName, targetList)
-        );
+        const result = await this.executeTransaction((state) => {
+            const ns = state.addPlayer(playerName, targetList);
+            // Set ownership for newly added player
+            this.#setOwnerIfAbsentSync(playerName);
+            return ns;
+        });
         return result.players;
     }
 
@@ -607,16 +674,25 @@ export class PlayerManager {
      * Remove a player from the lists and from any teams they're assigned to
      */
     async removePlayer(playerName) {
-        return await this.executeTransaction((state) => state.removePlayer(playerName));
+        return await this.executeTransaction((state) => {
+            // Enforce ownership when removing completely
+            this.#ensureOwnerOrAdminSync(playerName);
+            const ns = state.removePlayer(playerName);
+            // Remove owner mapping after complete removal
+            this.#deleteOwnerSync(playerName);
+            return ns;
+        });
     }
 
     /**
      * Move a player between available and waiting lists, removing from teams if moving to the waiting list
      */
     async movePlayer(playerName, fromList, toList) {
-        const result = await this.executeTransaction((state) =>
-            state.movePlayerBetweenLists(playerName, fromList, toList)
-        );
+        const result = await this.executeTransaction((state) => {
+            // Enforce ownership for list moves (prevents freeing spots by others)
+            this.#ensureOwnerOrAdminSync(playerName);
+            return state.movePlayerBetweenLists(playerName, fromList, toList);
+        });
         return result.players;
     }
 
@@ -636,6 +712,9 @@ export class PlayerManager {
                     400
                 );
             }
+
+            // Enforce ownership for removals from teams
+            this.#ensureOwnerOrAdminSync(playerName);
 
             const newState = new PlayerState(state.players, state.teams, state.settings);
 
@@ -663,6 +742,7 @@ export class PlayerManager {
                 newState.players.waitingList = newState.players.waitingList.filter(
                     (p) => p !== playerName
                 );
+                this.#deleteOwnerSync(playerName);
             }
 
             newState.validateState();

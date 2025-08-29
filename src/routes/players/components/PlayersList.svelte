@@ -11,8 +11,15 @@
         sourceList,
         destinationList,
         moveLabel,
-        canMoveToOtherList
+        canMoveToOtherList,
+        date
     } = $props();
+
+    import { ownsPlayer } from '$lib/client/ownership.js';
+    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '$lib/client/services/auth.js';
+    const leagueId = $derived(getLeagueId());
+    const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 </script>
 
 <div class="flex flex-col gap-2">
@@ -50,7 +57,7 @@
                     ]}
                     <PlayerActionsDropdown
                         {actions}
-                        {canModifyList} />
+                        canModifyList={canModifyList && (isAdmin || ownsPlayer(date, player))} />
                 {/if}
             </ListgroupItem>
         {/each}

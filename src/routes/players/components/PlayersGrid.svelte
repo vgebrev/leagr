@@ -40,7 +40,8 @@
             sourceList="available"
             destinationList="waitingList"
             moveLabel="Move to waiting list"
-            {canMoveToOtherList} />
+            {canMoveToOtherList}
+            {date} />
     </div>
     <div class="flex flex-col gap-2">
         <PlayersList
@@ -52,6 +53,7 @@
             sourceList="waitingList"
             destinationList="available"
             moveLabel="Move to active list"
-            {canMoveToOtherList} />
+            {canMoveToOtherList}
+            {date} />
     </div>
 </div>

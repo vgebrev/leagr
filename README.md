@@ -18,7 +18,7 @@ Features include:
     - Replay team draws for dramatic effect.
     - Players can be moved from a team to the waiting list (and vice versa), removed, or marked as a no-show.
 - **Discipline**
-    - Automatic suspension of players after repeated no-shows.
+    - Automatic suspension of players after no-shows.
 - **Game Scheduling and Score Tracking**
     - Generate a round-robin home-away match schedule and track results.
     - Standings table based on match results.

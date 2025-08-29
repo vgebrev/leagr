@@ -2,7 +2,11 @@
     import '../app.css';
     import { settings } from '$lib/client/stores/settings.js';
     import { dateString } from '$lib/shared/helpers.js';
-    import { setApiKey, setLeagueId } from '$lib/client/services/api-client.svelte.js';
+    import {
+        setApiKey,
+        setLeagueId,
+        setAdminCode as setAdminHeader
+    } from '$lib/client/services/api-client.svelte.js';
     import { page } from '$app/state';
     import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
     import { onMount } from 'svelte';
@@ -37,6 +41,13 @@
     let systemThemeIsDark = $state(false);
 
     onMount(() => {
+        // Initialize admin header from stored code (if any)
+        if (typeof window !== 'undefined' && data.leagueId) {
+            import('$lib/client/services/auth.js').then((m) => {
+                const stored = m.getStoredAdminCode(data.leagueId);
+                if (stored) setAdminHeader(stored);
+            });
+        }
         if (typeof window !== 'undefined' && window.matchMedia) {
             const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 

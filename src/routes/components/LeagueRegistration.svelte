@@ -21,6 +21,7 @@
     let icon = $state('soccer');
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
+    let adminCode = $state(generateAccessCode());
 
     // Dynamic URL parts from the current page
     let urlProtocol = $derived(page.url.protocol);
@@ -109,6 +110,7 @@
                     name,
                     icon,
                     accessCode,
+                    adminCode,
                     ownerEmail: ownerEmail.trim() || undefined
                 });
 
@@ -127,6 +129,10 @@
 
     function regenerateAccessCode() {
         accessCode = generateAccessCode();
+    }
+
+    function regenerateAdminCode() {
+        adminCode = generateAccessCode();
     }
 </script>
 
@@ -227,6 +233,34 @@
             <ExclamationCircleSolid /><span>
                 <span class="font-bold">Important!</span> Remember this code and share it with players
                 to join your league!</span>
+        </Alert>
+    </div>
+
+    <!-- Admin Code -->
+    <div>
+        <Label
+            for="adminCode"
+            class="mb-2 text-sm font-medium text-gray-900 dark:text-white">Admin Code</Label>
+        <div class="flex w-full items-center space-x-2">
+            <Input
+                id="adminCode"
+                type="text"
+                bind:value={adminCode}
+                placeholder="XXXX-XXXX-XXXX"
+                classes={{ wrapper: 'flex-1 font-mono' }}
+                required />
+            <Button
+                type="button"
+                color="alternative"
+                size="sm"
+                onclick={regenerateAdminCode}>
+                Generate
+            </Button>
+        </div>
+        <Alert class="mt-2 flex items-center border">
+            <ExclamationCircleSolid /><span>
+                <span class="font-bold">Keep this private.</span> This code grants full admin control
+                and should not be shared with participants.</span>
         </Alert>
     </div>
 
