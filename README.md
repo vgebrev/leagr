@@ -14,7 +14,7 @@ Features include:
     - Moving players between lists.
 - **Team Management**
     - Generate random teams, either completely random or using player ELO as seeds.
-    - Multi-iteration team generation algorithm that tries to maximise team variance and balance.    
+    - Multi-iteration team generation algorithm that tries to maximise team variance and balance.
     - Replay team draws for dramatic effect.
     - Players can be moved from a team to the waiting list (and vice versa), removed, or marked as a no-show.
 - **Discipline**

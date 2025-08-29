@@ -734,6 +734,27 @@ export class TeamGenerator {
             bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers);
         }
 
+        // Sync draw history with final optimized teams so replay matches final rosters
+        if (this.recordHistory && Array.isArray(this.drawHistory) && this.drawHistory.length > 0) {
+            const finalTeamOf = new Map();
+            for (const [teamName, players] of Object.entries(bestTeams)) {
+                for (const player of players) {
+                    finalTeamOf.set(player, teamName);
+                }
+            }
+
+            // Remap each step's destination team to the player's final team
+            this.drawHistory = this.drawHistory.map((step) => {
+                const finalTeam = finalTeamOf.get(step.player);
+                if (!finalTeam || finalTeam === step.toTeam) return step;
+                return {
+                    ...step,
+                    originalToTeam: step.toTeam,
+                    toTeam: finalTeam
+                };
+            });
+        }
+
         return bestTeams;
     }
 
