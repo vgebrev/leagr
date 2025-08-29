@@ -19,11 +19,20 @@ export const GET = async ({ url, locals }) => {
     }
 
     try {
-        const data = await createPlayerManager()
+        const manager = createPlayerManager()
             .setDate(dateValidation.date)
             .setLeague(locals.leagueId)
-            .getData({ players: true, teams: false, settings: false });
-        return json(data.players);
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    locals.leagueId,
+                    locals.clientId,
+                    false
+                )
+            );
+        const data = await manager.getData({ players: true, teams: false, settings: false });
+        const ownedByMe = await manager.getOwnedPlayersForCurrentClient();
+        return json({ ...data.players, ownedByMe });
     } catch (err) {
         console.error('Error fetching players:', err);
         return error(500, 'Failed to fetch players');
@@ -118,7 +127,7 @@ export const POST = async ({ request, url, locals }) => {
     if (suspension.suspended) {
         return error(
             400,
-            suspension.reason || 'Player is suspended for this session due to repeated no-shows.'
+            suspension.reason || 'Player is suspended for this session due to no-shows.'
         );
     }
 
@@ -146,9 +155,11 @@ export const POST = async ({ request, url, locals }) => {
             bodyParseResult.data.list
         );
 
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
         // Include similar player suggestion in the response
         return json({
             ...result,
+            ownedByMe,
             ...(similarPlayer && { similarPlayer })
         });
     } catch (err) {
@@ -213,7 +224,8 @@ export const DELETE = async ({ request, url, locals }) => {
         }
 
         const result = await playerManager.removePlayer(nameValidation.sanitizedName);
-        return json(result.players);
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+        return json({ ...result.players, ownedByMe });
     } catch (err) {
         console.error('Error removing player:', err);
         if (err instanceof PlayerError) {
@@ -296,7 +308,8 @@ export const PATCH = async ({ request, url, locals }) => {
             bodyParseResult.data.fromList,
             bodyParseResult.data.toList
         );
-        return json(result);
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+        return json({ ...result, ownedByMe });
     } catch (err) {
         console.error('Error moving player:', err);
         if (err instanceof PlayerError) {

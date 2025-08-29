@@ -5,7 +5,6 @@ import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
 import { isDateInPast } from '$lib/shared/helpers.js';
-import { markOwned } from '$lib/client/ownership.js';
 
 class PlayersService {
     #settings = $state(defaultSettings);
@@ -25,6 +24,9 @@ class PlayersService {
 
     /** @type {Array} */
     suspendedPlayers = $state([]);
+
+    /** @type {string[]} */
+    ownedByMe = $state([]);
 
     // Derived state
     registrationOpenDate = $derived.by(() => {
@@ -77,6 +79,7 @@ class PlayersService {
                 const playerData = await api.get('players', date);
                 this.players = playerData?.available || [];
                 this.waitingList = playerData?.waitingList || [];
+                this.ownedByMe = playerData?.ownedByMe || [];
             },
             (error) => {
                 setNotification(
@@ -183,9 +186,7 @@ class PlayersService {
                 });
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
-
-                // Mark this player as owned by this client for UI affordances
-                markOwned(this.currentDate, sanitizedName);
+                this.ownedByMe = result.ownedByMe || this.ownedByMe;
 
                 // Show notification if a similar player was found
                 if (result.similarPlayer) {
@@ -246,6 +247,7 @@ class PlayersService {
                     });
                     this.players = result.available || [];
                     this.waitingList = result.waitingList || [];
+                    this.ownedByMe = result.ownedByMe || this.ownedByMe;
                 }
             },
             (error) => {
@@ -280,6 +282,7 @@ class PlayersService {
                 });
                 this.players = result.available || [];
                 this.waitingList = result.waitingList || [];
+                this.ownedByMe = result.ownedByMe || this.ownedByMe;
             },
             (error) => {
                 console.error('Error moving player:', error);
@@ -299,6 +302,7 @@ class PlayersService {
         this.rankedPlayers = [];
         this.suspendedPlayers = [];
         this.currentDate = null;
+        this.ownedByMe = [];
     }
 }
 

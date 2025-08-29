@@ -214,6 +214,7 @@ class TeamsService {
                     // Extract player names for legacy playersService
                     playersService.players = result.players.available.map((p) => p.name);
                     playersService.waitingList = result.players.waitingList.map((p) => p.name);
+                    playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
 
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();
@@ -272,6 +273,7 @@ class TeamsService {
                     // Extract player names for legacy playersService
                     playersService.players = result.players.available.map((p) => p.name);
                     playersService.waitingList = result.players.waitingList.map((p) => p.name);
+                    playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
 
                     // Reload team configurations to reflect player changes
                     await this.loadTeamConfigurations();

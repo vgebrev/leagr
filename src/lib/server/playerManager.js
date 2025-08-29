@@ -366,6 +366,18 @@ export class PlayerManager {
         return this;
     }
 
+    /**
+     * Returns the list of players owned by the current client (based on access control).
+     * @returns {Promise<string[]>}
+     */
+    async getOwnedPlayersForCurrentClient() {
+        if (!this.#accessControl) return [];
+        await this.#loadOwners();
+        const myOwnerId = this.#accessControl.deriveOwnerId();
+        if (!myOwnerId || !this.#owners) return [];
+        return Object.keys(this.#owners).filter((p) => this.#owners[p] === myOwnerId);
+    }
+
     async #loadOwners() {
         if (this.#owners === null) {
             this.#owners = (await data.get('playerOwners', this.date, this.leagueId)) || {};

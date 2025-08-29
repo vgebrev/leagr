@@ -82,9 +82,9 @@
         }
     }
 
-    import { ownsPlayer } from '$lib/client/ownership.js';
     import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
     import { getStoredAdminCode } from '$lib/client/services/auth.js';
+    import { playersService } from '$lib/client/services/players.svelte.js';
     const leagueId = $derived(getLeagueId());
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 </script>
@@ -153,8 +153,7 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList &&
-                                            (isAdmin || ownsPlayer(date, playerName))}
+                                        canModifyList={canModifyList && (isAdmin || playersService.ownedByMe.includes(playerName))}
                                         styleClass={styles.buttonClass} />
                                 {:else if onremove && player}
                                     {@const playerName =
@@ -184,8 +183,7 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList &&
-                                            (isAdmin || ownsPlayer(date, playerName))}
+                                        canModifyList={canModifyList && (isAdmin || playersService.ownedByMe.includes(playerName))}
                                         styleClass={styles.buttonClass} />
                                 {/if}
                                 {#if onassign && !player}

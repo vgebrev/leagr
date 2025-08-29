@@ -97,7 +97,8 @@ export const DELETE = async ({ request, url, locals }) => {
 
         // Return enhanced data with ELO information for both teams and players
         const enhancedData = await playerManager.getAllDataWithElo();
-        return json(enhancedData);
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+        return json({ ...enhancedData, ownedByMe });
     } catch (err) {
         console.error('Error removing player from team:', err);
         if (err instanceof PlayerError) {
@@ -172,7 +173,8 @@ export const POST = async ({ request, url, locals }) => {
 
         // Return enhanced data with ELO information for both teams and players
         const enhancedData = await playerManager.getAllDataWithElo();
-        return json(enhancedData);
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+        return json({ ...enhancedData, ownedByMe });
     } catch (err) {
         console.error('Error assigning player to team:', err);
         if (err instanceof PlayerError) {
