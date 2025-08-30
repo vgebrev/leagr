@@ -505,6 +505,28 @@ export class RankingsManager {
     }
 
     /**
+     * Find the last appearance date for a player (last ranking detail where they scored points)
+     * @param {Object} rankingDetail - Player's ranking detail object
+     * @returns {string|null} - Last appearance date (YYYY-MM-DD) or null if no appearances
+     */
+    findLastAppearance(rankingDetail) {
+        if (!rankingDetail || Object.keys(rankingDetail).length === 0) {
+            return null;
+        }
+
+        // Get all dates where player appeared and scored points, sorted chronologically
+        const appearanceDates = Object.keys(rankingDetail)
+            .filter(date => {
+                const detail = rankingDetail[date];
+                // Player appeared if they have a team and scored any points
+                return detail && detail.team && detail.totalPoints > 0;
+            })
+            .sort();
+
+        return appearanceDates.length > 0 ? appearanceDates[appearanceDates.length - 1] : null;
+    }
+
+    /**
      * Apply hybrid ranking algorithm to raw player data
      * @param {Object} rawRankings - Rankings with basic points/appearances
      * @returns {Object} Enhanced rankings with calculated fields
@@ -570,6 +592,9 @@ export class RankingsManager {
             // Calculate ranking points (weighted average * max appearances)
             const rankingPoints = weightedAverage * maxAppearances;
 
+            // Find last appearance date (last ranking detail with points scored)
+            const lastAppearance = this.findLastAppearance(data.rankingDetail || {});
+
             enhancedPlayers[name] = {
                 // Original data
                 points: data.points,
@@ -578,6 +603,9 @@ export class RankingsManager {
 
                 // ELO data
                 elo: data.elo || null,
+
+                // Activity tracking
+                lastAppearance: lastAppearance,
 
                 // Calculated averages
                 rawAverage: parseFloat(rawAverage.toFixed(2)),
@@ -598,8 +626,19 @@ export class RankingsManager {
         // Step 3: Add ranking positions
         const playersArray = Object.entries(enhancedPlayers);
 
-        // Sort by ranking points (descending)
-        playersArray.sort((a, b) => b[1].rankingPoints - a[1].rankingPoints);
+        // Sort by ranking points (descending), with total points and ELO as tiebreakers
+        playersArray.sort((a, b) => {
+            if (b[1].rankingPoints !== a[1].rankingPoints) {
+                return b[1].rankingPoints - a[1].rankingPoints;
+            }
+            if (b[1].points !== a[1].points) {
+                return b[1].points - a[1].points;
+            }
+            // Tertiary tiebreaker: ELO rating
+            const aElo = a[1].elo?.rating || ELO_BASELINE_RATING;
+            const bElo = b[1].elo?.rating || ELO_BASELINE_RATING;
+            return bElo - aElo;
+        });
 
         // Add rank positions
         playersArray.forEach(([name], index) => {
