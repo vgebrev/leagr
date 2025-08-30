@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
+import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
@@ -24,12 +25,22 @@ export const GET = async ({ url, locals }) => {
     }
 
     try {
-        const enhancedData = await createPlayerManager()
+        const manager = createPlayerManager()
             .setDate(dateValidation.date)
             .setLeague(leagueId)
-            .getAllDataWithElo();
+            .setAccessControl(
+                createPlayerAccessControl().setContext(
+                    dateValidation.date,
+                    leagueId,
+                    locals.clientId,
+                    false
+                )
+            );
 
-        return json(enhancedData);
+        const enhancedData = await manager.getAllDataWithElo();
+        const ownedByMe = await manager.getOwnedPlayersForCurrentClient();
+
+        return json({ ...enhancedData, ownedByMe });
     } catch (err) {
         console.error('Error fetching teams:', err);
         return error(500, 'Failed to fetch teams');
@@ -148,10 +159,12 @@ export const POST = async ({ request, url, locals }) => {
 
         // Get the enhanced data with ELO ratings for the response
         const enhancedData = await playerManager.getAllDataWithElo();
+        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
 
         return json({
             teams: enhancedData.teams,
-            config: result.config
+            config: result.config,
+            ownedByMe
         });
     } catch (err) {
         console.error('Error generating teams:', err);

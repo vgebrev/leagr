@@ -50,8 +50,6 @@
     }
 
     onMount(async () => {
-        // Ensure players (and ownedByMe) are loaded for UI gating
-        await playersService.loadPlayers(date);
         await teamsService.loadTeams(date);
     });
 </script>

@@ -312,6 +312,7 @@ class TeamsService {
                     // Update playersService with extracted names for backward compatibility
                     playersService.players = this.availablePlayersWithElo.map((p) => p.name);
                     playersService.waitingList = this.waitingListWithElo.map((p) => p.name);
+                    playersService.ownedByMe = teamsData.ownedByMe || [];
                     // Ensure playersService has the correct currentDate for derived calculations
                     playersService.currentDate = date;
                 } else {
