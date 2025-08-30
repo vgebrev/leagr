@@ -7,6 +7,7 @@
 
     let { player, data, index, currentSort, onSortChange } = $props();
 
+    let showRankMovement = $derived(currentSort === 'rankingPoints');
     /**
      * Sanitize player name for use as CSS selector ID
      * @param {string} name - Player name
@@ -45,36 +46,38 @@
     <TableBodyCell class="px-1 py-1.5 text-center">
         <div class="flex items-center justify-evenly gap-1">
             <span>{index + 1}</span>
-            {#if data.rankMovement > 0}
-                <span
-                    class="flex items-center text-xs text-green-500"
-                    id="rank-up-{sanitizeId(player)}">
-                    <AngleUpOutline class="h-4 w-4 shrink-0" /><sub>{data.rankMovement}</sub>
-                </span>
-                <Tooltip
-                    class="shadow-lg"
-                    triggeredBy="#rank-up-{sanitizeId(player)}"
-                    transition={scale}>Moved up {data.rankMovement} places</Tooltip>
-            {:else if data.rankMovement < 0}
-                <span
-                    class="flex items-center text-xs text-red-500"
-                    id="rank-down-{sanitizeId(player)}">
-                    <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
-                        >{Math.abs(data.rankMovement)}</sub>
-                </span>
-                <Tooltip
-                    class="shadow-lg"
-                    triggeredBy="#rank-down-{sanitizeId(player)}"
-                    transition={scale}>Moved down {Math.abs(data.rankMovement)} places</Tooltip>
-            {:else}
-                <span
-                    class="text-xs text-gray-500"
-                    id="rank-same-{sanitizeId(player)}"
-                    ><MinusOutline class="h-4 w-4 shrink-0" /></span>
-                <Tooltip
-                    class="shadow-lg"
-                    triggeredBy="#rank-same-{sanitizeId(player)}"
-                    transition={scale}>No rank movement</Tooltip>
+            {#if showRankMovement}
+                {#if data.rankMovement > 0}
+                    <span
+                        class="flex items-center text-xs text-green-500"
+                        id="rank-up-{sanitizeId(player)}">
+                        <AngleUpOutline class="h-4 w-4 shrink-0" /><sub>{data.rankMovement}</sub>
+                    </span>
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#rank-up-{sanitizeId(player)}"
+                        transition={scale}>Moved up {data.rankMovement} places</Tooltip>
+                {:else if data.rankMovement < 0}
+                    <span
+                        class="flex items-center text-xs text-red-500"
+                        id="rank-down-{sanitizeId(player)}">
+                        <AngleDownOutline class="h-4 w-4 shrink-0" /><sub
+                            >{Math.abs(data.rankMovement)}</sub>
+                    </span>
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#rank-down-{sanitizeId(player)}"
+                        transition={scale}>Moved down {Math.abs(data.rankMovement)} places</Tooltip>
+                {:else}
+                    <span
+                        class="text-xs text-gray-500"
+                        id="rank-same-{sanitizeId(player)}"
+                        ><MinusOutline class="h-4 w-4 shrink-0" /></span>
+                    <Tooltip
+                        class="shadow-lg"
+                        triggeredBy="#rank-same-{sanitizeId(player)}"
+                        transition={scale}>No rank movement</Tooltip>
+                {/if}
             {/if}
         </div>
     </TableBodyCell>
