@@ -685,7 +685,12 @@ export class RankingsManager {
                             playerTracker.set(player, {
                                 points: 0,
                                 appearances: 0,
-                                rankingDetail: {}
+                                rankingDetail: {},
+                                elo: {
+                                    rating: ELO_BASELINE_RATING,
+                                    lastDecayAt: null,
+                                    gamesPlayed: 0
+                                }
                             });
                         }
 
