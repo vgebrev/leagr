@@ -43,7 +43,8 @@
         name="player-name"
         type="text"
         placeholder="Player Name"
-        classes={{ wrapper: 'w-full' }}
+        classes={{ wrapper: 'w-full', combo: 'w-full dark:shadow-gray-900 shadow-md' }}
+        class="!bg-gray-50 dark:!bg-gray-800"
         required
         disabled={!canModifyList}
         autocomplete="off" />
@@ -65,6 +66,7 @@
         </Button>
 
         <Dropdown
+            class="border border-gray-200 !bg-gray-50 dark:border-gray-700 dark:!bg-gray-800"
             bind:isOpen={dropdownOpen}
             simple>
             <DropdownItem onclick={addToWaitingList}>

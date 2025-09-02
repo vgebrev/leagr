@@ -64,7 +64,7 @@
     <div class="mb-6 text-center">
         <LockSolid class="text-primary-600 mx-auto mb-4 h-16 w-16" />
         <h1 class="text-lg font-bold text-gray-900 dark:text-white">League Access Required</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
             Enter the access code for <strong>{data.leagueInfo?.name || 'this league'}</strong>
         </p>
     </div>
@@ -82,7 +82,8 @@
                 bind:value={accessCode}
                 placeholder="Enter access code"
                 required
-                classes={{ wrapper: 'w-full font-mono' }} />
+                classes={{ wrapper: 'w-full font-mono' }}
+                class="dark:bg-gray-800" />
         </div>
 
         <Button
@@ -94,7 +95,7 @@
         </Button>
     </form>
 
-    <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+    <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
         <p>
             <a
                 href="/auth/forgot"

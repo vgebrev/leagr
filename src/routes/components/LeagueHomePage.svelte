@@ -47,8 +47,8 @@
     });
 </script>
 
-<Listgroup class="w-full shadow">
-    <ListgroupItem class="bg-gray-200 text-gray-900 dark:bg-gray-700 dark:text-gray-400"
+<Listgroup class="glass w-full dark:text-gray-300">
+    <ListgroupItem class="bg-gray-300/90 backdrop-blur-lg dark:bg-gray-700/90"
         >How It Works</ListgroupItem>
     <ListgroupItem><span>{datePickText}</span></ListgroupItem>
     <ListgroupItem

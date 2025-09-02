@@ -210,7 +210,7 @@
 
 <div class="flex flex-col gap-2">
     {#if !hasStandings}
-        <Alert class="flex items-center border py-2"
+        <Alert class="glass flex items-center border py-2"
             ><ExclamationCircleSolid /><span>
                 The knockout cup phase is only available after some league <Button
                     color="alternative"
@@ -230,7 +230,7 @@
 
         <!-- Regeneration confirmation -->
         {#if showConfirmRegenerate}
-            <Alert class="flex items-center border">
+            <Alert class="glass flex items-center border">
                 <ExclamationCircleSolid />
                 <span
                     >A knockout cup is already in progress. Are you sure you want to reset it?</span>

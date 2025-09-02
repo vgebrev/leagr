@@ -59,7 +59,7 @@
 <!-- Header -->
 <div class="mb-2">
     <h5 class="flex items-center text-lg font-bold">Champions Hall</h5>
-    <p class="text-sm text-gray-500">Players who have won at least one league or knockout cup</p>
+    <p class="text-sm text-gray-400">Players who have won at least one league or knockout cup</p>
 </div>
 
 {#if loading}
@@ -68,7 +68,7 @@
         <div class="text-gray-500">Loading champions data...</div>
     </div>
 {:else if error}
-    <Alert class="flex items-center border">
+    <Alert class="glass flex items-center border">
         <ExclamationCircleSolid />
         <span>Failed to load champions data. Please try again.</span>
     </Alert>
@@ -80,8 +80,9 @@
 {:else}
     <Table
         classes={{ div: 'w-full text-xs' }}
+        class="dark:text-gray-300"
         shadow>
-        <TableHead>
+        <TableHead class="dark:text-gray-300">
             <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
             <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                 >Player</TableHeadCell>
@@ -93,7 +94,8 @@
             {#each champions as champion, index (index)}
                 <TableBodyRow>
                     <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 font-medium text-gray-900 dark:text-gray-100">
+                    <TableBodyCell
+                        class="px-1 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
                         {#if index === 0}
                             <button onclick={handleTopChampionClick}>
                                 {champion.playerName}
@@ -122,7 +124,7 @@
                                 </div>
                             </Popover>
                         {:else}
-                            <span class="text-gray-400">0</span>
+                            <span class="text-gray-400 dark:text-gray-300">0</span>
                         {/if}
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
@@ -145,7 +147,7 @@
                                 </div>
                             </Popover>
                         {:else}
-                            <span class="text-gray-400">0</span>
+                            <span class="text-gray-400 dark:text-gray-300">0</span>
                         {/if}
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center font-medium"

@@ -167,7 +167,10 @@
         href={faviconUrl}
         type="image/svg+xml" />
 </svelte:head>
-<main class="flex h-[100dvh] flex-col overflow-hidden">
+<main class="relative flex h-[100dvh] flex-col overflow-hidden">
+    <!-- Background layers (order matters) -->
+    <div class="bg-aurora z-0"></div>
+    <div class="bg-grain z-0"></div>
     <TopNavBar
         {date}
         leagueInfo={data.leagueInfo} />

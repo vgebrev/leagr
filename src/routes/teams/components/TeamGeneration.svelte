@@ -71,7 +71,7 @@
     {/each}
     {#if teamConfig.length === 0}
         {#if isConfigurationConflict}
-            <Alert class="flex items-center border py-2"
+            <Alert class="glass flex items-center border py-2"
                 ><ExclamationCircleSolid /><span
                     >{configurationMessage}
                     <Button
@@ -82,7 +82,7 @@
                     ></span
                 ></Alert>
         {:else}
-            <Alert class="flex items-center border py-2"
+            <Alert class="glass flex items-center border py-2"
                 ><ExclamationCircleSolid /><span
                     >More <Button
                         color="alternative"
@@ -108,7 +108,7 @@
     {/if}
 </div>
 {#if confirmRegenerate}
-    <Alert class="flex items-center border"
+    <Alert class="glass flex items-center border"
         ><ExclamationCircleSolid /><span
             >Teams have already been generated. Are you sure you want to regenerate them?</span>
         <Button

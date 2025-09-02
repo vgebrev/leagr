@@ -45,10 +45,13 @@
 
 <Datepicker
     value={selectedDate}
+    class="border border-gray-200 !bg-gray-50 shadow-md dark:border-gray-700 dark:!bg-gray-800 dark:shadow-gray-900"
+    inputClass="dark:!bg-gray-800"
+    placeholder="Select a date"
     dateFormat={{ weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }}
     onselect={dateChanged}></Datepicker>
 {#if !isSelectedCompetitionDay}
-    <Alert class="flex items-center border"
+    <Alert class="glass flex items-center border"
         ><ExclamationCircleSolid /><span
             >Selected date is not a {competitionDaysText}. Are you sure you've got the right date?</span
         ></Alert>

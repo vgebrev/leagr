@@ -4,7 +4,11 @@
     import RankProgressionChart from './components/RankProgressionChart.svelte';
     import AppearanceHistorySection from './components/AppearanceHistorySection.svelte';
     import { Alert, Spinner, Dropdown, DropdownItem, Button, Badge } from 'flowbite-svelte';
-    import { ChevronDownOutline, ExclamationCircleOutline, HourglassOutline } from 'flowbite-svelte-icons';
+    import {
+        ChevronDownOutline,
+        ExclamationCircleOutline,
+        HourglassOutline
+    } from 'flowbite-svelte-icons';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
@@ -42,13 +46,13 @@
      */
     function getPlayerStatus(lastAppearance, appearances) {
         if (!lastAppearance) return 'inactive';
-        
+
         const today = new Date();
         const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, today.getDate());
         const lastAppearanceDate = new Date(lastAppearance);
-        
+
         const hasRecentAppearance = lastAppearanceDate >= twoMonthsAgo;
-        
+
         if (!hasRecentAppearance) return 'inactive';
         if (appearances < 2) return 'provisional';
         return 'active';
@@ -124,18 +128,23 @@
     <div class="mb-2 flex items-start justify-between">
         <div>
             <h1 class="text-xl font-bold">{player || 'Loading...'}</h1>
-            <h6 class="text-gray-500">Player Profile</h6>
+            <h6 class="text-gray-400">Player Profile</h6>
         </div>
         <!-- Player Status Badge -->
         {#if playerData}
             {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}
             {#if status === 'inactive'}
-                <Badge border class="flex items-center">
+                <Badge
+                    border
+                    class="flex items-center">
                     <ExclamationCircleOutline class="me-2 h-4 w-4" />
                     Inactive Player
                 </Badge>
             {:else if status === 'provisional'}
-                <Badge border color="gray" class="flex items-center">
+                <Badge
+                    border
+                    color="gray"
+                    class="flex items-center">
                     <HourglassOutline class="me-2 h-4 w-4" />
                     Provisional Player
                 </Badge>
@@ -180,12 +189,12 @@
             {playerData}
             limit={selectedLimit} />
     {:else if loadingError}
-        <Alert class="flex items-center border">
+        <Alert class="glass flex items-center border">
             <ExclamationCircleSolid />
             <span>Failed to load player data. Please check the player name and try again.</span>
         </Alert>
     {:else}
-        <div class="flex items-center justify-center gap-2">
+        <div class="glass flex items-center justify-center gap-2">
             <Spinner size="6" />
             <div class="text-gray-500">Loading player data...</div>
         </div>

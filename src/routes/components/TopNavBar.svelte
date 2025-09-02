@@ -53,7 +53,7 @@
         {#if $isLoading}<Spinner size="6" />{/if}
         {#if leagueInfo}
             <button
-                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-400 dark:hover:bg-gray-700"
+                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
                 onclick={shareCurrentPage}
                 id="share-button"><ForwardOutline /></button>
             <Tooltip
@@ -61,7 +61,7 @@
                 triggeredBy="#share-button"
                 transition={scale}>Share link</Tooltip>
             <a
-                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-400 dark:hover:bg-gray-700"
+                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
                 href={`/settings?date=${date}`}
                 id="settings-link"><AdjustmentsHorizontalSolid /></a>
             <Tooltip
@@ -71,6 +71,7 @@
         {/if}
         <DarkMode
             color="alternative"
+            class="dark:text-gray-300"
             id="theme-picker" />
         <Tooltip
             class="shadow-lg"

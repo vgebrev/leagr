@@ -14,7 +14,7 @@
 <Button onclick={handleUpdate}>
     <ChartOutline class="me-2 h-4 w-4" /> Update Rankings
 </Button>
-<Alert class="flex items-center border">
+<Alert class="glass flex items-center border">
     <ExclamationCircleSolid />
     <span>Only update rankings after the last game score of the day is recorded!</span>
 </Alert>

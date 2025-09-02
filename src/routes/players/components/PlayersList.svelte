@@ -11,8 +11,7 @@
         sourceList,
         destinationList,
         moveLabel,
-        canMoveToOtherList,
-        date
+        canMoveToOtherList
     } = $props();
 
     import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
@@ -25,7 +24,7 @@
 <div class="flex flex-col gap-2">
     <span class="block text-sm font-medium text-gray-700 rtl:text-right dark:text-gray-200"
         >{label}</span>
-    <Listgroup class="w-full gap-0">
+    <Listgroup class="glass w-full gap-0 dark:text-gray-300">
         {#each players as player, i (i)}
             <ListgroupItem class="flex gap-2 p-1 ps-2"
                 ><span
@@ -57,7 +56,8 @@
                     ]}
                     <PlayerActionsDropdown
                         {actions}
-                        canModifyList={canModifyList && (isAdmin || playersService.ownedByMe.includes(player))} />
+                        canModifyList={canModifyList &&
+                            (isAdmin || playersService.ownedByMe.includes(player))} />
                 {/if}
             </ListgroupItem>
         {/each}

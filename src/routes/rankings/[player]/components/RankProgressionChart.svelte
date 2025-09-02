@@ -53,7 +53,7 @@
                             <text
                                 x={padding.left - 15}
                                 y={y + 4}
-                                class="fill-gray-600 text-xs dark:fill-gray-400"
+                                class="fill-gray-600 text-xs dark:fill-gray-300"
                                 text-anchor="end">
                                 {rank}
                             </text>
@@ -61,7 +61,7 @@
                             <text
                                 x={padding.left + chartWidth + 15}
                                 y={y + 4}
-                                class="fill-gray-600 text-xs dark:fill-gray-400"
+                                class="fill-gray-600 text-xs dark:fill-gray-300"
                                 text-anchor="start">
                                 {rank}
                             </text>
@@ -119,7 +119,7 @@
                         <text
                             {x}
                             y={chartHeight + padding.top + 20}
-                            class="fill-gray-600 text-xs dark:fill-gray-400"
+                            class="fill-gray-600 text-xs dark:fill-gray-300"
                             text-anchor="middle"
                             transform="rotate(-45, {x}, {chartHeight + padding.top + 20})">
                             {new Date(point.date).toLocaleDateString('en-GB', {
@@ -131,7 +131,7 @@
                 </svg>
             </div>
 
-            <div class="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            <div class="mt-2 text-center text-sm text-gray-600 dark:text-gray-300">
                 Complete rank progression over {progression.length} sessions
                 <br />
                 <span class="text-xs">Filled circles: played • Empty circles: missed session</span>

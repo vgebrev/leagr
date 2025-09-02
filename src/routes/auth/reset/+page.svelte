@@ -96,7 +96,7 @@
     <div class="mb-2 text-center">
         <LockSolid class="text-primary-600 mx-auto mb-4 h-16 w-16" />
         <h1 class="text-lg font-bold text-gray-900 dark:text-white">Reset Access Code</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
             Set a new access code for <strong>{data.leagueInfo?.name || 'this league'}</strong>
         </p>
     </div>
@@ -104,10 +104,10 @@
     {#if !hasValidated}
         <div class="w-full text-center">
             <Spinner size="6" />
-            <p class="text-gray-600 dark:text-gray-400">Validating reset code...</p>
+            <p class="text-gray-600 dark:text-gray-300">Validating reset code...</p>
         </div>
     {:else if !isValidResetCode}
-        <Alert class="flex items-center border">
+        <Alert class="glass flex items-center border">
             <ExclamationCircleSolid /><span>
                 This reset link is invalid or has expired. Please <a
                     href="/auth/forgot"
@@ -137,7 +137,8 @@
                         bind:value={newAccessCode}
                         placeholder="Enter new access code"
                         required
-                        classes={{ wrapper: 'flex-1 font-mono' }} />
+                        classes={{ wrapper: 'flex-1 font-mono' }}
+                        class="dark:bg-gray-800" />
                     <Button
                         type="button"
                         color="alternative"
@@ -145,7 +146,7 @@
                         Generate
                     </Button>
                 </div>
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-300">
                     Share this code with league members to access the league
                 </p>
             </div>
@@ -159,7 +160,7 @@
             </Button>
         </form>
 
-        <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
             <p>Make sure to save your new access code securely.</p>
         </div>
     {/if}

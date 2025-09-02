@@ -28,8 +28,9 @@
 {#if standings.length > 0}
     <Table
         classes={{ div: 'w-full min-w-fit text-xs' }}
+        class="dark:text-gray-300"
         shadow>
-        <TableHead>
+        <TableHead class="bg-gray-200 dark:text-gray-300">
             <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
             <TableHeadCell
                 class="max-w-32 overflow-hidden px-1 py-1.5 text-center text-ellipsis whitespace-nowrap"
@@ -96,7 +97,7 @@
         </TableBody>
     </Table>
 {:else}
-    <Alert class="flex items-center border py-2"
+    <Alert class="glass flex items-center border py-2"
         ><ExclamationCircleSolid /><span>
             Schedule some <Button
                 color="alternative"

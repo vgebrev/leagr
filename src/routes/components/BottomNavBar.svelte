@@ -17,7 +17,7 @@
     {activeUrl}
     position="fixed"
     classes={{ inner: 'grid-cols-6' }}
-    class="z-10 shrink-0">
+    class="glass z-10 shrink-0">
     <BottomNavItem
         btnName="Players"
         href="/players?date={date}">

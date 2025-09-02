@@ -20,8 +20,8 @@
 {#if schedule.length > 0}
     <div class={`flex w-full flex-col gap-2 ${className}`}>
         {#each schedule as round, roundIndex (roundIndex)}
-            <Listgroup class="w-full shadow">
-                <ListgroupItem class="px-2.5 py-1">
+            <Listgroup class="glass w-full">
+                <ListgroupItem class="px-2.5 py-1 dark:text-gray-300">
                     Round {roundIndex + 1}
                 </ListgroupItem>
 

@@ -140,7 +140,7 @@
     <h1 class="mb-2 font-bold text-gray-900 dark:text-white">
         {mode === 'new' ? 'Create New League' : 'Register League'}
     </h1>
-    <p class="text-gray-600 dark:text-gray-400">
+    <p class="text-gray-600 dark:text-gray-300">
         {mode === 'new'
             ? 'Set up your own social league.'
             : `The league "${leagueId}" doesn't exist yet. Register it now!`}
@@ -156,7 +156,7 @@
             for="subdomain"
             class="mb-2 text-sm font-medium text-gray-900 dark:text-white">League URL</Label>
         <div class="flex items-center space-x-2">
-            <span class="text-sm text-gray-500 dark:text-gray-400">{urlProtocol}//</span>
+            <span class="text-sm text-gray-500 dark:text-gray-300">{urlProtocol}//</span>
             <Input
                 id="subdomain"
                 type="text"
@@ -164,8 +164,9 @@
                 placeholder="your-league"
                 disabled={mode === 'existing'}
                 classes={{ wrapper: 'w-full flex-1' }}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
-            <span class="text-sm text-gray-500 dark:text-gray-400">.{urlHost}</span>
+            <span class="text-sm text-gray-500 dark:text-gray-300">.{urlHost}</span>
         </div>
         {#if subdomainError}
             <p class="mt-2 text-sm text-red-600 dark:text-red-500">{subdomainError}</p>
@@ -182,6 +183,7 @@
             type="text"
             bind:value={name}
             placeholder="Your League"
+            class="!bg-gray-50 dark:!bg-gray-800"
             required />
     </div>
 
@@ -220,6 +222,7 @@
                 bind:value={accessCode}
                 placeholder="XXXX-XXXX-XXXX"
                 classes={{ wrapper: 'flex-1 font-mono' }}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button
                 type="button"
@@ -229,7 +232,7 @@
                 Generate
             </Button>
         </div>
-        <Alert class="mt-2 flex items-center border">
+        <Alert class="glass mt-2 flex items-center border">
             <ExclamationCircleSolid /><span>
                 <span class="font-bold">Important!</span> Remember this code and share it with players
                 to join your league!</span>
@@ -248,6 +251,7 @@
                 bind:value={adminCode}
                 placeholder="XXXX-XXXX-XXXX"
                 classes={{ wrapper: 'flex-1 font-mono' }}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button
                 type="button"
@@ -257,7 +261,7 @@
                 Generate
             </Button>
         </div>
-        <Alert class="mt-2 flex items-center border">
+        <Alert class="glass mt-2 flex items-center border">
             <ExclamationCircleSolid /><span>
                 <span class="font-bold">Keep this private.</span> This code grants full admin control
                 and should not be shared with participants.</span>
@@ -274,8 +278,9 @@
             id="ownerEmail"
             type="email"
             bind:value={ownerEmail}
-            placeholder="your.email@example.com" />
-        <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+            placeholder="your.email@example.com"
+            class="!bg-gray-50 dark:!bg-gray-800" />
+        <p class="mt-2 text-sm text-gray-500 dark:text-gray-300">
             Used for access code recovery if you forget it
         </p>
     </div>

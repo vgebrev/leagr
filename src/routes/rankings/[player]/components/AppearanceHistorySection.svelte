@@ -18,11 +18,11 @@
 <div>
     <div class="mb-2">
         <h2 class="text-lg font-semibold">Appearance History</h2>
-        <p class="text-sm text-gray-500">Detailed breakdown of points earned per appearance</p>
+        <p class="text-sm text-gray-400">Detailed breakdown of points earned per appearance</p>
     </div>
 
     {#if appearances.length === 0}
-        <div class="py-8 text-center text-gray-500 dark:text-gray-400">
+        <div class="py-8 text-center text-gray-400 dark:text-gray-300">
             No appearance data found for this player.
         </div>
     {:else}
@@ -41,46 +41,46 @@
             <div class="grid grid-cols-5 text-sm">
                 <div class="shrink-0 text-center">
                     <div
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-300">
                         Appearance
                     </div>
-                    <div class="font-semibold">
+                    <div class="font-semibold dark:text-gray-200">
                         {appearances.reduce((sum, d) => sum + d.appearancePoints, 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
                     <div
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-300">
                         Match
                     </div>
-                    <div class="font-semibold">
+                    <div class="font-semibold dark:text-gray-200">
                         {appearances.reduce((sum, d) => sum + d.matchPoints, 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
                     <div
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-300">
                         Bonus
                     </div>
-                    <div class="font-semibold">
+                    <div class="font-semibold dark:text-gray-200">
                         {appearances.reduce((sum, d) => sum + d.bonusPoints, 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
                     <div
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-300">
                         Knockout
                     </div>
-                    <div class="font-semibold">
+                    <div class="font-semibold dark:text-gray-200">
                         {appearances.reduce((sum, d) => sum + d.knockoutPoints, 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
                     <div
-                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-400">
+                        class="overflow-hidden text-ellipsis whitespace-nowrap text-gray-600 dark:text-gray-300">
                         Total
                     </div>
-                    <div class="font-semibold">
+                    <div class="font-semibold dark:text-gray-200">
                         {appearances.reduce((sum, d) => sum + d.totalPoints, 0)}
                     </div>
                 </div>

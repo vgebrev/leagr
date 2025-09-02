@@ -53,12 +53,13 @@
 </Button>
 
 <Dropdown
+    class="border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
     simple
     {isOpen}>
     {#each actions as action, i (i)}
         {@const Icon = iconMap[action.type]}
         <DropdownItem
-            class="w-full font-normal"
+            class="w-full font-normal dark:bg-gray-800"
             onclick={action.onclick}
             disabled={action.disabled}>
             <span class="flex items-center">

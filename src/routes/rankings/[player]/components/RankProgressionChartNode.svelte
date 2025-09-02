@@ -44,8 +44,8 @@
         {x}
         y={y - 8}
         class={played
-            ? 'cursor-pointer fill-gray-700 text-xs font-medium hover:opacity-80 dark:fill-gray-300'
-            : 'cursor-pointer fill-gray-400 text-xs font-medium hover:opacity-80 dark:fill-gray-500'}
+            ? 'cursor-pointer fill-gray-700 text-xs font-medium hover:opacity-80 dark:fill-gray-200'
+            : 'cursor-pointer fill-gray-400 text-xs font-medium hover:opacity-80 dark:fill-gray-400'}
         text-anchor="middle">
         {point.rank}
     </text>

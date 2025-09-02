@@ -52,7 +52,7 @@
 
 <!-- No teams warning -->
 {#if !hasTeams}
-    <Alert class="flex items-center border py-2">
+    <Alert class="glass flex items-center border py-2">
         <ExclamationCircleSolid />
         <span>
             Make some
@@ -79,7 +79,7 @@
 
 <!-- Regeneration confirmation -->
 {#if showConfirmRegenerate}
-    <Alert class="flex items-center border">
+    <Alert class="glass flex items-center border">
         <ExclamationCircleSolid />
         <span>Games have already been scheduled. Are you sure you want to reset the schedule?</span>
         <Button

@@ -30,13 +30,10 @@
     }
 </script>
 
-<div
-    class="rounded-lg bg-white p-2 dark:bg-gray-800 {hasBorder
-        ? 'border border-gray-200 shadow-md dark:border-gray-700'
-        : ''}">
+<div class="rounded-lg p-2 {hasBorder ? 'glass border border-gray-200 dark:border-gray-700' : ''}">
     <!-- Date and Team Header -->
     <div class="mb-3 flex items-center justify-between gap-2">
-        <div class="shrink-0 text-sm font-semibold">
+        <div class="shrink-0 text-sm font-semibold dark:text-gray-200">
             {formatDate(detail.date)}
             {#if detail.leagueWinner || detail.cupWinner}
                 <div class="mt-1 flex gap-1">
@@ -76,7 +73,7 @@
     <div class="space-y-2">
         {#if detail.appearancePoints > 0}
             <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Appearance:</span>
+                <span class="text-gray-600 dark:text-gray-300">Appearance:</span>
                 <Badge color="gray">
                     +{detail.appearancePoints}
                 </Badge>
@@ -85,7 +82,7 @@
 
         {#if detail.matchPoints > 0}
             <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Match Points:</span>
+                <span class="text-gray-600 dark:text-gray-300">Match Points:</span>
                 <Badge color="gray">
                     +{detail.matchPoints}
                 </Badge>
@@ -94,7 +91,7 @@
 
         {#if detail.bonusPoints > 0}
             <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Bonus Points:</span>
+                <span class="text-gray-600 dark:text-gray-300">Bonus Points:</span>
                 <Badge color="gray">
                     +{detail.bonusPoints}
                 </Badge>
@@ -103,7 +100,7 @@
 
         {#if detail.knockoutPoints > 0}
             <div class="flex justify-between text-sm">
-                <span class="text-gray-600 dark:text-gray-400">Knockout Points:</span>
+                <span class="text-gray-600 dark:text-gray-300">Knockout Points:</span>
                 <Badge color="gray">
                     +{detail.knockoutPoints}
                 </Badge>
@@ -114,7 +111,7 @@
     <!-- Total -->
     <div
         class="mt-2 flex justify-between border-t border-t-gray-200 pt-2 font-semibold dark:border-t-gray-700">
-        <span>Total:</span>
+        <span class="dark:text-gray-200">Total:</span>
         <Badge
             color="gray"
             class="font-bold">
@@ -126,7 +123,7 @@
     {#if detail.eloRating}
         <div
             class="mt-2 flex justify-between border-t border-t-gray-200 pt-2 text-sm dark:border-t-gray-700">
-            <span class="text-gray-600 dark:text-gray-400">ELO Rating:</span>
+            <span class="text-gray-600 dark:text-gray-300">ELO Rating:</span>
             <Badge color="blue">
                 {detail.eloRating}
             </Badge>

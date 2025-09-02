@@ -144,11 +144,7 @@
         if (match.bye) return true;
 
         // Disable if either team is null/TBD or BYE
-        if (!match.home || !match.away || match.home === 'BYE' || match.away === 'BYE') {
-            return true;
-        }
-
-        return false;
+        return !match.home || !match.away || match.home === 'BYE' || match.away === 'BYE';
     }
 </script>
 
@@ -169,9 +165,9 @@
                             <h4 class="text-md font-medium">{formatRoundName(round)}</h4>
                         </div>
                         {#each matches as match (match.round + '-' + match.match)}
-                            <Card class="p-2 pt-1">
+                            <Card class="glass p-2 pt-1">
                                 <div class="flex items-center justify-between">
-                                    <div class="text-xs text-gray-500">
+                                    <div class="text-xs text-gray-300">
                                         Match {match.match}
                                     </div>
                                 </div>

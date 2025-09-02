@@ -8,8 +8,9 @@
 
 <Table
     classes={{ div: 'w-full text-xs' }}
+    class="dark:text-gray-300"
     shadow>
-    <TableHead>
+    <TableHead class="dark:text-gray-300">
         <TableHeadCell class="w-8 px-0.5 py-1 text-center text-xs">#</TableHeadCell>
         <TableHeadCell
             class="max-w-32 overflow-hidden px-0.5 py-1 text-xs font-bold text-ellipsis whitespace-nowrap text-gray-900 dark:text-gray-100">

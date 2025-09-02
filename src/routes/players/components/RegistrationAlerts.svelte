@@ -9,14 +9,14 @@
 </script>
 
 {#if registrationOpenDate && now < registrationOpenDate}
-    <Alert class="flex items-center border">
+    <Alert class="glass flex items-center border">
         <ExclamationCircleSolid />
         You can't add players for this day before {dateTimeString(registrationOpenDate)}
     </Alert>
 {/if}
 
 {#if registrationCloseDate && now >= registrationCloseDate}
-    <Alert class="flex items-center border">
+    <Alert class="glass flex items-center border">
         <ExclamationCircleSolid />
         You can't add players for this day after {dateTimeString(registrationCloseDate)}
     </Alert>

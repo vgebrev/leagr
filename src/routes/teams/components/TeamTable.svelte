@@ -13,8 +13,7 @@
         assignablePlayers = [],
         allTeams = {},
         size = 'md',
-        showPlayerRankings = false,
-        date = null
+        showPlayerRankings = false
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
@@ -89,10 +88,10 @@
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 </script>
 
-<div class="relative overflow-hidden rounded-md shadow-md">
+<div class="relative overflow-hidden rounded-md">
     <table
-        class={`w-full text-left text-sm ${styles.text} border-collapse overflow-hidden rounded-md`}>
-        <thead class={`text-xs uppercase ${styles.header}`}>
+        class={`w-full text-left text-sm ${styles.text} glass border-collapse overflow-hidden rounded-md backdrop-blur-lg`}>
+        <thead class={`text-xs uppercase ${styles.header} backdrop-blur-lg`}>
             <tr>
                 <th
                     scope="col"
@@ -153,7 +152,9 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList && (isAdmin || playersService.ownedByMe.includes(playerName))}
+                                        canModifyList={canModifyList &&
+                                            (isAdmin ||
+                                                playersService.ownedByMe.includes(playerName))}
                                         styleClass={styles.buttonClass} />
                                 {:else if onremove && player}
                                     {@const playerName =
@@ -183,7 +184,9 @@
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList && (isAdmin || playersService.ownedByMe.includes(playerName))}
+                                        canModifyList={canModifyList &&
+                                            (isAdmin ||
+                                                playersService.ownedByMe.includes(playerName))}
                                         styleClass={styles.buttonClass} />
                                 {/if}
                                 {#if onassign && !player}

@@ -33,18 +33,26 @@
     ];
 </script>
 
-<Accordion flush>
+<Accordion
+    flush
+    class="dark:text-gray-300">
     <AccordionItem classes={{ button: 'p-2 text-sm', content: 'p-2 text-sm' }}>
         {#snippet header()}<InfoCircleOutline /> Ranking Info{/snippet}
         <div class="flex flex-col items-center gap-2">
             <p>Players receive ranking points based on their team performance on the day.</p>
-            <Listgroup items={pointsInfo} />
+            <Listgroup
+                class="dark:text-gray-300"
+                items={pointsInfo} />
             <p class="text-center"><strong>Ranking System:</strong></p>
-            <Listgroup items={rankingInfo} />
+            <Listgroup
+                class="dark:text-gray-300"
+                items={rankingInfo} />
             <p class="text-center"><strong>ELO System:</strong></p>
-            <Listgroup items={eloInfo} />
+            <Listgroup
+                class="dark:text-gray-300"
+                items={eloInfo} />
             {#if rankingMetadata}
-                <p class="text-center text-gray-600 dark:text-gray-400">
+                <p class="text-center text-gray-600 dark:text-gray-300">
                     League Average: {rankingMetadata.globalAverage} pts/appearance • Full Confidence:
                     {rankingMetadata.confidenceThreshold}+ appearances • Total Players: {rankingMetadata.totalPlayers}
                 </p>

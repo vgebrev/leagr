@@ -54,13 +54,13 @@
     <div class="mb-2 text-center">
         <LockSolid class="text-primary-600 mx-auto mb-4 h-16 w-16" />
         <h1 class="text-lg font-bold text-gray-900 dark:text-white">Forgot Access Code</h1>
-        <p class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+        <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
             Reset your access code for <strong>{data.leagueInfo?.name || 'this league'}</strong>
         </p>
     </div>
 
     {#if !hasOwnerEmail}
-        <Alert class="flex items-center border">
+        <Alert class="glass flex items-center border">
             <ExclamationCircleSolid /><span>
                 This league doesn't have an organiser email configured. Access code reset is not
                 available.
@@ -74,7 +74,7 @@
             Return to Login
         </Button>
     {:else}
-        <Alert class="flex items-center border">
+        <Alert class="glass flex items-center border">
             <ExclamationCircleSolid /><span>
                 Only the league organiser can reset the access code. If you're not the organiser,
                 please contact them for the access code or share link.
@@ -93,8 +93,9 @@
                     bind:value={email}
                     placeholder="your.email@example.com"
                     required
-                    classes={{ wrapper: 'w-full' }} />
-                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    classes={{ wrapper: 'w-full' }}
+                    class="dark:bg-gray-800" />
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-300">
                     Enter the email address associated with this league
                 </p>
             </div>
@@ -108,7 +109,7 @@
             </Button>
         </form>
 
-        <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
             <p>
                 <a
                     href="/auth"
