@@ -33,7 +33,7 @@
             {@render limitDropdown?.()}
         </div>
         <div
-            class="w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
+            class="glass w-full rounded-lg border border-gray-200 bg-white p-2 shadow-lg dark:border-gray-700 dark:bg-gray-800">
             <div
                 class="overflow-x-auto"
                 bind:this={scrollContainer}>

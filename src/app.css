@@ -75,26 +75,16 @@ body {
     }
 
     /* Reusable glass card */
-    .glass {
-        @apply shadow-sm dark:shadow-gray-900 backdrop-blur-lg;
+    .glass-strong {
+        @apply shadow-md dark:shadow-gray-900 backdrop-blur-lg;
         /* light/dark base translucency */
-        /*@apply bg-white/4 dark:bg-gray-800/3;*/
         @apply bg-gray-50/75 dark:bg-gray-800/75;
     }
 
-    /* Strengthen edge contrast on darker scenes */
-    .glass-strong {
-        border-color: rgb(255 255 255 / 0.28);
-    }
-
-    /* Internal scrim to guarantee readable text over busy zones */
-    .glass-scrim {
-        --scrim: color-mix(in oklab, theme(colors.gray.900) 45%, transparent);
-    }
-    .glass-scrim::before {
-        content: "";
-        @apply absolute inset-0 pointer-events-none;
-        background: var(--scrim);
+    .glass {
+        @apply shadow-md dark:shadow-gray-900 backdrop-blur-lg;
+        /* light/dark base translucency */
+        @apply bg-gray-50/20 dark:bg-gray-800/20;
     }
 
     /* Backdrop-blur fallback */
@@ -106,7 +96,6 @@ body {
 /* Prefer stronger contrast if the user asks for it */
 @media (prefers-contrast: more) {
     .glass { border-color: rgb(255 255 255 / 0.32); }
-    .glass-scrim { --scrim: color-mix(in oklab, theme(colors.gray.900) 60%, transparent); }
 }
 
 /* Optional: reduce motion if you later add subtle bg shifts */

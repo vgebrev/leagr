@@ -58,7 +58,7 @@
 <Label>Choose team option</Label>
 <div class="flex w-full flex-col gap-2">
     {#each teamConfig as config, i (i)}
-        <div class="rounded-md border p-2">
+        <div class="rounded-md border border-gray-200 p-2 dark:border-gray-600">
             <Radio
                 bind:group={selectedTeamConfig}
                 value={config}
