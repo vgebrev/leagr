@@ -487,37 +487,36 @@ describe('TeamGenerator', () => {
     describe('draw history correction', () => {
         it('should preserve snake draft team order in draw history after optimization', () => {
             const testPlayers = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
-            const teamNames = ['Team1', 'Team2', 'Team3'];
-            
+
             const generator = createTeamGenerator()
                 .setSettings(mockSettings)
                 .setPlayers(testPlayers)
                 .setRankings(mockRankings)
                 .setHistoryRecording(true);
-            
+
             const config = { teamSizes: [2, 2, 2] };
             const result = generator.generateTeams('seeded', config);
-            
+
             // Verify draw history exists
             expect(result.drawHistory).toBeDefined();
             expect(result.drawHistory.drawHistory).toBeDefined();
             expect(result.drawHistory.drawHistory.length).toBe(6);
-            
+
             // Group by pot to verify snake draft pattern
             const potGroups = {};
-            result.drawHistory.drawHistory.forEach(step => {
+            result.drawHistory.drawHistory.forEach((step) => {
                 if (!potGroups[step.fromPot]) potGroups[step.fromPot] = [];
                 potGroups[step.fromPot].push(step);
             });
-            
+
             // For each pot, verify team assignment order follows snake pattern
-            Object.entries(potGroups).forEach(([potIndex, steps]) => {
-                const teamOrder = steps.map(step => step.toTeam);
-                
+            Object.entries(potGroups).forEach(([, steps]) => {
+                const teamOrder = steps.map((step) => step.toTeam);
+
                 // Snake draft should have teams appear in order (forward or reverse)
                 const uniqueTeams = [...new Set(teamOrder)];
                 expect(uniqueTeams.length).toBe(Math.min(3, steps.length)); // At most 3 unique teams
-                
+
                 // Verify no team appears more than once per pot (proper snake draft)
                 if (steps.length === 3) {
                     expect(teamOrder.length).toBe(3);
@@ -528,18 +527,17 @@ describe('TeamGenerator', () => {
 
         it('should maintain player-team consistency after optimization', () => {
             const testPlayers = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
-            const teamNames = ['Red', 'Blue', 'Green'];
-            
+
             const generator = createTeamGenerator()
                 .setSettings(mockSettings)
                 .setPlayers(testPlayers)
                 .setRankings(mockRankings)
                 .setHistoryRecording(true);
-            
+
             const config = { teamSizes: [2, 2, 2] };
             const result = generator.generateTeams('seeded', config);
             const teams = result.teams;
-            
+
             // Create final team mapping from actual teams
             const finalTeamOf = new Map();
             for (const [teamName, teamPlayers] of Object.entries(teams)) {
@@ -547,12 +545,12 @@ describe('TeamGenerator', () => {
                     finalTeamOf.set(player, teamName);
                 }
             }
-            
+
             // Verify each player in draw history ended up in the team shown
-            result.drawHistory.drawHistory.forEach(step => {
+            result.drawHistory.drawHistory.forEach((step) => {
                 const actualFinalTeam = finalTeamOf.get(step.player);
                 expect(actualFinalTeam).toBe(step.toTeam);
-                
+
                 // If originalToTeam exists, verify it's different from final team
                 if (step.originalToTeam) {
                     expect(step.originalToTeam).not.toBe(step.toTeam);

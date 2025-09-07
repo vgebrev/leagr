@@ -48,57 +48,73 @@ body {
 @layer utilities {
     /* Soft color blobs using your secondary/primary palette */
     .bg-aurora {
-        @apply absolute inset-0 -z-10 pointer-events-none;
+        @apply pointer-events-none absolute inset-0 -z-10;
         background-image:
-                radial-gradient(60% 60% at 0% 0%,
+            radial-gradient(
+                60% 60% at 0% 0%,
                 color-mix(in oklab, theme(colors.secondary.400) 22%, transparent) 0%,
-                transparent 60%),
-                radial-gradient(55% 55% at 100% 0%,
+                transparent 60%
+            ),
+            radial-gradient(
+                55% 55% at 100% 0%,
                 color-mix(in oklab, theme(colors.primary.400) 18%, transparent) 0%,
-                transparent 60%),
-                radial-gradient(45% 45% at 50% 100%,
+                transparent 60%
+            ),
+            radial-gradient(
+                45% 45% at 50% 100%,
                 color-mix(in oklab, theme(colors.secondary.300) 16%, transparent) 0%,
-                transparent 60%);
+                transparent 60%
+            );
         background-repeat: no-repeat;
         background-size: cover;
     }
 
     /* Whisper-grain for texture (very light) */
     .bg-grain {
-        @apply absolute inset-0 -z-10 pointer-events-none opacity-20;
+        @apply pointer-events-none absolute inset-0 -z-10 opacity-20;
         mix-blend-mode: soft-light;
         background-image:
-                radial-gradient(circle at 1px 1px, rgba(255,255,255,0.08) 1px, transparent 1.2px),
-                radial-gradient(circle at 0.5px 0.5px, rgba(0,0,0,0.15) 0.8px, transparent 1px);
-        background-size: 6px 6px, 10px 10px;
-        background-position: 0 0, 1px 2px;
+            radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.08) 1px, transparent 1.2px),
+            radial-gradient(circle at 0.5px 0.5px, rgba(0, 0, 0, 0.15) 0.8px, transparent 1px);
+        background-size:
+            6px 6px,
+            10px 10px;
+        background-position:
+            0 0,
+            1px 2px;
     }
 
     /* Reusable glass card */
     .glass-strong {
-        @apply shadow-md dark:shadow-gray-900 backdrop-blur-lg;
+        @apply shadow-md backdrop-blur-lg dark:shadow-gray-900;
         /* light/dark base translucency */
         @apply bg-gray-50/75 dark:bg-gray-800/75;
     }
 
     .glass {
-        @apply shadow-md dark:shadow-gray-900 backdrop-blur-lg;
+        @apply shadow-md backdrop-blur-lg dark:shadow-gray-900;
         /* light/dark base translucency */
         @apply bg-gray-50/20 dark:bg-gray-800/20;
     }
 
     /* Backdrop-blur fallback */
     @supports not (backdrop-filter: blur(1rem)) {
-        .glass { @apply bg-white/12 dark:bg-white/10; }
+        .glass {
+            @apply bg-white/12 dark:bg-white/10;
+        }
     }
 }
 
 /* Prefer stronger contrast if the user asks for it */
 @media (prefers-contrast: more) {
-    .glass { border-color: rgb(255 255 255 / 0.32); }
+    .glass {
+        border-color: rgb(255 255 255 / 0.32);
+    }
 }
 
 /* Optional: reduce motion if you later add subtle bg shifts */
 @media (prefers-reduced-motion: reduce) {
-    .motion-safe\:animate-none { animation: none !important; }
+    .motion-safe\:animate-none {
+        animation: none !important;
+    }
 }

@@ -516,7 +516,7 @@ export class RankingsManager {
 
         // Get all dates where player appeared and scored points, sorted chronologically
         const appearanceDates = Object.keys(rankingDetail)
-            .filter(date => {
+            .filter((date) => {
                 const detail = rankingDetail[date];
                 // Player appeared if they have a team and scored any points
                 return detail && detail.team && detail.totalPoints > 0;

@@ -62,7 +62,7 @@
 
     let sortedPlayers = $derived.by(() => {
         const filtered = Object.entries(rankings.players ?? {})
-            .filter(([name, data]) => {
+            .filter(([, data]) => {
                 // Apply active player filter if enabled (exclude inactive and provisional players)
                 return !showActiveOnly || isPlayerActive(data.lastAppearance, data.appearances);
             })
@@ -70,8 +70,7 @@
                 if (sortBy === 'rankingPoints') {
                     if (b[1].rankingPoints !== a[1].rankingPoints)
                         return b[1].rankingPoints - a[1].rankingPoints;
-                    if (b[1].points !== a[1].points) 
-                        return b[1].points - a[1].points;
+                    if (b[1].points !== a[1].points) return b[1].points - a[1].points;
                     // Tertiary tiebreaker: ELO rating
                     const aElo = a[1].elo?.rating || 0;
                     const bElo = b[1].elo?.rating || 0;
@@ -154,10 +153,12 @@
             class="text-sm">
             Regular players only
         </Toggle>
-        <QuestionCircleOutline 
-            class="h-4 w-4 text-gray-400 hover:text-gray-600 cursor-help" 
+        <QuestionCircleOutline
+            class="h-4 w-4 cursor-help text-gray-400 hover:text-gray-600"
             id="regular-players-help" />
-        <Tooltip triggeredBy="#regular-players-help" class="text-xs">
+        <Tooltip
+            triggeredBy="#regular-players-help"
+            class="text-xs">
             2+ appearances in the last 2 months
         </Tooltip>
     </div>

@@ -755,12 +755,12 @@ export class TeamGenerator {
             }
 
             const correctedHistory = [];
-            
+
             // Process each pot, preserving team assignment order
-            for (const [potIndex, potSteps] of potGroups) {
+            for (const [, potSteps] of potGroups) {
                 // Get the original snake draft team order for this pot
-                const teamAssignmentOrder = potSteps.map(step => step.toTeam);
-                
+                const teamAssignmentOrder = potSteps.map((step) => step.toTeam);
+
                 // Get players from this pot who ended up in each team
                 const playersFromPotByFinalTeam = new Map();
                 for (const step of potSteps) {
@@ -775,20 +775,25 @@ export class TeamGenerator {
                 for (let i = 0; i < potSteps.length; i++) {
                     const originalStep = potSteps[i];
                     const originalTeamAssignment = teamAssignmentOrder[i];
-                    
+
                     // Try to find a player from this pot who ended up in the originally assigned team
-                    const playersInOriginalTeam = playersFromPotByFinalTeam.get(originalTeamAssignment) || [];
-                    
+                    const playersInOriginalTeam =
+                        playersFromPotByFinalTeam.get(originalTeamAssignment) || [];
+
                     let playerForSlot;
                     if (playersInOriginalTeam.length > 0) {
                         // Use a player who ended up in the original team (prefer original if available)
-                        playerForSlot = playersInOriginalTeam.includes(originalStep.player) 
-                            ? originalStep.player 
+                        playerForSlot = playersInOriginalTeam.includes(originalStep.player)
+                            ? originalStep.player
                             : playersInOriginalTeam[0];
                         // Remove used player to avoid duplicates
-                        const playerIndex = playersFromPotByFinalTeam.get(originalTeamAssignment).indexOf(playerForSlot);
+                        const playerIndex = playersFromPotByFinalTeam
+                            .get(originalTeamAssignment)
+                            .indexOf(playerForSlot);
                         if (playerIndex > -1) {
-                            playersFromPotByFinalTeam.get(originalTeamAssignment).splice(playerIndex, 1);
+                            playersFromPotByFinalTeam
+                                .get(originalTeamAssignment)
+                                .splice(playerIndex, 1);
                         }
                     } else {
                         // No player from this pot ended up in original team, use original player
