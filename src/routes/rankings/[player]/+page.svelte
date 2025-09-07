@@ -168,15 +168,16 @@
                         </Button>
                         <Dropdown
                             simple
-                            class="w-20"
+                            class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
                             bind:isOpen={dropdownOpen}>
                             {#each limitOptions as option, i (i)}
                                 <DropdownItem
                                     onclick={() => handleLimitChange(option.value)}
-                                    classes={{ anchor: 'w-full' }}
-                                    class={selectedLimit === option.value
-                                        ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-600'
-                                        : ''}>
+                                    class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                                        selectedLimit === option.value
+                                            ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                                            : ''
+                                    }`}>
                                     <span class="w-full">{option.label}</span>
                                 </DropdownItem>
                             {/each}
