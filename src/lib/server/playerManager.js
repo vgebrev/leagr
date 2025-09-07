@@ -603,10 +603,8 @@ export class PlayerManager {
                 if (rankingDates.length > 0) {
                     const mostRecentPriorDate = rankingDates[rankingDates.length - 1];
                     elo = playerRanking.rankingDetail[mostRecentPriorDate]?.eloRating ?? 1000;
-                } else if (playerRanking.elo?.rating) {
-                    // Fallback to current ELO if no prior ranking detail exists
-                    elo = Math.round(playerRanking.elo.rating);
                 }
+                // If no prior ranking detail exists, keep the default 1000 ELO for new players
             }
 
             return {
