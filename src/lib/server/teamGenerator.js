@@ -735,7 +735,9 @@ export class TeamGenerator {
         }
 
         // Sync draw history with final optimized teams so replay matches final rosters
+        // while preserving the original snake draft team order
         if (this.recordHistory && Array.isArray(this.drawHistory) && this.drawHistory.length > 0) {
+            // Create mapping of final team assignments
             const finalTeamOf = new Map();
             for (const [teamName, players] of Object.entries(bestTeams)) {
                 for (const player of players) {
@@ -743,16 +745,73 @@ export class TeamGenerator {
                 }
             }
 
-            // Remap each step's destination team to the player's final team
-            this.drawHistory = this.drawHistory.map((step) => {
-                const finalTeam = finalTeamOf.get(step.player);
-                if (!finalTeam || finalTeam === step.toTeam) return step;
-                return {
-                    ...step,
-                    originalToTeam: step.toTeam,
-                    toTeam: finalTeam
-                };
-            });
+            // Group draw history by pot and reconstruct with final players
+            const potGroups = new Map();
+            for (const step of this.drawHistory) {
+                if (!potGroups.has(step.fromPot)) {
+                    potGroups.set(step.fromPot, []);
+                }
+                potGroups.get(step.fromPot).push(step);
+            }
+
+            const correctedHistory = [];
+            
+            // Process each pot, preserving team assignment order
+            for (const [potIndex, potSteps] of potGroups) {
+                // Get the original snake draft team order for this pot
+                const teamAssignmentOrder = potSteps.map(step => step.toTeam);
+                
+                // Get players from this pot who ended up in each team
+                const playersFromPotByFinalTeam = new Map();
+                for (const step of potSteps) {
+                    const finalTeam = finalTeamOf.get(step.player);
+                    if (!playersFromPotByFinalTeam.has(finalTeam)) {
+                        playersFromPotByFinalTeam.set(finalTeam, []);
+                    }
+                    playersFromPotByFinalTeam.get(finalTeam).push(step.player);
+                }
+
+                // Rebuild history maintaining team order but with final team players
+                for (let i = 0; i < potSteps.length; i++) {
+                    const originalStep = potSteps[i];
+                    const originalTeamAssignment = teamAssignmentOrder[i];
+                    
+                    // Try to find a player from this pot who ended up in the originally assigned team
+                    const playersInOriginalTeam = playersFromPotByFinalTeam.get(originalTeamAssignment) || [];
+                    
+                    let playerForSlot;
+                    if (playersInOriginalTeam.length > 0) {
+                        // Use a player who ended up in the original team (prefer original if available)
+                        playerForSlot = playersInOriginalTeam.includes(originalStep.player) 
+                            ? originalStep.player 
+                            : playersInOriginalTeam[0];
+                        // Remove used player to avoid duplicates
+                        const playerIndex = playersFromPotByFinalTeam.get(originalTeamAssignment).indexOf(playerForSlot);
+                        if (playerIndex > -1) {
+                            playersFromPotByFinalTeam.get(originalTeamAssignment).splice(playerIndex, 1);
+                        }
+                    } else {
+                        // No player from this pot ended up in original team, use original player
+                        playerForSlot = originalStep.player;
+                    }
+
+                    const finalTeam = finalTeamOf.get(playerForSlot);
+                    const correctedStep = {
+                        ...originalStep,
+                        player: playerForSlot,
+                        toTeam: finalTeam
+                    };
+
+                    // Track original team if different from final
+                    if (finalTeam !== originalTeamAssignment) {
+                        correctedStep.originalToTeam = originalTeamAssignment;
+                    }
+
+                    correctedHistory.push(correctedStep);
+                }
+            }
+
+            this.drawHistory = correctedHistory;
         }
 
         return bestTeams;
