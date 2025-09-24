@@ -11,6 +11,7 @@
     import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
     import { onMount } from 'svelte';
     import { goto, afterNavigate } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
@@ -111,7 +112,7 @@
                     const queryString = searchParams.toString();
                     const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');
                     const redirectUrl = encodeURIComponent(fullUrl);
-                    goto(`/auth?redirect=${redirectUrl}`);
+                    goto(resolve(`/auth?redirect=${redirectUrl}`));
                     return;
                 }
             }
@@ -126,7 +127,7 @@
         const authenticated = isAuthenticated(data.leagueId);
         if (!authenticated) {
             const redirectUrl = encodeURIComponent(page.url.pathname + page.url.search);
-            goto(`/auth?redirect=${redirectUrl}`);
+            goto(resolve(`/auth?redirect=${redirectUrl}`));
         }
     });
 </script>

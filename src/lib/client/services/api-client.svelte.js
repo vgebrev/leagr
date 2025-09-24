@@ -1,5 +1,6 @@
 import { getStoredAccessCode, removeStoredAccessCode } from './auth.js';
 import { goto } from '$app/navigation';
+import { resolve } from '$app/paths';
 
 class HttpError extends Error {
     constructor(message, status, body) {
@@ -105,7 +106,7 @@ function handleAuthError(response) {
         const currentUrl =
             typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
         const redirectUrl = encodeURIComponent(currentUrl);
-        goto(`/auth?redirect=${redirectUrl}`);
+        goto(resolve(`/auth?redirect=${redirectUrl}`));
     }
 }
 

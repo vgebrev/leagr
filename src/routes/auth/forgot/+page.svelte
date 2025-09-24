@@ -2,6 +2,7 @@
     import { Button, Input, Label, Alert } from 'flowbite-svelte';
     import { LockSolid, EnvelopeSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -13,7 +14,7 @@
 
     onMount(() => {
         if (!data.leagueInfo) {
-            goto('/');
+            goto(resolve('/'));
         }
     });
 
@@ -69,7 +70,7 @@
 
         <Button
             color="primary"
-            href="/auth"
+            href={resolve('/auth')}
             class="w-full">
             Return to Login
         </Button>
@@ -112,7 +113,7 @@
         <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
             <p>
                 <a
-                    href="/auth"
+                    href={resolve('/auth')}
                     class="text-primary-600 hover:underline">
                     Remember your code? Back to login
                 </a>

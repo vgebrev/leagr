@@ -13,6 +13,7 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -112,7 +113,7 @@
         }
 
         // Update URL and reload data
-        await goto(url.toString(), { replaceState: true });
+        await goto(resolve(url.toString()), { replaceState: true });
         await loadPlayerData();
     }
 

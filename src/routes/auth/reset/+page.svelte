@@ -2,6 +2,7 @@
     import { Button, Input, Label, Alert, Spinner } from 'flowbite-svelte';
     import { LockOpenSolid, LockSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { generateAccessCode } from '$lib/shared/validation.js';
@@ -18,7 +19,7 @@
     // Get reset code from URL query params
     onMount(() => {
         if (!data.leagueInfo) {
-            goto('/');
+            goto(resolve('/'));
             return;
         }
 
@@ -78,7 +79,7 @@
             async () => {
                 await leaguesService.resetAccessCode(resetCode.trim(), newAccessCode.trim());
                 setNotification('Access code updated successfully!', 'success');
-                goto(`/auth?code=${newAccessCode.trim()}`);
+                goto(resolve(`/auth?code=${newAccessCode.trim()}`));
             },
             (error) => {
                 console.error('Error updating access code:', error);
@@ -110,7 +111,7 @@
         <Alert class="glass flex items-center border">
             <ExclamationCircleSolid /><span>
                 This reset link is invalid or has expired. Please <a
-                    href="/auth/forgot"
+                    href={resolve('/auth/forgot')}
                     class="text-primary-600 hover:underline">request a new reset link</a
                 >.
             </span>
@@ -118,7 +119,7 @@
 
         <Button
             color="primary"
-            href="/auth"
+            href={resolve('/auth')}
             class="w-full">
             Return to Login
         </Button>

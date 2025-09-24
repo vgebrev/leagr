@@ -2,6 +2,7 @@
     import { TableBodyCell, TableBodyRow, Tooltip } from 'flowbite-svelte';
     import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import { page } from '$app/state';
     import { scale } from 'svelte/transition';
 
@@ -21,7 +22,7 @@
         // Navigate to player detail page, preserving date query parameter
         const dateParam = page.url.searchParams.get('date');
         const url = dateParam ? `/rankings/${player}?date=${dateParam}` : `/rankings/${player}`;
-        goto(url);
+        goto(resolve(url));
     }
 
     /** Handles sorting when a column header is clicked.

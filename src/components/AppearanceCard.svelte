@@ -4,6 +4,7 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
 
     let { detail, hasBorder = true } = $props();
 
@@ -26,7 +27,7 @@
      * @param {string} date - Date in YYYY-MM-DD format
      */
     function goToTableDate(date) {
-        goto(`/table?date=${date}`);
+        goto(resolve(`/table?date=${date}`));
     }
 </script>
 

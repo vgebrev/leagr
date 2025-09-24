@@ -2,6 +2,7 @@
     import { Button, Input, Label } from 'flowbite-svelte';
     import { LockOpenSolid, LockSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import {
@@ -21,13 +22,13 @@
     // Redirect if already authenticated or no league
     onMount(() => {
         if (!data.leagueInfo) {
-            goto('/');
+            goto(resolve('/'));
             return;
         }
 
         const authenticated = isAuthenticated(data.leagueId);
         if (authenticated) {
-            goto(redirectUrl);
+            goto(resolve(redirectUrl));
         }
     });
 
@@ -52,7 +53,7 @@
                 // Store the code and redirect
                 storeAccessCode(data.leagueId, accessCode.trim());
                 setNotification('Authentication successful!', 'success');
-                goto(redirectUrl);
+                goto(resolve(redirectUrl));
             } else {
                 setNotification('Invalid access code. Please try again.', 'error');
             }
@@ -98,7 +99,7 @@
     <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
         <p>
             <a
-                href="/auth/forgot"
+                href={resolve('/auth/forgot')}
                 class="text-primary-600 hover:underline">
                 Forgotten access code?
             </a>
