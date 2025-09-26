@@ -61,7 +61,7 @@
                 placeholder="Enter admin code"
                 required
                 classes={{ wrapper: 'w-full font-mono' }}
-                class="dark:bg-gray-800" />
+                class="!bg-gray-50 dark:!bg-gray-800" />
         </div>
 
         <Button

@@ -35,6 +35,7 @@
                 step={1}
                 min={0}
                 classes={{ wrapper: 'w-full' }}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button type="submit">
                 <CheckCircleSolid class="me-2 h-4 w-4" /> Set

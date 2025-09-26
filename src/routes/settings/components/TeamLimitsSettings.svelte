@@ -34,6 +34,7 @@
                 min={2}
                 max={leagueSettings.teamGeneration.maxTeams}
                 onchange={onSave}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
         </div>
 
@@ -47,6 +48,7 @@
                 min={leagueSettings.teamGeneration.minTeams}
                 max={5}
                 onchange={onSave}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
         </div>
     </div>
@@ -62,6 +64,7 @@
                 min={3}
                 max={leagueSettings.teamGeneration.maxPlayersPerTeam}
                 onchange={onSave}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
         </div>
 
@@ -75,6 +78,7 @@
                 min={leagueSettings.teamGeneration.minPlayersPerTeam}
                 max={15}
                 onchange={onSave}
+                class="!bg-gray-50 dark:!bg-gray-800"
                 required />
         </div>
     </div>
