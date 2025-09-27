@@ -15,11 +15,12 @@
      */
 
     /** @type {DisciplineSettingsProps} */
-    let { leagueSettings, onSave } = $props();
+    let { leagueSettings = $bindable(), onSave } = $props();
 </script>
 
 <div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
         bind:checked={leagueSettings.discipline.enabled}
         onchange={onSave}>
         Enable suspensions

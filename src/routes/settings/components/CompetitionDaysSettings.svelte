@@ -15,7 +15,7 @@
      */
 
     /** @type {CompetitionDaysSettingsProps} */
-    let { leagueSettings, onSave } = $props();
+    let { leagueSettings = $bindable(), onSave } = $props();
 
     /**
      * The days of the week options for the multiselect component.

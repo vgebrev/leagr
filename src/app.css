@@ -105,6 +105,29 @@ body {
     }
 }
 
+@layer utilities {
+    /* Prevent scroll anchoring shifts */
+    .overflow-anchor-none { overflow-anchor: none; }
+
+    /* Keep hidden toggle inputs in-flow to prevent focus scroll jumps */
+    label:has(input.leagr-toggle-input) {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        width: 100%;
+    }
+    input.leagr-toggle-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        margin: 0;
+        overflow: visible;
+        clip: auto;
+    }
+}
+
 /* Prefer stronger contrast if the user asks for it */
 @media (prefers-contrast: more) {
     .glass {

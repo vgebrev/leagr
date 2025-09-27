@@ -20,7 +20,7 @@
      */
 
     /** @type {CompetitionTimeControlsProps} */
-    let { leagueSettings, onSave, onUpdateStartDayOffset, onUpdateEndDayOffset } = $props();
+    let { leagueSettings = $bindable(), onSave, onUpdateStartDayOffset, onUpdateEndDayOffset } = $props();
 
     /**
      * The UI representation of the start day offset (positive number for display).
@@ -41,6 +41,7 @@
 
 <div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
         bind:checked={leagueSettings.registrationWindow.enabled}
         onchange={onSave}>
         Enable competition time controls

@@ -17,7 +17,7 @@
      */
 
     /** @type {TeamLimitsSettingsProps} */
-    let { leagueSettings, onSave } = $props();
+    let { leagueSettings = $bindable(), onSave } = $props();
 </script>
 
 <div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">

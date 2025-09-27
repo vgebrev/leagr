@@ -166,8 +166,8 @@
             {/snippet}
             <DaySettings
                 {date}
-                {daySettings}
-                {leagueSettings}
+                bind:daySettings
+                bind:leagueSettings
                 onSave={saveDaySettings} />
         </AccordionItem>
 
@@ -177,25 +177,25 @@
             {/snippet}
             <div class="section-dividers flex flex-col gap-2">
                 <PlayerLimitSettings
-                    {leagueSettings}
+                    bind:leagueSettings
                     onSave={saveLeagueSettings} />
                 <CompetitionDaysSettings
-                    {leagueSettings}
+                    bind:leagueSettings
                     onSave={saveLeagueSettings} />
                 <CompetitionTimeControls
-                    {leagueSettings}
+                    bind:leagueSettings
                     onSave={saveLeagueSettings}
                     onUpdateStartDayOffset={updateStartDayOffset}
                     onUpdateEndDayOffset={updateEndDayOffset} />
                 <TeamLimitsSettings
-                    {leagueSettings}
+                    bind:leagueSettings
                     onSave={saveLeagueSettings} />
                 <DisciplineSettings
-                    {leagueSettings}
+                    bind:leagueSettings
                     onSave={saveLeagueSettings} />
             </div>
             <BehaviorToggles
-                {leagueSettings}
+                bind:leagueSettings
                 onSave={saveLeagueSettings} />
         </AccordionItem>
 

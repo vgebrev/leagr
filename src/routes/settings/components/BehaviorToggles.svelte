@@ -11,23 +11,28 @@
      */
 
     /** @type {BehaviorTogglesProps} */
-    let { leagueSettings, onSave } = $props();
+    let { leagueSettings = $bindable(), onSave } = $props();
 </script>
 
 <div class="mt-2 space-y-3 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
         bind:checked={leagueSettings.canRegenerateTeams}
         onchange={onSave}>
         Allow team regeneration
     </Toggle>
     <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
         bind:checked={leagueSettings.canResetSchedule}
         onchange={onSave}>
         Allow schedule reset
     </Toggle>
     <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
         bind:checked={leagueSettings.seedTeams}
         onchange={onSave}>
         Balance teams using player rankings
     </Toggle>
 </div>
+
+<style lang="postcss"></style>

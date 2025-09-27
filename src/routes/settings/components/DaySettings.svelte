@@ -14,7 +14,7 @@
      */
 
     /** @type {DaySettingsProps} */
-    let { date, daySettings, leagueSettings, onSave } = $props();
+    let { date, daySettings = $bindable(), leagueSettings = $bindable(), onSave } = $props();
 
     /**
      * Handles the form submission for day settings.

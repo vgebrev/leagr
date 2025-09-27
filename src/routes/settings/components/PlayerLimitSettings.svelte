@@ -10,7 +10,7 @@
      */
 
     /** @type {PlayerLimitSettingsProps} */
-    let { leagueSettings, onSave } = $props();
+    let { leagueSettings = $bindable(), onSave } = $props();
 
     /**
      * Handles the form submission for league player limit settings.
