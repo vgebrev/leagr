@@ -107,7 +107,9 @@ body {
 
 @layer utilities {
     /* Prevent scroll anchoring shifts */
-    .overflow-anchor-none { overflow-anchor: none; }
+    .overflow-anchor-none {
+        overflow-anchor: none;
+    }
 
     /* Keep hidden toggle inputs in-flow to prevent focus scroll jumps */
     label:has(input.leagr-toggle-input) {

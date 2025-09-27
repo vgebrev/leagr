@@ -20,7 +20,12 @@
      */
 
     /** @type {CompetitionTimeControlsProps} */
-    let { leagueSettings = $bindable(), onSave, onUpdateStartDayOffset, onUpdateEndDayOffset } = $props();
+    let {
+        leagueSettings = $bindable(),
+        onSave,
+        onUpdateStartDayOffset,
+        onUpdateEndDayOffset
+    } = $props();
 
     /**
      * The UI representation of the start day offset (positive number for display).
