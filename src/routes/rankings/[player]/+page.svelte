@@ -17,6 +17,7 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     let player = $derived(page.params.player);
     let playerData = $state(null);
@@ -104,16 +105,18 @@
     async function handleLimitChange(newLimit) {
         dropdownOpen = false; // Close dropdown
 
-        // Update URL with new limit parameter
-        const url = new URL(page.url);
+        // Build an internal href preserving existing params
+        const params = new SvelteURLSearchParams(page.url.search);
         if (newLimit === null) {
-            url.searchParams.delete('limit');
+            params.delete('limit');
         } else {
-            url.searchParams.set('limit', newLimit.toString());
+            params.set('limit', String(newLimit));
         }
+        const query = params.toString();
+        const href = resolve(`${page.url.pathname}${query ? `?${query}` : ''}`);
 
-        // Update URL and reload data
-        await goto(resolve(url.toString()), { replaceState: true });
+        // Navigate without full reload and keep history tidy
+        await goto(href, { replaceState: true });
         await loadPlayerData();
     }
 
