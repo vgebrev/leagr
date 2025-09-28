@@ -7,7 +7,10 @@ describe('PlayerState', () => {
     beforeEach(() => {
         mockPlayers = { available: [], waitingList: [] };
         mockTeams = { 'Team A': [null, null], 'Team B': [null, null] };
-        mockSettings = { playerLimit: 4 };
+        mockSettings = {
+            playerLimit: 4,
+            teamGeneration: { maxPlayersPerTeam: 3 }
+        };
         playerState = new PlayerState(mockPlayers, mockTeams, mockSettings);
     });
 
@@ -243,14 +246,32 @@ describe('PlayerState', () => {
             );
         });
 
-        it('should throw error when team has no empty slots', () => {
-            playerState.players.available = ['John', 'Jane', 'Bob'];
-            playerState.teams['Team A'] = ['Jane', 'Bob']; // No empty slots
+        it('should throw error when team has reached maximum capacity', () => {
+            playerState.players.available = ['John', 'Jane', 'Bob', 'Alice'];
+            playerState.teams['Team A'] = ['Jane', 'Bob', 'Alice']; // At max capacity (3 players)
 
             expect(() => playerState.movePlayerToTeam('John', 'Team A')).toThrow(PlayerError);
             expect(() => playerState.movePlayerToTeam('John', 'Team A')).toThrow(
-                'Team Team A has no empty slots.'
+                'Team Team A has reached maximum capacity of 3 players.'
             );
+        });
+
+        it('should allow adding player to team with empty slots', () => {
+            playerState.players.available = ['John', 'Jane'];
+            playerState.teams['Team A'] = ['Jane', null]; // Has empty slot
+
+            const newState = playerState.movePlayerToTeam('John', 'Team A');
+
+            expect(newState.teams['Team A']).toEqual(['Jane', 'John']);
+        });
+
+        it('should allow adding player to team below max capacity', () => {
+            playerState.players.available = ['John', 'Jane', 'Bob'];
+            playerState.teams['Team A'] = ['Jane', 'Bob']; // 2 players, max is 3
+
+            const newState = playerState.movePlayerToTeam('John', 'Team A');
+
+            expect(newState.teams['Team A']).toEqual(['Jane', 'Bob', 'John']);
         });
 
         it('should throw error when moving from waiting exceeds player limit', () => {

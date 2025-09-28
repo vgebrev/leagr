@@ -49,16 +49,23 @@
         return assignedPlayerCount > 0 ? total / assignedPlayerCount : 0;
     });
 
-    // Get teams with empty slots for player assignment
+    // Get teams with available slots for player assignment
     const teamsWithEmptySlots = $derived.by(() => {
         if (!allTeams || Object.keys(allTeams).length === 0) {
             return [];
         }
 
+        const maxPlayersPerTeam = $settings.teamGeneration?.maxPlayersPerTeam || 7;
+
         return Object.keys(allTeams).filter((teamName) => {
             const team = allTeams[teamName];
             if (!team) return false;
-            return team.some((player) => player === null);
+
+            // Count actual players (non-null entries)
+            const currentPlayerCount = team.filter(player => player !== null).length;
+
+            // Team has space if it has null slots OR is below max capacity
+            return team.some((player) => player === null) || currentPlayerCount < maxPlayersPerTeam;
         });
     });
 

@@ -185,12 +185,22 @@ export class PlayerState {
 
         // Find an empty slot in the team
         const emptySlotIndex = newState.teams[teamName].findIndex((p) => p === null);
-        if (emptySlotIndex === -1) {
-            throw new PlayerError(`Team ${teamName} has no empty slots.`, 400);
-        }
 
-        // Assign to team
-        newState.teams[teamName][emptySlotIndex] = playerName;
+        if (emptySlotIndex === -1) {
+            // No null slots available, check if team is below max capacity
+            const currentPlayerCount = newState.teams[teamName].filter(p => p !== null).length;
+            const maxPlayersPerTeam = this.settings.teamGeneration?.maxPlayersPerTeam || 7;
+
+            if (currentPlayerCount >= maxPlayersPerTeam) {
+                throw new PlayerError(`Team ${teamName} has reached maximum capacity of ${maxPlayersPerTeam} players.`, 400);
+            }
+
+            // Team has space, add player to the end
+            newState.teams[teamName].push(playerName);
+        } else {
+            // Assign to existing empty slot
+            newState.teams[teamName][emptySlotIndex] = playerName;
+        }
 
         // Move from waiting to available if needed
         if (location.location === 'waiting') {
