@@ -60,7 +60,15 @@
         {@const Icon = iconMap[action.type]}
         <DropdownItem
             class="w-full font-normal dark:bg-gray-800"
-            onclick={action.onclick}
+            onclick={async () => {
+                try {
+                    await action.onclick();
+                } catch (error) {
+                    console.error('Action failed:', error);
+                } finally {
+                    isOpen = false;
+                }
+            }}
             disabled={action.disabled}>
             <span class="flex items-center">
                 {#if Icon}<Icon class="me-2 h-4 w-4" />{/if}
