@@ -100,11 +100,8 @@ export const POST = async ({ request, url, locals }) => {
             return error(400, operationValidation.error);
         }
 
-        // Get rankings for seeded teams
-        let rankings = null;
-        if (method === 'seeded') {
-            rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
-        }
+        // Get rankings for both seeded and random teams (needed for draw history ELO display)
+        const rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
 
         // Load teammate history for variance-conscious team generation
         let teammateHistory = null;

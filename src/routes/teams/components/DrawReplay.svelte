@@ -188,7 +188,7 @@
 
         // Start flying animation after a short delay
         createTimeout(() => {
-            startFlyingAnimation(step.player, step.toTeam, step.fromPot);
+            startFlyingAnimation(step.player, step.toTeam);
             // Fire confetti towards the end of the flying animation when player lands
             fireStepConfetti(step.toTeam);
         }, 400);
@@ -217,12 +217,25 @@
         currentStep++;
     }
 
-    function startFlyingAnimation(playerName, teamName, fromPot) {
+    function startFlyingAnimation(playerName, teamName) {
         // Enable flying state (player/team already set in animatingPlayer/Team)
         isFlying = true;
 
         // Calculate starting position (pot center)
-        const potElement = document.querySelector(`.pot:nth-child(${fromPot + 1})`);
+        // Find which pot element contains the specific player
+        let potElement;
+        const allPotElements = document.querySelectorAll('.pot');
+        for (const element of allPotElements) {
+            const playerElements = element.querySelectorAll('.flex.w-full .overflow-hidden');
+            for (const playerEl of playerElements) {
+                if (playerEl.textContent.trim() === playerName) {
+                    potElement = element;
+                    break;
+                }
+            }
+            if (potElement) break;
+        }
+
         const startRect = potElement?.getBoundingClientRect();
 
         if (startRect) {
@@ -483,42 +496,106 @@
                 class="shadow-lg">Reset</Tooltip>
         </div>
 
+        {#snippet potDisplay(potName, players)}
+            <div class="pot min-w-0 flex-1">
+                <Listgroup class="shadow-lg">
+                    <ListgroupItem
+                        class="bg-gray-400 px-2 py-1 text-xs font-bold text-gray-900 uppercase dark:bg-gray-500 dark:text-gray-200"
+                        >{potName}</ListgroupItem>
+                    {#each players as player (player.name)}
+                        <ListgroupItem
+                            class={`px-2 py-1 text-xs transition-all duration-500 ${
+                                animatingPlayer === player.name ? animatingPlayerClasses : ''
+                            } ${assignedPlayers.has(player.name) ? 'line-through opacity-50' : ''}`}>
+                            <div class="flex w-full items-center justify-between">
+                                <div
+                                    class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
+                                    {player.name}
+                                </div>
+                                {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
+                                    <div class="text-xs font-light whitespace-nowrap opacity-70">
+                                        {player.elo ?? player.rankingPoints}
+                                    </div>
+                                {/if}
+                            </div>
+                        </ListgroupItem>
+                    {/each}
+                </Listgroup>
+            </div>
+        {/snippet}
+
         <!-- Pots Section -->
         <div class="pots-section mb-2">
-            <div
-                class="pots-container flex gap-2"
-                style="width: 100%;">
-                {#each currentPots as pot, potIndex (potIndex)}
-                    <div class="pot min-w-0 flex-1">
-                        <Listgroup class="shadow-lg">
-                            <ListgroupItem
-                                class="bg-gray-400 px-2 py-1 text-xs font-bold text-gray-900 uppercase dark:bg-gray-500 dark:text-gray-200"
-                                >{pot.name}</ListgroupItem>
-                            {#each pot.players as player (player.name)}
-                                <ListgroupItem
-                                    class={`px-2 py-1 text-xs transition-all duration-500 ${
-                                        animatingPlayer === player.name
-                                            ? animatingPlayerClasses
-                                            : ''
-                                    } ${assignedPlayers.has(player.name) ? 'line-through opacity-50' : ''}`}>
-                                    <div class="flex w-full items-center justify-between">
-                                        <div
-                                            class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
-                                            {player.name}
-                                        </div>
-                                        {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
-                                            <div
-                                                class="text-xs font-light whitespace-nowrap opacity-70">
-                                                {player.elo ?? player.rankingPoints}
-                                            </div>
-                                        {/if}
-                                    </div>
-                                </ListgroupItem>
-                            {/each}
-                        </Listgroup>
+            {#if currentPots.length === 1}
+                <!-- Random draw: split single pot into grid layout -->
+                {@const teamCount = Object.keys(currentTeams).length}
+                {@const playersPerPot = teamCount * 2}
+                {@const totalColumns = Math.ceil(currentPots[0].players.length / playersPerPot)}
+                {@const createColumns = () => {
+                    const cols = [];
+                    for (let colIndex = 0; colIndex < totalColumns; colIndex++) {
+                        const startIndex = colIndex * playersPerPot;
+                        const endIndex = Math.min(
+                            startIndex + playersPerPot,
+                            currentPots[0].players.length
+                        );
+                        const columnPlayers = currentPots[0].players.slice(startIndex, endIndex);
+                        if (columnPlayers.length > 0) {
+                            cols.push({ index: colIndex, players: columnPlayers });
+                        }
+                    }
+                    return cols;
+                }}
+                {@const columns = createColumns()}
+                <div class="pots-container">
+                    <!-- Single spanning header for random teams -->
+                    <div
+                        class="rounded-t-lg bg-gray-400 px-2 py-1 text-center text-xs font-bold text-gray-900 uppercase shadow-lg dark:bg-gray-500 dark:text-gray-200">
+                        All Players
                     </div>
-                {/each}
-            </div>
+                    <!-- Grid of player columns -->
+                    <div
+                        class="grid gap-x-2"
+                        style="grid-template-columns: repeat({totalColumns}, 1fr);">
+                        {#each columns as column (column.index)}
+                            <div class="pot min-w-0 flex-1">
+                                <Listgroup class="rounded-t-none shadow-lg">
+                                    {#each column.players as player (player.name)}
+                                        <ListgroupItem
+                                            class={`px-2 py-1 text-xs transition-all duration-500 ${
+                                                animatingPlayer === player.name
+                                                    ? animatingPlayerClasses
+                                                    : ''
+                                            } ${assignedPlayers.has(player.name) ? 'line-through opacity-50' : ''}`}>
+                                            <div class="flex w-full items-center justify-between">
+                                                <div
+                                                    class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
+                                                    {player.name}
+                                                </div>
+                                                {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
+                                                    <div
+                                                        class="text-xs font-light whitespace-nowrap opacity-70">
+                                                        {player.elo ?? player.rankingPoints}
+                                                    </div>
+                                                {/if}
+                                            </div>
+                                        </ListgroupItem>
+                                    {/each}
+                                </Listgroup>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {:else}
+                <!-- Seeded draw: keep original flex layout -->
+                <div
+                    class="pots-container flex gap-2"
+                    style="width: 100%;">
+                    {#each currentPots as pot, potIndex (potIndex)}
+                        {@render potDisplay(pot.name, pot.players)}
+                    {/each}
+                </div>
+            {/if}
         </div>
 
         <!-- Teams Section -->
