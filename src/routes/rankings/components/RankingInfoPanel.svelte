@@ -8,7 +8,7 @@
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
         'Team Bonus: 0-6pts based on final team position and number of teams',
-        'Knockout Bonus: 3pts for each knockout match won'
+        'Knockout Bonus: 4pts for each knockout match won'
     ];
 
     const rankingInfo = [
