@@ -6,6 +6,9 @@ const config = {
         alias: {
             $lib: 'src/lib',
             $components: 'src/components'
+        },
+        csrf: {
+            checkOrigin: false
         }
     }
 };
