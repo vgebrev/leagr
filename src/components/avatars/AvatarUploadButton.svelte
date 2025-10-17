@@ -3,9 +3,9 @@
     import Avatar from './Avatar.svelte';
 
     /**
-     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onUpload: (file: File) => Promise<void> }}
+     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onUpload: (file: File) => Promise<void> }}
      */
-    let { avatarUrl = null, status = null, size = 'lg', onUpload } = $props();
+    let { avatarUrl = null, hasPendingAvatar = false, size = 'lg', onUpload } = $props();
 
     let uploading = $state(false);
     let fileInput = $state(null);
@@ -40,7 +40,7 @@
 
     <Avatar
         {avatarUrl}
-        {status}
+        {hasPendingAvatar}
         {size}
         canUpload={!uploading}
         onclick={triggerFileInput} />

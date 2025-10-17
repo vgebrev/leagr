@@ -229,7 +229,7 @@ export class AvatarManager {
     /**
      * Update player avatar metadata in rankings.json
      * @param {string} playerName
-     * @param {Object} avatarData - { avatar: filename, avatarStatus: status }
+     * @param {Object} avatarData - { avatar?: filename, pendingAvatar?: filename }
      */
     async updatePlayerAvatar(playerName, avatarData) {
         const mutex = this.getRankingsMutex();
@@ -247,8 +247,12 @@ export class AvatarManager {
             if (avatarData.avatar !== undefined) {
                 rankings.players[playerName].avatar = avatarData.avatar;
             }
-            if (avatarData.avatarStatus !== undefined) {
-                rankings.players[playerName].avatarStatus = avatarData.avatarStatus;
+            if (avatarData.pendingAvatar !== undefined) {
+                if (avatarData.pendingAvatar === null) {
+                    delete rankings.players[playerName].pendingAvatar;
+                } else {
+                    rankings.players[playerName].pendingAvatar = avatarData.pendingAvatar;
+                }
             }
 
             await this.saveRankingsUnsafe(rankings);
@@ -258,19 +262,19 @@ export class AvatarManager {
     /**
      * Get player avatar info
      * @param {string} playerName
-     * @returns {Promise<{avatar: string|null, avatarStatus: string|null}>}
+     * @returns {Promise<{avatar: string|null, pendingAvatar: string|null}>}
      */
     async getPlayerAvatar(playerName) {
         const rankings = await this.loadRankings();
         const player = rankings.players[playerName];
 
         if (!player) {
-            return { avatar: null, avatarStatus: null };
+            return { avatar: null, pendingAvatar: null };
         }
 
         return {
             avatar: player.avatar || null,
-            avatarStatus: player.avatarStatus || null
+            pendingAvatar: player.pendingAvatar || null
         };
     }
 
@@ -283,8 +287,8 @@ export class AvatarManager {
         const pending = [];
 
         for (const [name, data] of Object.entries(rankings.players)) {
-            if (data.avatarStatus === 'pending' && data.avatar) {
-                pending.push({ name, avatar: data.avatar });
+            if (data.pendingAvatar) {
+                pending.push({ name, avatar: data.pendingAvatar });
             }
         }
 
@@ -296,15 +300,18 @@ export class AvatarManager {
      * @param {string} playerName
      */
     async deletePlayerAvatar(playerName) {
-        const { avatar } = await this.getPlayerAvatar(playerName);
+        const { avatar, pendingAvatar } = await this.getPlayerAvatar(playerName);
 
         if (avatar) {
             await this.deleteFile(avatar);
         }
+        if (pendingAvatar) {
+            await this.deleteFile(pendingAvatar);
+        }
 
         await this.updatePlayerAvatar(playerName, {
             avatar: null,
-            avatarStatus: null
+            pendingAvatar: null
         });
     }
 

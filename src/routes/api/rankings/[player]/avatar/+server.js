@@ -34,25 +34,23 @@ export async function POST({ request, params, locals }) {
         const { buffer } = await avatarManager.validateUpload(file);
         const processedBuffer = await avatarManager.processImage(buffer);
 
-        // Delete old avatar if exists
-        const { avatar: oldAvatar } = await avatarManager.getPlayerAvatar(player);
-        if (oldAvatar) {
-            await avatarManager.deleteFile(oldAvatar);
+        // Delete old pending avatar if exists
+        const { pendingAvatar: oldPendingAvatar } = await avatarManager.getPlayerAvatar(player);
+        if (oldPendingAvatar) {
+            await avatarManager.deleteFile(oldPendingAvatar);
         }
 
         // Save new avatar
         const filename = await avatarManager.saveFile(processedBuffer);
 
-        // Update rankings metadata with pending status
+        // Update rankings metadata with pending avatar
         await avatarManager.updatePlayerAvatar(player, {
-            avatar: filename,
-            avatarStatus: 'pending'
+            pendingAvatar: filename
         });
 
         return json({
             success: true,
-            avatar: filename,
-            avatarStatus: 'pending',
+            pendingAvatar: filename,
             message: 'Avatar uploaded successfully and is pending approval'
         });
     } catch (err) {
@@ -65,7 +63,7 @@ export async function POST({ request, params, locals }) {
 }
 
 /** @type {import('./$types').RequestHandler} */
-export async function GET({ params, locals }) {
+export async function GET({ params, locals, url }) {
     const { player } = params;
 
     if (!player) {
@@ -80,22 +78,31 @@ export async function GET({ params, locals }) {
     const avatarManager = createAvatarManager().setLeague(leagueId);
 
     try {
-        const { avatar } = await avatarManager.getPlayerAvatar(player);
+        // Check if requesting pending avatar
+        const showPending = url.searchParams.get('pending') === 'true';
+        const { avatar, pendingAvatar } = await avatarManager.getPlayerAvatar(player);
 
-        // Serve avatar if it exists - approval status is a frontend concern
-        if (!avatar) {
+        // Determine which avatar to serve
+        const avatarToServe = showPending ? pendingAvatar : avatar;
+
+        if (!avatarToServe) {
             throw error(404, 'Avatar not found');
         }
 
-        const avatarPath = avatarManager.getAvatarFilePath(avatar);
+        const avatarPath = avatarManager.getAvatarFilePath(avatarToServe);
 
         try {
             const fileBuffer = await fs.readFile(avatarPath);
 
+            // Use shorter cache for pending avatars to avoid stale cache issues
+            const cacheControl = showPending
+                ? 'public, max-age=60, must-revalidate' // 1 minute for pending
+                : 'public, max-age=604800'; // 1 week for approved
+
             return new Response(fileBuffer, {
                 headers: {
                     'Content-Type': 'image/webp',
-                    'Cache-Control': 'public, max-age=604800' // Cache for 1 week
+                    'Cache-Control': cacheControl
                 }
             });
         } catch {
@@ -138,20 +145,20 @@ export async function PATCH({ request, params, locals }) {
         }
 
         // Get current avatar info
-        const { avatar } = await avatarManager.getPlayerAvatar(player);
+        const { avatar: currentAvatar, pendingAvatar } =
+            await avatarManager.getPlayerAvatar(player);
 
-        if (!avatar) {
-            throw error(404, 'No avatar found for this player');
+        if (!pendingAvatar) {
+            throw error(404, 'No pending avatar found for this player');
         }
 
-        // If rejected, delete the file
+        // If rejected, delete the pending avatar file
         if (status === 'rejected') {
-            await avatarManager.deleteFile(avatar);
+            await avatarManager.deleteFile(pendingAvatar);
 
-            // Update metadata
+            // Clear pendingAvatar metadata
             await avatarManager.updatePlayerAvatar(player, {
-                avatar: null,
-                avatarStatus: 'rejected'
+                pendingAvatar: null
             });
 
             return json({
@@ -161,9 +168,14 @@ export async function PATCH({ request, params, locals }) {
             });
         }
 
-        // Approve avatar
+        // Approve: delete old avatar if exists, move pending to avatar
+        if (currentAvatar) {
+            await avatarManager.deleteFile(currentAvatar);
+        }
+
         await avatarManager.updatePlayerAvatar(player, {
-            avatarStatus: 'approved'
+            avatar: pendingAvatar,
+            pendingAvatar: null
         });
 
         return json({

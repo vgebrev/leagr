@@ -105,7 +105,7 @@ export async function GET({ params, locals, url }) {
             playerData: {
                 ...cleanPlayerData,
                 avatar: cleanPlayerData.avatar || null,
-                avatarStatus: cleanPlayerData.avatarStatus || null,
+                pendingAvatar: cleanPlayerData.pendingAvatar || null,
                 details: details // Single source of truth - client handles sorting/filtering
             },
             rankingMetadata: rankings.rankingMetadata,

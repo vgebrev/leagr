@@ -78,12 +78,12 @@
     <div class="text-center text-gray-500 dark:text-gray-400">No pending avatars to review</div>
 {:else}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {#each pending as { name } (name)}
+        {#each pending as { name, avatar } (name)}
             <Card class="flex flex-col items-center gap-4 p-4">
                 <Avatar
-                    avatarUrl={`/api/rankings/${encodeURIComponent(name)}/avatar`}
-                    status="pending"
-                    forceShow={true}
+                    avatarUrl={`/api/rankings/${encodeURIComponent(name)}/avatar?pending=true&v=${encodeURIComponent(avatar)}`}
+                    hasPendingAvatar={false}
+                    showPendingOnly={true}
                     size="xl" />
                 <p class="text-center font-semibold">{name}</p>
                 <ButtonGroup class="w-full">

@@ -1,23 +1,23 @@
 <script>
     import { Avatar, Indicator } from 'flowbite-svelte';
-    import { CameraPhotoOutline, ClockOutline, CloseOutline } from 'flowbite-svelte-icons';
+    import { CameraPhotoOutline, ClockOutline } from 'flowbite-svelte-icons';
 
     /**
-     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, canUpload?: boolean, forceShow?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
      */
     let {
         avatarUrl = null,
-        status = null,
+        hasPendingAvatar = false,
         canUpload = false,
-        forceShow = false,
+        showPendingOnly = false,
         size = 'lg',
         onclick = undefined
     } = $props();
 
-    // Show approved avatar or force show (for admin review) or null for icon fallback
-    let displayAvatarUrl = $derived(
-        (status === 'approved' || forceShow) && avatarUrl ? avatarUrl : undefined
-    );
+    // Display logic:
+    // - If showPendingOnly: show avatarUrl (which should be the pending avatar URL)
+    // - Otherwise: show avatarUrl (which should be the approved avatar URL)
+    let displayAvatarUrl = $derived(avatarUrl || undefined);
 
     // Determine if clickable
     let isClickable = $derived(canUpload || !!onclick);
@@ -36,7 +36,7 @@
             src={displayAvatarUrl}
             {size}>
             {#snippet indicator()}
-                {#if status === 'pending'}
+                {#if hasPendingAvatar && !showPendingOnly}
                     <Indicator
                         color={undefined}
                         border
@@ -44,14 +44,6 @@
                         placement="top-right"
                         class="bg-gray-200 ring-gray-800 dark:bg-gray-800 dark:ring-gray-200">
                         <ClockOutline class="h-4 w-4 text-gray-700 dark:text-gray-200" />
-                    </Indicator>
-                {:else if status === 'rejected'}
-                    <Indicator
-                        color="red"
-                        border
-                        size="xl"
-                        placement="top-right">
-                        <CloseOutline class="h-4 w-4 text-white" />
                     </Indicator>
                 {:else if canUpload && !displayAvatarUrl}
                     <Indicator

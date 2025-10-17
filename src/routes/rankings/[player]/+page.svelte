@@ -144,10 +144,13 @@
         );
     }
 
-    // Derived avatar URL
+    // Derived avatar URL (show approved avatar, not pending)
     let avatarUrl = $derived(
         playerData?.avatar ? `/api/rankings/${encodeURIComponent(player)}/avatar` : null
     );
+
+    // Check if there's a pending avatar
+    let hasPendingAvatar = $derived(!!playerData?.pendingAvatar);
 
     onMount(loadPlayerData);
 </script>
@@ -163,7 +166,7 @@
             {#if playerData}
                 <AvatarUploadButton
                     {avatarUrl}
-                    status={playerData.avatarStatus}
+                    {hasPendingAvatar}
                     size="lg"
                     onUpload={handleAvatarUpload} />
             {/if}
