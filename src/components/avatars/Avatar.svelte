@@ -1,12 +1,16 @@
 <script>
     import { Avatar, Indicator } from 'flowbite-svelte';
-    import { CameraPhotoOutline, ClockOutline, CloseOutline } from 'flowbite-svelte-icons';
+    import {
+        CameraPhotoOutline,
+        ClockOutline,
+        CloseOutline,
+        UserSolid
+    } from 'flowbite-svelte-icons';
 
     /**
-     * @type {{ playerName: string, avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, canUpload?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, canUpload?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
      */
     let {
-        playerName,
         avatarUrl = null,
         status = null,
         canUpload = false,
@@ -14,18 +18,8 @@
         onclick = undefined
     } = $props();
 
-    // Generate initials from player name
-    let initials = $derived(
-        playerName
-            ?.split(' ')
-            .map((n) => n[0])
-            .join('')
-            .toUpperCase()
-            .slice(0, 2) || '?'
-    );
-
-    // Show approved avatar or null for initials fallback
-    let displayAvatarUrl = $derived(status === 'approved' && avatarUrl ? avatarUrl : null);
+    // Show approved avatar or null for icon fallback
+    let displayAvatarUrl = $derived(status === 'approved' && avatarUrl ? avatarUrl : undefined);
 
     // Determine if clickable
     let isClickable = $derived(canUpload || !!onclick);
@@ -74,7 +68,7 @@
             {/snippet}
 
             {#if !displayAvatarUrl}
-                <h1 class="text-3xl font-bold">{initials}</h1>
+                <UserSolid class="h-full w-full text-gray-500 dark:text-gray-400" />
             {/if}
         </Avatar>
 

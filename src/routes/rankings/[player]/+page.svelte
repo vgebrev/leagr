@@ -161,10 +161,9 @@
 <div class="container mx-auto">
     <!-- Header -->
     <div class="mb-2 flex items-start justify-between">
-        <div class="flex items-center gap-4">
+        <div class="ms-2 flex items-center gap-4">
             {#if playerData}
                 <AvatarUploadButton
-                    playerName={player}
                     {avatarUrl}
                     status={playerData.avatarStatus}
                     size="lg"

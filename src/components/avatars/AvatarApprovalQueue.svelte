@@ -17,8 +17,7 @@
         loadingError = false;
         await withLoading(
             async () => {
-                const response = await api.get('players/pending-avatars');
-                pending = response;
+                pending = await api.get('players/pending-avatars');
             },
             (err) => {
                 console.error('Error loading pending avatars:', err);
@@ -81,7 +80,6 @@
         {#each pending as { name } (name)}
             <Card class="flex flex-col items-center gap-4 p-4">
                 <Avatar
-                    playerName={name}
                     avatarUrl={`/api/rankings/${encodeURIComponent(name)}/avatar`}
                     status="pending"
                     size="xl" />

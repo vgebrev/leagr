@@ -3,9 +3,9 @@
     import Avatar from './Avatar.svelte';
 
     /**
-     * @type {{ playerName: string, avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onUpload: (file: File) => Promise<void> }}
+     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onUpload: (file: File) => Promise<void> }}
      */
-    let { playerName, avatarUrl = null, status = null, size = 'lg', onUpload } = $props();
+    let { avatarUrl = null, status = null, size = 'lg', onUpload } = $props();
 
     let uploading = $state(false);
     let fileInput = $state(null);
@@ -39,7 +39,6 @@
         disabled={uploading} />
 
     <Avatar
-        {playerName}
         {avatarUrl}
         {status}
         {size}
