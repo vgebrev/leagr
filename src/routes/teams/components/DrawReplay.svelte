@@ -24,6 +24,12 @@
 
     let { drawHistory, open = $bindable(false) } = $props();
 
+    // Reverse the draw history to show lowest ELO players first for drama
+    let reversedDrawHistory = $derived.by(() => {
+        if (!drawHistory?.drawHistory) return [];
+        return [...drawHistory.drawHistory].reverse();
+    });
+
     let isPlaying = $state(false);
     let currentStep = $state(0);
     let intervalId = null;
@@ -92,14 +98,14 @@
 
     // Current teams state (players get added as they're assigned, using completedSteps for delayed updates)
     let currentTeams = $derived.by(() => {
-        if (!drawHistory?.drawHistory) return {};
+        if (!reversedDrawHistory.length) return {};
 
         // Get all unique team names and their target sizes from the full draw history
         const teamSizes = {};
-        drawHistory.drawHistory.forEach((step) => {
+        reversedDrawHistory.forEach((step) => {
             if (!teamSizes[step.toTeam]) {
                 // Count how many players this team should have in total
-                teamSizes[step.toTeam] = drawHistory.drawHistory.filter(
+                teamSizes[step.toTeam] = reversedDrawHistory.filter(
                     (s) => s.toTeam === step.toTeam
                 ).length;
             }
@@ -112,11 +118,12 @@
         });
 
         // Fill in assigned players at their correct positions (using completedSteps)
+        // Fill from bottom to top for drama
         for (let i = 0; i < completedSteps; i++) {
-            const step = drawHistory.drawHistory[i];
+            const step = reversedDrawHistory[i];
             if (step && teams[step.toTeam]) {
-                // Find first null slot and assign the player
-                const nullIndex = teams[step.toTeam].findIndex((slot) => slot === null);
+                // Find last null slot and assign the player (fill from bottom to top)
+                const nullIndex = teams[step.toTeam].findLastIndex((slot) => slot === null);
                 if (nullIndex !== -1) {
                     teams[step.toTeam][nullIndex] = step.player;
                 }
@@ -161,7 +168,7 @@
     });
 
     function play() {
-        if (currentStep >= drawHistory.drawHistory.length) {
+        if (currentStep >= reversedDrawHistory.length) {
             reset();
         }
 
@@ -178,9 +185,9 @@
     }
 
     function nextStep() {
-        if (currentStep >= drawHistory.drawHistory.length) return;
+        if (currentStep >= reversedDrawHistory.length) return;
 
-        const step = drawHistory.drawHistory[currentStep];
+        const step = reversedDrawHistory[currentStep];
 
         // Start pulse animation in pot
         animatingPlayer = step.player;
@@ -205,9 +212,9 @@
             // Add a small gap before next step
             createTimeout(() => {
                 // Continue with next step if playing
-                if (isPlaying && currentStep < drawHistory.drawHistory.length) {
+                if (isPlaying && currentStep < reversedDrawHistory.length) {
                     nextStep();
-                } else if (currentStep >= drawHistory.drawHistory.length) {
+                } else if (currentStep >= reversedDrawHistory.length) {
                     pause();
                 }
             }, 300); // 300ms gap between steps
@@ -293,7 +300,7 @@
         // Rebuild completedAnimations based on completedSteps
         const newCompleted = new SvelteSet();
         for (let i = 0; i < completedSteps; i++) {
-            const step = drawHistory.drawHistory[i];
+            const step = reversedDrawHistory[i];
             if (step) {
                 newCompleted.add(step.player);
             }
@@ -459,7 +466,7 @@
                     id="next-button"
                     size="xs"
                     onclick={nextStep}
-                    disabled={currentStep >= drawHistory.drawHistory.length}>
+                    disabled={currentStep >= reversedDrawHistory.length}>
                     <ForwardStepSolid class="h-4 w-4" />
                 </Button>
 
