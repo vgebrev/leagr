@@ -34,7 +34,6 @@
         bind:this={fileInput}
         type="file"
         accept="image/*"
-        capture="user"
         class="hidden"
         onchange={handleFileSelect}
         disabled={uploading} />
