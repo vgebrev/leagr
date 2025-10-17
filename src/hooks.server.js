@@ -142,6 +142,26 @@ function checkApiKey(request) {
     return apiKey && apiKey === API_KEY;
 }
 
+// Public endpoints that don't require league access code
+const publicEndpoints = [
+    { method: '*', pattern: /^\/api\/leagues/ },
+    { method: 'GET', pattern: /^\/api\/rankings\/[^/]+\/avatar$/ }
+];
+
+/**
+ * Check if the request is for a public endpoint
+ * @param {string} method - HTTP method
+ * @param {string} pathname - Request pathname
+ * @returns {boolean}
+ */
+function isPublicEndpoint(method, pathname) {
+    return publicEndpoints.some(
+        (endpoint) =>
+            (endpoint.method === '*' || endpoint.method === method) &&
+            endpoint.pattern.test(pathname)
+    );
+}
+
 export const handle = async ({ event, resolve }) => {
     const ip = getIp(event);
     const { url, request } = event;
@@ -170,18 +190,20 @@ export const handle = async ({ event, resolve }) => {
     const { allowed, origin } = isOriginAllowed(request);
 
     if (url.pathname.startsWith('/api/')) {
+        const isPublic = isPublicEndpoint(request.method, url.pathname);
+
         if (!allowed) {
             // Use 401 so the client does not treat this as a league auth failure (403 triggers logout)
             return new Response(JSON.stringify({ message: 'Origin not allowed' }), { status: 401 });
         }
 
-        if (!checkApiKey(request)) {
+        if (!isPublic && !checkApiKey(request)) {
             return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
         }
 
-        // Require client identification for all API endpoints
+        // Require client identification for all API endpoints (except public)
         const clientId = request.headers.get('x-client-id');
-        if (!clientId) {
+        if (!isPublic && !clientId) {
             return new Response(JSON.stringify({ message: 'Unidentified Client' }), {
                 status: 400
             });
@@ -190,14 +212,14 @@ export const handle = async ({ event, resolve }) => {
         // Apply rule-based rate-limiting (first matching rule)
         const rule = pickRateRule(request.method, url.pathname);
         if (rule) {
-            const composite = `${ip}|${clientId}`;
+            const composite = `${ip}|${clientId || 'public'}`;
             if (isRateLimitedFor(rule, composite)) {
                 return new Response(JSON.stringify({ message: rule.message }), { status: 429 });
             }
         }
 
-        // Check access code for API requests (except public league endpoints)
-        if (!url.pathname.startsWith('/api/leagues')) {
+        // Check access code for API requests (except public endpoints)
+        if (!isPublic) {
             const accessCode = request.headers.get('authorization');
 
             // Must have league info and access code for protected endpoints

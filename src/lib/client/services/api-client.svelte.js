@@ -173,6 +173,32 @@ async function postDirect(endpoint, value) {
     return await response.json();
 }
 
+async function postFormData(endpoint, formData) {
+    const url = `${baseUrl}/${endpoint}`;
+    const headers = getAuthHeaders();
+    // Remove Content-Type header - browser will set it with boundary for FormData
+    delete headers['Content-Type'];
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: formData
+    });
+    if (!response.ok) {
+        handleAuthError(response);
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
+    }
+
+    return await response.json();
+}
+
 async function remove(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const response = await fetch(url, {
@@ -215,10 +241,34 @@ async function patch(key, date, value) {
     return await response.json();
 }
 
+async function patchDirect(endpoint, value) {
+    const url = `${baseUrl}/${endpoint}`;
+    const response = await fetch(url, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(value)
+    });
+    if (!response.ok) {
+        handleAuthError(response);
+        const errorData = await response
+            .json()
+            .catch(() => ({ message: `HTTP error! status: ${response.status}` }));
+        throw new HttpError(
+            errorData.message || `HTTP error! status: ${response.status}`,
+            response.status,
+            errorData
+        );
+    }
+
+    return await response.json();
+}
+
 export const api = {
     get,
     post,
     postDirect,
+    postFormData,
     remove,
-    patch
+    patch,
+    patchDirect
 };

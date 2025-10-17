@@ -122,7 +122,7 @@
 
         try {
             const response = await api.get('players/pending-avatars');
-            pendingAvatarsCount = response.length;
+            pendingAvatarsCount = response.count || 0;
         } catch (err) {
             // Silently fail - not critical
             console.error('Error loading pending avatars count:', err);

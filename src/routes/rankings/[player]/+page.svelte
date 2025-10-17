@@ -130,9 +130,7 @@
 
         await withLoading(
             async () => {
-                await api.post(`rankings/${encodeURIComponent(player)}/avatar`, formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
+                await api.postFormData(`rankings/${encodeURIComponent(player)}/avatar`, formData);
                 await loadPlayerData(); // Refresh player data
                 setNotification('Avatar uploaded! Pending admin approval.', 'success');
             },

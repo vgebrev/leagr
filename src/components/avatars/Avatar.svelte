@@ -1,25 +1,23 @@
 <script>
     import { Avatar, Indicator } from 'flowbite-svelte';
-    import {
-        CameraPhotoOutline,
-        ClockOutline,
-        CloseOutline,
-        UserSolid
-    } from 'flowbite-svelte-icons';
+    import { CameraPhotoOutline, ClockOutline, CloseOutline } from 'flowbite-svelte-icons';
 
     /**
-     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, canUpload?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, status?: 'pending' | 'rejected' | 'approved' | null, canUpload?: boolean, forceShow?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
      */
     let {
         avatarUrl = null,
         status = null,
         canUpload = false,
+        forceShow = false,
         size = 'lg',
         onclick = undefined
     } = $props();
 
-    // Show approved avatar or null for icon fallback
-    let displayAvatarUrl = $derived(status === 'approved' && avatarUrl ? avatarUrl : undefined);
+    // Show approved avatar or force show (for admin review) or null for icon fallback
+    let displayAvatarUrl = $derived(
+        (status === 'approved' || forceShow) && avatarUrl ? avatarUrl : undefined
+    );
 
     // Determine if clickable
     let isClickable = $derived(canUpload || !!onclick);
@@ -34,9 +32,9 @@
         {onclick}
         disabled={!isClickable}>
         <Avatar
+            border={true}
             src={displayAvatarUrl}
-            {size}
-            class="ring-2 ring-gray-300 dark:ring-gray-600">
+            {size}>
             {#snippet indicator()}
                 {#if status === 'pending'}
                     <Indicator
@@ -67,9 +65,9 @@
                 {/if}
             {/snippet}
 
-            {#if !displayAvatarUrl}
-                <UserSolid class="h-full w-full text-gray-500 dark:text-gray-400" />
-            {/if}
+            <!--{#if !displayAvatarUrl}-->
+            <!--    <UserSolid class="h-full w-full text-gray-500 dark:text-gray-400" />-->
+            <!--{/if}-->
         </Avatar>
 
         {#if canUpload && !displayAvatarUrl}

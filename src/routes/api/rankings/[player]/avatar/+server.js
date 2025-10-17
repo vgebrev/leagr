@@ -1,6 +1,5 @@
 import { json, error } from '@sveltejs/kit';
 import { validateLeagueForAPI } from '$lib/server/league.js';
-import { PlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createAvatarManager, AvatarError } from '$lib/server/avatarManager.js';
 import fs from 'fs/promises';
 
@@ -17,15 +16,8 @@ export async function POST({ request, params, locals }) {
         throw error(404, 'League not found');
     }
 
-    // Check ownership (admin can bypass)
-    const clientId = request.headers.get('x-client-id');
-    const accessControl = new PlayerAccessControl(locals.isAdmin);
-
-    try {
-        await accessControl.validatePlayerAccess(player, clientId, leagueId);
-    } catch (err) {
-        throw error(403, err.message || 'Access denied');
-    }
+    // No access control - anyone can upload an avatar for any player
+    // Admin approval is required before the avatar is displayed
 
     const avatarManager = createAvatarManager().setLeague(leagueId);
 
@@ -88,10 +80,10 @@ export async function GET({ params, locals }) {
     const avatarManager = createAvatarManager().setLeague(leagueId);
 
     try {
-        const { avatar, avatarStatus } = await avatarManager.getPlayerAvatar(player);
+        const { avatar } = await avatarManager.getPlayerAvatar(player);
 
-        // Only serve approved avatars (admins can see all)
-        if (!avatar || (avatarStatus !== 'approved' && !locals.isAdmin)) {
+        // Serve avatar if it exists - approval status is a frontend concern
+        if (!avatar) {
             throw error(404, 'Avatar not found');
         }
 
@@ -189,7 +181,7 @@ export async function PATCH({ request, params, locals }) {
 }
 
 /** @type {import('./$types').RequestHandler} */
-export async function DELETE({ request, params, locals }) {
+export async function DELETE({ params, locals }) {
     const { player } = params;
 
     if (!player) {
@@ -201,15 +193,8 @@ export async function DELETE({ request, params, locals }) {
         throw error(404, 'League not found');
     }
 
-    // Check ownership (admin can bypass)
-    const clientId = request.headers.get('x-client-id');
-    const accessControl = new PlayerAccessControl(locals.isAdmin);
-
-    try {
-        await accessControl.validatePlayerAccess(player, clientId, leagueId);
-    } catch (err) {
-        throw error(403, err.message || 'Access denied');
-    }
+    // No access control - anyone can delete an avatar
+    // This is used for users to remove their own avatars
 
     const avatarManager = createAvatarManager().setLeague(leagueId);
 

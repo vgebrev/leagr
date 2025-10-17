@@ -17,7 +17,8 @@
         loadingError = false;
         await withLoading(
             async () => {
-                pending = await api.get('players/pending-avatars');
+                const response = await api.get('players/pending-avatars');
+                pending = response.pending || [];
             },
             (err) => {
                 console.error('Error loading pending avatars:', err);
@@ -33,7 +34,7 @@
     async function approve(playerName) {
         await withLoading(
             async () => {
-                await api.patch(`rankings/${encodeURIComponent(playerName)}/avatar`, {
+                await api.patchDirect(`rankings/${encodeURIComponent(playerName)}/avatar`, {
                     status: 'approved'
                 });
                 setNotification(`Avatar approved for ${playerName}`, 'success');
@@ -52,7 +53,7 @@
     async function reject(playerName) {
         await withLoading(
             async () => {
-                await api.patch(`rankings/${encodeURIComponent(playerName)}/avatar`, {
+                await api.patchDirect(`rankings/${encodeURIComponent(playerName)}/avatar`, {
                     status: 'rejected'
                 });
                 setNotification(`Avatar rejected for ${playerName}`, 'info');
@@ -82,6 +83,7 @@
                 <Avatar
                     avatarUrl={`/api/rankings/${encodeURIComponent(name)}/avatar`}
                     status="pending"
+                    forceShow={true}
                     size="xl" />
                 <p class="text-center font-semibold">{name}</p>
                 <ButtonGroup class="w-full">
