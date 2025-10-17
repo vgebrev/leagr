@@ -42,8 +42,8 @@
                         border
                         size="xl"
                         placement="top-right"
-                        class="bg-gray-200 ring-gray-800 dark:bg-gray-800 dark:ring-gray-200">
-                        <ClockOutline class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+                        class="border-gray-200 bg-gray-200 opacity-75 dark:border-gray-700 dark:bg-gray-800">
+                        <ClockOutline class="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Indicator>
                 {:else if canUpload && !displayAvatarUrl}
                     <Indicator
@@ -51,8 +51,8 @@
                         border
                         size="xl"
                         placement="top-right"
-                        class="bg-gray-200 ring-gray-800 dark:bg-gray-800 dark:ring-gray-200">
-                        <CameraPhotoOutline class="h-4 w-4 text-gray-700 dark:text-gray-200" />
+                        class="border-gray-200 bg-gray-200 opacity-75 dark:border-gray-700 dark:bg-gray-800">
+                        <CameraPhotoOutline class="h-4 w-4 text-gray-600 dark:text-gray-400" />
                     </Indicator>
                 {/if}
             {/snippet}
