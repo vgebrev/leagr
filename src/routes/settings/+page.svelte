@@ -225,11 +225,11 @@
                     class="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
                     Avatar Approvals
                     {#if pendingAvatarsCount > 0}
-                        <Badge color="yellow">{pendingAvatarsCount}</Badge>
+                        <Badge color="primary">{pendingAvatarsCount}</Badge>
                     {/if}
                 </span>
             {/snippet}
-            <AvatarApprovalQueue />
+            <AvatarApprovalQueue onCountChange={(count) => (pendingAvatarsCount = count)} />
         </AccordionItem>
 
         <AccordionItem classes={{ button: 'p-2', content: 'p-2' }}>

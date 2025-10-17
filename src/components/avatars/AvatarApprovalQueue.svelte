@@ -1,11 +1,13 @@
 <script>
     import Avatar from './Avatar.svelte';
-    import { Alert, Button, ButtonGroup, Card } from 'flowbite-svelte';
+    import { Alert, Button, ButtonGroup } from 'flowbite-svelte';
     import { CheckOutline, CloseOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
+
+    let { onCountChange = () => {} } = $props();
 
     let pending = $state([]);
     let loadingError = $state(false);
@@ -19,6 +21,7 @@
             async () => {
                 const response = await api.get('players/pending-avatars');
                 pending = response.pending || [];
+                onCountChange(pending.length);
             },
             (err) => {
                 console.error('Error loading pending avatars:', err);
@@ -77,9 +80,10 @@
 {:else if pending.length === 0}
     <div class="text-center text-gray-500 dark:text-gray-400">No pending avatars to review</div>
 {:else}
-    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="flex flex-wrap gap-4">
         {#each pending as { name, avatar } (name)}
-            <Card class="flex flex-col items-center gap-4 p-4">
+            <div
+                class="glass flex flex-1 basis-64 flex-col items-center gap-4 rounded-lg border border-gray-200 p-4 dark:border-gray-700">
                 <Avatar
                     avatarUrl={`/api/rankings/${encodeURIComponent(name)}/avatar?pending=true&v=${encodeURIComponent(avatar)}`}
                     hasPendingAvatar={false}
@@ -88,21 +92,23 @@
                 <p class="text-center font-semibold">{name}</p>
                 <ButtonGroup class="w-full">
                     <Button
-                        color="green"
+                        color="primary"
+                        size="sm"
                         class="flex-1"
                         onclick={() => approve(name)}>
                         <CheckOutline class="me-2 h-4 w-4" />
                         Approve
                     </Button>
                     <Button
-                        color="red"
+                        color="alternative"
+                        size="sm"
                         class="flex-1"
                         onclick={() => reject(name)}>
                         <CloseOutline class="me-2 h-4 w-4" />
                         Reject
                     </Button>
                 </ButtonGroup>
-            </Card>
+            </div>
         {/each}
     </div>
 {/if}
