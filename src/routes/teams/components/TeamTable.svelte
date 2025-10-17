@@ -10,6 +10,7 @@
         canModifyList = true,
         onremove = null,
         onassign = null,
+        onPlayerClick = null,
         assignablePlayers = [],
         allTeams = {},
         size = 'md',
@@ -123,11 +124,13 @@
                         ><div class="flex items-center justify-between">
                             <div class="min-w-0 flex-1">
                                 {#if player}
-                                    <span class="truncate">
-                                        {typeof player === 'string'
-                                            ? player
-                                            : player.name || player}
-                                    </span>
+                                    {@const playerName =
+                                        typeof player === 'string' ? player : player.name || player}
+                                    <button
+                                        onclick={() => onPlayerClick?.(playerName)}
+                                        class="cursor-pointer truncate hover:underline">
+                                        {playerName}
+                                    </button>
                                 {:else}
                                     <span class="italic opacity-50">Empty</span>
                                 {/if}

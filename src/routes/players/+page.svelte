@@ -5,6 +5,7 @@
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
     import PlayersGrid from './components/PlayersGrid.svelte';
     import SuspensionsModal from './components/SuspensionsModal.svelte';
+    import PlayerModal from '$components/PlayerModal.svelte';
     import { Button } from 'flowbite-svelte';
     import { BanOutline } from 'flowbite-svelte-icons';
     import { settings } from '$lib/client/stores/settings.js';
@@ -12,9 +13,16 @@
     let { data } = $props();
     let playerName = $state('');
     let showSuspensionsModal = $state(false);
+    let showPlayerModal = $state(false);
+    let selectedPlayer = $state(null);
 
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
+
+    function handlePlayerClick(player) {
+        selectedPlayer = player;
+        showPlayerModal = true;
+    }
 
     onMount(async () => {
         await playersService.loadPlayers(data.date);
@@ -72,6 +80,7 @@
             canModifyList={playersService.canModifyList}
             onremove={removePlayer}
             onmove={movePlayer}
+            onPlayerClick={handlePlayerClick}
             date={data.date} />
     </div>
 
@@ -92,3 +101,7 @@
 <SuspensionsModal
     suspendedPlayers={playersService.suspendedPlayers}
     bind:open={showSuspensionsModal} />
+
+<PlayerModal
+    bind:playerName={selectedPlayer}
+    bind:open={showPlayerModal} />

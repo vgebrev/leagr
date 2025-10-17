@@ -5,7 +5,7 @@
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import { scale } from 'svelte/transition';
 
-    let { playerData } = $props();
+    let { playerData, showAverages = true } = $props();
 </script>
 
 <div class="glass mb-2 w-full rounded-lg border border-gray-200 p-2 dark:border-gray-700">
@@ -78,7 +78,7 @@
         </div>
     </div>
 
-    {#if playerData.rawAverage && playerData.weightedAverage}
+    {#if showAverages && playerData.rawAverage && playerData.weightedAverage}
         <div class="mt-2 grid grid-cols-3 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             <div class="text-center">
                 <div class="text-sm text-gray-600 dark:text-gray-300">Raw Average</div>

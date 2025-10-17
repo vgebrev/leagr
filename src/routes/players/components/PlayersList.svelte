@@ -11,7 +11,8 @@
         sourceList,
         destinationList,
         moveLabel,
-        canMoveToOtherList
+        canMoveToOtherList,
+        onPlayerClick
     } = $props();
 
     import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
@@ -26,11 +27,12 @@
         >{label}</span>
     <Listgroup class="glass w-full gap-0 dark:text-gray-300">
         {#each players as player, i (i)}
-            <ListgroupItem class="flex gap-2 p-1 ps-2"
-                ><span
-                    class="max-w-100 overflow-hidden text-nowrap overflow-ellipsis whitespace-nowrap"
-                    >{i + 1}. {player}</span
-                >{#if onremove}
+            <ListgroupItem class="flex gap-2 p-1 ps-2">
+                <button
+                    onclick={() => onPlayerClick?.(player)}
+                    class="max-w-100 cursor-pointer overflow-hidden text-nowrap overflow-ellipsis whitespace-nowrap hover:underline"
+                    >{i + 1}. {player}</button>
+                {#if onremove}
                     {@const actions = [
                         {
                             type: 'remove',

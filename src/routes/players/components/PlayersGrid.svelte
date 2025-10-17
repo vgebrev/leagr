@@ -7,6 +7,7 @@
         canModifyList,
         onremove,
         onmove,
+        onPlayerClick,
         /** type { string } */
         date
     } = $props();
@@ -37,6 +38,7 @@
             {canModifyList}
             onremove={async (name) => await onremove(name, 'available')}
             {onmove}
+            {onPlayerClick}
             sourceList="available"
             destinationList="waitingList"
             moveLabel="Move to waiting list"
@@ -50,6 +52,7 @@
             {canModifyList}
             onremove={async (name) => await onremove(name, 'waitingList')}
             {onmove}
+            {onPlayerClick}
             sourceList="waitingList"
             destinationList="available"
             moveLabel="Move to active list"

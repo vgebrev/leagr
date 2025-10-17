@@ -8,6 +8,7 @@
         canModifyList,
         onremove,
         onassign,
+        onPlayerClick,
         showPlayerRankings = false,
         date = null
     } = $props();
@@ -25,6 +26,7 @@
             {canModifyList}
             {onassign}
             {onremove}
+            {onPlayerClick}
             {assignablePlayers}
             {showPlayerRankings}
             {date} />
@@ -40,6 +42,7 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
+                    {onPlayerClick}
                     {showPlayerRankings}
                     {date} />
             {/if}
@@ -52,6 +55,7 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
+                    {onPlayerClick}
                     {showPlayerRankings}
                     {date} />
             {/if}
