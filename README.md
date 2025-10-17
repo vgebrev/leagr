@@ -26,7 +26,7 @@ Features include:
 - **Player Rankings**
     - Cumulative player rankings based on team performances and consistency.
     - Player ELO tracks individual matches for long-term team balance optimisation.
-    - Player profile - ranking details and history.
+    - Player profile - ranking details, history, and profile photos (Admin-approved).
     - Champions hall: tracks league and cup winners.
 
 ## Environment Setup
