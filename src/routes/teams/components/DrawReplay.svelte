@@ -15,6 +15,7 @@
         BackwardStepSolid
     } from 'flowbite-svelte-icons';
     import TeamTable from './TeamTable.svelte';
+    import Avatar from '$components/avatars/Avatar.svelte';
     import { onMount } from 'svelte';
     import { scale, fade } from 'svelte/transition';
     import ArrowRotateIcon from '$components/Icons/ArrowRotateIcon.svelte';
@@ -91,6 +92,19 @@
             if (player) {
                 // Use ELO if available, fallback to rankingPoints for legacy data
                 return player.elo ?? player.rankingPoints ?? null;
+            }
+        }
+        return null;
+    }
+
+    // Helper function to get player avatar from initialPots
+    function getPlayerAvatar(playerName) {
+        if (!drawHistory?.initialPots) return null;
+
+        for (const pot of drawHistory.initialPots) {
+            const player = pot.players.find((p) => p.name === playerName);
+            if (player) {
+                return player.avatar || null;
             }
         }
         return null;
@@ -427,12 +441,21 @@
     <div class="draw-replay-container relative overflow-hidden p-2">
         <!-- Flying Player Animation -->
         {#if isFlying && animatingPlayer}
+            {@const playerAvatar = getPlayerAvatar(animatingPlayer)}
+            {@const avatarUrl = playerAvatar
+                ? `/api/rankings/${encodeURIComponent(animatingPlayer)}/avatar`
+                : null}
             <div
                 class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-[1400ms] ease-in-out {flyingPlayerClasses}"
                 style="left: {flyingPlayerPosition.x}px; top: {flyingPlayerPosition.y}px;"
                 transition:fade>
-                <div class="rounded-lg px-4 py-2 text-sm font-bold shadow-xl">
-                    {animatingPlayer}
+                <div class="flex items-center gap-2 p-2">
+                    <div class="shrink-0">
+                        <Avatar
+                            {avatarUrl}
+                            size="sm" />
+                    </div>
+                    <span class="text-sm font-bold">{animatingPlayer}</span>
                 </div>
             </div>
         {/if}

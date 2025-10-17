@@ -194,7 +194,8 @@ export class TeamGenerator {
                             name,
                             elo: playerRanking?.elo?.rating
                                 ? Math.round(playerRanking.elo.rating)
-                                : 1000
+                                : 1000,
+                            avatar: playerRanking?.avatar || null
                         };
                     })
                 }
@@ -680,7 +681,8 @@ export class TeamGenerator {
                         name,
                         elo: this.rankings?.players?.[name]?.elo?.rating
                             ? Math.round(this.rankings.players[name].elo.rating)
-                            : defaultElo
+                            : defaultElo,
+                        avatar: this.rankings?.players?.[name]?.avatar || null
                     }))
                 });
 
