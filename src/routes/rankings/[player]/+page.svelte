@@ -3,6 +3,7 @@
     import PlayerSummaryCard from './components/PlayerSummaryCard.svelte';
     import RankProgressionChart from './components/RankProgressionChart.svelte';
     import AppearanceHistorySection from './components/AppearanceHistorySection.svelte';
+    import AvatarUploadButton from '$components/avatars/AvatarUploadButton.svelte';
     import { Alert, Spinner, Dropdown, DropdownItem, Button, Badge } from 'flowbite-svelte';
     import {
         ChevronDownOutline,
@@ -120,6 +121,36 @@
         await loadPlayerData();
     }
 
+    /**
+     * Handle avatar upload
+     */
+    async function handleAvatarUpload(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        await withLoading(
+            async () => {
+                await api.post(`rankings/${encodeURIComponent(player)}/avatar`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                await loadPlayerData(); // Refresh player data
+                setNotification('Avatar uploaded! Pending admin approval.', 'success');
+            },
+            (err) => {
+                console.error('Error uploading avatar:', err);
+                setNotification(
+                    err.message || 'Failed to upload avatar. Please try again.',
+                    'error'
+                );
+            }
+        );
+    }
+
+    // Derived avatar URL
+    let avatarUrl = $derived(
+        playerData?.avatar ? `/api/rankings/${encodeURIComponent(player)}/avatar` : null
+    );
+
     onMount(loadPlayerData);
 </script>
 
@@ -130,9 +161,19 @@
 <div class="container mx-auto">
     <!-- Header -->
     <div class="mb-2 flex items-start justify-between">
-        <div>
-            <h1 class="text-xl font-bold">{player || 'Loading...'}</h1>
-            <h6 class="text-gray-400">Player Profile</h6>
+        <div class="flex items-center gap-4">
+            {#if playerData}
+                <AvatarUploadButton
+                    playerName={player}
+                    {avatarUrl}
+                    status={playerData.avatarStatus}
+                    size="lg"
+                    onUpload={handleAvatarUpload} />
+            {/if}
+            <div>
+                <h1 class="text-2xl font-bold">{player || 'Loading...'}</h1>
+                <h6 class="text-gray-400">Player Profile</h6>
+            </div>
         </div>
         <!-- Player Status Badge -->
         {#if playerData}

@@ -57,6 +57,7 @@
         "flowbite-svelte-icons": "^3.0.0",
         "form-data": "^4.0.4",
         "fuzzball": "^2.2.3",
-        "mailgun.js": "^12.0.3"
+        "mailgun.js": "^12.0.3",
+        "sharp": "^0.34.4"
     }
 }

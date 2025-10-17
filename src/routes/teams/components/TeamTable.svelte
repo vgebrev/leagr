@@ -62,7 +62,7 @@
             if (!team) return false;
 
             // Count actual players (non-null entries)
-            const currentPlayerCount = team.filter(player => player !== null).length;
+            const currentPlayerCount = team.filter((player) => player !== null).length;
 
             // Team has space if it has null slots OR is below max capacity
             return team.some((player) => player === null) || currentPlayerCount < maxPlayersPerTeam;

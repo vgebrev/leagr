@@ -15,13 +15,14 @@
     import TeamLimitsSettings from './components/TeamLimitsSettings.svelte';
     import DisciplineSettings from './components/DisciplineSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
+    import AvatarApprovalQueue from '$components/avatars/AvatarApprovalQueue.svelte';
     import {
         getStoredAdminCode,
         removeStoredAdminCode,
         validateAdminCode
     } from '$lib/client/services/auth.js';
     import { setAdminCode } from '$lib/client/services/api-client.svelte.js';
-    import { Button } from 'flowbite-svelte';
+    import { Button, Badge } from 'flowbite-svelte';
     import AdminAccess from './components/AdminAccess.svelte';
 
     let { data } = $props();
@@ -29,6 +30,7 @@
     let leagueSettings = $state({ ...defaultSettings });
     let daySettings = $state(getDaySettingsDefaults(defaultSettings));
     let hasAdmin = $state(false);
+    let pendingAvatarsCount = $state(0);
 
     /**
      * Updates the start day offset for the registration window.
@@ -112,6 +114,21 @@
         );
     }
 
+    /**
+     * Load pending avatars count
+     */
+    async function loadPendingAvatarsCount() {
+        if (!hasAdmin) return;
+
+        try {
+            const response = await api.get('players/pending-avatars');
+            pendingAvatarsCount = response.length;
+        } catch (err) {
+            // Silently fail - not critical
+            console.error('Error loading pending avatars count:', err);
+        }
+    }
+
     onMount(async () => {
         // Prevent body scroll on settings page to avoid double scrollbar
         document.body.style.overflow = 'hidden';
@@ -144,6 +161,9 @@
             hasAdmin = await validateAdminCode();
             if (!hasAdmin) {
                 removeStoredAdminCode(data.leagueId);
+            } else {
+                // Load pending avatars count if admin
+                await loadPendingAvatarsCount();
             }
         }
 
@@ -197,6 +217,19 @@
             <BehaviorToggles
                 bind:leagueSettings
                 onSave={saveLeagueSettings} />
+        </AccordionItem>
+
+        <AccordionItem classes={{ button: 'p-2', content: 'p-2' }}>
+            {#snippet header()}
+                <span
+                    class="flex items-center gap-2 font-semibold text-gray-700 dark:text-gray-200">
+                    Avatar Approvals
+                    {#if pendingAvatarsCount > 0}
+                        <Badge color="yellow">{pendingAvatarsCount}</Badge>
+                    {/if}
+                </span>
+            {/snippet}
+            <AvatarApprovalQueue />
         </AccordionItem>
 
         <AccordionItem classes={{ button: 'p-2', content: 'p-2' }}>

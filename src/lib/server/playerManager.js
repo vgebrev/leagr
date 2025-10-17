@@ -188,11 +188,14 @@ export class PlayerState {
 
         if (emptySlotIndex === -1) {
             // No null slots available, check if team is below max capacity
-            const currentPlayerCount = newState.teams[teamName].filter(p => p !== null).length;
+            const currentPlayerCount = newState.teams[teamName].filter((p) => p !== null).length;
             const maxPlayersPerTeam = this.settings.teamGeneration?.maxPlayersPerTeam || 7;
 
             if (currentPlayerCount >= maxPlayersPerTeam) {
-                throw new PlayerError(`Team ${teamName} has reached maximum capacity of ${maxPlayersPerTeam} players.`, 400);
+                throw new PlayerError(
+                    `Team ${teamName} has reached maximum capacity of ${maxPlayersPerTeam} players.`,
+                    400
+                );
             }
 
             // Team has space, add player to the end
