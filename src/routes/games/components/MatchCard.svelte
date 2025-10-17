@@ -3,7 +3,7 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import { validateGameScore } from '$lib/shared/validation.js';
 
-    let { match, onScoreChange, disabled = false, className = '' } = $props();
+    let { match, onScoreChange, onTeamClick, disabled = false, className = '' } = $props();
 
     let homeScoreInput = $derived(match.homeScore?.toString() || '');
     let awayScoreInput = $derived(match.awayScore?.toString() || '');
@@ -107,7 +107,8 @@
         <!-- Home team -->
         <TeamBadge
             className="w-2/5"
-            teamName={match.home} />
+            teamName={match.home}
+            onclick={() => onTeamClick?.(match.home)} />
 
         <!-- Home score input -->
         <div class="flex flex-col items-center">
@@ -148,6 +149,7 @@
         <!-- Away team -->
         <TeamBadge
             className="w-2/5"
-            teamName={match.away} />
+            teamName={match.away}
+            onclick={() => onTeamClick?.(match.away)} />
     </div>
 {/if}

@@ -12,15 +12,25 @@
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
 
-    let { standings = [], date, onTeamClick = null } = $props();
+    let { standings = [], date, onCelebrate = null, onTeamClick = null } = $props();
 
     /**
-     * Handle team click event
+     * Handle team celebration click event
      * @param {number} index
      */
-    function handleTeamClick(index) {
+    function handleCelebrate(index) {
+        if (onCelebrate) {
+            onCelebrate(index);
+        }
+    }
+
+    /**
+     * Handle team badge click for modal
+     * @param {string} teamName
+     */
+    function handleTeamBadgeClick(teamName) {
         if (onTeamClick) {
-            onTeamClick(index);
+            onTeamClick(teamName);
         }
     }
 </script>
@@ -54,17 +64,18 @@
                     <TableBodyCell class="max-w-32 overflow-hidden px-1 py-1.5 text-center"
                         ><div
                             class="flex justify-between overflow-hidden"
-                            onclick={() => handleTeamClick(index)}
+                            onclick={() => handleCelebrate(index)}
                             onkeydown={(e) => {
                                 if (e.key === 'Enter' || e.key === ' ') {
-                                    handleTeamClick(index);
+                                    handleCelebrate(index);
                                 }
                             }}
                             tabindex="0"
                             role="button">
                             <TeamBadge
                                 className="w-full overflow-hidden text-ellipsis whitespace-nowrap"
-                                teamName={team.team} />
+                                teamName={team.team}
+                                onclick={() => handleTeamBadgeClick(team.team)} />
                         </div>
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">

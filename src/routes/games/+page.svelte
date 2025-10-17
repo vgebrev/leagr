@@ -7,11 +7,20 @@
     import { isCompetitionEnded } from '$lib/shared/helpers.js';
     import ScheduleDisplay from './components/ScheduleDisplay.svelte';
     import GameActions from './components/GameActions.svelte';
+    import TeamModal from '$components/TeamModal.svelte';
 
     let { data } = $props();
 
     /** @type {string} */
     const date = data.date;
+
+    let showTeamModal = $state(false);
+    let selectedTeam = $state(null);
+
+    function handleTeamClick(teamName) {
+        selectedTeam = teamName;
+        showTeamModal = true;
+    }
 
     /** @type {boolean} */
     let competitionEnded = $derived(isCompetitionEnded(date, $settings));
@@ -150,4 +159,10 @@
 <ScheduleDisplay
     {schedule}
     disabled={competitionEnded}
-    onMatchUpdate={handleMatchUpdate} />
+    onMatchUpdate={handleMatchUpdate}
+    onTeamClick={handleTeamClick} />
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    {date}
+    bind:open={showTeamModal} />

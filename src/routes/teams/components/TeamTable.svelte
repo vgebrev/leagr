@@ -11,6 +11,7 @@
         onremove = null,
         onassign = null,
         onPlayerClick = null,
+        onTeamClick = null,
         assignablePlayers = [],
         allTeams = {},
         size = 'md',
@@ -105,9 +106,18 @@
                     scope="col"
                     class={sizeStyles[size]}>
                     <div class="flex items-center gap-1 overflow-hidden">
-                        <div>
-                            {teamName || `${capitalize(color)} Team`}
-                        </div>
+                        {#if onTeamClick && !isPlayerList}
+                            <button
+                                type="button"
+                                onclick={() => onTeamClick?.(teamName)}
+                                class="cursor-pointer text-left uppercase hover:underline">
+                                {teamName || `${capitalize(color)} Team`}
+                            </button>
+                        {:else}
+                            <div class="text-left uppercase">
+                                {teamName || `${capitalize(color)} Team`}
+                            </div>
+                        {/if}
                         {#if showPlayerRankings && teamAverageElo > 0}
                             <div class="ml-auto opacity-50">
                                 {teamAverageElo.toFixed(0)}

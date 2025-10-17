@@ -8,15 +8,23 @@
     import TeamsGrid from './components/TeamsGrid.svelte';
     import DrawReplay from './components/DrawReplay.svelte';
     import PlayerModal from '$components/PlayerModal.svelte';
+    import TeamModal from '$components/TeamModal.svelte';
 
     let { data } = $props();
     const date = data.date;
     let showPlayerModal = $state(false);
     let selectedPlayer = $state(null);
+    let showTeamModal = $state(false);
+    let selectedTeam = $state(null);
 
     function handlePlayerClick(player) {
         selectedPlayer = player;
         showPlayerModal = true;
+    }
+
+    function handleTeamClick(teamName) {
+        selectedTeam = teamName;
+        showTeamModal = true;
     }
 
     // Use the Teams service for all team-related data and operations
@@ -93,7 +101,8 @@
         {date}
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)}
-        onPlayerClick={handlePlayerClick} />
+        onPlayerClick={handlePlayerClick}
+        onTeamClick={handleTeamClick} />
 
     {#if replayData}
         <DrawReplay
@@ -105,3 +114,8 @@
 <PlayerModal
     bind:playerName={selectedPlayer}
     bind:open={showPlayerModal} />
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    {date}
+    bind:open={showTeamModal} />

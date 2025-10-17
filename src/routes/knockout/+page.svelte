@@ -8,11 +8,20 @@
     import KnockoutBracket from './components/KnockoutBracket.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
+    import TeamModal from '$components/TeamModal.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
     let { data } = $props();
     const date = data.date;
+
+    let showTeamModal = $state(false);
+    let selectedTeam = $state(null);
+
+    function handleTeamClick(teamName) {
+        selectedTeam = teamName;
+        showTeamModal = true;
+    }
 
     let knockoutBracket = $state(null);
     let standings = $state([]);
@@ -246,7 +255,8 @@
                 bracket={knockoutBracket}
                 disabled={isCompetitionEnded(date, $settings)}
                 onMatchUpdate={handleKnockoutMatchUpdate}
-                onTeamClick={celebrateTeam} />
+                onCelebrate={celebrateTeam}
+                onTeamClick={handleTeamClick} />
         {/if}
     {/if}
 </div>
@@ -256,3 +266,8 @@
     teamName={winningTeam.name}
     teamColour={winningTeam.colour}
     icon="🏆" />
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    {date}
+    bind:open={showTeamModal} />

@@ -6,10 +6,19 @@
     import { settings } from '$lib/client/stores/settings.js';
     import StandingsTable from './components/StandingsTable.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
+    import TeamModal from '$components/TeamModal.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
     const date = data.date;
+
+    let showTeamModal = $state(false);
+    let selectedTeam = $state(null);
+
+    function handleTeamClick(teamName) {
+        selectedTeam = teamName;
+        showTeamModal = true;
+    }
 
     let standings = $state([]);
 
@@ -65,10 +74,16 @@
     <StandingsTable
         {standings}
         {date}
-        onTeamClick={celebrate} />
+        onCelebrate={celebrate}
+        onTeamClick={handleTeamClick} />
 </div>
 
 <CelebrationOverlay
     bind:celebrating
     teamName={winningTeam.name}
     teamColour={winningTeam.colour} />
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    {date}
+    bind:open={showTeamModal} />

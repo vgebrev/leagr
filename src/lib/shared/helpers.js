@@ -113,7 +113,7 @@ export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 export const teamStyles = {
     blue: {
         text: 'text-blue-100 bg-blue-500',
-        header: 'bg-blue-600 text-white',
+        header: 'bg-blue-600 dark:bg-blue-600 text-white',
         row: 'bg-blue-500',
         button: 'white',
         buttonClass:
@@ -123,7 +123,7 @@ export const teamStyles = {
     },
     orange: {
         text: 'text-orange-100 bg-orange-500',
-        header: 'bg-orange-600 text-white',
+        header: 'bg-orange-600 dark:bg-orange-600 text-white',
         row: 'bg-orange-500',
         button: 'white',
         buttonClass:
@@ -133,7 +133,7 @@ export const teamStyles = {
     },
     green: {
         text: 'text-green-100 bg-green-500',
-        header: 'bg-green-600 text-white',
+        header: 'bg-green-600 dark:bg-green-600 text-white',
         row: 'bg-green-500',
         button: 'white',
         buttonClass:
@@ -143,7 +143,7 @@ export const teamStyles = {
     },
     white: {
         text: 'text-gray-800 bg-gray-100',
-        header: 'bg-gray-200 text-gray-800',
+        header: 'bg-gray-200 dark:bg-gray-200 text-gray-800 dark:text-gray-800',
         row: 'bg-gray-100',
         button: 'black',
         buttonClass:
@@ -153,7 +153,7 @@ export const teamStyles = {
     },
     black: {
         text: 'text-gray-100 bg-gray-800',
-        header: 'bg-gray-900 text-white',
+        header: 'bg-gray-900 dark:bg-gray-900 text-white',
         row: 'bg-gray-700',
         button: 'white',
         buttonClass:
@@ -163,7 +163,7 @@ export const teamStyles = {
     },
     red: {
         text: 'text-red-100 bg-red-500',
-        header: 'bg-red-600 text-white',
+        header: 'bg-red-600 dark:bg-red-600 text-white',
         row: 'bg-red-500',
         button: 'white',
         buttonClass:

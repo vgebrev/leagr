@@ -2,7 +2,7 @@
     import { Listgroup, ListgroupItem } from 'flowbite-svelte';
     import MatchCard from './MatchCard.svelte';
 
-    let { schedule = [], onMatchUpdate, disabled = false, className = '' } = $props();
+    let { schedule = [], onMatchUpdate, onTeamClick, disabled = false, className = '' } = $props();
 
     /**
      * Handle match score update
@@ -31,6 +31,7 @@
                             <MatchCard
                                 {match}
                                 {disabled}
+                                {onTeamClick}
                                 onScoreChange={(updatedMatch) =>
                                     handleMatchUpdate(roundIndex, matchIndex, updatedMatch)}
                                 className="w-full" />

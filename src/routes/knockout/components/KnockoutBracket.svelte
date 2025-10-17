@@ -2,13 +2,29 @@
     import { Card, Input } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
 
-    let { bracket = null, onMatchUpdate = null, onTeamClick = null, disabled = false } = $props();
+    let {
+        bracket = null,
+        onMatchUpdate = null,
+        onCelebrate = null,
+        onTeamClick = null,
+        disabled = false
+    } = $props();
 
     /**
-     * Handle team badge click
+     * Handle team row click for celebration
      * @param {string} teamName - Name of the clicked team
      */
-    function handleTeamClick(teamName) {
+    function handleCelebrate(teamName) {
+        if (onCelebrate) {
+            onCelebrate(teamName);
+        }
+    }
+
+    /**
+     * Handle team badge click for modal
+     * @param {string} teamName - Name of the clicked team
+     */
+    function handleTeamBadgeClick(teamName) {
         if (onTeamClick) {
             onTeamClick(teamName);
         }
@@ -176,10 +192,10 @@
                                 <div class="mt-2 flex justify-between gap-2">
                                     <div
                                         class="flex w-full overflow-hidden"
-                                        onclick={() => handleTeamClick(match.home)}
+                                        onclick={() => handleCelebrate(match.home)}
                                         onkeydown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
-                                                handleTeamClick(match.home);
+                                                handleCelebrate(match.home);
                                             }
                                         }}
                                         tabindex="0"
@@ -187,6 +203,7 @@
                                         {#if match.home && match.home !== 'BYE'}
                                             <TeamBadge
                                                 teamName={match.home}
+                                                onclick={() => handleTeamBadgeClick(match.home)}
                                                 className="text-sm w-full {isLoser(match, 'home')
                                                     ? 'line-through opacity-50'
                                                     : ''}" />
@@ -216,10 +233,10 @@
                                 <div class="mt-2 flex justify-between gap-2">
                                     <div
                                         class="flex w-full overflow-hidden"
-                                        onclick={() => handleTeamClick(match.away)}
+                                        onclick={() => handleCelebrate(match.away)}
                                         onkeydown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
-                                                handleTeamClick(match.away);
+                                                handleCelebrate(match.away);
                                             }
                                         }}
                                         tabindex="0"
@@ -227,6 +244,7 @@
                                         {#if match.away && match.away !== 'BYE'}
                                             <TeamBadge
                                                 teamName={match.away}
+                                                onclick={() => handleTeamBadgeClick(match.away)}
                                                 className="text-sm w-full {isLoser(match, 'away')
                                                     ? 'line-through opacity-50'
                                                     : ''}" />

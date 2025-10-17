@@ -1,9 +1,10 @@
 <script>
     import { Avatar, Indicator } from 'flowbite-svelte';
     import { CameraPhotoOutline, ClockOutline } from 'flowbite-svelte-icons';
+    import { teamStyles } from '$lib/shared/helpers.js';
 
     /**
-     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: string, onclick?: () => void }}
      */
     let {
         avatarUrl = null,
@@ -11,8 +12,15 @@
         canUpload = false,
         showPendingOnly = false,
         size = 'lg',
+        color = undefined,
         onclick = undefined
     } = $props();
+
+    // Get team color styles if color is provided
+    const colorStyles = $derived(color ? teamStyles[color] || teamStyles.default : null);
+    const avatarClasses = $derived(
+        colorStyles ? `${colorStyles.border} ${colorStyles.header}` : undefined
+    );
 
     // Display logic:
     // - If showPendingOnly: show avatarUrl (which should be the pending avatar URL)
@@ -32,9 +40,10 @@
         {onclick}
         disabled={!isClickable}>
         <Avatar
-            border={true}
+            border={!color}
             src={displayAvatarUrl}
-            {size}>
+            {size}
+            class={avatarClasses}>
             {#snippet indicator()}
                 {#if hasPendingAvatar && !showPendingOnly}
                     <Indicator
@@ -56,10 +65,6 @@
                     </Indicator>
                 {/if}
             {/snippet}
-
-            <!--{#if !displayAvatarUrl}-->
-            <!--    <UserSolid class="h-full w-full text-gray-500 dark:text-gray-400" />-->
-            <!--{/if}-->
         </Avatar>
 
         {#if canUpload && !displayAvatarUrl}
