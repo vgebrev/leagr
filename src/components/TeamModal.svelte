@@ -102,7 +102,7 @@
     closeBtnClass="p-0">
     {#snippet header()}
         {#if teamName}
-            <div class="flex items-center justify-center">
+            <div class="flex w-full items-center justify-center">
                 <TeamBadge
                     {teamName}
                     className="text-lg px-3 py-1" />

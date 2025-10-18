@@ -19,7 +19,7 @@
     // Get team color styles if color is provided
     const colorStyles = $derived(color ? teamStyles[color] || teamStyles.default : null);
     const avatarClasses = $derived(
-        colorStyles ? `${colorStyles.border} ${colorStyles.header}` : undefined
+        colorStyles ? `!border-2 ${colorStyles.border} ${colorStyles.text}` : undefined
     );
 
     // Display logic:
@@ -31,7 +31,7 @@
     let isClickable = $derived(canUpload || !!onclick);
 </script>
 
-<div class="relative inline-block">
+<div class="relative inline-block {colorStyles ? 'drop-shadow-lg drop-shadow-gray-700' : ''}">
     <button
         type="button"
         class="relative"

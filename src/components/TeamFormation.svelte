@@ -158,7 +158,8 @@
                                 size="lg"
                                 color={teamColor} />
                         </div>
-                        <div class={`rounded px-2 py-0.5 text-center ${colorStyles.header}`}>
+                        <div
+                            class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>
                             <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
                         </div>
                     </div>
