@@ -138,7 +138,7 @@
     </svg>
 
     <!-- Player Formation Overlay -->
-    <div class="absolute inset-0 flex flex-col justify-around px-2 py-4">
+    <div class="absolute inset-0 flex flex-col justify-evenly px-2 py-8">
         {#each formation as line, i (i)}
             <div class="flex items-center justify-around gap-2">
                 {#each line as player, j (j)}

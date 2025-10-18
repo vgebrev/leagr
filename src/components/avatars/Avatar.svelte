@@ -31,7 +31,7 @@
     let isClickable = $derived(canUpload || !!onclick);
 </script>
 
-<div class="relative inline-block {colorStyles ? 'drop-shadow-lg drop-shadow-gray-700' : ''}">
+<div class="relative inline-block {colorStyles ? 'drop-shadow-lg drop-shadow-gray-800' : ''}">
     <button
         type="button"
         class="relative"
