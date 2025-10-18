@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { createAvatarManager } from '$lib/server/avatarManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
 /**
@@ -81,10 +82,12 @@ export async function GET({ params, locals, url }) {
     }
 
     const rankingsManager = createRankingsManager().setLeague(leagueId);
+    const avatarManager = createAvatarManager().setLeague(leagueId);
 
     try {
-        // Load enhanced rankings data
+        // Load enhanced rankings data and avatar data
         const rankings = await rankingsManager.loadEnhancedRankings();
+        const avatarsData = await avatarManager.loadAvatars();
 
         // Find the specific player
         const playerData = rankings.players[player];
@@ -100,12 +103,15 @@ export async function GET({ params, locals, url }) {
         // eslint-disable-next-line no-unused-vars
         const { rankingDetail: _, ...cleanPlayerData } = playerData;
 
+        // Get avatar data from avatars.json
+        const playerAvatar = avatarsData[player] || {};
+
         return json({
             player,
             playerData: {
                 ...cleanPlayerData,
-                avatar: cleanPlayerData.avatar || null,
-                pendingAvatar: cleanPlayerData.pendingAvatar || null,
+                avatar: playerAvatar.avatar || null,
+                pendingAvatar: playerAvatar.pendingAvatar || null,
                 details: details // Single source of truth - client handles sorting/filtering
             },
             rankingMetadata: rankings.rankingMetadata,

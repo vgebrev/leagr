@@ -11,8 +11,8 @@ const AVATAR_SIZE = 512; // 512x512 pixels
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const OUTPUT_FORMAT = 'webp';
 
-// Mutex for rankings.json operations
-const rankingsMutexes = new Map();
+// Mutex for avatars.json operations
+const avatarsMutexes = new Map();
 
 /**
  * Custom error class for avatar operations
@@ -59,26 +59,26 @@ export class AvatarManager {
     }
 
     /**
-     * Get mutex for rankings file
+     * Get mutex for avatars file
      * @returns {Mutex} - League-specific mutex
      */
-    getRankingsMutex() {
+    getAvatarsMutex() {
         if (!this.leagueId) {
             throw new Error('League ID must be set before accessing mutex');
         }
-        const key = `rankings-${this.leagueId}`;
-        if (!rankingsMutexes.has(key)) {
-            rankingsMutexes.set(key, new Mutex());
+        const key = `avatars-${this.leagueId}`;
+        if (!avatarsMutexes.has(key)) {
+            avatarsMutexes.set(key, new Mutex());
         }
-        return rankingsMutexes.get(key);
+        return avatarsMutexes.get(key);
     }
 
     /**
-     * Get rankings path for the current league
-     * @returns {string} - Rankings file path
+     * Get avatars metadata file path
+     * @returns {string} - Avatars metadata file path
      */
-    getRankingsPath() {
-        return path.join(this.getDataPath(), 'rankings.json');
+    getAvatarsMetadataPath() {
+        return path.join(this.getDataPath(), 'avatars.json');
     }
 
     /**
@@ -90,39 +90,39 @@ export class AvatarManager {
     }
 
     /**
-     * Load rankings without mutex protection (internal use)
-     * @returns {Promise<Object>} - Rankings data
+     * Load avatars metadata without mutex protection (internal use)
+     * @returns {Promise<Object>} - Avatars metadata
      */
-    async loadRankingsUnsafe() {
+    async loadAvatarsUnsafe() {
         try {
-            const data = await fs.readFile(this.getRankingsPath(), 'utf-8');
+            const data = await fs.readFile(this.getAvatarsMetadataPath(), 'utf-8');
             return JSON.parse(data);
         } catch (err) {
             if (err.code === 'ENOENT') {
-                return { players: {}, rankingMetadata: {} };
+                return {};
             }
             throw err;
         }
     }
 
     /**
-     * Load rankings with mutex protection
-     * @returns {Promise<Object>} - Rankings data
+     * Load avatars metadata with mutex protection
+     * @returns {Promise<Object>} - Avatars metadata
      */
-    async loadRankings() {
-        const mutex = this.getRankingsMutex();
+    async loadAvatars() {
+        const mutex = this.getAvatarsMutex();
         return await mutex.runExclusive(async () => {
-            return await this.loadRankingsUnsafe();
+            return await this.loadAvatarsUnsafe();
         });
     }
 
     /**
-     * Save rankings without mutex protection (internal use)
-     * @param {Object} rankings - Rankings data to save
+     * Save avatars metadata without mutex protection (internal use)
+     * @param {Object} avatars - Avatars metadata to save
      * @returns {Promise<void>}
      */
-    async saveRankingsUnsafe(rankings) {
-        await fs.writeFile(this.getRankingsPath(), JSON.stringify(rankings, null, 2));
+    async saveAvatarsUnsafe(avatars) {
+        await fs.writeFile(this.getAvatarsMetadataPath(), JSON.stringify(avatars, null, 2));
     }
 
     /**
@@ -227,35 +227,40 @@ export class AvatarManager {
     }
 
     /**
-     * Update player avatar metadata in rankings.json
+     * Update player avatar metadata in avatars.json
      * @param {string} playerName
      * @param {Object} avatarData - { avatar?: filename, pendingAvatar?: filename }
      */
     async updatePlayerAvatar(playerName, avatarData) {
-        const mutex = this.getRankingsMutex();
+        const mutex = this.getAvatarsMutex();
         return await mutex.runExclusive(async () => {
-            const rankings = await this.loadRankingsUnsafe();
+            const avatars = await this.loadAvatarsUnsafe();
 
-            if (!rankings.players[playerName]) {
-                rankings.players[playerName] = {
-                    points: 0,
-                    appearances: 0,
-                    rankingDetail: {}
-                };
+            if (!avatars[playerName]) {
+                avatars[playerName] = {};
             }
 
             if (avatarData.avatar !== undefined) {
-                rankings.players[playerName].avatar = avatarData.avatar;
+                if (avatarData.avatar === null) {
+                    delete avatars[playerName].avatar;
+                } else {
+                    avatars[playerName].avatar = avatarData.avatar;
+                }
             }
             if (avatarData.pendingAvatar !== undefined) {
                 if (avatarData.pendingAvatar === null) {
-                    delete rankings.players[playerName].pendingAvatar;
+                    delete avatars[playerName].pendingAvatar;
                 } else {
-                    rankings.players[playerName].pendingAvatar = avatarData.pendingAvatar;
+                    avatars[playerName].pendingAvatar = avatarData.pendingAvatar;
                 }
             }
 
-            await this.saveRankingsUnsafe(rankings);
+            // Clean up empty player entries
+            if (Object.keys(avatars[playerName]).length === 0) {
+                delete avatars[playerName];
+            }
+
+            await this.saveAvatarsUnsafe(avatars);
         });
     }
 
@@ -265,16 +270,16 @@ export class AvatarManager {
      * @returns {Promise<{avatar: string|null, pendingAvatar: string|null}>}
      */
     async getPlayerAvatar(playerName) {
-        const rankings = await this.loadRankings();
-        const player = rankings.players[playerName];
+        const avatars = await this.loadAvatars();
+        const playerAvatar = avatars[playerName];
 
-        if (!player) {
+        if (!playerAvatar) {
             return { avatar: null, pendingAvatar: null };
         }
 
         return {
-            avatar: player.avatar || null,
-            pendingAvatar: player.pendingAvatar || null
+            avatar: playerAvatar.avatar || null,
+            pendingAvatar: playerAvatar.pendingAvatar || null
         };
     }
 
@@ -283,10 +288,10 @@ export class AvatarManager {
      * @returns {Promise<Array<{name: string, avatar: string}>>}
      */
     async getPendingAvatars() {
-        const rankings = await this.loadRankings();
+        const avatars = await this.loadAvatars();
         const pending = [];
 
-        for (const [name, data] of Object.entries(rankings.players)) {
+        for (const [name, data] of Object.entries(avatars)) {
             if (data.pendingAvatar) {
                 pending.push({ name, avatar: data.pendingAvatar });
             }

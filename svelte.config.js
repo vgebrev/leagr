@@ -8,7 +8,7 @@ const config = {
             $components: 'src/components'
         },
         csrf: {
-            checkOrigin: false
+            trustedOrigins: ['*']
         }
     }
 };
