@@ -34,7 +34,7 @@
     let isPlaying = $state(false);
     let currentStep = $state(0);
     let intervalId = null;
-    let showPlayerRankings = $state(true);
+    let showPlayerRankings = $state(false);
 
     // Animation state for visual transitions
     let animatingPlayer = $state(null);
