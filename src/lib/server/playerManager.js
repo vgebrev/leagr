@@ -2,6 +2,7 @@ import { data } from './data.js';
 import { defaultPlayers } from '$lib/shared/defaults.js';
 import { getConsolidatedSettings } from './settings.js';
 import { createRankingsManager } from './rankings.js';
+import { createAvatarManager } from './avatarManager.js';
 
 /**
  * Custom error class for player operations that preserves HTTP status codes
@@ -592,12 +593,13 @@ export class PlayerManager {
     }
 
     /**
-     * Helper method to enhance player list with ELO data
+     * Helper method to enhance player list with ELO and avatar data
      * @param {string[]} players - Array of player names (can include null values for teams)
      * @param {Object} rankings - Enhanced rankings data
-     * @returns {Object[]} Array of player objects with name and elo (preserving nulls)
+     * @param {Object} avatars - Avatar data from avatarManager
+     * @returns {Object[]} Array of player objects with name, elo, and avatar (preserving nulls)
      */
-    #enhancePlayersWithElo(players, rankings) {
+    #enhancePlayersWithEloAndAvatar(players, rankings, avatars) {
         return players.map((playerName) => {
             if (playerName === null) {
                 return null; // Preserve null slots for teams
@@ -620,16 +622,21 @@ export class PlayerManager {
                 // If no prior ranking detail exists, keep the default 1000 ELO for new players
             }
 
+            // Get avatar data
+            const playerAvatar = avatars?.[playerName];
+            const avatar = playerAvatar?.avatar || null;
+
             return {
                 name: playerName,
-                elo
+                elo,
+                avatar
             };
         });
     }
 
     /**
-     * Get teams data enhanced with player ELO information
-     * @returns {Promise<Object>} Teams object with player objects containing name and elo
+     * Get teams data enhanced with player ELO and avatar information
+     * @returns {Promise<Object>} Teams object with player objects containing name, elo, and avatar
      */
     async getTeamsWithElo() {
         // Get basic teams data
@@ -640,17 +647,25 @@ export class PlayerManager {
             .setLeague(this.leagueId)
             .loadEnhancedRankings();
 
-        // Enhance teams with ELO data using the helper method
+        // Load avatar data
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
+        // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(gameData.teams)) {
-            enhancedTeams[teamName] = this.#enhancePlayersWithElo(players, rankings);
+            enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
+                players,
+                rankings,
+                avatars
+            );
         }
 
         return enhancedTeams;
     }
 
     /**
-     * Get all data enhanced with player ELO information for team management UI
+     * Get all data enhanced with player ELO and avatar information for team management UI
      * @returns {Promise<{teams: Object, players: {available: Object[], waitingList: Object[]}}>}
      */
     async getAllDataWithElo() {
@@ -662,16 +677,32 @@ export class PlayerManager {
             .setLeague(this.leagueId)
             .loadEnhancedRankings();
 
-        // Enhance teams with ELO data using the helper method
+        // Load avatar data
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
+        // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(gameData.teams)) {
-            enhancedTeams[teamName] = this.#enhancePlayersWithElo(players, rankings);
+            enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
+                players,
+                rankings,
+                avatars
+            );
         }
 
-        // Enhance available and waiting list players with ELO data
+        // Enhance available and waiting list players with ELO and avatar data
         const enhancedPlayers = {
-            available: this.#enhancePlayersWithElo(gameData.players.available, rankings),
-            waitingList: this.#enhancePlayersWithElo(gameData.players.waitingList, rankings)
+            available: this.#enhancePlayersWithEloAndAvatar(
+                gameData.players.available,
+                rankings,
+                avatars
+            ),
+            waitingList: this.#enhancePlayersWithEloAndAvatar(
+                gameData.players.waitingList,
+                rankings,
+                avatars
+            )
         };
 
         return {

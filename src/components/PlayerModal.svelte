@@ -29,7 +29,9 @@
 
         await withLoading(
             async () => {
-                const response = await api.get(`rankings/${encodeURIComponent(playerName)}`);
+                const response = await api.get(
+                    `rankings/${encodeURIComponent(playerName)}?limit=0`
+                );
                 playerData = response.playerData;
             },
             (err) => {

@@ -50,7 +50,13 @@ function createUnifiedDetails(playerData, limit = null) {
     }
 
     // Apply limit to appearances only (not all sessions)
-    if (limit && limit > 0) {
+    if (limit !== null && limit !== undefined) {
+        // limit=0 means no session data at all
+        if (limit === 0) {
+            return [];
+        }
+
+        // limit>0 means last N appearances
         const recentAppearances = allDetails.filter((d) => d.played).slice(-limit);
 
         // Include recent appearances and any non-played sessions in that date range
@@ -93,7 +99,7 @@ export async function GET({ params, locals, url }) {
         const playerData = rankings.players[player];
 
         if (!playerData) {
-            throw error(404, `Player "${player}" not found in rankings`);
+            return error(404, `Player "${player}" not found in rankings`);
         }
 
         // Create unified details array

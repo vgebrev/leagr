@@ -8,13 +8,12 @@
         TableHeadCell,
         TableBody,
         TableBodyRow,
-        TableBodyCell,
-        Popover
+        TableBodyCell
     } from 'flowbite-svelte';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import AppearanceCard from '$components/AppearanceCard.svelte';
+    import TrophyPopover from '$components/TrophyPopover.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
@@ -112,17 +111,10 @@
                                 <CrownIcon class="h-4 w-4" />
                                 {champion.leagueWins}
                             </button>
-                            <Popover
-                                triggeredBy="#league-{index}"
-                                class="max-h-1/2 overflow-y-auto text-sm">
-                                <div class="flex flex-col gap-2">
-                                    {#each champion.leagueSessions as session, sessionIndex (sessionIndex)}
-                                        <AppearanceCard
-                                            detail={session}
-                                            hasBorder={false} />
-                                    {/each}
-                                </div>
-                            </Popover>
+                            <TrophyPopover
+                                triggerId="league-{index}"
+                                playerName={champion.playerName}
+                                trophyType="league" />
                         {:else}
                             <span class="text-gray-400 dark:text-gray-300">0</span>
                         {/if}
@@ -135,17 +127,10 @@
                                 <TrophyIcon class="h-4 w-4" />
                                 {champion.cupWins}
                             </button>
-                            <Popover
-                                triggeredBy="#cup-{index}"
-                                class="max-h-1/2 overflow-y-auto text-sm">
-                                <div class="flex flex-col gap-2">
-                                    {#each champion.cupSessions as session, sessionIndex (sessionIndex)}
-                                        <AppearanceCard
-                                            detail={session}
-                                            hasBorder={false} />
-                                    {/each}
-                                </div>
-                            </Popover>
+                            <TrophyPopover
+                                triggerId="cup-{index}"
+                                playerName={champion.playerName}
+                                trophyType="cup" />
                         {:else}
                             <span class="text-gray-400 dark:text-gray-300">0</span>
                         {/if}

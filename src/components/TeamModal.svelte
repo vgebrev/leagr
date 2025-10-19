@@ -32,40 +32,23 @@
 
         await withLoading(
             async () => {
-                const response = await api.get('teams', date);
+                // Fetch only the specific team's data using teamName parameter
+                const response = await api.get(
+                    `teams?date=${date}&teamName=${encodeURIComponent(teamName)}`
+                );
                 const teams = response.teams || {};
 
-                // Get players for the specified team
+                // Get players for the specified team - already enhanced with ELO and avatar
                 const players = teams[teamName] || [];
 
-                // Fetch rankings data for each player to get avatars and ELO
-                const playersWithData = await Promise.all(
-                    players
-                        .filter((player) => player !== null) // Filter out null/Empty slots
-                        .map(async (player) => {
-                            const playerName =
-                                typeof player === 'string' ? player : player.name || player;
-                            try {
-                                const rankingData = await api.get(
-                                    `rankings/${encodeURIComponent(playerName)}`
-                                );
-                                return {
-                                    name: playerName,
-                                    avatar: rankingData.playerData?.avatar || null,
-                                    elo: rankingData.playerData?.elo?.rating || null
-                                };
-                            } catch {
-                                // If player doesn't have ranking data, just use their name
-                                return {
-                                    name: playerName,
-                                    avatar: null,
-                                    elo: null
-                                };
-                            }
-                        })
-                );
-
-                teamPlayers = playersWithData;
+                // Filter out null/empty slots and extract player data
+                teamPlayers = players
+                    .filter((player) => player !== null)
+                    .map((player) => ({
+                        name: player.name,
+                        avatar: player.avatar || null,
+                        elo: player.elo || null
+                    }));
             },
             (err) => {
                 console.error('Error loading team data:', err);

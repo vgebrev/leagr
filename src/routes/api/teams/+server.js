@@ -24,6 +24,9 @@ export const GET = async ({ url, locals }) => {
         return error(400, dateValidation.error);
     }
 
+    // Check for optional teamName filter
+    const teamName = url.searchParams.get('teamName');
+
     try {
         const manager = createPlayerManager()
             .setDate(dateValidation.date)
@@ -39,6 +42,18 @@ export const GET = async ({ url, locals }) => {
 
         const enhancedData = await manager.getAllDataWithElo();
         const ownedByMe = await manager.getOwnedPlayersForCurrentClient();
+
+        // If teamName is specified, filter to only return that team's data
+        if (teamName) {
+            const teamData = enhancedData.teams[teamName];
+            if (!teamData) {
+                return error(404, `Team "${teamName}" not found`);
+            }
+            return json({
+                teams: { [teamName]: teamData },
+                ownedByMe
+            });
+        }
 
         return json({ ...enhancedData, ownedByMe });
     } catch (err) {
