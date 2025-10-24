@@ -4,6 +4,7 @@ import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
+import { createAvatarManager } from '$lib/server/avatarManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { data } from '$lib/server/data.js';
 import {
@@ -117,6 +118,16 @@ export const POST = async ({ request, url, locals }) => {
 
         // Get rankings for both seeded and random teams (needed for draw history ELO display)
         const rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
+
+        // Load avatars and merge them into rankings data
+        const avatars = await createAvatarManager().setLeague(leagueId).loadAvatars();
+        if (rankings.players) {
+            for (const [playerName, avatarData] of Object.entries(avatars)) {
+                if (rankings.players[playerName]) {
+                    rankings.players[playerName].avatar = avatarData.avatar || null;
+                }
+            }
+        }
 
         // Load teammate history for variance-conscious team generation
         let teammateHistory = null;
