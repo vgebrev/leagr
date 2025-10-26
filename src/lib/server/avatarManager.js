@@ -6,9 +6,10 @@ import { getLeagueDataPath } from './league.js';
 import { Mutex } from 'async-mutex';
 
 // Constants
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const AVATAR_SIZE = 512; // 512x512 pixels
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+export const AVATAR_SIZE = 512; // 512x512 pixels
+export const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+export const MAX_DIMENSIONS = 4096; // 4096x4096 pixels
 const OUTPUT_FORMAT = 'webp';
 
 // Mutex for avatars.json operations

@@ -33,7 +33,7 @@
     <input
         bind:this={fileInput}
         type="file"
-        accept="image/*"
+        accept="image/jpeg,image/png,image/webp"
         class="hidden"
         onchange={handleFileSelect}
         disabled={uploading} />

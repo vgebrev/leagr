@@ -1,6 +1,12 @@
 import { json, error } from '@sveltejs/kit';
 import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createAvatarManager, AvatarError } from '$lib/server/avatarManager.js';
+import {
+    createAvatarManager,
+    AvatarError,
+    MAX_FILE_SIZE,
+    ALLOWED_MIME_TYPES,
+    MAX_DIMENSIONS
+} from '$lib/server/avatarManager.js';
 import { logger } from '$lib/server/logger.js';
 import fs from 'fs/promises';
 
@@ -55,6 +61,8 @@ export async function POST({ request, params, locals }) {
             message: 'Avatar uploaded successfully and is pending approval'
         });
     } catch (err) {
+        const requirementsText = `Requirements: Max file size ${MAX_FILE_SIZE / 1024 / 1024}MB, Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}, Max dimensions: ${MAX_DIMENSIONS}x${MAX_DIMENSIONS}px`;
+
         if (err instanceof AvatarError) {
             logger.error('Avatar upload error (AvatarError):', {
                 player,
@@ -62,13 +70,7 @@ export async function POST({ request, params, locals }) {
                 message: err.message,
                 stack: err.stack
             });
-            throw error(err.statusCode, {
-                message: err.message,
-                exception: {
-                    name: err.name,
-                    message: err.message
-                }
-            });
+            throw error(err.statusCode, `${err.message}. ${requirementsText}`);
         }
         logger.error('Avatar upload error (unexpected):', {
             player,
@@ -76,14 +78,7 @@ export async function POST({ request, params, locals }) {
             name: err.name,
             stack: err.stack
         });
-        throw error(500, {
-            message: 'Failed to upload avatar',
-            exception: {
-                name: err.name,
-                message: err.message,
-                stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-            }
-        });
+        throw error(500, `Failed to upload avatar. ${requirementsText}`);
     }
 }
 
