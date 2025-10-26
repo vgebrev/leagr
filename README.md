@@ -102,12 +102,13 @@ docker run -d \
   --restart unless-stopped \
   -p 3000:3000 \
   -v /path/to/data/on/host:/app/data \
+  -v /path/to/logs/on/host:/app/logs \
   -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
   -e API_KEY="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -e APP_URL="https://your-production-url.com" \
   -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
   -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
-
+  -e BODY_SIZE_LIMIT=6291456 \
   leagr:latest
 ```
 
@@ -120,13 +121,17 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 - `APP_URL`: The base URL of your application (used for generating links in emails)
 - `MAILGUN_SENDING_KEY`: Mailgun API key for sending emails
 - `MAILGUN_DOMAIN`: Mailgun domain for sending emails
+- `BODY_SIZE_LIMIT`: Maximum request body size in bytes (default: 524288 / 512KB). Set to 6291456 (6MB) for avatar uploads
+- `LOGS_DIR`: Directory path for application logs (default: /app/logs). Mount as volume for persistent logs
 
 **Notes:**
 
 - Replace `/path/to/data/on/host` with the actual path to the data directory on your host machine
+- Replace `/path/to/logs/on/host` with the actual path to the logs directory on your host machine
 - Replace `a1b2c3d4-e5f6-7890-abcd-ef1234567890` with a secure, randomly generated API key
 - Replace the allowed origins, app URL with your actual domain(s)
 - Replace Mailgun credentials with your actual Mailgun account details
+- The `BODY_SIZE_LIMIT` is set to 6MB (6291456 bytes) to support avatar uploads up to 5MB
 
 ## License
 
