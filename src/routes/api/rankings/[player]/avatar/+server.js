@@ -1,6 +1,7 @@
 import { json, error } from '@sveltejs/kit';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { createAvatarManager, AvatarError } from '$lib/server/avatarManager.js';
+import { logger } from '$lib/server/logger.js';
 import fs from 'fs/promises';
 
 /** @type {import('./$types').RequestHandler} */
@@ -55,10 +56,34 @@ export async function POST({ request, params, locals }) {
         });
     } catch (err) {
         if (err instanceof AvatarError) {
-            throw error(err.statusCode, err.message);
+            logger.error('Avatar upload error (AvatarError):', {
+                player,
+                statusCode: err.statusCode,
+                message: err.message,
+                stack: err.stack
+            });
+            throw error(err.statusCode, {
+                message: err.message,
+                exception: {
+                    name: err.name,
+                    message: err.message
+                }
+            });
         }
-        console.error('Avatar upload error:', err);
-        throw error(500, 'Failed to upload avatar');
+        logger.error('Avatar upload error (unexpected):', {
+            player,
+            message: err.message,
+            name: err.name,
+            stack: err.stack
+        });
+        throw error(500, {
+            message: 'Failed to upload avatar',
+            exception: {
+                name: err.name,
+                message: err.message,
+                stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+            }
+        });
     }
 }
 

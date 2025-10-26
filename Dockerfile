@@ -11,6 +11,7 @@ COPY . .
 
 RUN npm run build
 RUN mkdir -p /app/data
+RUN mkdir -p /app/logs
 
 # --- Stage 2: Install only production dependencies ---
 FROM node:24-alpine AS prod-deps
@@ -30,6 +31,7 @@ COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/data ./data
+COPY --from=builder /app/logs ./logs
 
 EXPOSE 3000
 
