@@ -28,7 +28,8 @@ Features include:
     - Player ELO tracks individual matches for long-term team balance optimisation.
     - Player profile - ranking details, history, and profile photos (Admin-approved).
     - Champions hall: tracks league and cup winners.
-
+    - Annually reset rankings to keep competition fresh and motivating.
+  
 ## Environment Setup
 
 Data is stored as JSON files in the `data` directory. For dev, make sure it exists in the root of the project.
