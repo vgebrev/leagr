@@ -16,6 +16,12 @@
             scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
         }
     });
+
+    $effect(() => {
+        if (scrollContainer) {
+            scrollContainer.scrollLeft = scrollContainer.scrollWidth - scrollContainer.clientWidth;
+        }
+    });
 </script>
 
 {#if progression && progression.length > 1}

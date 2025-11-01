@@ -129,4 +129,5 @@ npm run test:frontend
 10. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
 11. If a task becomes more complex than initially planned, pause and discuss alternatives.
 12. Document any assumptions made during implementation in the review section.
+
 - Always use Svelte 5 runes syntax when editing .svelte components and svelte.js files

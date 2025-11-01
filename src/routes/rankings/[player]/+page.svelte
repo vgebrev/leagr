@@ -19,11 +19,19 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
+    import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
 
     let player = $derived(page.params.player);
     let playerData = $state(null);
     let celebrating = $state(false);
     let loadingError = $state(false);
+
+    // Get year from URL query string, default to MAX_YEAR
+    let selectedYear = $derived.by(() => {
+        const yearParam = page.url.searchParams.get('year');
+        return yearParam ? parseInt(yearParam, 10) : MAX_YEAR;
+    });
+
     // Get limit from URL query string, default to null (All)
     let selectedLimit = $derived.by(() => {
         const limitParam = page.url.searchParams.get('limit');
@@ -32,6 +40,10 @@
         return isNaN(parsed) ? null : parsed;
     });
     let dropdownOpen = $state(false);
+    let yearDropdownOpen = $state(false);
+
+    // Generate year options from config
+    let yearOptions = $derived(getYearOptions());
 
     const limitOptions = [
         { value: 5, label: 'last 5' },
@@ -71,7 +83,7 @@
     }
 
     /**
-     * Load player data with optional limit
+     * Load player data with optional limit and year
      */
     async function loadPlayerData() {
         if (!player) {
@@ -82,9 +94,13 @@
         loadingError = false;
         await withLoading(
             async () => {
-                const url = selectedLimit
-                    ? `rankings/${encodeURIComponent(player)}?limit=${selectedLimit}`
-                    : `rankings/${encodeURIComponent(player)}`;
+                // Build URL with year and optional limit
+                const params = new SvelteURLSearchParams();
+                params.set('year', String(selectedYear));
+                if (selectedLimit !== null) {
+                    params.set('limit', String(selectedLimit));
+                }
+                const url = `rankings/${encodeURIComponent(player)}?${params.toString()}`;
                 const response = await api.get(url);
                 playerData = response.playerData;
                 checkForCelebration();
@@ -101,6 +117,24 @@
     }
 
     /**
+     * Handle year change by updating URL and reloading data
+     * @param {number} newYear
+     */
+    async function handleYearChange(newYear) {
+        yearDropdownOpen = false;
+
+        // Build an internal href preserving existing params
+        const params = new SvelteURLSearchParams(page.url.search);
+        params.set('year', String(newYear));
+        const query = params.toString();
+        const href = resolve(`${page.url.pathname}?${query}`, {});
+
+        // Navigate and reload data
+        await goto(href, { replaceState: true });
+        await loadPlayerData();
+    }
+
+    /**
      * Handle limit change by updating URL and reloading data
      */
     async function handleLimitChange(newLimit) {
@@ -114,7 +148,7 @@
             params.set('limit', String(newLimit));
         }
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}${query ? `?${query}` : ''}`);
+        const href = resolve(`${page.url.pathname}${query ? `?${query}` : ''}`, {});
 
         // Navigate without full reload and keep history tidy
         await goto(href, { replaceState: true });
@@ -175,26 +209,55 @@
                 <h6 class="text-gray-400">Player Profile</h6>
             </div>
         </div>
-        <!-- Player Status Badge -->
-        {#if playerData}
-            {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}
-            {#if status === 'inactive'}
-                <Badge
-                    border
-                    class="flex items-center">
-                    <ExclamationCircleOutline class="me-2 h-4 w-4" />
-                    Inactive Player
-                </Badge>
-            {:else if status === 'provisional'}
-                <Badge
-                    border
-                    color="gray"
-                    class="flex items-center">
-                    <HourglassOutline class="me-2 h-4 w-4" />
-                    Provisional Player
-                </Badge>
+        <div class="flex flex-col items-center gap-2">
+            <!-- Year Selector -->
+            <div class="flex items-center gap-1">
+                <span class="text-xs">Year</span>
+                <Button
+                    color="light"
+                    size="xs"
+                    class="flex items-center gap-1">
+                    {selectedYear}
+                    <ChevronDownOutline class="h-4 w-4" />
+                </Button>
+                <Dropdown
+                    simple
+                    class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+                    bind:isOpen={yearDropdownOpen}>
+                    {#each yearOptions as option, i (i)}
+                        <DropdownItem
+                            onclick={() => handleYearChange(option.value)}
+                            class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                                selectedYear === option.value
+                                    ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                                    : ''
+                            }`}>
+                            {option.name}
+                        </DropdownItem>
+                    {/each}
+                </Dropdown>
+            </div>
+            <!-- Player Status Badge -->
+            {#if playerData}
+                {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}
+                {#if status === 'inactive'}
+                    <Badge
+                        border
+                        class="flex items-center">
+                        <ExclamationCircleOutline class="me-2 h-4 w-4" />
+                        Inactive Player
+                    </Badge>
+                {:else if status === 'provisional'}
+                    <Badge
+                        border
+                        color="gray"
+                        class="flex items-center">
+                        <HourglassOutline class="me-2 h-4 w-4" />
+                        Provisional Player
+                    </Badge>
+                {/if}
             {/if}
-        {/if}
+        </div>
     </div>
 
     {#if playerData}

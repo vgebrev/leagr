@@ -1051,3 +1051,180 @@ describe('RankingsManager - Knockout Points', () => {
         });
     });
 });
+
+describe('RankingsManager - Yearly Rankings', () => {
+    let rankingsManager;
+
+    beforeEach(() => {
+        rankingsManager = createRankingsManager();
+    });
+
+    describe('getRankingsPath', () => {
+        it('should return path with year when year is specified', () => {
+            rankingsManager.setLeague('test-league');
+            const path = rankingsManager.getRankingsPath(2025);
+            expect(path).toContain('rankings-2025.json');
+        });
+
+        it('should return path with current year when year is not specified', () => {
+            rankingsManager.setLeague('test-league');
+            const currentYear = new Date().getFullYear();
+            const path = rankingsManager.getRankingsPath();
+            expect(path).toContain(`rankings-${currentYear}.json`);
+        });
+
+        it('should handle different years correctly', () => {
+            rankingsManager.setLeague('test-league');
+            const path2024 = rankingsManager.getRankingsPath(2024);
+            const path2025 = rankingsManager.getRankingsPath(2025);
+            expect(path2024).toContain('rankings-2024.json');
+            expect(path2025).toContain('rankings-2025.json');
+        });
+    });
+
+    describe('filterSessionFilesByYear', () => {
+        it('should filter files to only include specified year', () => {
+            const files = [
+                '2024-05-24.json',
+                '2024-06-07.json',
+                '2025-01-15.json',
+                '2025-03-22.json',
+                '2025-12-31.json',
+                '2026-01-01.json'
+            ];
+
+            const filtered2024 = rankingsManager.filterSessionFilesByYear(files, 2024);
+            expect(filtered2024).toEqual(['2024-05-24.json', '2024-06-07.json']);
+
+            const filtered2025 = rankingsManager.filterSessionFilesByYear(files, 2025);
+            expect(filtered2025).toEqual(['2025-01-15.json', '2025-03-22.json', '2025-12-31.json']);
+        });
+
+        it('should return empty array when no files match year', () => {
+            const files = ['2024-05-24.json', '2024-06-07.json'];
+            const filtered = rankingsManager.filterSessionFilesByYear(files, 2025);
+            expect(filtered).toEqual([]);
+        });
+
+        it('should handle empty file list', () => {
+            const filtered = rankingsManager.filterSessionFilesByYear([], 2025);
+            expect(filtered).toEqual([]);
+        });
+    });
+
+    describe('loadPreviousYearElo', () => {
+        it('should extract ELO ratings from previous year rankings', () => {
+            const previousRankings = {
+                players: {
+                    Alice: {
+                        elo: {
+                            rating: 1050,
+                            lastDecayAt: '2024-12-31',
+                            gamesPlayed: 10
+                        }
+                    },
+                    Bob: {
+                        elo: {
+                            rating: 980,
+                            lastDecayAt: '2024-12-31',
+                            gamesPlayed: 8
+                        }
+                    },
+                    Charlie: {
+                        elo: {
+                            rating: 1120,
+                            lastDecayAt: '2024-12-31',
+                            gamesPlayed: 15
+                        }
+                    }
+                }
+            };
+
+            const eloCarryOver = rankingsManager.loadPreviousYearElo(previousRankings);
+
+            expect(eloCarryOver).toEqual({
+                Alice: { rating: 1050, gamesPlayed: 10 },
+                Bob: { rating: 980, gamesPlayed: 8 },
+                Charlie: { rating: 1120, gamesPlayed: 15 }
+            });
+        });
+
+        it('should return empty object when no previous rankings', () => {
+            const eloCarryOver = rankingsManager.loadPreviousYearElo(null);
+            expect(eloCarryOver).toEqual({});
+        });
+
+        it('should return empty object when previous rankings has no players', () => {
+            const previousRankings = {
+                players: {}
+            };
+            const eloCarryOver = rankingsManager.loadPreviousYearElo(previousRankings);
+            expect(eloCarryOver).toEqual({});
+        });
+
+        it('should handle players without ELO data', () => {
+            const previousRankings = {
+                players: {
+                    Alice: {
+                        elo: {
+                            rating: 1050,
+                            lastDecayAt: '2024-12-31',
+                            gamesPlayed: 10
+                        }
+                    },
+                    Bob: {
+                        // No ELO data
+                    }
+                }
+            };
+
+            const eloCarryOver = rankingsManager.loadPreviousYearElo(previousRankings);
+
+            expect(eloCarryOver).toEqual({
+                Alice: { rating: 1050, gamesPlayed: 10 }
+            });
+        });
+    });
+
+    describe('initializePlayerWithCarryOverElo', () => {
+        it('should initialize player with carried-over ELO', () => {
+            const eloCarryOver = {
+                Alice: { rating: 1050, gamesPlayed: 10 },
+                Bob: { rating: 980, gamesPlayed: 8 }
+            };
+
+            const playerData = rankingsManager.initializePlayerWithCarryOverElo(
+                'Alice',
+                eloCarryOver
+            );
+
+            expect(playerData.elo.rating).toBe(1050);
+            expect(playerData.elo.gamesPlayed).toBe(10); // Carry over games played
+            expect(playerData.elo.lastDecayAt).toBeNull(); // Reset decay date
+            expect(playerData.points).toBe(0);
+            expect(playerData.appearances).toBe(0);
+        });
+
+        it('should initialize player with baseline ELO when not in carry-over', () => {
+            const eloCarryOver = {
+                Alice: { rating: 1050, gamesPlayed: 10 }
+            };
+
+            const playerData = rankingsManager.initializePlayerWithCarryOverElo(
+                'Bob',
+                eloCarryOver
+            );
+
+            expect(playerData.elo.rating).toBe(1000); // ELO_BASELINE_RATING
+            expect(playerData.elo.gamesPlayed).toBe(0);
+            expect(playerData.elo.lastDecayAt).toBeNull();
+        });
+
+        it('should initialize player with baseline ELO when carry-over is empty', () => {
+            const playerData = rankingsManager.initializePlayerWithCarryOverElo('Alice', {});
+
+            expect(playerData.elo.rating).toBe(1000); // ELO_BASELINE_RATING
+            expect(playerData.elo.gamesPlayed).toBe(0);
+        });
+    });
+});

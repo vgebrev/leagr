@@ -1,19 +1,32 @@
 <script>
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
-    import { onMount } from 'svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import { Button, Toggle, Tooltip } from 'flowbite-svelte';
-    import { QuestionCircleOutline } from 'flowbite-svelte-icons';
+    import { Button, Toggle, Tooltip, Dropdown, DropdownItem } from 'flowbite-svelte';
+    import { QuestionCircleOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
     import { page } from '$app/state';
+    import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
+    import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     let rankings = $state({ players: {}, rankingMetadata: {} });
     let sortBy = $state('rankingPoints'); // Default to ranking points
     let showActiveOnly = $state(true); // Default to showing active players only
+    let yearDropdownOpen = $state(false);
+
+    // Get selected year from URL, default to MAX_YEAR
+    let selectedYear = $derived.by(() => {
+        const yearParam = page.url.searchParams.get('year');
+        return yearParam ? parseInt(yearParam, 10) : MAX_YEAR;
+    });
+
+    // Generate year options from config
+    let yearOptions = $derived(getYearOptions());
 
     // Preserve date parameter when navigating to champions
     let championsUrl = $derived.by(() => {
@@ -100,10 +113,33 @@
         return adjustRankMovement(filtered);
     });
 
+    /**
+     * Load rankings for the selected year
+     */
+    async function loadRankings() {
+        await withLoading(
+            async () => {
+                const url = `rankings?year=${selectedYear}`;
+                rankings = await api.get(url);
+            },
+            (err) => {
+                console.error(err);
+                setNotification(
+                    err.message || 'Unable to load rankings. Please try again.',
+                    'error'
+                );
+            }
+        );
+    }
+
+    /**
+     * Update rankings for the selected year
+     */
     async function updateRankings() {
         await withLoading(
             async () => {
-                rankings = await api.post('rankings');
+                const url = `rankings?year=${selectedYear}`;
+                rankings = await api.post(url);
             },
             (err) => {
                 console.error(err);
@@ -115,30 +151,49 @@
         );
     }
 
+    /**
+     * Handle year change - update URL and reload data
+     * @param {number} newYear
+     */
+    async function handleYearChange(newYear) {
+        yearDropdownOpen = false;
+        // Build an internal href preserving existing params
+        const params = new SvelteURLSearchParams(page.url.search);
+        params.set('year', String(newYear));
+        const query = params.toString();
+        const href = resolve(`${page.url.pathname}?${query}`, {});
+
+        // Navigate and reload data
+        await goto(href, { replaceState: true });
+    }
+
     /** Handle sort change event
      * @param {string} newSort */
     function handleSortChange(newSort) {
         sortBy = newSort;
     }
 
-    onMount(async () => {
-        await withLoading(
-            async () => {
-                rankings = await api.get('rankings');
-            },
-            (err) => {
-                console.error(err);
-                setNotification(
-                    err.message || 'Unable to load rankings. Please try again.',
-                    'error'
-                );
-            }
-        );
+    // Load rankings when selectedYear changes (including on mount)
+    $effect(() => {
+        if (selectedYear) {
+            // Track the year
+            loadRankings(); // Reload when year changes
+        }
+    });
+
+    // Auto-adjust "regular players only" filter based on available sessions
+    $effect(() => {
+        const dates = rankings.calculatedDates;
+        if (dates) {
+            // Enable filter when we have enough data (2+ sessions), disable otherwise
+            showActiveOnly = dates.length >= 2;
+        }
     });
 </script>
 
 <div class="flex flex-col gap-2">
     <RankingInfoPanel rankingMetadata={rankings.rankingMetadata} />
+
     <Button
         href={championsUrl}
         color="primary"
@@ -147,20 +202,50 @@
         <TrophyIcon class="h-4 w-4" />
         Champions Hall
     </Button>
-    <div class="flex items-center gap-1">
-        <Toggle
-            bind:checked={showActiveOnly}
-            class="text-sm">
-            Regular players only
-        </Toggle>
-        <QuestionCircleOutline
-            class="h-4 w-4 cursor-help text-gray-400 hover:text-gray-600"
-            id="regular-players-help" />
-        <Tooltip
-            triggeredBy="#regular-players-help"
-            class="text-xs">
-            2+ appearances in the last 2 months
-        </Tooltip>
+
+    <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-1">
+            <Toggle
+                bind:checked={showActiveOnly}
+                class="text-sm">
+                Regular players only
+            </Toggle>
+            <QuestionCircleOutline
+                class="h-4 w-4 cursor-help text-gray-400 hover:text-gray-600"
+                id="regular-players-help" />
+            <Tooltip
+                triggeredBy="#regular-players-help"
+                class="text-xs">
+                2+ appearances in the last 2 months
+            </Tooltip>
+        </div>
+
+        <div class="ml-auto flex items-center gap-1">
+            <span class="text-xs">Year</span>
+            <Button
+                color="light"
+                size="xs"
+                class="flex items-center gap-1">
+                {selectedYear}
+                <ChevronDownOutline class="h-4 w-4" />
+            </Button>
+            <Dropdown
+                simple
+                class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+                bind:isOpen={yearDropdownOpen}>
+                {#each yearOptions as option, i (i)}
+                    <DropdownItem
+                        onclick={() => handleYearChange(option.value)}
+                        class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                            selectedYear === option.value
+                                ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                                : ''
+                        }`}>
+                        {option.name}
+                    </DropdownItem>
+                {/each}
+            </Dropdown>
+        </div>
     </div>
     <div class="overflow-x-auto">
         <RankingsTable

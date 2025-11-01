@@ -53,10 +53,23 @@ export class RankingsManager {
 
     /**
      * Get the Rankings file path for the current league
+     * @param {number} [year] - Year for rankings file (defaults to current year)
      * @returns {string} - Rankings file path
      */
-    getRankingsPath() {
-        return path.join(this.getDataPath(), 'rankings.json');
+    getRankingsPath(year) {
+        const targetYear = year ?? new Date().getFullYear();
+        return path.join(this.getDataPath(), `rankings-${targetYear}.json`);
+    }
+
+    /**
+     * Filter session files to only include those from a specific year
+     * @param {string[]} files - Array of session file names
+     * @param {number} year - Year to filter by
+     * @returns {string[]} - Filtered array of file names
+     */
+    filterSessionFilesByYear(files, year) {
+        const yearPrefix = `${year}-`;
+        return files.filter((file) => file.startsWith(yearPrefix));
     }
 
     /**
@@ -75,11 +88,12 @@ export class RankingsManager {
 
     /**
      * Load rankings without mutex protection (internal use)
+     * @param {number} [year] - Year to load rankings for (defaults to current year)
      * @returns {Promise<Object>} - Raw rankings data
      */
-    async loadRankingsUnsafe() {
+    async loadRankingsUnsafe(year) {
         try {
-            const raw = await fs.readFile(this.getRankingsPath(), 'utf-8');
+            const raw = await fs.readFile(this.getRankingsPath(year), 'utf-8');
             return JSON.parse(raw);
         } catch {
             return {
@@ -92,22 +106,24 @@ export class RankingsManager {
 
     /**
      * Load rankings with mutex protection
+     * @param {number} [year] - Year to load rankings for (defaults to current year)
      * @returns {Promise<Object>} - Raw rankings data
      */
-    async loadRankings() {
+    async loadRankings(year) {
         const mutex = this.getRankingsMutex();
         return await mutex.runExclusive(async () => {
-            return await this.loadRankingsUnsafe();
+            return await this.loadRankingsUnsafe(year);
         });
     }
 
     /**
      * Save rankings without mutex protection (internal use)
      * @param {Object} rankings - Rankings data to save
+     * @param {number} [year] - Year to save rankings for (defaults to current year)
      * @returns {Promise<void>}
      */
-    async saveRankingsUnsafe(rankings) {
-        await fs.writeFile(this.getRankingsPath(), JSON.stringify(rankings, null, 2));
+    async saveRankingsUnsafe(rankings, year) {
+        await fs.writeFile(this.getRankingsPath(year), JSON.stringify(rankings, null, 2));
     }
 
     /**
@@ -282,8 +298,9 @@ export class RankingsManager {
      * @param {Array} rounds - Game rounds data
      * @param {Array} knockoutBracket - Knockout tournament bracket
      * @param {string} date - Current session date
+     * @param {Object} eloCarryOver - ELO carry-over data from previous year
      */
-    processEloRatings(playerTracker, teams, rounds, knockoutBracket, date) {
+    processEloRatings(playerTracker, teams, rounds, knockoutBracket, date, eloCarryOver = {}) {
         // Apply ELO decay to all players before processing games for this date
         this.applyEloDecayToAllPlayers(playerTracker, date);
 
@@ -300,7 +317,8 @@ export class RankingsManager {
                         awayTeam,
                         homeScore,
                         awayScore,
-                        'league'
+                        'league',
+                        eloCarryOver
                     );
                 }
             }
@@ -318,7 +336,8 @@ export class RankingsManager {
                         awayTeam,
                         match.homeScore,
                         match.awayScore,
-                        'cup'
+                        'cup',
+                        eloCarryOver
                     );
                 }
             }
@@ -400,8 +419,17 @@ export class RankingsManager {
      * @param {number} homeScore - Home team score
      * @param {number} awayScore - Away team score
      * @param {string} phase - Game phase ('league' or cup-related)
+     * @param {Object} eloCarryOver - ELO carry-over data from previous year
      */
-    updateEloRatingsForGame(playerTracker, homeTeam, awayTeam, homeScore, awayScore, phase) {
+    updateEloRatingsForGame(
+        playerTracker,
+        homeTeam,
+        awayTeam,
+        homeScore,
+        awayScore,
+        phase,
+        eloCarryOver = {}
+    ) {
         // Filter out null players
         const homePlayersValid = homeTeam.filter((p) => p !== null && p !== undefined);
         const awayPlayersValid = awayTeam.filter((p) => p !== null && p !== undefined);
@@ -410,22 +438,22 @@ export class RankingsManager {
             return; // Skip games with no valid players
         }
 
-        // Ensure all players exist and have ELO data
+        // Ensure all players exist and have ELO data (with carry-over if available)
         [...homePlayersValid, ...awayPlayersValid].forEach((playerName) => {
             if (!playerTracker.has(playerName)) {
-                playerTracker.set(playerName, {
-                    points: 0,
-                    appearances: 0,
-                    rankingDetail: {}
-                });
+                playerTracker.set(
+                    playerName,
+                    this.initializePlayerWithCarryOverElo(playerName, eloCarryOver)
+                );
             }
 
             const playerData = playerTracker.get(playerName);
             if (!playerData.elo) {
+                const carryOverData = eloCarryOver[playerName];
                 playerData.elo = {
-                    rating: ELO_BASELINE_RATING,
+                    rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
                     lastDecayAt: null,
-                    gamesPlayed: 0
+                    gamesPlayed: carryOverData?.gamesPlayed ?? 0
                 };
             }
         });
@@ -662,14 +690,74 @@ export class RankingsManager {
     }
 
     /**
+     * Load ELO data from previous year's rankings file
+     * @param {Object|null} previousRankings - Previous year's rankings data
+     * @returns {Object} - Map of player names to their complete ELO data
+     */
+    loadPreviousYearElo(previousRankings) {
+        if (!previousRankings || !previousRankings.players) {
+            return {};
+        }
+
+        const eloCarryOver = {};
+        for (const [playerName, playerData] of Object.entries(previousRankings.players)) {
+            if (playerData.elo && playerData.elo.rating !== undefined) {
+                eloCarryOver[playerName] = {
+                    rating: playerData.elo.rating,
+                    gamesPlayed: playerData.elo.gamesPlayed || 0
+                };
+            }
+        }
+        return eloCarryOver;
+    }
+
+    /**
+     * Initialize a new player with ELO carry-over from previous year
+     * @param {string} playerName - Player's name
+     * @param {Object} eloCarryOver - Map of player names to ELO data
+     * @returns {Object} - Initialized player data
+     */
+    initializePlayerWithCarryOverElo(playerName, eloCarryOver) {
+        const carryOverData = eloCarryOver[playerName];
+        return {
+            points: 0,
+            appearances: 0,
+            rankingDetail: {},
+            elo: {
+                rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
+                lastDecayAt: null,
+                gamesPlayed: carryOverData?.gamesPlayed ?? 0
+            }
+        };
+    }
+
+    /**
      * Update rankings by processing all game data from scratch with complete history tracking
+     * @param {number} [year] - Year to calculate rankings for (defaults to current year)
      * @returns {Promise<Object>} - Updated rankings
      */
-    async updateRankings() {
+    async updateRankings(year) {
         const mutex = this.getRankingsMutex();
         return await mutex.runExclusive(async () => {
+            const targetYear = year ?? new Date().getFullYear();
+
+            // Load previous year's ELO ratings for carry-over
+            let previousYearRankings = null;
+            try {
+                const prevYearPath = this.getRankingsPath(targetYear - 1);
+                const raw = await fs.readFile(prevYearPath, 'utf-8');
+                previousYearRankings = JSON.parse(raw);
+            } catch {
+                // No previous year rankings - this is fine for the first year
+                previousYearRankings = null;
+            }
+            const eloCarryOver = this.loadPreviousYearElo(previousYearRankings);
+
             const files = await fs.readdir(this.getDataPath());
-            const dateFiles = files.filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort(); // Process chronologically
+            const dateFiles = files
+                .filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f))
+                .filter((f) => this.filterSessionFilesByYear([f], targetYear).length > 0)
+                .sort(); // Process chronologically
 
             // Track all players we've seen and their cumulative data
             const playerTracker = new Map();
@@ -703,7 +791,14 @@ export class RankingsManager {
                 const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
 
                 // Process ELO ratings for all games in this session
-                this.processEloRatings(playerTracker, teams, rounds, knockoutBracket, date);
+                this.processEloRatings(
+                    playerTracker,
+                    teams,
+                    rounds,
+                    knockoutBracket,
+                    date,
+                    eloCarryOver
+                );
 
                 // Track players who appeared this date
                 const playersWhoAppeared = new Set();
@@ -721,16 +816,10 @@ export class RankingsManager {
 
                         // Initialize player if first appearance
                         if (!playerTracker.has(player)) {
-                            playerTracker.set(player, {
-                                points: 0,
-                                appearances: 0,
-                                rankingDetail: {},
-                                elo: {
-                                    rating: ELO_BASELINE_RATING,
-                                    lastDecayAt: null,
-                                    gamesPlayed: 0
-                                }
-                            });
+                            playerTracker.set(
+                                player,
+                                this.initializePlayerWithCarryOverElo(player, eloCarryOver)
+                            );
                         }
 
                         const playerData = playerTracker.get(player);
@@ -806,7 +895,7 @@ export class RankingsManager {
                 playerData.cupWins = championships.cupWins;
             });
 
-            await this.saveRankingsUnsafe(enhancedRankings);
+            await this.saveRankingsUnsafe(enhancedRankings, targetYear);
             return enhancedRankings;
         });
     }
@@ -902,10 +991,11 @@ export class RankingsManager {
 
     /**
      * Load rankings and ensure they have enhanced data
+     * @param {number} [year] - Year to load rankings for (defaults to current year)
      * @returns {Promise<Object>} - Enhanced rankings
      */
-    async loadEnhancedRankings() {
-        const rawRankings = await this.loadRankings();
+    async loadEnhancedRankings(year) {
+        const rawRankings = await this.loadRankings(year);
 
         // Check if rankings already have enhanced data
         if (rawRankings.rankingMetadata && rawRankings.players) {

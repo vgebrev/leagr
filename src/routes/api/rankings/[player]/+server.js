@@ -82,6 +82,11 @@ export async function GET({ params, locals, url }) {
             ? parseInt(limitParam, 10)
             : null;
 
+    // Parse year parameter, default to current year
+    const year = url.searchParams.get('year')
+        ? parseInt(url.searchParams.get('year'), 10)
+        : new Date().getFullYear();
+
     const { leagueId, isValid } = validateLeagueForAPI(locals);
     if (!isValid) {
         throw error(404, 'League not found');
@@ -92,7 +97,7 @@ export async function GET({ params, locals, url }) {
 
     try {
         // Load enhanced rankings data and avatar data
-        const rankings = await rankingsManager.loadEnhancedRankings();
+        const rankings = await rankingsManager.loadEnhancedRankings(year);
         const avatarsData = await avatarManager.loadAvatars();
 
         // Find the specific player
