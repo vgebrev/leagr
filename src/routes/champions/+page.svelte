@@ -1,5 +1,4 @@
 <script>
-    import { onMount } from 'svelte';
     import {
         Alert,
         Spinner,
@@ -8,9 +7,12 @@
         TableHeadCell,
         TableBody,
         TableBodyRow,
-        TableBodyCell
+        TableBodyCell,
+        Button,
+        Dropdown,
+        DropdownItem
     } from 'flowbite-svelte';
-    import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { ExclamationCircleSolid, ChevronDownOutline } from 'flowbite-svelte-icons';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyPopover from '$components/TrophyPopover.svelte';
@@ -18,20 +20,40 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
+    import { page } from '$app/state';
+    import { goto } from '$app/navigation';
+    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
+    import { resolve } from '$app/paths';
 
     let champions = $state([]);
     let loading = $state(true);
     let error = $state(false);
     let celebrating = $state(false);
+    let yearDropdownOpen = $state(false);
     let topChampion = $derived(champions.length > 0 ? champions[0].playerName : '');
+
+    // Get selected year from URL, default to "all"
+    let selectedYear = $derived.by(() => {
+        const yearParam = page.url.searchParams.get('year');
+        return yearParam || new Date().getFullYear();
+    });
+
+    // Generate year options with "All" option
+    let yearOptions = $derived.by(() => {
+        const options = [...getYearOptions(), { value: 'all', name: 'all' }];
+        return options;
+    });
+
     /**
-     * Load champions data
+     * Load champions data for selected year
      */
     async function loadChampions() {
         error = false;
         await withLoading(
             async () => {
-                const response = await api.get('champions');
+                const url = `champions?year=${selectedYear}`;
+                const response = await api.get(url);
                 champions = response.champions || [];
             },
             (err) => {
@@ -44,6 +66,30 @@
     }
 
     /**
+     * Handle year change - update URL
+     * @param {string|number} newYear
+     */
+    async function handleYearChange(newYear) {
+        yearDropdownOpen = false;
+        // Build an internal href preserving existing params
+        const params = new SvelteURLSearchParams(page.url.search);
+        params.set('year', String(newYear));
+        const query = params.toString();
+        const href = resolve(`${page.url.pathname}?${query}`, {});
+
+        // Navigate and reload data
+        await goto(href, { replaceState: true });
+    }
+
+    // Load champions when selectedYear changes (including on mount)
+    $effect(() => {
+        if (selectedYear) {
+            // Track the year
+            loadChampions(); // Reload when year changes
+        }
+    });
+
+    /**
      * Handle click on top champion's name
      */
     function handleTopChampionClick() {
@@ -51,14 +97,46 @@
             celebrating = true;
         }
     }
-
-    onMount(loadChampions);
 </script>
 
 <!-- Header -->
-<div class="mb-2">
-    <h5 class="flex items-center text-lg font-bold">Champions Hall</h5>
-    <p class="text-sm text-gray-400">Players who have won at least one league or knockout cup</p>
+<div class="mb-2 flex items-start justify-between">
+    <div>
+        <h5 class="flex items-center text-lg font-bold">Champions Hall</h5>
+        <p class="text-sm text-gray-400">
+            {selectedYear === 'all'
+                ? 'All-time league and knockout cup winners'
+                : `${selectedYear} league and knockout cup winners`}
+        </p>
+    </div>
+
+    <!-- Year Selector -->
+    <div class="flex items-center gap-1">
+        <span class="text-xs">Year</span>
+        <Button
+            color="light"
+            size="xs"
+            class="flex items-center gap-1">
+            {yearOptions.find((opt) => opt.value == selectedYear)?.name || selectedYear}
+            <ChevronDownOutline class="h-4 w-4" />
+        </Button>
+        <Dropdown
+            simple
+            class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+            bind:isOpen={yearDropdownOpen}>
+            {#each yearOptions as option, i (i)}
+                <DropdownItem
+                    onclick={() => handleYearChange(option.value)}
+                    class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                        selectedYear === option.value
+                            ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                            : ''
+                    }`}>
+                    {option.name}
+                </DropdownItem>
+            {/each}
+        </Dropdown>
+    </div>
 </div>
 
 {#if loading}
