@@ -186,7 +186,7 @@
         const dates = rankings.calculatedDates;
         if (dates) {
             // Enable filter when we have enough data (2+ sessions), disable otherwise
-            showActiveOnly = dates.length >= 2;
+            showActiveOnly = dates.length > 2;
         }
     });
 </script>
