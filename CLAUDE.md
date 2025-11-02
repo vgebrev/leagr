@@ -61,7 +61,7 @@ npm run test:frontend
 ### Data Architecture
 
 - **File-based JSON storage** with date-specific files (`YYYY-MM-DD.json`)
-- **Central rankings file** (`rankings.json`) for player statistics
+- **Yearly rankings files** (`rankings-YYYY.json`) for player statistics
 - **Mutex-protected operations** using async-mutex for concurrent access safety
 - **Structured data format**: players, teams, games, settings per session
 
@@ -70,7 +70,8 @@ npm run test:frontend
 - `/api/players` - Player registration and management
 - `/api/teams` - Team generation (random or seeded)
 - `/api/games` - Match scheduling and results
-- `/api/rankings` - Player performance rankings
+- `/api/rankings` - Player performance rankings (supports year parameter)
+- `/api/champions` - League and cup winners (supports year parameter)
 - `/api/settings` - Configuration management
 
 ### State Management
@@ -96,7 +97,7 @@ npm run test:frontend
 1. Client → API routes → Server utilities → JSON files
 2. All file operations are mutex-protected for thread safety
 3. Date-based routing for session management
-4. Rankings calculated using confidence intervals
+4. Rankings calculated using confidence intervals and support yearly filtering
 
 ### Testing
 
@@ -117,17 +118,24 @@ npm run test:frontend
 
 ## Standard Workflow
 
-1. First, think through the problem, read the codebase for relevant files, and write a plan to tasks/todo.md.
-2. The plan should have a list of todo items that you can check off as you complete them
-3. Before you begin working, check in with me and I will verify the plan.
-4. Then, begin working on the todo items, marking them as complete as you go.
-5. **Write tests first** - Create unit tests for new functionality before implementation
-6. Please every step of the way give me a high-level explanation of what changes you made
-7. Make every task and code change you do as simple as possible. We want to avoid making any massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
-8. **Run tests frequently** - Use `npm test` to verify changes don't break existing functionality
-9. Finally, add a review section to the todo.md file with a summary of the changes you made and any other relevant information.
-10. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
-11. If a task becomes more complex than initially planned, pause and discuss alternatives.
-12. Document any assumptions made during implementation in the review section.
+1. **Plan**: Think through the problem, read the codebase for relevant files, and create a plan using the TodoWrite tool.
+2. **Review Plan**: Check in with the user to verify the plan before proceeding.
+3. **Track Progress**: Use the TodoWrite tool during implementation to track todo items, marking them as complete as you go.
+4. **Write tests first** - Create unit tests for new functionality before implementation
+5. **Explain Changes**: Every step of the way, give high-level explanations of what changes you made
+6. **Keep it Simple**: Make every task and code change as simple as possible. Avoid massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
+7. **Run tests frequently** - Use `npm test` to verify changes don't break existing functionality
+8. **Document**: After completing a non-trivial feature or significant change, create a summary document in `tasks/[feature-name]-implementation.md` with:
+    - Overview of what was implemented
+    - Architecture decisions made
+    - Files modified (with brief descriptions)
+    - Testing approach
+    - Any assumptions or limitations
+9. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
+10. If a task becomes more complex than initially planned, pause and discuss alternatives.
+
+**Important Notes:**
 
 - Always use Svelte 5 runes syntax when editing .svelte components and svelte.js files
+- Use TodoWrite tool for in-session progress tracking
+- Create persistent summary docs in `tasks/` folder for completed features
