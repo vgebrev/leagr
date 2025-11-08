@@ -204,20 +204,20 @@ Tracks for each team:
 Updated the team performance calculation to use points percentage instead of total wins:
 
 1. **Backend Changes** (`yearInReviewManager.js`)
-   - Now includes knockout cup games in team statistics (not just league games)
-   - Calculates points (3 for win, 1 for draw) and total available points
-   - Computes points percentage: `(points won / total available points) * 100`
-   - Updated sorting criteria:
-     1. Points percentage (DESC for best, ASC for worst)
-     2. Goal difference
-     3. Goals scored
-     4. Total points
-   - Returns additional fields: `totalGames`, `points`, `totalAvailablePoints`, `pointsPercentage`
+    - Now includes knockout cup games in team statistics (not just league games)
+    - Calculates points (3 for win, 1 for draw) and total available points
+    - Computes points percentage: `(points won / total available points) * 100`
+    - Updated sorting criteria:
+        1. Points percentage (DESC for best, ASC for worst)
+        2. Goal difference
+        3. Goals scored
+        4. Total points
+    - Returns additional fields: `totalGames`, `points`, `totalAvailablePoints`, `pointsPercentage`
 
 2. **Frontend Changes** (`Invincibles.svelte`, `Underdogs.svelte`)
-   - Added prominent points percentage display at top of card
-   - Shows actual points won vs total available (e.g., "24/24")
-   - Maintains existing stats grid (W/D/L, goals, etc.)
+    - Added prominent points percentage display at top of card
+    - Shows actual points won vs total available (e.g., "24/24")
+    - Maintains existing stats grid (W/D/L, goals, etc.)
 
 **Result**: Teams with perfect records now correctly rank above teams with more total wins but lower win percentages. For example, a team with 8 wins from 8 games (100%) now ranks above a team with 7 wins, 1 draw, 1 loss from 9 games (77.8%).
 
@@ -226,24 +226,24 @@ Updated the team performance calculation to use points percentage instead of tot
 Fixed critical layout issues with the carousel implementation:
 
 1. **Carousel Container Structure** (`+page.svelte`)
-   - Added proper height context with `min-h-[calc(100dvh-9rem)]` wrapper
-   - Created relative positioning hierarchy for smooth transitions
-   - Absolute positioned slides to overlay during transitions (eliminates jumpiness)
-   - Repositioned nav buttons from viewport edges to page container (`left-2/right-2`)
-   - Fixed indicators positioning at `bottom-4` with improved visibility
+    - Added proper height context with `min-h-[calc(100dvh-9rem)]` wrapper
+    - Created relative positioning hierarchy for smooth transitions
+    - Absolute positioned slides to overlay during transitions (eliminates jumpiness)
+    - Repositioned nav buttons from viewport edges to page container (`left-2/right-2`)
+    - Fixed indicators positioning at `bottom-4` with improved visibility
 
 2. **SlideCard Component** (`SlideCard.svelte`)
-   - Converted to flex column layout with `overflow-hidden`
-   - Fixed header section with `shrink-0` and responsive padding
-   - Scrollable content area with `flex-1 overflow-y-auto min-h-0`
-   - Responsive text scaling (mobile to desktop)
-   - Bottom padding to prevent indicator overlap
+    - Converted to flex column layout with `overflow-hidden`
+    - Fixed header section with `shrink-0` and responsive padding
+    - Scrollable content area with `flex-1 overflow-y-auto min-h-0`
+    - Responsive text scaling (mobile to desktop)
+    - Bottom padding to prevent indicator overlap
 
 3. **All Card Components Made Responsive**
-   - Reduced spacing/padding on mobile (`gap-2 md:gap-3`, `p-3 md:p-4`)
-   - Responsive text sizes (`text-base md:text-xl`, `text-xs md:text-sm`)
-   - Compact layouts that fit within available viewport height
-   - All 9 cards updated: YearOverview, IronManAward, MostImproved, KingOfKings, PlayerOfYear, TeamOfYear, Underdogs, Invincibles, FunFacts
+    - Reduced spacing/padding on mobile (`gap-2 md:gap-3`, `p-3 md:p-4`)
+    - Responsive text sizes (`text-base md:text-xl`, `text-xs md:text-sm`)
+    - Compact layouts that fit within available viewport height
+    - All 9 cards updated: YearOverview, IronManAward, MostImproved, KingOfKings, PlayerOfYear, TeamOfYear, Underdogs, Invincibles, FunFacts
 
 **Result**: Carousel now properly fills available space, has smooth animations, visible indicators, and works responsively on all screen sizes.
 

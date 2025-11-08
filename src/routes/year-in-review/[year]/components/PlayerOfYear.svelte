@@ -14,23 +14,27 @@
         {#if data && data.length > 0}
             {#each data as player, index (index)}
                 <div
-                    class="flex items-center justify-between rounded-lg bg-gradient-to-r from-gray-50 to-blue-50 p-3 transition-colors hover:from-gray-100 hover:to-blue-100 dark:from-gray-800 dark:to-blue-900/20 dark:hover:from-gray-700 dark:hover:to-blue-900/30 md:p-4">
+                    class="flex items-center justify-between rounded-lg bg-gradient-to-r from-gray-50 to-blue-50 p-3 transition-colors hover:from-gray-100 hover:to-blue-100 md:p-4 dark:from-gray-800 dark:to-blue-900/20 dark:hover:from-gray-700 dark:hover:to-blue-900/30">
                     <div class="flex items-center gap-2 md:gap-4">
                         <span class="text-2xl md:text-4xl">{medals[index]}</span>
                         <div class="text-left">
-                            <div class="text-base font-bold text-gray-900 dark:text-white md:text-xl">
+                            <div
+                                class="text-base font-bold text-gray-900 md:text-xl dark:text-white">
                                 {player.name}
                             </div>
-                            <div class="text-xs text-gray-600 dark:text-gray-400 md:text-sm">
+                            <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
                                 Rank #{player.rank} • {player.appearances} Sessions
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 md:text-3xl">
+                        <div
+                            class="text-2xl font-bold text-blue-600 md:text-3xl dark:text-blue-400">
                             {player.rankingPoints.toFixed(1)}
                         </div>
-                        <div class="text-xs text-gray-600 dark:text-gray-400 md:text-sm">Ranking Points</div>
+                        <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
+                            Ranking Points
+                        </div>
                     </div>
                 </div>
             {/each}

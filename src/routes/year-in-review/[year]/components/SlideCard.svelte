@@ -8,10 +8,10 @@
         <!-- Header section - fixed at top -->
         <div class="shrink-0 px-4 py-6 text-center md:px-6 md:py-8">
             <div class="mb-2 text-4xl md:mb-4 md:text-6xl">{icon}</div>
-            <h2 class="mb-1 text-2xl font-bold text-gray-900 dark:text-white md:mb-2 md:text-4xl">
+            <h2 class="mb-1 text-2xl font-bold text-gray-900 md:mb-2 md:text-4xl dark:text-white">
                 {heading}
             </h2>
-            <p class="text-sm text-gray-600 dark:text-gray-400 md:text-base">{description}</p>
+            <p class="text-sm text-gray-600 md:text-base dark:text-gray-400">{description}</p>
         </div>
 
         <!-- Content section - scrollable -->

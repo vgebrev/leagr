@@ -14,19 +14,20 @@
             <!-- Highest Scoring Match -->
             {#if data.highestScoringMatch}
                 <div
-                    class="rounded-lg bg-gradient-to-r from-orange-50 to-red-50 p-3 dark:from-orange-900/20 dark:to-red-900/20 md:p-4">
-                    <div class="mb-2 text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+                    class="rounded-lg bg-gradient-to-r from-orange-50 to-red-50 p-3 md:p-4 dark:from-orange-900/20 dark:to-red-900/20">
+                    <div
+                        class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                         🔥 Highest Scoring Match
                     </div>
                     <div class="flex items-center justify-center gap-2 md:gap-4">
                         <TeamBadge teamName={data.highestScoringMatch.home} />
-                        <span class="text-xl font-bold text-gray-900 dark:text-white md:text-2xl">
+                        <span class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
                             {data.highestScoringMatch.homeScore} - {data.highestScoringMatch
                                 .awayScore}
                         </span>
                         <TeamBadge teamName={data.highestScoringMatch.away} />
                     </div>
-                    <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 md:text-sm">
+                    <div class="mt-1 text-xs text-gray-600 md:text-sm dark:text-gray-400">
                         {data.highestScoringMatch.totalGoals} total goals on {data
                             .highestScoringMatch.date}
                     </div>
@@ -36,18 +37,19 @@
             <!-- Biggest Margin Win -->
             {#if data.biggestMarginWin}
                 <div
-                    class="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-3 dark:from-green-900/20 dark:to-emerald-900/20 md:p-4">
-                    <div class="mb-2 text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+                    class="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-3 md:p-4 dark:from-green-900/20 dark:to-emerald-900/20">
+                    <div
+                        class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                         💥 Biggest Margin Win
                     </div>
                     <div class="flex items-center justify-center gap-2 md:gap-4">
                         <TeamBadge teamName={data.biggestMarginWin.home} />
-                        <span class="text-xl font-bold text-gray-900 dark:text-white md:text-2xl">
+                        <span class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
                             {data.biggestMarginWin.homeScore} - {data.biggestMarginWin.awayScore}
                         </span>
                         <TeamBadge teamName={data.biggestMarginWin.away} />
                     </div>
-                    <div class="mt-1 text-xs text-gray-600 dark:text-gray-400 md:text-sm">
+                    <div class="mt-1 text-xs text-gray-600 md:text-sm dark:text-gray-400">
                         {data.biggestMarginWin.margin} goal margin on {data.biggestMarginWin.date}
                     </div>
                 </div>
@@ -56,28 +58,32 @@
             <!-- Most & Fewest Goals -->
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {#if data.mostGoalsSession}
-                    <div class="rounded-lg bg-blue-50 p-3 dark:bg-blue-900/20 md:p-4">
-                        <div class="mb-1 text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+                    <div class="rounded-lg bg-blue-50 p-3 md:p-4 dark:bg-blue-900/20">
+                        <div
+                            class="mb-1 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                             ⚽ Most Goals in a Session
                         </div>
-                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 md:text-3xl">
+                        <div
+                            class="text-2xl font-bold text-blue-600 md:text-3xl dark:text-blue-400">
                             {data.mostGoalsSession.goals}
                         </div>
-                        <div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400 md:text-sm">
+                        <div class="mt-0.5 text-xs text-gray-600 md:text-sm dark:text-gray-400">
                             {data.mostGoalsSession.date}
                         </div>
                     </div>
                 {/if}
 
                 {#if data.fewestGoalsSession}
-                    <div class="rounded-lg bg-purple-50 p-3 dark:bg-purple-900/20 md:p-4">
-                        <div class="mb-1 text-sm font-semibold text-gray-900 dark:text-white md:text-base">
+                    <div class="rounded-lg bg-purple-50 p-3 md:p-4 dark:bg-purple-900/20">
+                        <div
+                            class="mb-1 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                             🛡️ Fewest Goals in a Session
                         </div>
-                        <div class="text-2xl font-bold text-purple-600 dark:text-purple-400 md:text-3xl">
+                        <div
+                            class="text-2xl font-bold text-purple-600 md:text-3xl dark:text-purple-400">
                             {data.fewestGoalsSession.goals}
                         </div>
-                        <div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400 md:text-sm">
+                        <div class="mt-0.5 text-xs text-gray-600 md:text-sm dark:text-gray-400">
                             {data.fewestGoalsSession.date}
                         </div>
                     </div>
