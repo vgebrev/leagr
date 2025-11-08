@@ -19,7 +19,7 @@
     // Get team color styles if color is provided
     const colorStyles = $derived(color ? teamStyles[color] || teamStyles.default : null);
     const avatarClasses = $derived(
-        colorStyles ? `!border-2 ${colorStyles.border} ${colorStyles.text}` : undefined
+        colorStyles ? `!border-2 !p-0 ${colorStyles.border} ${colorStyles.text}` : '!p-0'
     );
 
     // Display logic:
