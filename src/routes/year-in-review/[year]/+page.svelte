@@ -104,107 +104,116 @@
     // });
 </script>
 
-<!-- Header with Year Selector -->
-<div class="mb-2 flex items-start justify-between">
-    <div>
-        <h5 class="text-lg font-bold">Year in Review</h5>
-        <p class="text-sm text-gray-400">
-            Highlights and statistics from {selectedYear}
-        </p>
-    </div>
-
-    <!-- Year Selector -->
-    <div class="flex items-center gap-1">
-        <span class="text-xs">Year</span>
-        <Button
-            color="light"
-            size="xs"
-            class="flex items-center gap-1">
-            {yearOptions.find((opt) => opt.value === selectedYear)?.name || selectedYear}
-            <ChevronDownOutline class="h-4 w-4" />
-        </Button>
-        <Dropdown
-            simple
-            class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
-            bind:isOpen={yearDropdownOpen}>
-            {#each yearOptions as option, i (i)}
-                <DropdownItem
-                    onclick={() => handleYearChange(option.value)}
-                    class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
-                        selectedYear === option.value
-                            ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
-                            : ''
-                    }`}>
-                    {option.name}
-                </DropdownItem>
-            {/each}
-        </Dropdown>
-    </div>
-</div>
-
-{#if $isLoading}
-    <div class="flex items-center justify-center">
-        <div class="text-gray-500 dark:text-gray-400">Loading...</div>
-    </div>
-{:else if yearInReview}
-    {#key currentSlide}
-        <div
-            in:fly={{ x: slideDirection * 300, duration: 400 }}
-            out:fly={{ x: slideDirection * -300, duration: 400 }}>
-            {#if currentSlide === 0}
-                <YearOverview data={yearInReview.overview} />
-            {:else if currentSlide === 1}
-                <IronManAward data={yearInReview.ironManAward} />
-            {:else if currentSlide === 2}
-                <MostImproved data={yearInReview.mostImproved} />
-            {:else if currentSlide === 3}
-                <KingOfKings data={yearInReview.kingOfKings} />
-            {:else if currentSlide === 4}
-                <PlayerOfYear data={yearInReview.playerOfYear} />
-            {:else if currentSlide === 5}
-                <Underdogs data={yearInReview.underdogs} />
-            {:else if currentSlide === 6}
-                <Invincibles data={yearInReview.invincibles} />
-            {:else if currentSlide === 7}
-                <TeamOfYear data={yearInReview.teamOfYear} />
-            {:else if currentSlide === 8}
-                <FunFacts data={yearInReview.funFacts} />
-            {/if}
+<!-- Use min-h to ensure full viewport coverage minus navbars and padding -->
+<div class="flex min-h-[calc(100dvh-9rem)] flex-col">
+    <!-- Header with Year Selector -->
+    <div class="mb-2 flex shrink-0 items-start justify-between">
+        <div>
+            <h5 class="text-lg font-bold">Year in Review</h5>
+            <p class="text-sm text-gray-400">
+                Highlights and statistics from {selectedYear}
+            </p>
         </div>
-    {/key}
 
-    <!-- Overlaid Previous Button -->
-    <button
-        onclick={prevSlide}
-        class="glass absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
-        aria-label="Previous slide">
-        <ChevronLeftOutline class="h-6 w-6 text-gray-900 dark:text-white" />
-    </button>
+        <!-- Year Selector -->
+        <div class="flex items-center gap-1">
+            <span class="text-xs">Year</span>
+            <Button
+                color="light"
+                size="xs"
+                class="flex items-center gap-1">
+                {yearOptions.find((opt) => opt.value === selectedYear)?.name || selectedYear}
+                <ChevronDownOutline class="h-4 w-4" />
+            </Button>
+            <Dropdown
+                simple
+                class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+                bind:isOpen={yearDropdownOpen}>
+                {#each yearOptions as option, i (i)}
+                    <DropdownItem
+                        onclick={() => handleYearChange(option.value)}
+                        class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                            selectedYear === option.value
+                                ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                                : ''
+                        }`}>
+                        {option.name}
+                    </DropdownItem>
+                {/each}
+            </Dropdown>
+        </div>
+    </div>
 
-    <!-- Overlaid Next Button -->
-    <button
-        onclick={nextSlide}
-        class="glass absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
-        aria-label="Next slide">
-        <ChevronRightOutline class="h-6 w-6 text-gray-900 dark:text-white" />
-    </button>
+    {#if $isLoading}
+        <div class="flex flex-1 items-center justify-center">
+            <div class="text-gray-500 dark:text-gray-400">Loading...</div>
+        </div>
+    {:else if yearInReview}
+        <!-- Carousel Container with relative positioning for absolute children -->
+        <div class="relative flex min-h-0 flex-1 flex-col">
+            <!-- Slides Container with absolute positioning for smooth transitions -->
+            <div class="relative flex-1">
+                {#key currentSlide}
+                    <div
+                        class="absolute inset-0"
+                        in:fly={{ x: slideDirection * 300, duration: 400 }}
+                        out:fly={{ x: slideDirection * -300, duration: 400 }}>
+                        {#if currentSlide === 0}
+                            <YearOverview data={yearInReview.overview} />
+                        {:else if currentSlide === 1}
+                            <IronManAward data={yearInReview.ironManAward} />
+                        {:else if currentSlide === 2}
+                            <MostImproved data={yearInReview.mostImproved} />
+                        {:else if currentSlide === 3}
+                            <KingOfKings data={yearInReview.kingOfKings} />
+                        {:else if currentSlide === 4}
+                            <PlayerOfYear data={yearInReview.playerOfYear} />
+                        {:else if currentSlide === 5}
+                            <Underdogs data={yearInReview.underdogs} />
+                        {:else if currentSlide === 6}
+                            <Invincibles data={yearInReview.invincibles} />
+                        {:else if currentSlide === 7}
+                            <TeamOfYear data={yearInReview.teamOfYear} />
+                        {:else if currentSlide === 8}
+                            <FunFacts data={yearInReview.funFacts} />
+                        {/if}
+                    </div>
+                {/key}
+            </div>
 
-    <!-- Overlaid Indicators -->
-    <div class="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-        <!-- eslint-disable-next-line no-unused-vars -->
-        {#each Array(totalSlides) as _, index (index)}
+            <!-- Navigation Buttons - positioned relative to carousel container -->
             <button
-                onclick={() => goToSlide(index)}
-                class="h-2.5 w-2.5 rounded-full transition-all {currentSlide === index
-                    ? 'w-8 bg-blue-600 dark:bg-blue-400'
-                    : 'bg-white/60 hover:bg-white dark:bg-gray-400/60 dark:hover:bg-gray-300'} backdrop-blur-sm"
-                aria-label="Go to slide {index + 1}"></button>
-        {/each}
-    </div>
-{:else}
-    <div class="flex flex-1 items-center justify-center">
-        <div class="text-gray-500 dark:text-gray-400">
-            No data available for {selectedYear}
+                onclick={prevSlide}
+                class="glass absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 md:p-3 dark:border-gray-700"
+                aria-label="Previous slide">
+                <ChevronLeftOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+            </button>
+
+            <button
+                onclick={nextSlide}
+                class="glass absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 md:p-3 dark:border-gray-700"
+                aria-label="Next slide">
+                <ChevronRightOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+            </button>
+
+            <!-- Indicators - positioned relative to carousel container -->
+            <div class="absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+                <!-- eslint-disable-next-line no-unused-vars -->
+                {#each Array(totalSlides) as _, index (index)}
+                    <button
+                        onclick={() => goToSlide(index)}
+                        class="h-2 w-2 rounded-full transition-all {currentSlide === index
+                            ? 'w-6 bg-blue-600 dark:bg-blue-400'
+                            : 'bg-gray-400/80 hover:bg-gray-500 dark:bg-gray-500/80 dark:hover:bg-gray-400'} backdrop-blur-sm"
+                        aria-label="Go to slide {index + 1}"></button>
+                {/each}
+            </div>
         </div>
-    </div>
-{/if}
+    {:else}
+        <div class="flex flex-1 items-center justify-center">
+            <div class="text-gray-500 dark:text-gray-400">
+                No data available for {selectedYear}
+            </div>
+        </div>
+    {/if}
+</div>

@@ -10,27 +10,27 @@
     icon="👟"
     heading="Iron Man Award"
     description="Most Dedicated Players">
-    <div class="mt-8 space-y-4">
+    <div class="mt-4 space-y-3">
         {#if data && data.length > 0}
             {#each data as player, index (index)}
                 <div
-                    class="flex items-center justify-between rounded-lg bg-gray-50 p-6 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700">
-                    <div class="flex items-center gap-4">
-                        <span class="text-4xl">{medals[index]}</span>
+                    class="flex items-center justify-between rounded-lg bg-gray-50 p-3 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 md:p-4">
+                    <div class="flex items-center gap-2 md:gap-4">
+                        <span class="text-2xl md:text-4xl">{medals[index]}</span>
                         <div class="text-left">
-                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                            <div class="text-base font-bold text-gray-900 dark:text-white md:text-xl">
                                 {player.name}
                             </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400">
+                            <div class="text-xs text-gray-600 dark:text-gray-400 md:text-sm">
                                 Ranking Points: {player.rankingPoints.toFixed(1)}
                             </div>
                         </div>
                     </div>
                     <div class="text-right">
-                        <div class="text-3xl font-bold text-blue-600 dark:text-blue-400">
+                        <div class="text-2xl font-bold text-blue-600 dark:text-blue-400 md:text-3xl">
                             {player.appearances}
                         </div>
-                        <div class="text-sm text-gray-600 dark:text-gray-400">Sessions</div>
+                        <div class="text-xs text-gray-600 dark:text-gray-400 md:text-sm">Sessions</div>
                     </div>
                 </div>
             {/each}
