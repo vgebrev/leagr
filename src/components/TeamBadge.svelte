@@ -1,7 +1,7 @@
 <script>
     import { teamStyles, teamColours, titleCase } from '$lib/shared/helpers.js';
 
-    let { teamName, className, onclick = null } = $props();
+    let { teamName, className = null, onclick = null } = $props();
 
     // Extract the colour from the team name (first word)
     let teamColour = $derived.by(() => {

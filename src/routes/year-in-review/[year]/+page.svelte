@@ -147,66 +147,59 @@
         <div class="text-gray-500 dark:text-gray-400">Loading...</div>
     </div>
 {:else if yearInReview}
-    <!-- Carousel Container -->
-    <div class="">
-        <!-- Slides -->
-        <div class="absolute inset-0">
-            {#key currentSlide}
-                <div
-                    class="absolute inset-0"
-                    in:fly={{ x: slideDirection * 300, duration: 400 }}
-                    out:fly={{ x: slideDirection * -300, duration: 400 }}>
-                    {#if currentSlide === 0}
-                        <YearOverview data={yearInReview.overview} />
-                    {:else if currentSlide === 1}
-                        <IronManAward data={yearInReview.ironManAward} />
-                    {:else if currentSlide === 2}
-                        <MostImproved data={yearInReview.mostImproved} />
-                    {:else if currentSlide === 3}
-                        <KingOfKings data={yearInReview.kingOfKings} />
-                    {:else if currentSlide === 4}
-                        <PlayerOfYear data={yearInReview.playerOfYear} />
-                    {:else if currentSlide === 5}
-                        <Underdogs data={yearInReview.underdogs} />
-                    {:else if currentSlide === 6}
-                        <Invincibles data={yearInReview.invincibles} />
-                    {:else if currentSlide === 7}
-                        <TeamOfYear data={yearInReview.teamOfYear} />
-                    {:else if currentSlide === 8}
-                        <FunFacts data={yearInReview.funFacts} />
-                    {/if}
-                </div>
-            {/key}
+    {#key currentSlide}
+        <div
+            in:fly={{ x: slideDirection * 300, duration: 400 }}
+            out:fly={{ x: slideDirection * -300, duration: 400 }}>
+            {#if currentSlide === 0}
+                <YearOverview data={yearInReview.overview} />
+            {:else if currentSlide === 1}
+                <IronManAward data={yearInReview.ironManAward} />
+            {:else if currentSlide === 2}
+                <MostImproved data={yearInReview.mostImproved} />
+            {:else if currentSlide === 3}
+                <KingOfKings data={yearInReview.kingOfKings} />
+            {:else if currentSlide === 4}
+                <PlayerOfYear data={yearInReview.playerOfYear} />
+            {:else if currentSlide === 5}
+                <Underdogs data={yearInReview.underdogs} />
+            {:else if currentSlide === 6}
+                <Invincibles data={yearInReview.invincibles} />
+            {:else if currentSlide === 7}
+                <TeamOfYear data={yearInReview.teamOfYear} />
+            {:else if currentSlide === 8}
+                <FunFacts data={yearInReview.funFacts} />
+            {/if}
         </div>
+    {/key}
 
-        <!-- Overlaid Previous Button -->
-        <button
-            onclick={prevSlide}
-            class="glass absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
-            aria-label="Previous slide">
-            <ChevronLeftOutline class="h-6 w-6 text-gray-900 dark:text-white" />
-        </button>
+    <!-- Overlaid Previous Button -->
+    <button
+        onclick={prevSlide}
+        class="glass absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
+        aria-label="Previous slide">
+        <ChevronLeftOutline class="h-6 w-6 text-gray-900 dark:text-white" />
+    </button>
 
-        <!-- Overlaid Next Button -->
-        <button
-            onclick={nextSlide}
-            class="glass absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
-            aria-label="Next slide">
-            <ChevronRightOutline class="h-6 w-6 text-gray-900 dark:text-white" />
-        </button>
+    <!-- Overlaid Next Button -->
+    <button
+        onclick={nextSlide}
+        class="glass absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
+        aria-label="Next slide">
+        <ChevronRightOutline class="h-6 w-6 text-gray-900 dark:text-white" />
+    </button>
 
-        <!-- Overlaid Indicators -->
-        <div class="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 gap-2">
-            <!-- eslint-disable-next-line no-unused-vars -->
-            {#each Array(totalSlides) as _, index (index)}
-                <button
-                    onclick={() => goToSlide(index)}
-                    class="h-2.5 w-2.5 rounded-full transition-all {currentSlide === index
-                        ? 'w-8 bg-blue-600 dark:bg-blue-400'
-                        : 'bg-white/60 hover:bg-white dark:bg-gray-400/60 dark:hover:bg-gray-300'} backdrop-blur-sm"
-                    aria-label="Go to slide {index + 1}"></button>
-            {/each}
-        </div>
+    <!-- Overlaid Indicators -->
+    <div class="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+        <!-- eslint-disable-next-line no-unused-vars -->
+        {#each Array(totalSlides) as _, index (index)}
+            <button
+                onclick={() => goToSlide(index)}
+                class="h-2.5 w-2.5 rounded-full transition-all {currentSlide === index
+                    ? 'w-8 bg-blue-600 dark:bg-blue-400'
+                    : 'bg-white/60 hover:bg-white dark:bg-gray-400/60 dark:hover:bg-gray-300'} backdrop-blur-sm"
+                aria-label="Go to slide {index + 1}"></button>
+        {/each}
     </div>
 {:else}
     <div class="flex flex-1 items-center justify-center">

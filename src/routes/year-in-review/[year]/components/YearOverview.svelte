@@ -4,15 +4,10 @@
     let { data } = $props();
 </script>
 
-<SlideCard>
-    <div class="mb-8">
-        <div class="mb-4 text-6xl">📊</div>
-        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Year by Numbers</h2>
-        <p class="text-gray-600 dark:text-gray-400">
-            {data?.firstSession} to {data?.lastSession}
-        </p>
-    </div>
-
+<SlideCard
+    icon="📊"
+    heading="Year by Numbers"
+    description={`${data?.firstSession} to ${data?.lastSession}`}>
     <div class="mt-8 grid grid-cols-2 gap-6 md:grid-cols-4">
         <div class="rounded-lg bg-blue-50 p-6 text-center dark:bg-blue-900/20">
             <div class="mb-2 text-5xl font-bold text-blue-600 dark:text-blue-400">

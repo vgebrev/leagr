@@ -6,13 +6,10 @@
     const medals = ['🥇', '🥈', '🥉'];
 </script>
 
-<SlideCard>
-    <div class="mb-8">
-        <div class="mb-4 text-6xl">📈</div>
-        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Most Improved</h2>
-        <p class="text-gray-600 dark:text-gray-400">Biggest Rank Climbers</p>
-    </div>
-
+<SlideCard
+    icon="📈"
+    heading="Most Improved"
+    description="Biggest Rank Climbers">
     <div class="mt-8 space-y-4">
         {#if data && data.length > 0}
             {#each data as player, index (index)}

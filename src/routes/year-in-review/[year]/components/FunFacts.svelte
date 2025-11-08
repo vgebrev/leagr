@@ -5,13 +5,10 @@
     let { data } = $props();
 </script>
 
-<SlideCard>
-    <div class="mb-8">
-        <div class="mb-4 text-6xl">🎯</div>
-        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Fun Facts</h2>
-        <p class="text-gray-600 dark:text-gray-400">Memorable Moments from the Year</p>
-    </div>
-
+<SlideCard
+    icon="🎯"
+    heading="Fun Facts"
+    description="Memorable Moments from the Year">
     {#if data}
         <div class="mt-8 space-y-6">
             <!-- Highest Scoring Match -->

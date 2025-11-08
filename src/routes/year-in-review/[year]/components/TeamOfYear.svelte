@@ -1,16 +1,13 @@
 <script>
     import SlideCard from './SlideCard.svelte';
 
-    let { data } = $props();
+    let { data, slideDirection } = $props();
 </script>
 
-<SlideCard>
-    <div class="mb-8">
-        <div class="mb-4 text-6xl">👑</div>
-        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">Team of the Year</h2>
-        <p class="text-gray-600 dark:text-gray-400">The Dream Team - Top 6 by Ranking Points</p>
-    </div>
-
+<SlideCard
+    icon="👑"
+    heading="Team of the Year"
+    description="The Dream Team - Top 6 by Ranking Points">
     {#if data && data.length > 0}
         <div class="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2">
             {#each data as player, index (index)}

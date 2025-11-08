@@ -5,13 +5,10 @@
     let { data } = $props();
 </script>
 
-<SlideCard>
-    <div class="mb-8">
-        <div class="mb-4 text-6xl">💪</div>
-        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">The Invincibles</h2>
-        <p class="text-gray-600 dark:text-gray-400">The Most Dominant Team</p>
-    </div>
-
+<SlideCard
+    icon="💪"
+    heading="The Invincibles"
+    description="The Most Dominant Team">
     {#if data}
         <div class="mt-8 space-y-6">
             <!-- Team Name -->
