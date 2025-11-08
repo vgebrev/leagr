@@ -1,0 +1,473 @@
+import fs from 'fs/promises';
+import { getLeagueDataPath } from './league.js';
+import { createRankingsManager } from './rankings.js';
+
+/**
+ * Year in Review Manager - Handles aggregation and calculation of yearly statistics
+ */
+export class YearInReviewManager {
+    constructor() {
+        this.leagueId = null;
+    }
+
+    /**
+     * Set the league ID for this manager instance
+     * @param {string} leagueId - League identifier
+     * @returns {YearInReviewManager} - Fluent interface
+     */
+    setLeague(leagueId) {
+        this.leagueId = leagueId;
+        return this;
+    }
+
+    /**
+     * Get the data path for the current league
+     * @returns {string} - Data path
+     */
+    getDataPath() {
+        if (!this.leagueId) {
+            throw new Error('League ID must be set before accessing data path');
+        }
+        return getLeagueDataPath(this.leagueId);
+    }
+
+    /**
+     * Load all session files for a given year
+     * @param {number} year - Year to load sessions for
+     * @returns {Promise<Array>} - Array of session objects with date and data
+     */
+    async loadYearSessions(year) {
+        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const dataPath = this.getDataPath();
+        const allFiles = await fs.readdir(dataPath);
+        const sessionFiles = rankingsManager.filterSessionFilesByYear(
+            allFiles.filter((f) => f.match(/^\d{4}-\d{2}-\d{2}\.json$/)),
+            year
+        );
+
+        const sessions = [];
+        for (const file of sessionFiles) {
+            try {
+                const date = file.replace('.json', '');
+                const filePath = `${dataPath}/${file}`;
+                const fileContent = await fs.readFile(filePath, 'utf-8');
+                const sessionData = JSON.parse(fileContent);
+
+                // Only include sessions that have games data
+                if (sessionData.games?.rounds && sessionData.teams) {
+                    sessions.push({ date, ...sessionData });
+                }
+            } catch (error) {
+                console.error(`Error loading session file ${file}:`, error);
+                // Skip this file and continue
+            }
+        }
+
+        return sessions;
+    }
+
+    /**
+     * Generate comprehensive year in review statistics
+     * @param {number} year - Year to generate statistics for
+     * @returns {Promise<Object>} - Year in review statistics
+     */
+    async generateYearInReview(year) {
+        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const rankingsData = await rankingsManager.loadEnhancedRankings(year);
+
+        // Check if we have data for this year
+        if (!rankingsData.calculatedDates || rankingsData.calculatedDates.length === 0) {
+            throw new Error('No data available for this year');
+        }
+
+        // Load previous year's rankings for year-over-year comparison
+        let previousYearRankings = null;
+        try {
+            previousYearRankings = await rankingsManager.loadEnhancedRankings(year - 1);
+        } catch {
+            // Previous year doesn't exist, that's okay
+        }
+
+        // Load all session files for the year
+        const sessions = await this.loadYearSessions(year);
+
+        // Calculate aggregated statistics
+        return this.calculateYearStats(rankingsData, previousYearRankings, sessions);
+    }
+
+    /**
+     * Calculate comprehensive year statistics
+     * @param {Object} rankingsData - Current year rankings data
+     * @param {Object} previousYearRankings - Previous year rankings (or null)
+     * @param {Array} sessions - All session data for the year
+     * @returns {Object} - Comprehensive year statistics
+     */
+    calculateYearStats(rankingsData, previousYearRankings, sessions) {
+        const players = rankingsData.players;
+        const sessionDates = rankingsData.calculatedDates;
+
+        // Year Overview
+        const overview = this.calculateOverview(sessionDates, sessions, players);
+
+        // Individual Awards
+        const ironManAward = this.calculateIronManAward(players);
+        const mostImproved = this.calculateMostImproved(players, previousYearRankings);
+        const kingOfKings = this.calculateKingOfKings(players);
+        const playerOfYear = this.calculatePlayerOfYear(players);
+
+        // Team Awards
+        const teamOfYear = this.calculateTeamOfYear(players);
+        const teamStats = this.calculateTeamStats(sessions);
+
+        // Fun Facts
+        const funFacts = this.calculateFunFacts(sessions);
+
+        return {
+            overview,
+            ironManAward,
+            mostImproved,
+            kingOfKings,
+            playerOfYear,
+            teamOfYear,
+            invincibles: teamStats.bestTeam,
+            underdogs: teamStats.worstTeam,
+            funFacts
+        };
+    }
+
+    /**
+     * Calculate year overview statistics
+     * @param {Array} sessionDates - Array of session dates
+     * @param {Array} sessions - All session data
+     * @param {Object} players - Player data
+     * @returns {Object} - Overview statistics
+     */
+    calculateOverview(sessionDates, sessions, players) {
+        return {
+            totalSessions: sessionDates.length,
+            totalMatches: sessions.reduce(
+                (sum, s) => sum + (s.games?.rounds?.flat().length || 0),
+                0
+            ),
+            totalPlayers: Object.keys(players).length,
+            totalGoals: sessions.reduce((sum, s) => {
+                return (
+                    sum +
+                    (s.games?.rounds?.flat().reduce((g, match) => {
+                        return g + (match.homeScore || 0) + (match.awayScore || 0);
+                    }, 0) || 0)
+                );
+            }, 0),
+            firstSession: sessionDates[0],
+            lastSession: sessionDates[sessionDates.length - 1]
+        };
+    }
+
+    /**
+     * Calculate Iron Man Award (most appearances, tiebreaker: total games played)
+     * @param {Object} players - Player data
+     * @returns {Array} - Top 3 players
+     */
+    calculateIronManAward(players) {
+        return Object.entries(players)
+            .map(([name, p]) => {
+                // Calculate total games played from ranking detail
+                const totalGames = p.appearances * 3; // Approximate: each session has ~3 league games per player
+
+                return {
+                    name,
+                    appearances: p.appearances,
+                    totalGames,
+                    rankingPoints: p.rankingPoints
+                };
+            })
+            .sort((a, b) => {
+                if (b.appearances !== a.appearances) return b.appearances - a.appearances;
+                return b.totalGames - a.totalGames;
+            })
+            .slice(0, 3);
+    }
+
+    /**
+     * Calculate Most Improved (biggest positive rank movement)
+     * @param {Object} players - Current year player data
+     * @param {Object} previousYearRankings - Previous year rankings (or null)
+     * @returns {Array} - Top 3 most improved players
+     */
+    calculateMostImproved(players, previousYearRankings) {
+        return Object.entries(players)
+            .map(([name, p]) => {
+                let previousRank = null;
+                let rankImprovement = 0;
+
+                // Try year-over-year comparison first
+                if (previousYearRankings?.players?.[name]) {
+                    previousRank = previousYearRankings.players[name].rank;
+                    rankImprovement = previousRank - p.rank;
+                } else {
+                    // Fallback: within-year improvement (first rank vs final rank)
+                    const sessionDatesForPlayer = Object.keys(p.rankingDetail || {}).sort();
+                    if (sessionDatesForPlayer.length > 1) {
+                        const firstSession = p.rankingDetail[sessionDatesForPlayer[0]];
+                        previousRank = firstSession.rank;
+                        rankImprovement = previousRank - p.rank;
+                    }
+                }
+
+                return {
+                    name,
+                    previousRank,
+                    currentRank: p.rank,
+                    rankImprovement,
+                    rankingPoints: p.rankingPoints
+                };
+            })
+            .filter((p) => p.previousRank !== null && p.rankImprovement > 0)
+            .sort((a, b) => b.rankImprovement - a.rankImprovement)
+            .slice(0, 3);
+    }
+
+    /**
+     * Calculate King of Kings (most trophies)
+     * @param {Object} players - Player data
+     * @returns {Array} - Top 3 trophy winners
+     */
+    calculateKingOfKings(players) {
+        return Object.entries(players)
+            .map(([name, p]) => ({
+                name,
+                leagueWins: p.leagueWins || 0,
+                cupWins: p.cupWins || 0,
+                totalTrophies: (p.leagueWins || 0) + (p.cupWins || 0),
+                rankingPoints: p.rankingPoints
+            }))
+            .filter((p) => p.totalTrophies > 0)
+            .sort((a, b) => b.totalTrophies - a.totalTrophies)
+            .slice(0, 3);
+    }
+
+    /**
+     * Calculate Player of the Year (top ranking points)
+     * @param {Object} players - Player data
+     * @returns {Array} - Top 3 players by ranking points
+     */
+    calculatePlayerOfYear(players) {
+        return Object.entries(players)
+            .map(([name, p]) => ({
+                name,
+                rankingPoints: p.rankingPoints,
+                rank: p.rank,
+                appearances: p.appearances
+            }))
+            .sort((a, b) => b.rankingPoints - a.rankingPoints)
+            .slice(0, 3);
+    }
+
+    /**
+     * Calculate Team of the Year (dream team - top 6 by ranking points)
+     * @param {Object} players - Player data
+     * @returns {Array} - Top 6 players
+     */
+    calculateTeamOfYear(players) {
+        return Object.entries(players)
+            .map(([name, p]) => ({
+                name,
+                rankingPoints: p.rankingPoints,
+                rank: p.rank
+            }))
+            .sort((a, b) => b.rankingPoints - a.rankingPoints)
+            .slice(0, 6);
+    }
+
+    /**
+     * Calculate team statistics - finds best/worst single team across all sessions
+     * @param {Array} sessions - All session data
+     * @returns {Object} - Team statistics including best and worst teams
+     */
+    calculateTeamStats(sessions) {
+        const allTeams = [];
+
+        // Evaluate each team in each session independently
+        for (const session of sessions) {
+            const { date, teams, games } = session;
+            if (!teams || !games?.rounds) continue;
+
+            const teamNames = Object.keys(teams);
+            const matchResults = [];
+
+            // Extract match results for this session
+            for (const round of games.rounds) {
+                for (const game of round) {
+                    if (game.homeScore !== null && game.awayScore !== null) {
+                        matchResults.push({
+                            home: game.home,
+                            away: game.away,
+                            homeScore: game.homeScore,
+                            awayScore: game.awayScore
+                        });
+                    }
+                }
+            }
+
+            // Calculate stats for each team in this session
+            for (const teamName of teamNames) {
+                let wins = 0;
+                let draws = 0;
+                let losses = 0;
+                let goalsFor = 0;
+                let goalsAgainst = 0;
+
+                for (const match of matchResults) {
+                    if (match.home === teamName) {
+                        goalsFor += match.homeScore;
+                        goalsAgainst += match.awayScore;
+                        if (match.homeScore > match.awayScore) wins++;
+                        else if (match.homeScore < match.awayScore) losses++;
+                        else draws++;
+                    } else if (match.away === teamName) {
+                        goalsFor += match.awayScore;
+                        goalsAgainst += match.homeScore;
+                        if (match.awayScore > match.homeScore) wins++;
+                        else if (match.awayScore < match.homeScore) losses++;
+                        else draws++;
+                    }
+                }
+
+                const goalDifference = goalsFor - goalsAgainst;
+
+                // Each team is unique per session
+                allTeams.push({
+                    sessionDate: date,
+                    teamName,
+                    wins,
+                    draws,
+                    losses,
+                    goalsFor,
+                    goalsAgainst,
+                    goalDifference,
+                    players: teams[teamName] || []
+                });
+            }
+        }
+
+        // Find best team (Invincibles) - most wins, then best goal difference
+        const bestTeam = [...allTeams].sort((a, b) => {
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            return b.goalDifference - a.goalDifference;
+        })[0];
+
+        // Find worst team (Underdogs) - fewest wins, then worst goal difference
+        const worstTeam = [...allTeams].sort((a, b) => {
+            if (a.wins !== b.wins) return a.wins - b.wins;
+            return a.goalDifference - b.goalDifference;
+        })[0];
+
+        return {
+            bestTeam: bestTeam
+                ? {
+                      sessionDate: bestTeam.sessionDate,
+                      teamName: bestTeam.teamName,
+                      wins: bestTeam.wins,
+                      draws: bestTeam.draws,
+                      losses: bestTeam.losses,
+                      goalsFor: bestTeam.goalsFor,
+                      goalsAgainst: bestTeam.goalsAgainst,
+                      goalDifference: bestTeam.goalDifference,
+                      players: bestTeam.players
+                  }
+                : null,
+            worstTeam: worstTeam
+                ? {
+                      sessionDate: worstTeam.sessionDate,
+                      teamName: worstTeam.teamName,
+                      wins: worstTeam.wins,
+                      draws: worstTeam.draws,
+                      losses: worstTeam.losses,
+                      goalsFor: worstTeam.goalsFor,
+                      goalsAgainst: worstTeam.goalsAgainst,
+                      goalDifference: worstTeam.goalDifference,
+                      players: worstTeam.players
+                  }
+                : null
+        };
+    }
+
+    /**
+     * Calculate fun facts from session data
+     * @param {Array} sessions - All session data
+     * @returns {Object} - Fun facts
+     */
+    calculateFunFacts(sessions) {
+        let highestScoringMatch = null;
+        let biggestMarginWin = null;
+        let mostGoalsSession = { date: null, goals: 0 };
+        let fewestGoalsSession = { date: null, goals: Infinity };
+
+        for (const session of sessions) {
+            const { date, games } = session;
+            if (!games?.rounds) continue;
+
+            let sessionGoals = 0;
+            let hasCompletedGames = false;
+
+            for (const round of games.rounds) {
+                for (const match of round) {
+                    if (match.homeScore !== null && match.awayScore !== null) {
+                        hasCompletedGames = true;
+                        const totalGoals = match.homeScore + match.awayScore;
+                        const margin = Math.abs(match.homeScore - match.awayScore);
+
+                        sessionGoals += totalGoals;
+
+                        // Highest scoring match
+                        if (!highestScoringMatch || totalGoals > highestScoringMatch.totalGoals) {
+                            highestScoringMatch = {
+                                date,
+                                home: match.home,
+                                away: match.away,
+                                homeScore: match.homeScore,
+                                awayScore: match.awayScore,
+                                totalGoals
+                            };
+                        }
+
+                        // Biggest margin win
+                        if (!biggestMarginWin || margin > biggestMarginWin.margin) {
+                            biggestMarginWin = {
+                                date,
+                                home: match.home,
+                                away: match.away,
+                                homeScore: match.homeScore,
+                                awayScore: match.awayScore,
+                                margin
+                            };
+                        }
+                    }
+                }
+            }
+
+            // Only count sessions with completed games for most/fewest goals
+            if (hasCompletedGames) {
+                if (sessionGoals > mostGoalsSession.goals) {
+                    mostGoalsSession = { date, goals: sessionGoals };
+                }
+                if (sessionGoals < fewestGoalsSession.goals) {
+                    fewestGoalsSession = { date, goals: sessionGoals };
+                }
+            }
+        }
+
+        return {
+            highestScoringMatch,
+            biggestMarginWin,
+            mostGoalsSession,
+            fewestGoalsSession: fewestGoalsSession.goals !== Infinity ? fewestGoalsSession : null
+        };
+    }
+}
+
+/**
+ * Factory function to create a new YearInReviewManager instance
+ * @returns {YearInReviewManager}
+ */
+export const createYearInReviewManager = () => new YearInReviewManager();

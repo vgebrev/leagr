@@ -1,0 +1,58 @@
+<script>
+    import SlideCard from './SlideCard.svelte';
+    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+
+    let { data } = $props();
+
+    const medals = ['🥇', '🥈', '🥉'];
+</script>
+
+<SlideCard>
+    <div class="mb-8">
+        <div class="mb-4 text-6xl">🏆</div>
+        <h2 class="mb-2 text-4xl font-bold text-gray-900 dark:text-white">King of Kings</h2>
+        <p class="text-gray-600 dark:text-gray-400">Most Championship Trophies</p>
+    </div>
+
+    <div class="mt-8 space-y-4">
+        {#if data && data.length > 0}
+            {#each data as player, index (index)}
+                <div
+                    class="flex items-center justify-between rounded-lg bg-gray-50 p-6 transition-colors hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700">
+                    <div class="flex items-center gap-4">
+                        <span class="text-4xl">{medals[index]}</span>
+                        <div class="text-left">
+                            <div class="text-2xl font-bold text-gray-900 dark:text-white">
+                                {player.name}
+                            </div>
+                            <div class="mt-1 flex gap-3">
+                                <div
+                                    class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                                    <TrophyIcon
+                                        type="league"
+                                        size="sm" />
+                                    {player.leagueWins} League
+                                </div>
+                                <div
+                                    class="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                                    <TrophyIcon
+                                        type="cup"
+                                        size="sm" />
+                                    {player.cupWins} Cup
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-5xl font-bold text-yellow-500 dark:text-yellow-400">
+                            {player.totalTrophies}
+                        </div>
+                        <div class="text-sm text-gray-600 dark:text-gray-400">Total Trophies</div>
+                    </div>
+                </div>
+            {/each}
+        {:else}
+            <div class="py-8 text-gray-500 dark:text-gray-400">No champions this year</div>
+        {/if}
+    </div>
+</SlideCard>

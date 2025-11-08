@@ -1,0 +1,217 @@
+<script>
+    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
+    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { Dropdown, DropdownItem, Button } from 'flowbite-svelte';
+    import {
+        ChevronDownOutline,
+        ChevronLeftOutline,
+        ChevronRightOutline
+    } from 'flowbite-svelte-icons';
+    import { goto } from '$app/navigation';
+    import { resolve } from '$app/paths';
+    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { fly } from 'svelte/transition';
+
+    import YearOverview from './components/YearOverview.svelte';
+    import IronManAward from './components/IronManAward.svelte';
+    import MostImproved from './components/MostImproved.svelte';
+    import KingOfKings from './components/KingOfKings.svelte';
+    import PlayerOfYear from './components/PlayerOfYear.svelte';
+    import Underdogs from './components/Underdogs.svelte';
+    import Invincibles from './components/Invincibles.svelte';
+    import TeamOfYear from './components/TeamOfYear.svelte';
+    import FunFacts from './components/FunFacts.svelte';
+
+    let { data } = $props();
+
+    let yearInReview = $state(null);
+    let yearDropdownOpen = $state(false);
+    let currentSlide = $state(0);
+    let lastLoadedYear = $state(null);
+    let slideDirection = $state(1); // 1 for forward, -1 for backward
+
+    // Get selected year from URL parameter
+    let selectedYear = $derived(parseInt(data.year, 10));
+
+    // Generate year options from config
+    let yearOptions = $derived(getYearOptions());
+
+    // Total number of slides
+    const totalSlides = 9;
+
+    /**
+     * Load year in review data for the selected year
+     */
+    async function loadYearInReview() {
+        await withLoading(async () => {
+            yearInReview = await api.get(`year-in-review/${selectedYear}`);
+        });
+    }
+
+    /**
+     * Handle year selection
+     */
+    function handleYearChange(year) {
+        goto(resolve(`/year-in-review/${year}`, {}));
+        yearDropdownOpen = false;
+    }
+
+    /**
+     * Navigate to previous slide
+     */
+    function prevSlide() {
+        slideDirection = -1;
+        currentSlide = currentSlide === 0 ? totalSlides - 1 : currentSlide - 1;
+    }
+
+    /**
+     * Navigate to next slide
+     */
+    function nextSlide() {
+        slideDirection = 1;
+        currentSlide = currentSlide === totalSlides - 1 ? 0 : currentSlide + 1;
+    }
+
+    /**
+     * Go to specific slide
+     */
+    function goToSlide(index) {
+        slideDirection = index > currentSlide ? 1 : -1;
+        currentSlide = index;
+    }
+
+    // Load data when component mounts or year changes
+    $effect(() => {
+        if (selectedYear && selectedYear !== lastLoadedYear) {
+            lastLoadedYear = selectedYear;
+            loadYearInReview();
+            currentSlide = 0; // Reset to first slide on year change
+        }
+    });
+
+    // Auto-slide every 10 seconds (resets on manual navigation)
+    // $effect(() => {
+    //     if (!yearInReview) return;
+    //
+    //     // Track currentSlide to reset interval on any slide change
+    //     currentSlide;
+    //
+    //     const interval = setInterval(() => {
+    //         nextSlide();
+    //     }, 10000);
+    //
+    //     return () => clearInterval(interval);
+    // });
+</script>
+
+<!-- Header with Year Selector -->
+<div class="mb-2 flex items-start justify-between">
+    <div>
+        <h5 class="text-lg font-bold">Year in Review</h5>
+        <p class="text-sm text-gray-400">
+            Highlights and statistics from {selectedYear}
+        </p>
+    </div>
+
+    <!-- Year Selector -->
+    <div class="flex items-center gap-1">
+        <span class="text-xs">Year</span>
+        <Button
+            color="light"
+            size="xs"
+            class="flex items-center gap-1">
+            {yearOptions.find((opt) => opt.value === selectedYear)?.name || selectedYear}
+            <ChevronDownOutline class="h-4 w-4" />
+        </Button>
+        <Dropdown
+            simple
+            class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+            bind:isOpen={yearDropdownOpen}>
+            {#each yearOptions as option, i (i)}
+                <DropdownItem
+                    onclick={() => handleYearChange(option.value)}
+                    class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                        selectedYear === option.value
+                            ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                            : ''
+                    }`}>
+                    {option.name}
+                </DropdownItem>
+            {/each}
+        </Dropdown>
+    </div>
+</div>
+
+{#if $isLoading}
+    <div class="flex items-center justify-center">
+        <div class="text-gray-500 dark:text-gray-400">Loading...</div>
+    </div>
+{:else if yearInReview}
+    <!-- Carousel Container -->
+    <div class="">
+        <!-- Slides -->
+        <div class="absolute inset-0">
+            {#key currentSlide}
+                <div
+                    class="absolute inset-0"
+                    in:fly={{ x: slideDirection * 300, duration: 400 }}
+                    out:fly={{ x: slideDirection * -300, duration: 400 }}>
+                    {#if currentSlide === 0}
+                        <YearOverview data={yearInReview.overview} />
+                    {:else if currentSlide === 1}
+                        <IronManAward data={yearInReview.ironManAward} />
+                    {:else if currentSlide === 2}
+                        <MostImproved data={yearInReview.mostImproved} />
+                    {:else if currentSlide === 3}
+                        <KingOfKings data={yearInReview.kingOfKings} />
+                    {:else if currentSlide === 4}
+                        <PlayerOfYear data={yearInReview.playerOfYear} />
+                    {:else if currentSlide === 5}
+                        <Underdogs data={yearInReview.underdogs} />
+                    {:else if currentSlide === 6}
+                        <Invincibles data={yearInReview.invincibles} />
+                    {:else if currentSlide === 7}
+                        <TeamOfYear data={yearInReview.teamOfYear} />
+                    {:else if currentSlide === 8}
+                        <FunFacts data={yearInReview.funFacts} />
+                    {/if}
+                </div>
+            {/key}
+        </div>
+
+        <!-- Overlaid Previous Button -->
+        <button
+            onclick={prevSlide}
+            class="glass absolute top-1/2 left-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
+            aria-label="Previous slide">
+            <ChevronLeftOutline class="h-6 w-6 text-gray-900 dark:text-white" />
+        </button>
+
+        <!-- Overlaid Next Button -->
+        <button
+            onclick={nextSlide}
+            class="glass absolute top-1/2 right-4 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-4 shadow-lg transition-all hover:scale-110 dark:border-gray-700"
+            aria-label="Next slide">
+            <ChevronRightOutline class="h-6 w-6 text-gray-900 dark:text-white" />
+        </button>
+
+        <!-- Overlaid Indicators -->
+        <div class="absolute bottom-8 left-1/2 z-10 flex -translate-x-1/2 gap-2">
+            <!-- eslint-disable-next-line no-unused-vars -->
+            {#each Array(totalSlides) as _, index (index)}
+                <button
+                    onclick={() => goToSlide(index)}
+                    class="h-2.5 w-2.5 rounded-full transition-all {currentSlide === index
+                        ? 'w-8 bg-blue-600 dark:bg-blue-400'
+                        : 'bg-white/60 hover:bg-white dark:bg-gray-400/60 dark:hover:bg-gray-300'} backdrop-blur-sm"
+                    aria-label="Go to slide {index + 1}"></button>
+            {/each}
+        </div>
+    </div>
+{:else}
+    <div class="flex flex-1 items-center justify-center">
+        <div class="text-gray-500 dark:text-gray-400">
+            No data available for {selectedYear}
+        </div>
+    </div>
+{/if}

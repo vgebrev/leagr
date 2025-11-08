@@ -1,24 +1,24 @@
 <script>
     import {
         Alert,
-        Spinner,
-        Table,
-        TableHead,
-        TableHeadCell,
-        TableBody,
-        TableBodyRow,
-        TableBodyCell,
         Button,
         Dropdown,
-        DropdownItem
+        DropdownItem,
+        Spinner,
+        Table,
+        TableBody,
+        TableBodyCell,
+        TableBodyRow,
+        TableHead,
+        TableHeadCell
     } from 'flowbite-svelte';
-    import { ExclamationCircleSolid, ChevronDownOutline } from 'flowbite-svelte-icons';
+    import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyPopover from '$components/TrophyPopover.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
+    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
@@ -27,7 +27,6 @@
     import { resolve } from '$app/paths';
 
     let champions = $state([]);
-    let loading = $state(true);
     let error = $state(false);
     let celebrating = $state(false);
     let yearDropdownOpen = $state(false);
@@ -41,8 +40,7 @@
 
     // Generate year options with "All" option
     let yearOptions = $derived.by(() => {
-        const options = [...getYearOptions(), { value: 'all', name: 'all' }];
-        return options;
+        return [...getYearOptions(), { value: 'all', name: 'all' }];
     });
 
     /**
@@ -62,7 +60,6 @@
                 setNotification(err.message || 'Failed to load champions data', 'error');
             }
         );
-        loading = false;
     }
 
     /**
@@ -117,7 +114,7 @@
             color="light"
             size="xs"
             class="flex items-center gap-1">
-            {yearOptions.find((opt) => opt.value == selectedYear)?.name || selectedYear}
+            {yearOptions.find((opt) => opt.value === selectedYear)?.name || selectedYear}
             <ChevronDownOutline class="h-4 w-4" />
         </Button>
         <Dropdown
@@ -139,7 +136,7 @@
     </div>
 </div>
 
-{#if loading}
+{#if $isLoading}
     <div class="flex items-center justify-center gap-2 p-8">
         <Spinner size="6" />
         <div class="text-gray-500">Loading champions data...</div>
