@@ -3,9 +3,9 @@ import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
 
 /**
- * Year in Review Manager - Handles aggregation and calculation of yearly statistics
+ * Year Recap Manager - Handles aggregation and calculation of yearly statistics
  */
-export class YearInReviewManager {
+export class YearRecapManager {
     constructor() {
         this.leagueId = null;
     }
@@ -13,7 +13,7 @@ export class YearInReviewManager {
     /**
      * Set the league ID for this manager instance
      * @param {string} leagueId - League identifier
-     * @returns {YearInReviewManager} - Fluent interface
+     * @returns {YearRecapManager} - Fluent interface
      */
     setLeague(leagueId) {
         this.leagueId = leagueId;
@@ -67,11 +67,11 @@ export class YearInReviewManager {
     }
 
     /**
-     * Generate comprehensive year in review statistics
+     * Generate comprehensive year recap statistics
      * @param {number} year - Year to generate statistics for
-     * @returns {Promise<Object>} - Year in review statistics
+     * @returns {Promise<Object>} - Year recap statistics
      */
-    async generateYearInReview(year) {
+    async generateYearRecap(year) {
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
         const rankingsData = await rankingsManager.loadEnhancedRankings(year);
 
@@ -534,7 +534,7 @@ export class YearInReviewManager {
 }
 
 /**
- * Factory function to create a new YearInReviewManager instance
- * @returns {YearInReviewManager}
+ * Factory function to create a new YearRecapManager instance
+ * @returns {YearRecapManager}
  */
-export const createYearInReviewManager = () => new YearInReviewManager();
+export const createYearRecapManager = () => new YearRecapManager();

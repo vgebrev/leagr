@@ -1,9 +1,9 @@
 import { json, error } from '@sveltejs/kit';
-import { createYearInReviewManager } from '$lib/server/yearInReviewManager.js';
+import { createYearRecapManager } from '$lib/server/yearRecapManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
 /**
- * GET /api/year-in-review/[year] - Get comprehensive year in review statistics
+ * GET /api/year-recap/[year] - Get comprehensive year recap statistics
  * @param {Object} locals - Local variables from SvelteKit request handler
  * @param {Object} params - Route parameters
  * @param {string} params.year - Year to get statistics for
@@ -20,14 +20,14 @@ export const GET = async ({ locals, params }) => {
     }
 
     try {
-        const manager = createYearInReviewManager().setLeague(leagueId);
-        const stats = await manager.generateYearInReview(year);
+        const manager = createYearRecapManager().setLeague(leagueId);
+        const stats = await manager.generateYearRecap(year);
         return json(stats);
     } catch (err) {
-        console.error('Error loading year in review data:', err);
+        console.error('Error loading year recap data:', err);
         if (err.message === 'No data available for this year') {
             return error(404, err.message);
         }
-        return error(500, 'Failed to load year in review data');
+        return error(500, 'Failed to load year recap data');
     }
 };

@@ -24,7 +24,7 @@
 
     let { data } = $props();
 
-    let yearInReview = $state(null);
+    let yearRecap = $state(null);
     let yearDropdownOpen = $state(false);
     let currentSlide = $state(0);
     let lastLoadedYear = $state(null);
@@ -40,11 +40,11 @@
     const totalSlides = 9;
 
     /**
-     * Load year in review data for the selected year
+     * Load year recap data for the selected year
      */
-    async function loadYearInReview() {
+    async function loadYearRecap() {
         await withLoading(async () => {
-            yearInReview = await api.get(`year-in-review/${selectedYear}`);
+            yearRecap = await api.get(`year-recap/${selectedYear}`);
         });
     }
 
@@ -52,7 +52,7 @@
      * Handle year selection
      */
     function handleYearChange(year) {
-        goto(resolve(`/year-in-review/${year}`, {}));
+        goto(resolve(`/year-recap/${year}`, {}));
         yearDropdownOpen = false;
     }
 
@@ -84,14 +84,14 @@
     $effect(() => {
         if (selectedYear && selectedYear !== lastLoadedYear) {
             lastLoadedYear = selectedYear;
-            loadYearInReview();
+            loadYearRecap();
             currentSlide = 0; // Reset to first slide on year change
         }
     });
 
     // Auto-slide every 10 seconds (resets on manual navigation)
     // $effect(() => {
-    //     if (!yearInReview) return;
+    //     if (!yearRecap) return;
     //
     //     // Track currentSlide to reset interval on any slide change
     //     currentSlide;
@@ -109,7 +109,7 @@
     <!-- Header with Year Selector -->
     <div class="mb-2 flex shrink-0 items-start justify-between">
         <div>
-            <h5 class="text-lg font-bold">Year in Review</h5>
+            <h5 class="text-lg font-bold">Year Recap</h5>
             <p class="text-sm text-gray-400">
                 Highlights and statistics from {selectedYear}
             </p>
@@ -148,7 +148,7 @@
         <div class="flex flex-1 items-center justify-center">
             <div class="text-gray-500 dark:text-gray-400">Loading...</div>
         </div>
-    {:else if yearInReview}
+    {:else if yearRecap}
         <!-- Carousel Container with relative positioning for absolute children -->
         <div class="relative flex min-h-0 flex-1 flex-col">
             <!-- Slides Container with absolute positioning for smooth transitions -->
@@ -159,23 +159,23 @@
                         in:fly={{ x: slideDirection * 300, duration: 400 }}
                         out:fly={{ x: slideDirection * -300, duration: 400 }}>
                         {#if currentSlide === 0}
-                            <YearOverview data={yearInReview.overview} />
+                            <YearOverview data={yearRecap.overview} />
                         {:else if currentSlide === 1}
-                            <IronManAward data={yearInReview.ironManAward} />
+                            <IronManAward data={yearRecap.ironManAward} />
                         {:else if currentSlide === 2}
-                            <MostImproved data={yearInReview.mostImproved} />
+                            <MostImproved data={yearRecap.mostImproved} />
                         {:else if currentSlide === 3}
-                            <KingOfKings data={yearInReview.kingOfKings} />
+                            <KingOfKings data={yearRecap.kingOfKings} />
                         {:else if currentSlide === 4}
-                            <PlayerOfYear data={yearInReview.playerOfYear} />
+                            <PlayerOfYear data={yearRecap.playerOfYear} />
                         {:else if currentSlide === 5}
-                            <Underdogs data={yearInReview.underdogs} />
+                            <Underdogs data={yearRecap.underdogs} />
                         {:else if currentSlide === 6}
-                            <Invincibles data={yearInReview.invincibles} />
+                            <Invincibles data={yearRecap.invincibles} />
                         {:else if currentSlide === 7}
-                            <TeamOfYear data={yearInReview.teamOfYear} />
+                            <TeamOfYear data={yearRecap.teamOfYear} />
                         {:else if currentSlide === 8}
-                            <FunFacts data={yearInReview.funFacts} />
+                            <FunFacts data={yearRecap.funFacts} />
                         {/if}
                     </div>
                 {/key}

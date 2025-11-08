@@ -1,17 +1,17 @@
-# Year in Review Feature - Implementation Document
+# Year Recap Feature - Implementation Document
 
 **Date**: 2025-11-07
-**Feature**: Year in Review statistics carousel
+**Feature**: Year Recap statistics carousel
 
 ## Overview
 
-Implemented a comprehensive "Year in Review" feature that presents yearly statistics in an engaging carousel format. The feature aggregates player performance data, team statistics, and memorable moments from a full year of sessions into nine themed cards that tell the story of the year.
+Implemented a comprehensive "Year Recap" feature that presents yearly statistics in an engaging carousel format. The feature aggregates player performance data, team statistics, and memorable moments from a full year of sessions into nine themed cards that tell the story of the year.
 
 ## Architecture Decisions
 
 ### Backend Design
 
-- **Separation of Concerns**: Created `YearInReviewManager` following the established manager pattern
+- **Separation of Concerns**: Created `YearRecapManager` following the established manager pattern
     - Manager handles all business logic for statistics calculation
     - API endpoint acts as a thin wrapper for request/response handling
     - Follows same pattern as `RankingsManager`, `StandingsManager`, etc.
@@ -25,8 +25,8 @@ Implemented a comprehensive "Year in Review" feature that presents yearly statis
 ### Frontend Design
 
 - **Route Structure**:
-    - `/year-in-review` - Redirects to current year
-    - `/year-in-review/[year]` - Year-specific review page
+    - `/year-recap` - Redirects to current year
+    - `/year-recap/[year]` - Year-specific recap page
     - Year selector dropdown for easy navigation between years
 
 - **Component Architecture**:
@@ -59,26 +59,26 @@ The nine cards progress from least to most prestigious, building a narrative:
 
 ### Backend
 
-- **Created**: `src/lib/server/yearInReviewManager.js`
-    - `YearInReviewManager` class with fluent interface
+- **Created**: `src/lib/server/yearRecapManager.js`
+    - `YearRecapManager` class with fluent interface
     - Methods for each statistic calculation
-    - `generateYearInReview()` orchestrates all calculations
-    - Factory function `createYearInReviewManager()`
+    - `generateYearRecap()` orchestrates all calculations
+    - Factory function `createYearRecapManager()`
 
-- **Created**: `src/routes/api/year-in-review/[year]/+server.js`
+- **Created**: `src/routes/api/year-recap/[year]/+server.js`
     - GET endpoint handler
     - Year validation (2024 - current year)
     - Error handling with appropriate HTTP status codes
 
 ### Frontend Routes
 
-- **Created**: `src/routes/year-in-review/+page.js`
+- **Created**: `src/routes/year-recap/+page.js`
     - Redirects to current year
 
-- **Created**: `src/routes/year-in-review/[year]/+page.js`
+- **Created**: `src/routes/year-recap/[year]/+page.js`
     - Loads year parameter from URL
 
-- **Created**: `src/routes/year-in-review/[year]/+page.svelte`
+- **Created**: `src/routes/year-recap/[year]/+page.svelte`
     - Main page with carousel
     - Year selector dropdown
     - Loading states
@@ -86,7 +86,7 @@ The nine cards progress from least to most prestigious, building a narrative:
 
 ### Frontend Components
 
-Created nine stat card components in `src/routes/year-in-review/[year]/components/`:
+Created nine stat card components in `src/routes/year-recap/[year]/components/`:
 
 - `YearOverview.svelte` - Overview statistics
 - `IronManAward.svelte` - Most appearances
@@ -100,10 +100,10 @@ Created nine stat card components in `src/routes/year-in-review/[year]/component
 
 ### Tests
 
-- **Created**: `test/lib/server/yearInReviewManager.test.js`
+- **Created**: `test/lib/server/yearRecapManager.test.js`
     - 20 comprehensive unit tests
     - Tests for all calculation methods
-    - Integration test for full year review generation
+    - Integration test for full year recap generation
     - Edge case handling
 
 ## Statistics Calculations
@@ -182,7 +182,7 @@ Tracks for each team:
 ### Limitations
 
 1. **No Navigation Link Yet**: Feature will be unveiled in mid-December 2025
-    - Currently accessible only via direct URL
+    - Currently accessible only via direct URL `/year-recap`
     - Will add navigation link closer to reveal date
 
 2. **Total Games Calculation**: Uses approximation (appearances × 3)
@@ -203,7 +203,7 @@ Tracks for each team:
 
 Updated the team performance calculation to use points percentage instead of total wins:
 
-1. **Backend Changes** (`yearInReviewManager.js`)
+1. **Backend Changes** (`yearRecapManager.js`)
     - Now includes knockout cup games in team statistics (not just league games)
     - Calculates points (3 for win, 1 for draw) and total available points
     - Computes points percentage: `(points won / total available points) * 100`
@@ -277,7 +277,7 @@ Fixed critical layout issues with the carousel implementation:
 ## Deployment Notes
 
 - Feature is complete and tested but **not yet linked in navigation**
-- Can be accessed directly at `/year-in-review` or `/year-in-review/[year]`
+- Can be accessed directly at `/year-recap` or `/year-recap/[year]`
 - Requires authentication (league access code) like other pages
 - No database migrations needed
 - No environment variables needed
