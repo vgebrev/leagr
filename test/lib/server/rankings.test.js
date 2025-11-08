@@ -756,8 +756,8 @@ describe('RankingsManager - Knockout Points', () => {
                 expect(newRating).toBeLessThan(originalRating);
                 expect(newRating).toBeGreaterThan(1000);
 
-                // More precise calculation: 1000 + (1200-1000) * (0.98^2)
-                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.98, 2);
+                // More precise calculation: 1000 + (1200-1000) * (0.95^2) with 5% decay
+                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.95, 2);
                 expect(newRating).toBeCloseTo(expectedRating, 2);
             });
 
@@ -804,8 +804,8 @@ describe('RankingsManager - Knockout Points', () => {
                 expect(alice.elo.rating).toBeLessThan(1200);
                 expect(alice.elo.lastDecayAt).toBe('2024-01-15');
 
-                // Calculate expected rating: 2 weeks from 2024-01-01 to 2024-01-15
-                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.98, 2);
+                // Calculate expected rating: 2 weeks from 2024-01-01 to 2024-01-15 with 5% decay
+                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.95, 2);
                 expect(alice.elo.rating).toBeCloseTo(expectedRating, 2);
             });
 

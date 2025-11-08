@@ -17,9 +17,9 @@ const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below the thresho
 
 // ELO rating configuration
 const ELO_BASELINE_RATING = 1000;
-const ELO_K_LEAGUE = 10;
-const ELO_K_CUP = 7;
-const ELO_DECAY_RATE = 0.02; // 2% per week
+const ELO_K_LEAGUE = 16;
+const ELO_K_CUP = 10;
+const ELO_DECAY_RATE = 0.05; // 5% per week
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /**

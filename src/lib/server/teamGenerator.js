@@ -582,6 +582,7 @@ export class TeamGenerator {
 
         // Default ELO rating for unranked players
         const defaultElo = 1000;
+        const minGamesForElo = 5; // Minimum games before ELO is considered reliable
 
         // Sort players by ELO rating first, then ranking points, then total points, then appearances
         const sortedPlayers = [...this.players].sort((a, b) => {
@@ -589,8 +590,13 @@ export class TeamGenerator {
             const playerB = this.rankings?.players?.[b];
 
             // Use ELO rating as primary sort criterion
-            const eloA = playerA?.elo?.rating ?? defaultElo;
-            const eloB = playerB?.elo?.rating ?? defaultElo;
+            // Players with fewer than minGamesForElo are treated as baseline for balance
+            const eloGamesA = playerA?.elo?.gamesPlayed ?? 0;
+            const eloGamesB = playerB?.elo?.gamesPlayed ?? 0;
+            const eloA =
+                eloGamesA >= minGamesForElo ? (playerA?.elo?.rating ?? defaultElo) : defaultElo;
+            const eloB =
+                eloGamesB >= minGamesForElo ? (playerB?.elo?.rating ?? defaultElo) : defaultElo;
 
             if (eloA !== eloB) {
                 return eloB - eloA;
