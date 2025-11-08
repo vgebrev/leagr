@@ -184,14 +184,14 @@
             <!-- Navigation Buttons - positioned relative to carousel container -->
             <button
                 onclick={prevSlide}
-                class="glass absolute top-1/2 left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 md:p-3 dark:border-gray-700"
+                class="glass-weak absolute top-1/2 -left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Previous slide">
                 <ChevronLeftOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>
 
             <button
                 onclick={nextSlide}
-                class="glass absolute top-1/2 right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 md:p-3 dark:border-gray-700"
+                class="glass-weak absolute top-1/2 -right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Next slide">
                 <ChevronRightOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>

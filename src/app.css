@@ -97,10 +97,19 @@ body {
         @apply bg-gray-50/20 dark:bg-gray-800/20;
     }
 
+    .glass-weak {
+        @apply shadow-sm backdrop-blur-[2px] dark:shadow-gray-900;
+        /* light/dark base translucency */
+        @apply bg-gray-50/10 dark:bg-gray-800/10;
+    }
+
     /* Backdrop-blur fallback */
     @supports not (backdrop-filter: blur(1rem)) {
         .glass {
             @apply bg-white/12 dark:bg-white/10;
+        }
+        .glass-weak {
+            @apply bg-white/8 dark:bg-white/6;
         }
     }
 }
