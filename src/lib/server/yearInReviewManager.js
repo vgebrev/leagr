@@ -281,6 +281,7 @@ export class YearInReviewManager {
 
     /**
      * Calculate team statistics - finds best/worst single team across all sessions
+     * Includes both league games and knockout cup games
      * @param {Array} sessions - All session data
      * @returns {Object} - Team statistics including best and worst teams
      */
@@ -295,7 +296,7 @@ export class YearInReviewManager {
             const teamNames = Object.keys(teams);
             const matchResults = [];
 
-            // Extract match results for this session
+            // Extract league match results for this session
             for (const round of games.rounds) {
                 for (const game of round) {
                     if (game.homeScore !== null && game.awayScore !== null) {
@@ -309,6 +310,24 @@ export class YearInReviewManager {
                 }
             }
 
+            // Extract knockout cup match results if available
+            if (games.knockout) {
+                for (const round of Object.values(games.knockout)) {
+                    if (Array.isArray(round)) {
+                        for (const game of round) {
+                            if (game.homeScore !== null && game.awayScore !== null) {
+                                matchResults.push({
+                                    home: game.home,
+                                    away: game.away,
+                                    homeScore: game.homeScore,
+                                    awayScore: game.awayScore
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+
             // Calculate stats for each team in this session
             for (const teamName of teamNames) {
                 let wins = 0;
@@ -316,15 +335,18 @@ export class YearInReviewManager {
                 let losses = 0;
                 let goalsFor = 0;
                 let goalsAgainst = 0;
+                let totalGames = 0;
 
                 for (const match of matchResults) {
                     if (match.home === teamName) {
+                        totalGames++;
                         goalsFor += match.homeScore;
                         goalsAgainst += match.awayScore;
                         if (match.homeScore > match.awayScore) wins++;
                         else if (match.homeScore < match.awayScore) losses++;
                         else draws++;
                     } else if (match.away === teamName) {
+                        totalGames++;
                         goalsFor += match.awayScore;
                         goalsAgainst += match.homeScore;
                         if (match.awayScore > match.homeScore) wins++;
@@ -333,6 +355,13 @@ export class YearInReviewManager {
                     }
                 }
 
+                // Calculate points (3 for win, 1 for draw)
+                const points = wins * 3 + draws;
+                // Total available points if they won all games
+                const totalAvailablePoints = totalGames * 3;
+                // Points percentage
+                const pointsPercentage =
+                    totalAvailablePoints > 0 ? (points / totalAvailablePoints) * 100 : 0;
                 const goalDifference = goalsFor - goalsAgainst;
 
                 // Each team is unique per session
@@ -345,50 +374,88 @@ export class YearInReviewManager {
                     goalsFor,
                     goalsAgainst,
                     goalDifference,
+                    totalGames,
+                    points,
+                    totalAvailablePoints,
+                    pointsPercentage,
                     players: teams[teamName] || []
                 });
             }
         }
 
-        // Find best team (Invincibles) - most wins, then best goal difference
-        const bestTeam = [...allTeams].sort((a, b) => {
-            if (b.wins !== a.wins) return b.wins - a.wins;
-            return b.goalDifference - a.goalDifference;
-        })[0];
+        // Find top 3 best teams (Invincibles)
+        // Sort by: points percentage DESC, goal difference DESC, goals scored DESC, total points DESC
+        const bestTeams = [...allTeams]
+            .sort((a, b) => {
+                if (Math.abs(b.pointsPercentage - a.pointsPercentage) > 0.01)
+                    return b.pointsPercentage - a.pointsPercentage;
+                if (b.goalDifference !== a.goalDifference)
+                    return b.goalDifference - a.goalDifference;
+                if (b.goalsFor !== a.goalsFor) return b.goalsFor - a.goalsFor;
+                return b.points - a.points;
+            })
+            .slice(0, 3);
 
-        // Find worst team (Underdogs) - fewest wins, then worst goal difference
-        const worstTeam = [...allTeams].sort((a, b) => {
-            if (a.wins !== b.wins) return a.wins - b.wins;
-            return a.goalDifference - b.goalDifference;
-        })[0];
+        // Find top 3 worst teams (Underdogs)
+        // Sort by: points percentage ASC, goal difference ASC, goals scored ASC, total points ASC
+        const worstTeams = [...allTeams]
+            .sort((a, b) => {
+                if (Math.abs(a.pointsPercentage - b.pointsPercentage) > 0.01)
+                    return a.pointsPercentage - b.pointsPercentage;
+                if (a.goalDifference !== b.goalDifference)
+                    return a.goalDifference - b.goalDifference;
+                if (a.goalsFor !== b.goalsFor) return a.goalsFor - b.goalsFor;
+                return a.points - b.points;
+            })
+            .slice(0, 3);
 
         return {
-            bestTeam: bestTeam
-                ? {
-                      sessionDate: bestTeam.sessionDate,
-                      teamName: bestTeam.teamName,
-                      wins: bestTeam.wins,
-                      draws: bestTeam.draws,
-                      losses: bestTeam.losses,
-                      goalsFor: bestTeam.goalsFor,
-                      goalsAgainst: bestTeam.goalsAgainst,
-                      goalDifference: bestTeam.goalDifference,
-                      players: bestTeam.players
-                  }
-                : null,
-            worstTeam: worstTeam
-                ? {
-                      sessionDate: worstTeam.sessionDate,
-                      teamName: worstTeam.teamName,
-                      wins: worstTeam.wins,
-                      draws: worstTeam.draws,
-                      losses: worstTeam.losses,
-                      goalsFor: worstTeam.goalsFor,
-                      goalsAgainst: worstTeam.goalsAgainst,
-                      goalDifference: worstTeam.goalDifference,
-                      players: worstTeam.players
-                  }
-                : null
+            bestTeam:
+                bestTeams.length > 0
+                    ? {
+                          sessionDate: bestTeams[0].sessionDate,
+                          teamName: bestTeams[0].teamName,
+                          wins: bestTeams[0].wins,
+                          draws: bestTeams[0].draws,
+                          losses: bestTeams[0].losses,
+                          goalsFor: bestTeams[0].goalsFor,
+                          goalsAgainst: bestTeams[0].goalsAgainst,
+                          goalDifference: bestTeams[0].goalDifference,
+                          totalGames: bestTeams[0].totalGames,
+                          points: bestTeams[0].points,
+                          totalAvailablePoints: bestTeams[0].totalAvailablePoints,
+                          pointsPercentage: bestTeams[0].pointsPercentage,
+                          players: bestTeams[0].players,
+                          honorableMentions: bestTeams.slice(1).map((t) => ({
+                              sessionDate: t.sessionDate,
+                              teamName: t.teamName,
+                              pointsPercentage: t.pointsPercentage
+                          }))
+                      }
+                    : null,
+            worstTeam:
+                worstTeams.length > 0
+                    ? {
+                          sessionDate: worstTeams[0].sessionDate,
+                          teamName: worstTeams[0].teamName,
+                          wins: worstTeams[0].wins,
+                          draws: worstTeams[0].draws,
+                          losses: worstTeams[0].losses,
+                          goalsFor: worstTeams[0].goalsFor,
+                          goalsAgainst: worstTeams[0].goalsAgainst,
+                          goalDifference: worstTeams[0].goalDifference,
+                          totalGames: worstTeams[0].totalGames,
+                          points: worstTeams[0].points,
+                          totalAvailablePoints: worstTeams[0].totalAvailablePoints,
+                          pointsPercentage: worstTeams[0].pointsPercentage,
+                          players: worstTeams[0].players,
+                          honorableMentions: worstTeams.slice(1).map((t) => ({
+                              sessionDate: t.sessionDate,
+                              teamName: t.teamName,
+                              pointsPercentage: t.pointsPercentage
+                          }))
+                      }
+                    : null
         };
     }
 

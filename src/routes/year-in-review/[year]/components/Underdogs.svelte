@@ -19,6 +19,19 @@
                 </div>
             </div>
 
+            <!-- Points Percentage Highlight -->
+            <div
+                class="rounded-lg bg-gradient-to-r from-orange-50 to-red-50 p-4 dark:from-orange-900/20 dark:to-red-900/20">
+                <div class="text-center">
+                    <div class="text-4xl font-bold text-orange-600 dark:text-orange-400 md:text-5xl">
+                        {data.pointsPercentage.toFixed(1)}%
+                    </div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 md:text-base">
+                        Points Won ({data.points}/{data.totalAvailablePoints})
+                    </div>
+                </div>
+            </div>
+
             <!-- Stats Grid -->
             <div class="grid grid-cols-3 gap-2 md:gap-3">
                 <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800 md:p-4">
@@ -80,6 +93,37 @@
                     {/each}
                 </div>
             </div>
+
+            <!-- Honorable Mentions -->
+            {#if data.honorableMentions && data.honorableMentions.length > 0}
+                <div class="mt-4 border-t border-gray-200 pt-4 dark:border-gray-700">
+                    <h3 class="mb-3 text-center text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Honorable Mentions
+                    </h3>
+                    <div class="flex flex-col gap-2">
+                        {#each data.honorableMentions as mention, index (index)}
+                            <div
+                                class="flex items-center justify-between rounded-lg bg-gray-50 p-2 dark:bg-gray-800">
+                                <div class="flex items-center gap-2">
+                                    <span
+                                        class="flex h-6 w-6 items-center justify-center rounded-full bg-gray-200 text-xs font-semibold dark:bg-gray-700">
+                                        #{index + 2}
+                                    </span>
+                                    <TeamBadge teamName={mention.teamName} />
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-xs text-gray-600 dark:text-gray-400">
+                                        {mention.sessionDate}
+                                    </div>
+                                    <div class="text-xs font-semibold text-orange-600 dark:text-orange-400">
+                                        {mention.pointsPercentage.toFixed(1)}%
+                                    </div>
+                                </div>
+                            </div>
+                        {/each}
+                    </div>
+                </div>
+            {/if}
         </div>
     {:else}
         <div class="py-8 text-gray-500 dark:text-gray-400">No data available</div>

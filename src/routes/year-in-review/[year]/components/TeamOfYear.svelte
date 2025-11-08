@@ -1,7 +1,7 @@
 <script>
     import SlideCard from './SlideCard.svelte';
 
-    let { data, slideDirection } = $props();
+    let { data } = $props();
 </script>
 
 <SlideCard
@@ -12,13 +12,14 @@
         <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
             {#each data as player, index (index)}
                 <div
-                    class="rounded-lg border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 p-3 dark:border-yellow-700 dark:from-yellow-900/20 dark:to-amber-900/20 md:p-4">
+                    class="rounded-lg border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 p-3 md:p-4 dark:border-yellow-700 dark:from-yellow-900/20 dark:to-amber-900/20">
                     <div class="flex items-center justify-between">
                         <div class="text-left">
                             <div class="mb-0.5 text-xs text-gray-600 dark:text-gray-400">
                                 Position {index + 1}
                             </div>
-                            <div class="text-base font-bold text-gray-900 dark:text-white md:text-lg">
+                            <div
+                                class="text-base font-bold text-gray-900 md:text-lg dark:text-white">
                                 {player.name}
                             </div>
                             <div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
@@ -26,7 +27,8 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="text-xl font-bold text-yellow-600 dark:text-yellow-400 md:text-2xl">
+                            <div
+                                class="text-xl font-bold text-yellow-600 md:text-2xl dark:text-yellow-400">
                                 {player.rankingPoints.toFixed(1)}
                             </div>
                             <div class="text-xs text-gray-600 dark:text-gray-400">Points</div>
@@ -38,7 +40,7 @@
 
         <div
             class="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/10">
-            <p class="text-xs text-gray-700 dark:text-gray-300 md:text-sm">
+            <p class="text-xs text-gray-700 md:text-sm dark:text-gray-300">
                 🌟 This legendary lineup represents the peak of performance throughout the year
             </p>
         </div>
