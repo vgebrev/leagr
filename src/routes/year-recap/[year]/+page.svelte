@@ -33,7 +33,6 @@
     let slideDirection = $state(1); // 1 for forward, -1 for backward
     let audioElement = $state(null);
     let isMuted = $state(true); // Muted by default
-    let isPlaying = $state(false);
 
     // Touch/swipe tracking
     let touchStartX = $state(0);
@@ -158,7 +157,6 @@
             audioElement.play().catch((err) => {
                 console.error('Error auto-playing audio:', err);
             });
-            isPlaying = true;
         }
     });
 
@@ -224,7 +222,7 @@
     {:else if yearRecap}
         <!-- Carousel Container with relative positioning for absolute children -->
         <div
-            class="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg"
+            class="relative flex min-h-0 flex-1 flex-col"
             ontouchstart={handleTouchStart}
             ontouchend={handleTouchEnd}>
             <!-- Slides Container with absolute positioning for smooth transitions -->
@@ -248,7 +246,7 @@
                     </div>
 
                     <div
-                        class="absolute inset-0"
+                        class="glass-weak absolute inset-0 rounded-lg"
                         in:fly={{ x: slideDirection * 300, duration: 400 }}
                         out:fly={{ x: slideDirection * -300, duration: 400 }}>
                         {#if currentSlide === 0}
@@ -277,14 +275,14 @@
             <!-- Navigation Buttons - positioned relative to carousel container -->
             <button
                 onclick={prevSlide}
-                class="glass-weak absolute top-7 left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass-weak absolute top-7 left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:top-8 md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Previous slide">
                 <ChevronLeftOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>
 
             <button
                 onclick={nextSlide}
-                class="glass-weak absolute top-7 right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass-weak absolute top-7 right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:top-8 md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Next slide">
                 <ChevronRightOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>

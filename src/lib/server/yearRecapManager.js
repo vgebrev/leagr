@@ -1,6 +1,7 @@
 import fs from 'fs/promises';
 import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
+import { createAvatarManager } from './avatarManager.js';
 
 /**
  * Year Recap Manager - Handles aggregation and calculation of yearly statistics
@@ -92,7 +93,7 @@ export class YearRecapManager {
         const sessions = await this.loadYearSessions(year);
 
         // Calculate aggregated statistics
-        return this.calculateYearStats(rankingsData, previousYearRankings, sessions);
+        return await this.calculateYearStats(rankingsData, previousYearRankings, sessions);
     }
 
     /**
@@ -100,9 +101,9 @@ export class YearRecapManager {
      * @param {Object} rankingsData - Current year rankings data
      * @param {Object} previousYearRankings - Previous year rankings (or null)
      * @param {Array} sessions - All session data for the year
-     * @returns {Object} - Comprehensive year statistics
+     * @returns {Promise<Object>} - Comprehensive year statistics
      */
-    calculateYearStats(rankingsData, previousYearRankings, sessions) {
+    async calculateYearStats(rankingsData, previousYearRankings, sessions) {
         const players = rankingsData.players;
         const sessionDates = rankingsData.calculatedDates;
 
@@ -110,7 +111,7 @@ export class YearRecapManager {
         const overview = this.calculateOverview(sessionDates, sessions, players);
 
         // Individual Awards
-        const ironManAward = this.calculateIronManAward(players);
+        const ironManAward = await this.calculateIronManAward(players);
         const mostImproved = this.calculateMostImproved(players, previousYearRankings);
         const kingOfKings = this.calculateKingOfKings(players);
         const playerOfYear = this.calculatePlayerOfYear(players);
@@ -166,19 +167,29 @@ export class YearRecapManager {
     /**
      * Calculate Iron Man Award (most appearances, tiebreaker: total games played)
      * @param {Object} players - Player data
-     * @returns {Array} - Top 3 players
+     * @returns {Promise<Array>} - Top 3 players
      */
-    calculateIronManAward(players) {
+    async calculateIronManAward(players) {
+        // Load avatar data
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
         return Object.entries(players)
             .map(([name, p]) => {
-                // Calculate total games played from ranking detail
-                const totalGames = p.appearances * 3; // Approximate: each session has ~3 league games per player
+                // Get actual total games played from ELO data
+                const totalGames = p.elo?.gamesPlayed || 0;
+
+                // Generate proper avatar URL if player has an avatar
+                const avatarUrl = avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null;
 
                 return {
                     name,
                     appearances: p.appearances,
                     totalGames,
-                    rankingPoints: p.rankingPoints
+                    rankingPoints: p.rankingPoints,
+                    avatarUrl
                 };
             })
             .sort((a, b) => {

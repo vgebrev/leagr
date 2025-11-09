@@ -2,13 +2,7 @@
     import { fade, scale, fly } from 'svelte/transition';
     import { onMount } from 'svelte';
 
-    let {
-        children,
-        delay = 0,
-        type = 'fade',
-        duration = 500,
-        ...transitionProps
-    } = $props();
+    let { children, delay = 0, type = 'fade', duration = 500, ...transitionProps } = $props();
 
     let show = $state(false);
 
