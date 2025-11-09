@@ -113,7 +113,7 @@ export class YearRecapManager {
         // Individual Awards
         const ironManAward = await this.calculateIronManAward(players);
         const mostImproved = await this.calculateMostImproved(players, previousYearRankings);
-        const kingOfKings = this.calculateKingOfKings(players);
+        const kingOfKings = await this.calculateKingOfKings(players);
         const playerOfYear = this.calculatePlayerOfYear(players);
 
         // Team Awards
@@ -231,9 +231,10 @@ export class YearRecapManager {
 
                 // Generate proper avatar URL if player has an avatar
                 const playerAvatar = avatars[name];
-                const avatarUrl = playerAvatar && playerAvatar.avatar
-                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
-                    : null;
+                const avatarUrl =
+                    playerAvatar && playerAvatar.avatar
+                        ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                        : null;
 
                 return {
                     name,
@@ -254,15 +255,25 @@ export class YearRecapManager {
      * @param {Object} players - Player data
      * @returns {Array} - Top 3 trophy winners
      */
-    calculateKingOfKings(players) {
+    async calculateKingOfKings(players) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
         return Object.entries(players)
-            .map(([name, p]) => ({
-                name,
-                leagueWins: p.leagueWins || 0,
-                cupWins: p.cupWins || 0,
-                totalTrophies: (p.leagueWins || 0) + (p.cupWins || 0),
-                rankingPoints: p.rankingPoints
-            }))
+            .map(([name, p]) => {
+                const avatarUrl = avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null;
+
+                return {
+                    name,
+                    leagueWins: p.leagueWins || 0,
+                    cupWins: p.cupWins || 0,
+                    totalTrophies: (p.leagueWins || 0) + (p.cupWins || 0),
+                    rankingPoints: p.rankingPoints,
+                    avatarUrl
+                };
+            })
             .filter((p) => p.totalTrophies > 0)
             .sort((a, b) => b.totalTrophies - a.totalTrophies)
             .slice(0, 3);
