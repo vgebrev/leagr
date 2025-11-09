@@ -5,7 +5,9 @@
     import {
         ChevronDownOutline,
         ChevronLeftOutline,
-        ChevronRightOutline
+        ChevronRightOutline,
+        VolumeMuteSolid,
+        VolumeUpSolid
     } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
@@ -29,6 +31,9 @@
     let currentSlide = $state(0);
     let lastLoadedYear = $state(null);
     let slideDirection = $state(1); // 1 for forward, -1 for backward
+    let audioElement = $state(null);
+    let isMuted = $state(true); // Muted by default
+    let isPlaying = $state(false);
 
     // Get selected year from URL parameter
     let selectedYear = $derived(parseInt(data.year, 10));
@@ -80,12 +85,43 @@
         currentSlide = index;
     }
 
+    /**
+     * Toggle audio mute/unmute
+     */
+    function toggleAudio() {
+        if (!audioElement) return;
+
+        if (isMuted) {
+            // Unmute and play
+            audioElement.muted = false;
+            audioElement.play().catch((err) => {
+                console.error('Error playing audio:', err);
+            });
+            isMuted = false;
+        } else {
+            // Mute
+            audioElement.muted = true;
+            isMuted = true;
+        }
+    }
+
     // Load data when component mounts or year changes
     $effect(() => {
         if (selectedYear && selectedYear !== lastLoadedYear) {
             lastLoadedYear = selectedYear;
             loadYearRecap();
             currentSlide = 0; // Reset to first slide on year change
+        }
+    });
+
+    // Initialize audio when component mounts
+    $effect(() => {
+        if (audioElement && yearRecap) {
+            // Start playing (muted by default)
+            audioElement.play().catch((err) => {
+                console.error('Error auto-playing audio:', err);
+            });
+            isPlaying = true;
         }
     });
 
@@ -208,6 +244,18 @@
                         aria-label="Go to slide {index + 1}"></button>
                 {/each}
             </div>
+
+            <!-- Audio Toggle Button - positioned in bottom right -->
+            <button
+                onclick={toggleAudio}
+                class="glass-weak absolute right-3 bottom-3 z-10 rounded-full border border-gray-200 p-3 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}>
+                {#if isMuted}
+                    <VolumeMuteSolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+                {:else}
+                    <VolumeUpSolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+                {/if}
+            </button>
         </div>
     {:else}
         <div class="flex flex-1 items-center justify-center">
@@ -216,4 +264,13 @@
             </div>
         </div>
     {/if}
+
+    <!-- Background Audio - dynamic based on selected year -->
+    <audio
+        bind:this={audioElement}
+        src="/year-recap-{selectedYear}.mp3"
+        loop
+        muted={isMuted}
+        preload="auto">
+    </audio>
 </div>
