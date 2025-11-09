@@ -35,6 +35,10 @@
     let isMuted = $state(true); // Muted by default
     let isPlaying = $state(false);
 
+    // Touch/swipe tracking
+    let touchStartX = $state(0);
+    let touchEndX = $state(0);
+
     // Get selected year from URL parameter
     let selectedYear = $derived(parseInt(data.year, 10));
 
@@ -102,6 +106,39 @@
             // Mute
             audioElement.muted = true;
             isMuted = true;
+        }
+    }
+
+    /**
+     * Handle touch start
+     */
+    function handleTouchStart(event) {
+        touchStartX = event.touches[0].clientX;
+    }
+
+    /**
+     * Handle touch end and detect swipe
+     */
+    function handleTouchEnd(event) {
+        touchEndX = event.changedTouches[0].clientX;
+        handleSwipe();
+    }
+
+    /**
+     * Process swipe gesture
+     */
+    function handleSwipe() {
+        const swipeThreshold = 50; // Minimum distance for a swipe
+        const swipeDistance = touchStartX - touchEndX;
+
+        if (Math.abs(swipeDistance) > swipeThreshold) {
+            if (swipeDistance > 0) {
+                // Swiped left - go to next slide
+                nextSlide();
+            } else {
+                // Swiped right - go to previous slide
+                prevSlide();
+            }
         }
     }
 
@@ -186,7 +223,10 @@
         </div>
     {:else if yearRecap}
         <!-- Carousel Container with relative positioning for absolute children -->
-        <div class="relative flex min-h-0 flex-1 flex-col">
+        <div
+            class="relative flex min-h-0 flex-1 flex-col"
+            ontouchstart={handleTouchStart}
+            ontouchend={handleTouchEnd}>
             <!-- Slides Container with absolute positioning for smooth transitions -->
             <div class="relative flex-1">
                 {#key currentSlide}
