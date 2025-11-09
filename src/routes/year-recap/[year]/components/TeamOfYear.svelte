@@ -1,49 +1,55 @@
 <script>
     import SlideCard from './SlideCard.svelte';
+    import AnimatedIn from './AnimatedIn.svelte';
+    import Avatar from '$components/avatars/Avatar.svelte';
 
     let { data } = $props();
 </script>
 
 <SlideCard
-    icon="👑"
+    icon="🏆"
     heading="Team of the Year"
-    description="The Dream Team - Top 6 by Ranking Points">
+    description="Top 6 by Ranking Points">
     {#if data && data.length > 0}
-        <div class="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div class="mt-4 grid grid-cols-2 gap-3">
             {#each data as player, index (index)}
-                <div
-                    class="rounded-lg border-2 border-yellow-300 bg-gradient-to-br from-yellow-50 to-amber-50 p-3 md:p-4 dark:border-yellow-700 dark:from-yellow-900/20 dark:to-amber-900/20">
-                    <div class="flex items-center justify-between">
+                <AnimatedIn
+                    delay={index * 150}
+                    type="scale"
+                    duration={400}>
+                    <div
+                        class="glass flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-3 dark:border-gray-700">
+                        <div class="shrink-0 leading-[0] [&>div]:block">
+                            <Avatar
+                                avatarUrl={player.avatarUrl}
+                                size="md" />
+                        </div>
                         <div class="text-left">
-                            <div class="mb-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                Position {index + 1}
-                            </div>
                             <div
-                                class="text-base font-bold text-gray-900 md:text-lg dark:text-white">
+                                class="text-sm font-bold text-gray-900 md:text-base dark:text-white">
                                 {player.name}
                             </div>
-                            <div class="mt-0.5 text-xs text-gray-600 dark:text-gray-400">
-                                Rank #{player.rank}
+                            <div class="text-xs text-gray-600 dark:text-gray-400">
+                                {player.rankingPoints.toFixed(1)} pts
                             </div>
-                        </div>
-                        <div class="text-right">
-                            <div
-                                class="text-xl font-bold text-yellow-600 md:text-2xl dark:text-yellow-400">
-                                {player.rankingPoints.toFixed(1)}
-                            </div>
-                            <div class="text-xs text-gray-600 dark:text-gray-400">Points</div>
                         </div>
                     </div>
-                </div>
+                </AnimatedIn>
             {/each}
         </div>
 
-        <div
-            class="mt-4 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/10">
-            <p class="text-xs text-gray-700 md:text-sm dark:text-gray-300">
-                🌟 This legendary lineup represents the peak of performance throughout the year
-            </p>
-        </div>
+        <AnimatedIn
+            delay={900}
+            type="fade"
+            duration={600}>
+            <div
+                class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
+                <p class="text-xs text-gray-700 md:text-sm dark:text-gray-300">
+                    🌟 This legendary lineup represents the peak of performance and consistency
+                    throughout the year
+                </p>
+            </div>
+        </AnimatedIn>
     {:else}
         <div class="py-8 text-gray-500 dark:text-gray-400">No data available</div>
     {/if}

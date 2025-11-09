@@ -117,7 +117,8 @@ export class YearRecapManager {
         const playerOfYear = await this.calculatePlayerOfYear(players);
 
         // Team Awards
-        const teamOfYear = this.calculateTeamOfYear(players);
+        const teamOfYear = await this.calculateTeamOfYear(players);
+        const dreamTeam = await this.calculateDreamTeam(players);
         const teamStats = this.calculateTeamStats(sessions);
 
         // Fun Facts
@@ -130,6 +131,7 @@ export class YearRecapManager {
             kingOfKings,
             playerOfYear,
             teamOfYear,
+            dreamTeam,
             invincibles: teamStats.bestTeam,
             underdogs: teamStats.worstTeam,
             funFacts
@@ -308,19 +310,59 @@ export class YearRecapManager {
     }
 
     /**
-     * Calculate Team of the Year (dream team - top 6 by ranking points)
+     * Calculate Team of the Year (top 6 by ranking points)
      * @param {Object} players - Player data
-     * @returns {Array} - Top 6 players
+     * @returns {Promise<Array>} - Top 6 players
      */
-    calculateTeamOfYear(players) {
+    async calculateTeamOfYear(players) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
         return Object.entries(players)
-            .map(([name, p]) => ({
-                name,
-                rankingPoints: p.rankingPoints,
-                rank: p.rank
-            }))
+            .map(([name, p]) => {
+                const avatarUrl = avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null;
+
+                return {
+                    name,
+                    rankingPoints: p.rankingPoints,
+                    rank: p.rank,
+                    avatarUrl
+                };
+            })
             .sort((a, b) => b.rankingPoints - a.rankingPoints)
             .slice(0, 6);
+    }
+
+    /**
+     * Calculate Dream Team (top 6 by ELO rating)
+     * @param {Object} players - Player data
+     * @returns {Promise<Array>} - Top 6 players by ELO
+     */
+    async calculateDreamTeam(players) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
+        return (
+            Object.entries(players)
+                // eslint-disable-next-line no-unused-vars
+                .filter(([_, p]) => p.elo && p.elo.rating)
+                .map(([name, p]) => {
+                    const avatarUrl = avatars[name]?.avatar
+                        ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                        : null;
+
+                    return {
+                        name,
+                        eloRating: p.elo.rating,
+                        gamesPlayed: p.elo.gamesPlayed || 0,
+                        avatarUrl
+                    };
+                })
+                .sort((a, b) => b.eloRating - a.eloRating)
+                .slice(0, 6)
+        );
     }
 
     /**

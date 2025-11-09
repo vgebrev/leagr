@@ -22,6 +22,7 @@
     import Underdogs from './components/Underdogs.svelte';
     import Invincibles from './components/Invincibles.svelte';
     import TeamOfYear from './components/TeamOfYear.svelte';
+    import DreamTeam from './components/DreamTeam.svelte';
     import FunFacts from './components/FunFacts.svelte';
 
     let { data } = $props();
@@ -45,7 +46,7 @@
     let yearOptions = $derived(getYearOptions());
 
     // Total number of slides
-    const totalSlides = 9;
+    const totalSlides = 10;
 
     /**
      * Load year recap data for the selected year
@@ -266,6 +267,8 @@
                         {:else if currentSlide === 7}
                             <TeamOfYear data={yearRecap.teamOfYear} />
                         {:else if currentSlide === 8}
+                            <DreamTeam data={yearRecap.dreamTeam} />
+                        {:else if currentSlide === 9}
                             <FunFacts data={yearRecap.funFacts} />
                         {/if}
                     </div>

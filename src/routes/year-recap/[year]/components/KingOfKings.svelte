@@ -11,7 +11,7 @@
 </script>
 
 <SlideCard
-    icon="🏆"
+    icon="👑"
     heading="King of Kings"
     description="Most Trophies">
     <div class="mt-4 space-y-3">
