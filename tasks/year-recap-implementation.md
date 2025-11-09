@@ -378,7 +378,7 @@ Updated total slides from 9 to 10 (added Dream Team):
     4. King of Kings
     5. Player of the Year
     6. Team of the Year
-    7. Dream Team *(new)*
+    7. Dream Team _(new)_
     8. Invincibles
     9. Underdogs
     10. Fun Facts
@@ -412,6 +412,7 @@ Updated total slides from 9 to 10 (added Dream Team):
 #### Glass Morphism
 
 Consistent glass effect styling across all cards:
+
 - `glass` utility class
 - `border border-gray-200 dark:border-gray-700`
 - Works in both light and dark modes
@@ -419,6 +420,7 @@ Consistent glass effect styling across all cards:
 #### Stat Display Pattern
 
 Standardized vertical stat layout:
+
 ```svelte
 <div class="flex flex-col items-center gap-0.5">
     <div class="text-[10px] text-gray-500">LABEL</div>
@@ -429,6 +431,7 @@ Standardized vertical stat layout:
 #### Interactive Cards
 
 Clickable cards that link to relevant pages:
+
 - Team badges → session table view
 - Session dates → session table view
 - Fun fact cards → session table view
@@ -457,11 +460,13 @@ Established consistent color scheme:
 ### File Updates Summary
 
 **New Files Created:**
+
 - `src/routes/year-recap/[year]/components/AnimatedIn.svelte`
 - `src/routes/year-recap/[year]/components/DreamTeam.svelte`
 - `static/audio/year-recap-theme.mp3`
 
 **Significantly Modified:**
+
 - `src/routes/year-recap/[year]/+page.svelte` (audio, animations, 10 slides)
 - `src/routes/year-recap/[year]/components/Underdogs.svelte` (complete redesign)
 - `src/routes/year-recap/[year]/components/Invincibles.svelte` (complete redesign)

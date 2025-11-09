@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { YearInReviewManager, createYearInReviewManager } from '$lib/server/yearInReviewManager.js';
+import { YearRecapManager, createYearRecapManager } from '$lib/server/yearRecapManager.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { createAvatarManager } from '$lib/server/avatarManager.js';
 import fs from 'fs/promises';
 
 // Mock dependencies
@@ -8,14 +9,18 @@ vi.mock('fs/promises');
 vi.mock('$lib/server/rankings.js', () => ({
     createRankingsManager: vi.fn()
 }));
+vi.mock('$lib/server/avatarManager.js', () => ({
+    createAvatarManager: vi.fn()
+}));
 
-describe('YearInReviewManager', () => {
+describe('YearRecapManager', () => {
     let manager;
     let mockRankingsManager;
+    let mockAvatarManager;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        manager = createYearInReviewManager();
+        manager = createYearRecapManager();
         manager.setLeague('test-league');
 
         // Mock rankings manager
@@ -27,12 +32,19 @@ describe('YearInReviewManager', () => {
             )
         };
         createRankingsManager.mockReturnValue(mockRankingsManager);
+
+        // Mock avatar manager
+        mockAvatarManager = {
+            setLeague: vi.fn().mockReturnThis(),
+            loadAvatars: vi.fn().mockResolvedValue({})
+        };
+        createAvatarManager.mockReturnValue(mockAvatarManager);
     });
 
     describe('Factory function', () => {
-        it('should create a new YearInReviewManager instance', () => {
-            const newManager = createYearInReviewManager();
-            expect(newManager).toBeInstanceOf(YearInReviewManager);
+        it('should create a new YearRecapManager instance', () => {
+            const newManager = createYearRecapManager();
+            expect(newManager).toBeInstanceOf(YearRecapManager);
         });
     });
 
@@ -91,7 +103,7 @@ describe('YearInReviewManager', () => {
     });
 
     describe('calculateIronManAward', () => {
-        it('should return top 3 players by appearances', () => {
+        it('should return top 3 players by appearances', async () => {
             const players = {
                 Alice: { appearances: 10, rankingPoints: 100 },
                 Bob: { appearances: 8, rankingPoints: 90 },
@@ -99,7 +111,7 @@ describe('YearInReviewManager', () => {
                 Dave: { appearances: 5, rankingPoints: 50 }
             };
 
-            const result = manager.calculateIronManAward(players);
+            const result = await manager.calculateIronManAward(players);
 
             expect(result).toHaveLength(3);
             expect(result[0].name).toBe('Charlie');
@@ -108,13 +120,13 @@ describe('YearInReviewManager', () => {
             expect(result[2].name).toBe('Bob');
         });
 
-        it('should use total games as tiebreaker', () => {
+        it('should use total games as tiebreaker', async () => {
             const players = {
                 Alice: { appearances: 10, rankingPoints: 100 },
                 Bob: { appearances: 10, rankingPoints: 90 }
             };
 
-            const result = manager.calculateIronManAward(players);
+            const result = await manager.calculateIronManAward(players);
 
             expect(result).toHaveLength(2);
             // Both have same appearances, so totalGames (appearances * 3) is same
@@ -125,7 +137,7 @@ describe('YearInReviewManager', () => {
     });
 
     describe('calculateMostImproved', () => {
-        it('should calculate year-over-year improvement', () => {
+        it('should calculate year-over-year improvement', async () => {
             const players = {
                 Alice: { rank: 3, rankingPoints: 100, rankingDetail: {} },
                 Bob: { rank: 1, rankingPoints: 120, rankingDetail: {} },
@@ -139,7 +151,7 @@ describe('YearInReviewManager', () => {
                 }
             };
 
-            const result = manager.calculateMostImproved(players, previousYear);
+            const result = await manager.calculateMostImproved(players, previousYear);
 
             expect(result).toHaveLength(2); // Only Alice and Bob improved
             expect(result[0].name).toBe('Alice'); // 10 -> 3 = +7
@@ -148,7 +160,7 @@ describe('YearInReviewManager', () => {
             expect(result[1].rankImprovement).toBe(4);
         });
 
-        it('should fall back to within-year improvement', () => {
+        it('should fall back to within-year improvement', async () => {
             const players = {
                 Alice: {
                     rank: 3,
@@ -161,14 +173,14 @@ describe('YearInReviewManager', () => {
             };
             const previousYear = null;
 
-            const result = manager.calculateMostImproved(players, previousYear);
+            const result = await manager.calculateMostImproved(players, previousYear);
 
             expect(result).toHaveLength(1);
             expect(result[0].name).toBe('Alice');
             expect(result[0].rankImprovement).toBe(7); // 10 -> 3
         });
 
-        it('should exclude players who declined in rank', () => {
+        it('should exclude players who declined in rank', async () => {
             const players = {
                 Alice: { rank: 10, rankingPoints: 50, rankingDetail: {} }
             };
@@ -178,14 +190,14 @@ describe('YearInReviewManager', () => {
                 }
             };
 
-            const result = manager.calculateMostImproved(players, previousYear);
+            const result = await manager.calculateMostImproved(players, previousYear);
 
             expect(result).toHaveLength(0);
         });
     });
 
     describe('calculateKingOfKings', () => {
-        it('should return top 3 players with most trophies', () => {
+        it('should return top 3 players with most trophies', async () => {
             const players = {
                 Alice: { leagueWins: 3, cupWins: 2, rankingPoints: 100 },
                 Bob: { leagueWins: 1, cupWins: 1, rankingPoints: 90 },
@@ -193,7 +205,7 @@ describe('YearInReviewManager', () => {
                 Dave: { leagueWins: 0, cupWins: 0, rankingPoints: 50 }
             };
 
-            const result = manager.calculateKingOfKings(players);
+            const result = await manager.calculateKingOfKings(players);
 
             expect(result).toHaveLength(3);
             expect(result[0].name).toBe('Alice');
@@ -204,27 +216,27 @@ describe('YearInReviewManager', () => {
             expect(result[2].totalTrophies).toBe(2);
         });
 
-        it('should exclude players with no trophies', () => {
+        it('should exclude players with no trophies', async () => {
             const players = {
                 Alice: { leagueWins: 0, cupWins: 0, rankingPoints: 100 },
                 Bob: { rankingPoints: 90 }
             };
 
-            const result = manager.calculateKingOfKings(players);
+            const result = await manager.calculateKingOfKings(players);
 
             expect(result).toHaveLength(0);
         });
     });
 
     describe('calculatePlayerOfYear', () => {
-        it('should return top 3 players by ranking points', () => {
+        it('should return top 3 players by ranking points', async () => {
             const players = {
                 Alice: { rankingPoints: 100, rank: 2, appearances: 10 },
                 Bob: { rankingPoints: 120, rank: 1, appearances: 12 },
                 Charlie: { rankingPoints: 90, rank: 3, appearances: 8 }
             };
 
-            const result = manager.calculatePlayerOfYear(players);
+            const result = await manager.calculatePlayerOfYear(players);
 
             expect(result).toHaveLength(3);
             expect(result[0].name).toBe('Bob');
@@ -235,7 +247,7 @@ describe('YearInReviewManager', () => {
     });
 
     describe('calculateTeamOfYear', () => {
-        it('should return top 6 players by ranking points', () => {
+        it('should return top 6 players by ranking points', async () => {
             const players = {
                 P1: { rankingPoints: 100, rank: 1 },
                 P2: { rankingPoints: 95, rank: 2 },
@@ -246,7 +258,7 @@ describe('YearInReviewManager', () => {
                 P7: { rankingPoints: 70, rank: 7 }
             };
 
-            const result = manager.calculateTeamOfYear(players);
+            const result = await manager.calculateTeamOfYear(players);
 
             expect(result).toHaveLength(6);
             expect(result[0].name).toBe('P1');
@@ -255,7 +267,7 @@ describe('YearInReviewManager', () => {
     });
 
     describe('calculateTeamStats', () => {
-        it('should identify best and worst teams per session', () => {
+        it('should identify best and worst teams per session', async () => {
             const sessions = [
                 {
                     date: '2025-01-01',
@@ -283,7 +295,7 @@ describe('YearInReviewManager', () => {
                 }
             ];
 
-            const result = manager.calculateTeamStats(sessions);
+            const result = await manager.calculateTeamStats(sessions);
 
             expect(result.bestTeam).toBeDefined();
             expect(result.bestTeam.teamName).toBe('red lions');
@@ -398,14 +410,14 @@ describe('YearInReviewManager', () => {
         });
     });
 
-    describe('generateYearInReview', () => {
+    describe('generateYearRecap', () => {
         it('should throw error when no data available', async () => {
             mockRankingsManager.loadEnhancedRankings.mockResolvedValue({
                 calculatedDates: [],
                 players: {}
             });
 
-            await expect(manager.generateYearInReview(2025)).rejects.toThrow(
+            await expect(manager.generateYearRecap(2025)).rejects.toThrow(
                 'No data available for this year'
             );
         });
@@ -436,7 +448,7 @@ describe('YearInReviewManager', () => {
                 })
             );
 
-            const result = await manager.generateYearInReview(2025);
+            const result = await manager.generateYearRecap(2025);
 
             expect(result).toHaveProperty('overview');
             expect(result).toHaveProperty('ironManAward');
