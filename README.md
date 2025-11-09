@@ -29,6 +29,12 @@ Features include:
     - Player profile - ranking details, history, and profile photos (Admin-approved).
     - Champions hall: tracks league and cup winners.
     - Annually reset rankings to keep competition fresh and motivating.
+- **Year Recap**
+    - An annual highlight reel of the league
+    - Individual Categories
+    - Team Categories
+    - Fun/Stats Categories
+    - Background Music
 
 ## Environment Setup
 
