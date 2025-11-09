@@ -239,7 +239,7 @@
                     <button
                         onclick={() => goToSlide(index)}
                         class="h-2 w-2 rounded-full transition-all {currentSlide === index
-                            ? 'w-6 bg-blue-600 dark:bg-blue-400'
+                            ? 'bg-primary-700 hover:bg-primary-800 dark:bg-primary-600 dark:hover:bg-primary-700 w-6'
                             : 'bg-gray-400/80 hover:bg-gray-500 dark:bg-gray-500/80 dark:hover:bg-gray-400'} backdrop-blur-sm"
                         aria-label="Go to slide {index + 1}"></button>
                 {/each}
