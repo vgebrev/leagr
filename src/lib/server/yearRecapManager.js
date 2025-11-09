@@ -2,6 +2,7 @@ import fs from 'fs/promises';
 import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
+import { logger } from './logger.js';
 
 /**
  * Year Recap Manager - Handles aggregation and calculation of yearly statistics
@@ -119,7 +120,7 @@ export class YearRecapManager {
         // Team Awards
         const teamOfYear = await this.calculateTeamOfYear(players);
         const dreamTeam = await this.calculateDreamTeam(players);
-        const teamStats = this.calculateTeamStats(sessions);
+        const teamStats = await this.calculateTeamStats(sessions);
 
         // Fun Facts
         const funFacts = this.calculateFunFacts(sessions);
@@ -369,9 +370,11 @@ export class YearRecapManager {
      * Calculate team statistics - finds best/worst single team across all sessions
      * Includes both league games and knockout cup games
      * @param {Array} sessions - All session data
-     * @returns {Object} - Team statistics including best and worst teams
+     * @returns {Promise<Object>} - Team statistics including best and worst teams
      */
-    calculateTeamStats(sessions) {
+    async calculateTeamStats(sessions) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
         const allTeams = [];
 
         // Evaluate each team in each session independently
@@ -380,13 +383,14 @@ export class YearRecapManager {
             if (!teams || !games?.rounds) continue;
 
             const teamNames = Object.keys(teams);
-            const matchResults = [];
+            const leagueMatches = [];
+            const cupMatches = [];
 
             // Extract league match results for this session
             for (const round of games.rounds) {
                 for (const game of round) {
                     if (game.homeScore !== null && game.awayScore !== null) {
-                        matchResults.push({
+                        leagueMatches.push({
                             home: game.home,
                             away: game.away,
                             homeScore: game.homeScore,
@@ -397,42 +401,36 @@ export class YearRecapManager {
             }
 
             // Extract knockout cup match results if available
-            if (games.knockout) {
-                for (const round of Object.values(games.knockout)) {
-                    if (Array.isArray(round)) {
-                        for (const game of round) {
-                            if (game.homeScore !== null && game.awayScore !== null) {
-                                matchResults.push({
-                                    home: game.home,
-                                    away: game.away,
-                                    homeScore: game.homeScore,
-                                    awayScore: game.awayScore
-                                });
-                            }
-                        }
+            const knockoutGames = games['knockout-games'] || games.knockout;
+            if (knockoutGames && knockoutGames.bracket) {
+                for (const game of knockoutGames.bracket) {
+                    if (game.homeScore !== null && game.awayScore !== null) {
+                        cupMatches.push({
+                            home: game.home,
+                            away: game.away,
+                            homeScore: game.homeScore,
+                            awayScore: game.awayScore
+                        });
                     }
                 }
             }
 
-            // Calculate stats for each team in this session
-            for (const teamName of teamNames) {
+            // Helper function to calculate stats for a set of matches
+            const calculateMatchStats = (matches, teamName) => {
                 let wins = 0;
                 let draws = 0;
                 let losses = 0;
                 let goalsFor = 0;
                 let goalsAgainst = 0;
-                let totalGames = 0;
 
-                for (const match of matchResults) {
+                for (const match of matches) {
                     if (match.home === teamName) {
-                        totalGames++;
                         goalsFor += match.homeScore;
                         goalsAgainst += match.awayScore;
                         if (match.homeScore > match.awayScore) wins++;
                         else if (match.homeScore < match.awayScore) losses++;
                         else draws++;
                     } else if (match.away === teamName) {
-                        totalGames++;
                         goalsFor += match.awayScore;
                         goalsAgainst += match.homeScore;
                         if (match.awayScore > match.homeScore) wins++;
@@ -440,6 +438,24 @@ export class YearRecapManager {
                         else draws++;
                     }
                 }
+
+                return { wins, draws, losses, goalsFor, goalsAgainst };
+            };
+
+            // Calculate stats for each team in this session
+            for (const teamName of teamNames) {
+                // Calculate league stats
+                const leagueStats = calculateMatchStats(leagueMatches, teamName);
+                // Calculate cup stats
+                const cupStats = calculateMatchStats(cupMatches, teamName);
+
+                // Combined totals
+                const wins = leagueStats.wins + cupStats.wins;
+                const draws = leagueStats.draws + cupStats.draws;
+                const losses = leagueStats.losses + cupStats.losses;
+                const goalsFor = leagueStats.goalsFor + cupStats.goalsFor;
+                const goalsAgainst = leagueStats.goalsAgainst + cupStats.goalsAgainst;
+                const totalGames = wins + draws + losses;
 
                 // Calculate points (3 for win, 1 for draw)
                 const points = wins * 3 + draws;
@@ -464,7 +480,9 @@ export class YearRecapManager {
                     points,
                     totalAvailablePoints,
                     pointsPercentage,
-                    players: teams[teamName] || []
+                    players: teams[teamName] || [],
+                    leagueStats,
+                    cupStats
                 });
             }
         }
@@ -495,6 +513,16 @@ export class YearRecapManager {
             })
             .slice(0, 3);
 
+        // Helper to add avatars to players
+        const addAvatarsToPlayers = (playerNames) => {
+            return playerNames.map((name) => ({
+                name,
+                avatarUrl: avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null
+            }));
+        };
+
         return {
             bestTeam:
                 bestTeams.length > 0
@@ -511,7 +539,9 @@ export class YearRecapManager {
                           points: bestTeams[0].points,
                           totalAvailablePoints: bestTeams[0].totalAvailablePoints,
                           pointsPercentage: bestTeams[0].pointsPercentage,
-                          players: bestTeams[0].players,
+                          players: addAvatarsToPlayers(bestTeams[0].players),
+                          leagueRecord: bestTeams[0].leagueStats,
+                          cupRecord: bestTeams[0].cupStats,
                           honorableMentions: bestTeams.slice(1).map((t) => ({
                               sessionDate: t.sessionDate,
                               teamName: t.teamName,
@@ -534,7 +564,9 @@ export class YearRecapManager {
                           points: worstTeams[0].points,
                           totalAvailablePoints: worstTeams[0].totalAvailablePoints,
                           pointsPercentage: worstTeams[0].pointsPercentage,
-                          players: worstTeams[0].players,
+                          players: addAvatarsToPlayers(worstTeams[0].players),
+                          leagueRecord: worstTeams[0].leagueStats,
+                          cupRecord: worstTeams[0].cupStats,
                           honorableMentions: worstTeams.slice(1).map((t) => ({
                               sessionDate: t.sessionDate,
                               teamName: t.teamName,

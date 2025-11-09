@@ -8,7 +8,8 @@ import path from 'path';
  */
 class Logger {
     constructor() {
-        this.logsDir = process.env.LOGS_DIR || '/app/logs';
+        // Use project logs directory in development
+        this.logsDir = process.env.LOGS_DIR || (process.env.NODE_ENV === 'production' ? '/app/logs' : 'logs');
         this.logFile = path.join(this.logsDir, 'app.log');
         this.maxLogSize = 10 * 1024 * 1024; // 10MB
         this.ensureLogDir();

@@ -34,7 +34,7 @@
                                     {player.name}
                                 </div>
                                 <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                                    {player.ptsPerAppearance.toFixed(1)} pts/app
+                                    {player.ptsPerAppearance.toFixed(1)} pts/session
                                 </div>
                             </div>
                         </div>
