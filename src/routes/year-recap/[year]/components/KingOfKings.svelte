@@ -39,14 +39,14 @@
                                     <div
                                         class="flex items-center gap-1 text-xs font-semibold text-yellow-600 md:text-sm dark:text-yellow-400">
                                         <CrownIcon class="h-3 w-3 md:h-4 md:w-4" />
-                                        {player.leagueWins} League
+                                        {player.leagueWins} Leagues
                                     </div>
                                     <div
                                         class="flex items-center gap-1 text-xs font-semibold text-orange-600 md:text-sm dark:text-orange-400">
                                         <TrophyIcon
                                             type="cup"
                                             class="h-3 w-3 md:h-4 md:w-4" />
-                                        {player.cupWins} Cup
+                                        {player.cupWins} Cups
                                     </div>
                                 </div>
                             </div>
