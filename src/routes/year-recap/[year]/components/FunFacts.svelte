@@ -1,6 +1,8 @@
 <script>
     import SlideCard from './SlideCard.svelte';
+    import AnimatedIn from './AnimatedIn.svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
+    import { resolve } from '$app/paths';
 
     let { data } = $props();
 </script>
@@ -13,80 +15,126 @@
         <div class="mt-4 space-y-3">
             <!-- Highest Scoring Match -->
             {#if data.highestScoringMatch}
-                <div
-                    class="rounded-lg bg-gradient-to-r from-orange-50 to-red-50 p-3 md:p-4 dark:from-orange-900/20 dark:to-red-900/20">
-                    <div
-                        class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
-                        🔥 Highest Scoring Match
-                    </div>
-                    <div class="flex items-center justify-center gap-2 md:gap-4">
-                        <TeamBadge teamName={data.highestScoringMatch.home} />
-                        <span class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
-                            {data.highestScoringMatch.homeScore} - {data.highestScoringMatch
-                                .awayScore}
-                        </span>
-                        <TeamBadge teamName={data.highestScoringMatch.away} />
-                    </div>
-                    <div class="mt-1 text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                        {data.highestScoringMatch.totalGoals} total goals on {data
-                            .highestScoringMatch.date}
-                    </div>
-                </div>
+                <AnimatedIn
+                    delay={0}
+                    type="scale"
+                    duration={400}>
+                    <a
+                        href={resolve(`/table?date=${data.highestScoringMatch.date}`)}
+                        data-sveltekit-preload-data="hover"
+                        class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 md:p-4 dark:border-gray-700">
+                        <div
+                            class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
+                            🔥 Highest Scoring Match
+                        </div>
+                        <div class="flex flex-nowrap items-center justify-center gap-1 md:gap-3">
+                            <div class="shrink-0">
+                                <TeamBadge teamName={data.highestScoringMatch.home} />
+                            </div>
+                            <span
+                                class="shrink-0 text-base font-bold text-gray-900 md:text-2xl dark:text-white">
+                                {data.highestScoringMatch.homeScore} - {data.highestScoringMatch
+                                    .awayScore}
+                            </span>
+                            <div class="shrink-0">
+                                <TeamBadge teamName={data.highestScoringMatch.away} />
+                            </div>
+                        </div>
+                        <div
+                            class="mt-1 text-center text-xs text-gray-600 md:text-sm dark:text-gray-400">
+                            {data.highestScoringMatch.totalGoals} total goals on {data
+                                .highestScoringMatch.date}
+                        </div>
+                    </a>
+                </AnimatedIn>
             {/if}
 
             <!-- Biggest Margin Win -->
             {#if data.biggestMarginWin}
-                <div
-                    class="rounded-lg bg-gradient-to-r from-green-50 to-emerald-50 p-3 md:p-4 dark:from-green-900/20 dark:to-emerald-900/20">
-                    <div
-                        class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
-                        💥 Biggest Margin Win
-                    </div>
-                    <div class="flex items-center justify-center gap-2 md:gap-4">
-                        <TeamBadge teamName={data.biggestMarginWin.home} />
-                        <span class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
-                            {data.biggestMarginWin.homeScore} - {data.biggestMarginWin.awayScore}
-                        </span>
-                        <TeamBadge teamName={data.biggestMarginWin.away} />
-                    </div>
-                    <div class="mt-1 text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                        {data.biggestMarginWin.margin} goal margin on {data.biggestMarginWin.date}
-                    </div>
-                </div>
+                <AnimatedIn
+                    delay={200}
+                    type="scale"
+                    duration={400}>
+                    <a
+                        href={resolve(`/table?date=${data.biggestMarginWin.date}`)}
+                        data-sveltekit-preload-data="hover"
+                        class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 md:p-4 dark:border-gray-700">
+                        <div
+                            class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
+                            💥 Biggest Margin Win
+                        </div>
+                        <div class="flex flex-nowrap items-center justify-center gap-1 md:gap-3">
+                            <div class="shrink-0">
+                                <TeamBadge teamName={data.biggestMarginWin.home} />
+                            </div>
+                            <span
+                                class="shrink-0 text-base font-bold text-gray-900 md:text-2xl dark:text-white">
+                                {data.biggestMarginWin.homeScore} - {data.biggestMarginWin
+                                    .awayScore}
+                            </span>
+                            <div class="shrink-0">
+                                <TeamBadge teamName={data.biggestMarginWin.away} />
+                            </div>
+                        </div>
+                        <div
+                            class="mt-1 text-center text-xs text-gray-600 md:text-sm dark:text-gray-400">
+                            {data.biggestMarginWin.margin} goal margin on {data.biggestMarginWin
+                                .date}
+                        </div>
+                    </a>
+                </AnimatedIn>
             {/if}
 
             <!-- Most & Fewest Goals -->
-            <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div class="grid grid-cols-2 gap-2">
                 {#if data.mostGoalsSession}
-                    <div class="rounded-lg bg-blue-50 p-3 md:p-4 dark:bg-blue-900/20">
-                        <div
-                            class="mb-1 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
-                            ⚽ Most Goals in a Session
-                        </div>
-                        <div
-                            class="text-2xl font-bold text-blue-600 md:text-3xl dark:text-blue-400">
-                            {data.mostGoalsSession.goals}
-                        </div>
-                        <div class="mt-0.5 text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                            {data.mostGoalsSession.date}
-                        </div>
-                    </div>
+                    <AnimatedIn
+                        delay={400}
+                        type="scale"
+                        duration={400}>
+                        <a
+                            href={resolve(`/table?date=${data.mostGoalsSession.date}`)}
+                            data-sveltekit-preload-data="hover"
+                            class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">
+                            <div
+                                class="mb-1 text-xs font-semibold text-gray-900 md:text-sm dark:text-white">
+                                ⚽ Most Goals
+                            </div>
+                            <div
+                                class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
+                                {data.mostGoalsSession.goals}
+                            </div>
+                            <div
+                                class="mt-0.5 text-[10px] text-gray-600 md:text-xs dark:text-gray-400">
+                                {data.mostGoalsSession.date}
+                            </div>
+                        </a>
+                    </AnimatedIn>
                 {/if}
 
                 {#if data.fewestGoalsSession}
-                    <div class="rounded-lg bg-purple-50 p-3 md:p-4 dark:bg-purple-900/20">
-                        <div
-                            class="mb-1 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
-                            🛡️ Fewest Goals in a Session
-                        </div>
-                        <div
-                            class="text-2xl font-bold text-purple-600 md:text-3xl dark:text-purple-400">
-                            {data.fewestGoalsSession.goals}
-                        </div>
-                        <div class="mt-0.5 text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                            {data.fewestGoalsSession.date}
-                        </div>
-                    </div>
+                    <AnimatedIn
+                        delay={500}
+                        type="scale"
+                        duration={400}>
+                        <a
+                            href={resolve(`/table?date=${data.fewestGoalsSession.date}`)}
+                            data-sveltekit-preload-data="hover"
+                            class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">
+                            <div
+                                class="mb-1 text-xs font-semibold text-gray-900 md:text-sm dark:text-white">
+                                🛡️ Fewest Goals
+                            </div>
+                            <div
+                                class="text-xl font-bold text-gray-900 md:text-2xl dark:text-white">
+                                {data.fewestGoalsSession.goals}
+                            </div>
+                            <div
+                                class="mt-0.5 text-[10px] text-gray-600 md:text-xs dark:text-gray-400">
+                                {data.fewestGoalsSession.date}
+                            </div>
+                        </a>
+                    </AnimatedIn>
                 {/if}
             </div>
         </div>

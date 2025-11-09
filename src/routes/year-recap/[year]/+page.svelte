@@ -162,18 +162,18 @@
     });
 
     // Auto-slide every 10 seconds (resets on manual navigation)
-    // $effect(() => {
-    //     if (!yearRecap) return;
-    //
-    //     // Track currentSlide to reset interval on any slide change
-    //     currentSlide;
-    //
-    //     const interval = setInterval(() => {
-    //         nextSlide();
-    //     }, 10000);
-    //
-    //     return () => clearInterval(interval);
-    // });
+    $effect(() => {
+        if (!yearRecap) return;
+
+        // Track currentSlide to reset interval on any slide change
+        currentSlide;
+
+        const interval = setInterval(() => {
+            nextSlide();
+        }, 10000);
+
+        return () => clearInterval(interval);
+    });
 </script>
 
 <!-- Use min-h to ensure full viewport coverage minus navbars and padding -->
