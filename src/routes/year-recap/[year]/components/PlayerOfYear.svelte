@@ -1,5 +1,7 @@
 <script>
     import SlideCard from './SlideCard.svelte';
+    import AnimatedIn from './AnimatedIn.svelte';
+    import Avatar from '$components/avatars/Avatar.svelte';
 
     let { data } = $props();
 
@@ -13,30 +15,40 @@
     <div class="mt-4 space-y-3">
         {#if data && data.length > 0}
             {#each data as player, index (index)}
-                <div
-                    class="flex items-center justify-between rounded-lg bg-gradient-to-r from-gray-50 to-blue-50 p-3 transition-colors hover:from-gray-100 hover:to-blue-100 md:p-4 dark:from-gray-800 dark:to-blue-900/20 dark:hover:from-gray-700 dark:hover:to-blue-900/30">
-                    <div class="flex items-center gap-2 md:gap-4">
-                        <span class="text-2xl md:text-4xl">{medals[index]}</span>
-                        <div class="text-left">
+                <AnimatedIn
+                    delay={index * 200}
+                    type="scale"
+                    duration={400}>
+                    <div
+                        class="glass flex items-center justify-between rounded-lg border border-gray-200 px-2 py-3 md:py-4 dark:border-gray-700">
+                        <div class="flex items-center gap-2 md:gap-3">
+                            <span class="text-2xl md:text-3xl">{medals[index]}</span>
+                            <div class="mr-1 shrink-0 leading-[0] md:mr-2 [&>div]:block">
+                                <Avatar
+                                    avatarUrl={player.avatarUrl}
+                                    size="md" />
+                            </div>
+                            <div class="text-left">
+                                <div
+                                    class="text-base font-bold text-gray-900 md:text-xl dark:text-white">
+                                    {player.name}
+                                </div>
+                                <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
+                                    {player.ptsPerAppearance.toFixed(1)} pts/app
+                                </div>
+                            </div>
+                        </div>
+                        <div class="text-right">
                             <div
-                                class="text-base font-bold text-gray-900 md:text-xl dark:text-white">
-                                {player.name}
+                                class="text-primary-600 dark:text-primary-500 text-2xl font-bold md:text-3xl">
+                                {player.rankingPoints.toFixed(1)}
                             </div>
                             <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                                Rank #{player.rank} • {player.appearances} Sessions
+                                Ranking Points
                             </div>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <div
-                            class="text-2xl font-bold text-blue-600 md:text-3xl dark:text-blue-400">
-                            {player.rankingPoints.toFixed(1)}
-                        </div>
-                        <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
-                            Ranking Points
-                        </div>
-                    </div>
-                </div>
+                </AnimatedIn>
             {/each}
         {:else}
             <div class="py-8 text-gray-500 dark:text-gray-400">No data available</div>

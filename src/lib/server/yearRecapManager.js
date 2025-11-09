@@ -114,7 +114,7 @@ export class YearRecapManager {
         const ironManAward = await this.calculateIronManAward(players);
         const mostImproved = await this.calculateMostImproved(players, previousYearRankings);
         const kingOfKings = await this.calculateKingOfKings(players);
-        const playerOfYear = this.calculatePlayerOfYear(players);
+        const playerOfYear = await this.calculatePlayerOfYear(players);
 
         // Team Awards
         const teamOfYear = this.calculateTeamOfYear(players);
@@ -282,16 +282,27 @@ export class YearRecapManager {
     /**
      * Calculate Player of the Year (top ranking points)
      * @param {Object} players - Player data
-     * @returns {Array} - Top 3 players by ranking points
+     * @returns {Promise<Array>} - Top 3 players by ranking points
      */
-    calculatePlayerOfYear(players) {
+    async calculatePlayerOfYear(players) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
         return Object.entries(players)
-            .map(([name, p]) => ({
-                name,
-                rankingPoints: p.rankingPoints,
-                rank: p.rank,
-                appearances: p.appearances
-            }))
+            .map(([name, p]) => {
+                const avatarUrl = avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null;
+
+                return {
+                    name,
+                    rankingPoints: p.rankingPoints,
+                    rank: p.rank,
+                    appearances: p.appearances,
+                    ptsPerAppearance: p.weightedAverage || 0,
+                    avatarUrl
+                };
+            })
             .sort((a, b) => b.rankingPoints - a.rankingPoints)
             .slice(0, 3);
     }
