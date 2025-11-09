@@ -2,7 +2,6 @@ import fs from 'fs/promises';
 import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
-import { logger } from './logger.js';
 
 /**
  * Year Recap Manager - Handles aggregation and calculation of yearly statistics

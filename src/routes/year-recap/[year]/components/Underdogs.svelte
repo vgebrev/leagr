@@ -5,6 +5,7 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import { resolve } from '$app/paths';
 
     let { data } = $props();
 </script>
@@ -21,7 +22,8 @@
                 type="fade"
                 duration={400}>
                 <a
-                    href="/table?date={data.sessionDate}"
+                    href={resolve(`/table?date=${data.sessionDate}`)}
+                    data-sveltekit-preload-data="hover"
                     class="flex flex-col items-center justify-center gap-1 transition-opacity hover:opacity-80 md:gap-2">
                     <TeamBadge teamName={data.teamName} />
                     <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">
