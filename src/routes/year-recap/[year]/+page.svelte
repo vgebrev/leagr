@@ -12,7 +12,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { getYearOptions } from '$lib/shared/yearConfig.js';
-    import { fly } from 'svelte/transition';
+    import { fly, fade } from 'svelte/transition';
 
     import YearOverview from './components/YearOverview.svelte';
     import IronManAward from './components/IronManAward.svelte';
@@ -224,12 +224,29 @@
     {:else if yearRecap}
         <!-- Carousel Container with relative positioning for absolute children -->
         <div
-            class="relative flex min-h-0 flex-1 flex-col"
+            class="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg"
             ontouchstart={handleTouchStart}
             ontouchend={handleTouchEnd}>
             <!-- Slides Container with absolute positioning for smooth transitions -->
-            <div class="relative flex-1">
+            <div class="relative z-10 flex-1">
                 {#key currentSlide}
+                    <!-- Background decorative elements - fade during transitions to counter brightening -->
+                    <div
+                        class="bg-primary-400/20 dark:bg-primary-600/20 pointer-events-none absolute top-0 left-1/2 z-0 h-48 w-48 -translate-x-1/2 rounded-full blur-3xl md:h-64 md:w-64"
+                        in:fade={{ duration: 400 }}
+                        out:fade={{ duration: 400 }}>
+                    </div>
+                    <div
+                        class="pointer-events-none absolute bottom-16 left-0 z-0 h-40 w-40 rounded-full bg-blue-400/15 blur-3xl md:bottom-20 md:h-56 md:w-56 dark:bg-blue-600/15"
+                        in:fade={{ duration: 400 }}
+                        out:fade={{ duration: 400 }}>
+                    </div>
+                    <div
+                        class="pointer-events-none absolute right-0 bottom-16 z-0 h-40 w-40 rounded-full bg-purple-400/15 blur-3xl md:bottom-20 md:h-56 md:w-56 dark:bg-purple-600/15"
+                        in:fade={{ duration: 400 }}
+                        out:fade={{ duration: 400 }}>
+                    </div>
+
                     <div
                         class="absolute inset-0"
                         in:fly={{ x: slideDirection * 300, duration: 400 }}
@@ -260,14 +277,14 @@
             <!-- Navigation Buttons - positioned relative to carousel container -->
             <button
                 onclick={prevSlide}
-                class="glass-weak absolute top-1/2 -left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass-weak absolute top-7 left-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Previous slide">
                 <ChevronLeftOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>
 
             <button
                 onclick={nextSlide}
-                class="glass-weak absolute top-1/2 -right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass-weak absolute top-7 right-2 z-10 -translate-y-1/2 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label="Next slide">
                 <ChevronRightOutline class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
             </button>
@@ -288,7 +305,7 @@
             <!-- Audio Toggle Button - positioned in bottom right -->
             <button
                 onclick={toggleAudio}
-                class="glass-weak absolute right-3 bottom-3 z-10 rounded-full border border-gray-200 p-3 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass absolute right-3 bottom-3 z-10 rounded-full border border-gray-200 p-3 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}>
                 {#if isMuted}
                     <VolumeMuteSolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
