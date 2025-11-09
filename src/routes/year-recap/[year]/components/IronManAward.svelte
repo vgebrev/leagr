@@ -40,7 +40,7 @@
                         </div>
                         <div class="text-right">
                             <div
-                                class="text-primary-700 dark:text-primary-600 text-2xl font-bold md:text-3xl">
+                                class="text-primary-600 dark:text-primary-500 text-2xl font-bold md:text-3xl">
                                 {player.appearances}
                             </div>
                             <div class="text-xs text-gray-600 md:text-sm dark:text-gray-400">

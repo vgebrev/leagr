@@ -18,7 +18,7 @@
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
-                        class="text-primary-700 dark:text-primary-600 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
+                        class="text-primary-600 dark:text-primary-500 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
                         {data?.totalSessions || 0}
                     </div>
                     <div class="text-sm font-medium text-gray-700 md:text-base dark:text-gray-300">
@@ -34,7 +34,7 @@
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
-                        class="text-primary-700 dark:text-primary-600 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
+                        class="text-primary-600 dark:text-primary-500 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
                         {data?.totalMatches || 0}
                     </div>
                     <div class="text-sm font-medium text-gray-700 md:text-base dark:text-gray-300">
@@ -50,7 +50,7 @@
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
-                        class="text-primary-700 dark:text-primary-600 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
+                        class="text-primary-600 dark:text-primary-500 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
                         {data?.totalPlayers || 0}
                     </div>
                     <div class="text-sm font-medium text-gray-700 md:text-base dark:text-gray-300">
@@ -66,7 +66,7 @@
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
-                        class="text-primary-700 dark:text-primary-600 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
+                        class="text-primary-600 dark:text-primary-500 mb-1 text-3xl font-bold md:mb-2 md:text-5xl">
                         {data?.totalGoals || 0}
                     </div>
                     <div class="text-sm font-medium text-gray-700 md:text-base dark:text-gray-300">

@@ -112,7 +112,7 @@ export class YearRecapManager {
 
         // Individual Awards
         const ironManAward = await this.calculateIronManAward(players);
-        const mostImproved = this.calculateMostImproved(players, previousYearRankings);
+        const mostImproved = await this.calculateMostImproved(players, previousYearRankings);
         const kingOfKings = this.calculateKingOfKings(players);
         const playerOfYear = this.calculatePlayerOfYear(players);
 
@@ -205,7 +205,11 @@ export class YearRecapManager {
      * @param {Object} previousYearRankings - Previous year rankings (or null)
      * @returns {Array} - Top 3 most improved players
      */
-    calculateMostImproved(players, previousYearRankings) {
+    async calculateMostImproved(players, previousYearRankings) {
+        // Load avatar data
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
         return Object.entries(players)
             .map(([name, p]) => {
                 let previousRank = null;
@@ -225,12 +229,19 @@ export class YearRecapManager {
                     }
                 }
 
+                // Generate proper avatar URL if player has an avatar
+                const playerAvatar = avatars[name];
+                const avatarUrl = playerAvatar && playerAvatar.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null;
+
                 return {
                     name,
                     previousRank,
                     currentRank: p.rank,
                     rankImprovement,
-                    rankingPoints: p.rankingPoints
+                    rankingPoints: p.rankingPoints,
+                    avatarUrl
                 };
             })
             .filter((p) => p.previousRank !== null && p.rankImprovement > 0)
