@@ -1,5 +1,5 @@
 <script>
-    import confetti from 'canvas-confetti';
+    import ConfettiEffect from '$components/ConfettiEffect.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
@@ -9,7 +9,7 @@
      * @property {import('$lib/shared/helpers.js').TeamColour} teamColour
      * @property {boolean} [celebrating]
      * @property {string} [icon]
-     * @property {string[] | null} [confettiColours]
+     * @property {string[] | null} confettiColours]
      */
 
     /** @type {Props} */
@@ -21,75 +21,18 @@
         confettiColours = null
     } = $props();
 
-    export function shootStars() {
-        const defaults = {
-            spread: 360,
-            ticks: 50,
-            gravity: 0.9,
-            decay: 0.94,
-            startVelocity: 30,
-            colors: ['FFE400', 'FFBD00', 'E89400', 'FFCA6C', 'FDFFB8']
-        };
-
-        function shoot() {
-            confetti({
-                ...defaults,
-                particleCount: 40,
-                scalar: 1.2,
-                shapes: ['star']
-            });
-
-            confetti({
-                ...defaults,
-                particleCount: 80,
-                scalar: 0.75,
-                shapes: ['circle']
-            });
-        }
-
-        setTimeout(shoot, 0);
-        setTimeout(shoot, 200);
-        setTimeout(shoot, 400);
-        setTimeout(shoot, 600);
-        setTimeout(shoot, 800);
-    }
-
-    /**
-     * @param {string[]} teamColours - Array of hex colour strings for confetti
-     */
-    export function fireConfetti(teamColours) {
-        const end = Date.now() + 0.5 * 1000;
-
-        const colors = confettiColours || teamColours || ['#999999', '#ffffff'];
-
-        (function frame() {
-            confetti({
-                particleCount: 2,
-                angle: 70,
-                spread: 55,
-                origin: { x: 0, y: 0.66 },
-                colors: colors
-            });
-            confetti({
-                particleCount: 2,
-                angle: 110,
-                spread: 55,
-                origin: { x: 1, y: 0.66 },
-                colors: colors
-            });
-
-            if (Date.now() < end) {
-                requestAnimationFrame(frame);
-            }
-        })();
-    }
+    /** @type {ConfettiEffect | null} */
+    let confettiEffect = null;
 
     /** @type {number | NodeJS.Timeout | null} */
     let celebrationTimeout = null;
     function celebrate() {
         if (celebrationTimeout) clearTimeout(celebrationTimeout);
-        shootStars();
-        fireConfetti(teamStyles[teamColour]?.confetti ?? teamStyles.default.confetti);
+
+        const colors =
+            confettiColours || (teamStyles[teamColour]?.confetti ?? teamStyles.default.confetti);
+        confettiEffect?.trigger(colors);
+
         celebrationTimeout = setTimeout(() => {
             celebrating = false;
         }, 3000);
@@ -104,6 +47,8 @@
         };
     });
 </script>
+
+<ConfettiEffect bind:this={confettiEffect} />
 
 {#if celebrating}
     <div

@@ -25,6 +25,7 @@
     import TeamOfYear from './components/TeamOfYear.svelte';
     import DreamTeam from './components/DreamTeam.svelte';
     import FunFacts from './components/FunFacts.svelte';
+    import ConfettiEffect from '$components/ConfettiEffect.svelte';
 
     let { data } = $props();
 
@@ -36,6 +37,7 @@
     let audioElement = $state(null);
     let isMuted = $state(true); // Muted by default
     let isInitialized = $state(false);
+    let confettiEffect = $state(null);
 
     // Touch/swipe tracking
     let touchStartX = $state(0);
@@ -235,6 +237,19 @@
 
         return () => clearInterval(interval);
     });
+
+    // Trigger confetti on PlayerOfYear and TeamOfYear slides
+    $effect(() => {
+        if (!yearRecap || !confettiEffect) return;
+
+        // Slide 4 = PlayerOfYear, Slide 7 = TeamOfYear
+        if (currentSlide === 4 || currentSlide === 7) {
+            // Delay confetti to allow slide transition to complete
+            setTimeout(() => {
+                confettiEffect?.trigger(['#efb100', '#fff085']);
+            }, 600);
+        }
+    });
 </script>
 
 <!-- Use min-h to ensure full viewport coverage minus navbars and padding -->
@@ -313,7 +328,7 @@
                         out:fly={{ x: slideDirection * -300, duration: 400 }}>
                         <!-- Progress indicator inside card -->
                         <div
-                            class="absolute top-[2px] right-[3px] left-[3px] z-20 h-0.5 overflow-hidden rounded-t-4xl bg-gray-200/50 dark:bg-gray-700/50">
+                            class="absolute top-[1px] right-[3px] left-[3px] z-20 h-0.5 overflow-hidden rounded-t-3xl bg-gray-200/50 dark:bg-gray-700/50">
                             <div class="progress-bar bg-primary-500 h-full opacity-75"></div>
                         </div>
                         {#if currentSlide === 0}
@@ -397,6 +412,9 @@
         muted={isMuted}
         preload="auto">
     </audio>
+
+    <!-- Confetti Effect -->
+    <ConfettiEffect bind:this={confettiEffect} />
 </div>
 
 <style>
