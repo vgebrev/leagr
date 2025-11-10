@@ -11,6 +11,7 @@
     } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import { page } from '$app/state';
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { fly, fade } from 'svelte/transition';
 
@@ -34,6 +35,7 @@
     let slideDirection = $state(1); // 1 for forward, -1 for backward
     let audioElement = $state(null);
     let isMuted = $state(true); // Muted by default
+    let isInitialized = $state(false);
 
     // Touch/swipe tracking
     let touchStartX = $state(0);
@@ -49,6 +51,43 @@
     const totalSlides = 10;
 
     /**
+     * Update URL with current slide
+     */
+    function updateUrl() {
+        if (!isInitialized) return; // Don't update during initialization
+        if (typeof window === 'undefined') return; // SSR guard
+
+        const url = new URL(window.location.href);
+        const newSlide = currentSlide.toString();
+
+        // Only update if value actually changed to prevent loops
+        if (url.searchParams.get('slide') === newSlide) {
+            return;
+        }
+
+        url.searchParams.set('slide', newSlide);
+
+        // Use native replaceState to avoid navigation events
+        window.history.replaceState(window.history.state, '', url.toString());
+    }
+
+    /**
+     * Initialize state from URL params
+     */
+    function initializeFromUrl() {
+        const slideParam = page.url.searchParams.get('slide');
+
+        if (slideParam !== null) {
+            const slide = parseInt(slideParam, 10);
+            if (!isNaN(slide) && slide >= 0 && slide < totalSlides) {
+                currentSlide = slide;
+            }
+        }
+
+        isInitialized = true;
+    }
+
+    /**
      * Load year recap data for the selected year
      */
     async function loadYearRecap() {
@@ -61,7 +100,13 @@
      * Handle year selection
      */
     function handleYearChange(year) {
-        goto(resolve(`/year-recap/${year}`, {}));
+        // Preserve current slide when changing years
+        const slideParam = page.url.searchParams.get('slide');
+        const pathWithQuery = slideParam
+            ? `/year-recap/${year}?slide=${slideParam}`
+            : `/year-recap/${year}`;
+
+        goto(resolve(pathWithQuery));
         yearDropdownOpen = false;
     }
 
@@ -142,19 +187,35 @@
         }
     }
 
+    // Initialize from URL params on mount
+    $effect(() => {
+        if (yearRecap && !isInitialized) {
+            initializeFromUrl();
+        }
+    });
+
+    // Update URL when slide changes
+    $effect(() => {
+        // Track dependency
+        currentSlide;
+
+        updateUrl();
+    });
+
     // Load data when component mounts or year changes
     $effect(() => {
         if (selectedYear && selectedYear !== lastLoadedYear) {
             lastLoadedYear = selectedYear;
+            isInitialized = false; // Reset initialization for new year
             loadYearRecap();
-            currentSlide = 0; // Reset to first slide on year change
         }
     });
 
     // Initialize audio when component mounts
     $effect(() => {
         if (audioElement && yearRecap) {
-            // Start playing (muted by default)
+            // Start playing muted (browser policy requires user interaction for unmuted)
+            audioElement.muted = true;
             audioElement.play().catch((err) => {
                 console.error('Error auto-playing audio:', err);
             });
