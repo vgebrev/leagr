@@ -5,9 +5,10 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
 
-    let { data } = $props();
+    let { data, initialDelay = 400, duration = 400 } = $props();
 
     const medals = ['🥇', '🥈', '🥉'];
+    const itemStagger = 200; // Delay increment per medal
 </script>
 
 <SlideCard
@@ -18,9 +19,9 @@
         {#if data && data.length > 0}
             {#each data as player, index (index)}
                 <AnimatedIn
-                    delay={index * 200}
+                    delay={initialDelay + index * itemStagger}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <div
                         class="glass flex items-center justify-between rounded-lg border border-gray-200 px-2 py-3 md:py-4 dark:border-gray-700">
                         <div class="flex items-center gap-2 md:gap-3">

@@ -7,7 +7,14 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import { resolve } from '$app/paths';
 
-    let { data } = $props();
+    let { data, initialDelay = 400, duration = 400 } = $props();
+
+    // Calculate delays
+    const badgeDelay = initialDelay;
+    const playersStartDelay = initialDelay + 200;
+    const playerStagger = 100;
+    const leagueDelay = initialDelay + 800;
+    const cupDelay = initialDelay + 900;
 </script>
 
 <SlideCard
@@ -18,9 +25,9 @@
         <div class="mt-4 space-y-4">
             <!-- Team Badge and Session -->
             <AnimatedIn
-                delay={0}
+                delay={badgeDelay}
                 type="fade"
-                duration={400}>
+                {duration}>
                 <a
                     href={resolve(`/table?date=${data.sessionDate}`)}
                     data-sveltekit-preload-data="hover"
@@ -36,9 +43,9 @@
             <div class="grid grid-cols-3 gap-2">
                 {#each data.players as player, index (index)}
                     <AnimatedIn
-                        delay={200 + index * 100}
+                        delay={playersStartDelay + index * playerStagger}
                         type="scale"
-                        duration={400}>
+                        {duration}>
                         <div
                             class="glass flex flex-col items-center gap-1 rounded-lg border border-gray-200 px-2 py-2 dark:border-gray-700">
                             <div class="shrink-0 leading-[0] [&>div]:block">
@@ -59,9 +66,9 @@
             <div class="grid grid-cols-2 gap-2">
                 <!-- League Record -->
                 <AnimatedIn
-                    delay={800}
+                    delay={leagueDelay}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <div class="glass rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                         <div class="mb-2 flex items-center justify-center gap-1.5">
                             <CrownIcon
@@ -134,9 +141,9 @@
 
                 <!-- Cup Record -->
                 <AnimatedIn
-                    delay={900}
+                    delay={cupDelay}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <div class="glass rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                         <div class="mb-2 flex items-center justify-center gap-1.5">
                             <TrophyIcon

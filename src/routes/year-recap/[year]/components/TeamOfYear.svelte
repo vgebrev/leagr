@@ -3,7 +3,12 @@
     import AnimatedIn from './AnimatedIn.svelte';
     import Avatar from '$components/avatars/Avatar.svelte';
 
-    let { data } = $props();
+    let { data, initialDelay = 400, duration = 400 } = $props();
+
+    // Calculate delays
+    const itemStagger = 150; // Delay increment per item
+    const summaryDelay = initialDelay + (data?.length || 6) * itemStagger + 200; // After last item + buffer
+    const summaryDuration = 600; // Longer duration for summary fade
 </script>
 
 <SlideCard
@@ -14,9 +19,9 @@
         <div class="mt-4 grid grid-cols-2 gap-3">
             {#each data as player, index (index)}
                 <AnimatedIn
-                    delay={index * 150}
+                    delay={initialDelay + index * itemStagger}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <div
                         class="glass flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-3 dark:border-gray-700">
                         <div class="shrink-0 leading-[0] [&>div]:block">
@@ -39,9 +44,9 @@
         </div>
 
         <AnimatedIn
-            delay={900}
+            delay={summaryDelay}
             type="fade"
-            duration={600}>
+            duration={summaryDuration}>
             <div
                 class="mt-4 rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-gray-700 dark:bg-gray-800">
                 <p class="text-xs text-gray-700 md:text-sm dark:text-gray-300">

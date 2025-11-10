@@ -2,7 +2,10 @@
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
 
-    let { data } = $props();
+    let { data, initialDelay = 400, duration = 400 } = $props();
+
+    // Calculate staggered delays with 200ms increments
+    const delays = [0, 200, 400, 600].map((offset) => initialDelay + offset);
 </script>
 
 <SlideCard
@@ -12,9 +15,9 @@
     <div class="flex items-center justify-center">
         <div class="grid grid-cols-2 gap-3 md:gap-4">
             <AnimatedIn
-                delay={0}
+                delay={delays[0]}
                 type="scale"
-                duration={400}>
+                {duration}>
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
@@ -28,9 +31,9 @@
             </AnimatedIn>
 
             <AnimatedIn
-                delay={200}
+                delay={delays[1]}
                 type="scale"
-                duration={400}>
+                {duration}>
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
@@ -44,9 +47,9 @@
             </AnimatedIn>
 
             <AnimatedIn
-                delay={400}
+                delay={delays[2]}
                 type="scale"
-                duration={400}>
+                {duration}>
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div
@@ -60,9 +63,9 @@
             </AnimatedIn>
 
             <AnimatedIn
-                delay={600}
+                delay={delays[3]}
                 type="scale"
-                duration={400}>
+                {duration}>
                 <div
                     class="glass rounded-lg border border-gray-200 bg-gray-700 p-4 text-center md:p-6 dark:border-gray-700 dark:bg-gray-700">
                     <div

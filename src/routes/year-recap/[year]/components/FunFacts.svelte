@@ -4,7 +4,15 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import { resolve } from '$app/paths';
 
-    let { data } = $props();
+    let { data, initialDelay = 400, duration = 400 } = $props();
+
+    // Calculate delays
+    const delays = {
+        highestScoring: initialDelay,
+        biggestMargin: initialDelay + 200,
+        mostGoals: initialDelay + 400,
+        fewestGoals: initialDelay + 500
+    };
 </script>
 
 <SlideCard
@@ -16,23 +24,23 @@
             <!-- Highest Scoring Match -->
             {#if data.highestScoringMatch}
                 <AnimatedIn
-                    delay={0}
+                    delay={delays.highestScoring}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <a
                         href={resolve(`/table?date=${data.highestScoringMatch.date}`)}
                         data-sveltekit-preload-data="hover"
-                        class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 md:p-4 dark:border-gray-700">
+                        class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
                         <div
                             class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                             🔥 Highest Scoring Match
                         </div>
-                        <div class="flex flex-nowrap items-center justify-center gap-1 md:gap-3">
+                        <div class="flex flex-nowrap items-center justify-center gap-2">
                             <div class="shrink-0">
                                 <TeamBadge teamName={data.highestScoringMatch.home} />
                             </div>
                             <span
-                                class="shrink-0 text-base font-bold text-gray-900 md:text-2xl dark:text-white">
+                                class="shrink-0 px-2 text-base font-semibold text-gray-900 md:px-3 md:text-2xl dark:text-white">
                                 {data.highestScoringMatch.homeScore} - {data.highestScoringMatch
                                     .awayScore}
                             </span>
@@ -52,23 +60,23 @@
             <!-- Biggest Margin Win -->
             {#if data.biggestMarginWin}
                 <AnimatedIn
-                    delay={200}
+                    delay={delays.biggestMargin}
                     type="scale"
-                    duration={400}>
+                    {duration}>
                     <a
                         href={resolve(`/table?date=${data.biggestMarginWin.date}`)}
                         data-sveltekit-preload-data="hover"
-                        class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 md:p-4 dark:border-gray-700">
+                        class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
                         <div
                             class="mb-2 text-sm font-semibold text-gray-900 md:text-base dark:text-white">
                             💥 Biggest Margin Win
                         </div>
-                        <div class="flex flex-nowrap items-center justify-center gap-1 md:gap-3">
+                        <div class="flex flex-nowrap items-center justify-center gap-2">
                             <div class="shrink-0">
                                 <TeamBadge teamName={data.biggestMarginWin.home} />
                             </div>
                             <span
-                                class="shrink-0 text-base font-bold text-gray-900 md:text-2xl dark:text-white">
+                                class="shrink-0 px-2 text-base font-semibold text-gray-900 md:px-3 md:text-2xl dark:text-white">
                                 {data.biggestMarginWin.homeScore} - {data.biggestMarginWin
                                     .awayScore}
                             </span>
@@ -89,9 +97,9 @@
             <div class="grid grid-cols-2 gap-2">
                 {#if data.mostGoalsSession}
                     <AnimatedIn
-                        delay={400}
+                        delay={delays.mostGoals}
                         type="scale"
-                        duration={400}>
+                        {duration}>
                         <a
                             href={resolve(`/table?date=${data.mostGoalsSession.date}`)}
                             data-sveltekit-preload-data="hover"
@@ -114,9 +122,9 @@
 
                 {#if data.fewestGoalsSession}
                     <AnimatedIn
-                        delay={500}
+                        delay={delays.fewestGoals}
                         type="scale"
-                        duration={400}>
+                        {duration}>
                         <a
                             href={resolve(`/table?date=${data.fewestGoalsSession.date}`)}
                             data-sveltekit-preload-data="hover"
