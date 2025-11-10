@@ -311,6 +311,11 @@
                         class="glass-weak absolute inset-0 rounded-lg"
                         in:fly={{ x: slideDirection * 300, duration: 400 }}
                         out:fly={{ x: slideDirection * -300, duration: 400 }}>
+                        <!-- Progress indicator inside card -->
+                        <div
+                            class="absolute top-[2px] right-[3px] left-[3px] z-20 h-0.5 overflow-hidden rounded-t-4xl bg-gray-200/50 dark:bg-gray-700/50">
+                            <div class="progress-bar bg-primary-500 h-full opacity-75"></div>
+                        </div>
                         {#if currentSlide === 0}
                             <YearOverview data={yearRecap.overview} />
                         {:else if currentSlide === 1}
@@ -393,3 +398,20 @@
         preload="auto">
     </audio>
 </div>
+
+<style>
+    .progress-bar {
+        width: 0;
+        transform-origin: left;
+        animation: progress 10s linear forwards;
+    }
+
+    @keyframes progress {
+        from {
+            width: 0;
+        }
+        to {
+            width: 100%;
+        }
+    }
+</style>
