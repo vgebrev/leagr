@@ -150,13 +150,15 @@
                             <Avatar
                                 {avatarUrl}
                                 size="md"
-                                color={teamColor} />
+                                color={teamColor}
+                                shadow="lg" />
                         </div>
                         <div class="hidden sm:block">
                             <Avatar
                                 {avatarUrl}
                                 size="lg"
-                                color={teamColor} />
+                                color={teamColor}
+                                shadow="lg" />
                         </div>
                         <div
                             class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>

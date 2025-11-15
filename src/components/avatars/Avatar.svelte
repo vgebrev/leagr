@@ -4,7 +4,7 @@
     import { teamStyles } from '$lib/shared/helpers.js';
 
     /**
-     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: string, onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: string, shadow?: 'sm' | 'lg', onclick?: () => void }}
      */
     let {
         avatarUrl = null,
@@ -13,6 +13,7 @@
         showPendingOnly = false,
         size = 'lg',
         color = undefined,
+        shadow = undefined,
         onclick = undefined
     } = $props();
 
@@ -20,6 +21,15 @@
     const colorStyles = $derived(color ? teamStyles[color] || teamStyles.default : null);
     const avatarClasses = $derived(
         colorStyles ? `!border-2 !p-0 ${colorStyles.border} ${colorStyles.text}` : '!p-0'
+    );
+
+    // Get shadow classes based on shadow prop
+    const shadowClasses = $derived(
+        shadow === 'sm'
+            ? 'drop-shadow-xs drop-shadow-gray-800'
+            : shadow === 'lg'
+              ? 'drop-shadow-lg drop-shadow-gray-800'
+              : ''
     );
 
     // Display logic:
@@ -31,7 +41,7 @@
     let isClickable = $derived(canUpload || !!onclick);
 </script>
 
-<div class="relative inline-block {colorStyles ? 'drop-shadow-lg drop-shadow-gray-800' : ''}">
+<div class="relative inline-block {shadowClasses}">
     <button
         type="button"
         class="relative"

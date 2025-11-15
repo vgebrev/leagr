@@ -61,6 +61,15 @@
         return `animate-pulse ${teamStyle.text}`;
     });
 
+    // Get team color for the flying player avatar
+    const flyingPlayerColor = $derived.by(() => {
+        if (!isFlying || !animatingPlayer || !animatingPlayerTeam) {
+            return undefined;
+        }
+
+        return animatingPlayerTeam.split(' ')[0].toLowerCase();
+    });
+
     // Get team color classes for the flying player (uses unified animating state)
     const flyingPlayerClasses = $derived.by(() => {
         if (!isFlying || !animatingPlayer || !animatingPlayerTeam) {
@@ -453,6 +462,8 @@
                     <div class="shrink-0">
                         <Avatar
                             {avatarUrl}
+                            color={flyingPlayerColor}
+                            shadow="sm"
                             size="sm" />
                     </div>
                     <span class="text-sm font-bold">{animatingPlayer}</span>
