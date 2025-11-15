@@ -39,7 +39,7 @@
                 loadingError = true;
                 setNotification(
                     err.message || 'Failed to load player profile. Please try again.',
-                    'error'
+                    'info'
                 );
             }
         );
@@ -68,7 +68,7 @@
     bodyClass="p-4"
     closeBtnClass="p-0">
     {#snippet header()}
-        {#if playerData}
+        {#if playerData || loadingError}
             <PlayerHeader
                 {playerData}
                 {playerName}
@@ -86,7 +86,7 @@
             <div class="text-gray-500">Loading...</div>
         </div>
     {:else if loadingError}
-        <div class="p-4 text-center text-red-500">Failed to load player data</div>
+        <div class="p-4 text-center text-sm text-gray-400">New player - no stats yet</div>
     {:else if playerData}
         <PlayerSummaryCard
             {playerData}
