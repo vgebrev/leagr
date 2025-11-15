@@ -81,29 +81,20 @@ export class YearRecapManager {
             throw new Error('No data available for this year');
         }
 
-        // Load previous year's rankings for year-over-year comparison
-        let previousYearRankings = null;
-        try {
-            previousYearRankings = await rankingsManager.loadEnhancedRankings(year - 1);
-        } catch {
-            // Previous year doesn't exist, that's okay
-        }
-
         // Load all session files for the year
         const sessions = await this.loadYearSessions(year);
 
         // Calculate aggregated statistics
-        return await this.calculateYearStats(rankingsData, previousYearRankings, sessions);
+        return await this.calculateYearStats(rankingsData, sessions);
     }
 
     /**
      * Calculate comprehensive year statistics
      * @param {Object} rankingsData - Current year rankings data
-     * @param {Object} previousYearRankings - Previous year rankings (or null)
      * @param {Array} sessions - All session data for the year
      * @returns {Promise<Object>} - Comprehensive year statistics
      */
-    async calculateYearStats(rankingsData, previousYearRankings, sessions) {
+    async calculateYearStats(rankingsData, sessions) {
         const players = rankingsData.players;
         const sessionDates = rankingsData.calculatedDates;
 
@@ -112,7 +103,7 @@ export class YearRecapManager {
 
         // Individual Awards
         const ironManAward = await this.calculateIronManAward(players);
-        const mostImproved = await this.calculateMostImproved(players, previousYearRankings);
+        const mostImproved = await this.calculateMostImproved(players);
         const kingOfKings = await this.calculateKingOfKings(players);
         const playerOfYear = await this.calculatePlayerOfYear(players);
 
@@ -202,34 +193,51 @@ export class YearRecapManager {
     }
 
     /**
-     * Calculate Most Improved (biggest positive rank movement)
+     * Calculate Most Improved (lowest rank to current rank, full confidence players only)
      * @param {Object} players - Current year player data
-     * @param {Object} previousYearRankings - Previous year rankings (or null)
      * @returns {Array} - Top 3 most improved players
      */
-    async calculateMostImproved(players, previousYearRankings) {
+    async calculateMostImproved(players) {
         // Load avatar data
         const avatarManager = createAvatarManager().setLeague(this.leagueId);
         const avatars = await avatarManager.loadAvatars();
 
+        // Calculate confidence threshold (66% of max appearances)
+        const CONFIDENCE_FRACTION = 0.66;
+        const maxAppearances = Math.max(...Object.values(players).map((p) => p.appearances || 0));
+        const confidenceThreshold = Math.max(1, Math.round(maxAppearances * CONFIDENCE_FRACTION));
+
         return Object.entries(players)
             .map(([name, p]) => {
-                let previousRank = null;
-                let rankImprovement = 0;
+                // Only include players with full confidence
+                if (p.appearances < confidenceThreshold) {
+                    return null;
+                }
 
-                // Try year-over-year comparison first
-                if (previousYearRankings?.players?.[name]) {
-                    previousRank = previousYearRankings.players[name].rank;
-                    rankImprovement = previousRank - p.rank;
-                } else {
-                    // Fallback: within-year improvement (first rank vs final rank)
-                    const sessionDatesForPlayer = Object.keys(p.rankingDetail || {}).sort();
-                    if (sessionDatesForPlayer.length > 1) {
-                        const firstSession = p.rankingDetail[sessionDatesForPlayer[0]];
-                        previousRank = firstSession.rank;
-                        rankImprovement = previousRank - p.rank;
+                const sessionDatesForPlayer = Object.keys(p.rankingDetail || {}).sort();
+
+                // Need at least 2 sessions to show improvement
+                if (sessionDatesForPlayer.length < 2) {
+                    return null;
+                }
+
+                // Get starting rank (first session)
+                const startingRank = p.rankingDetail[sessionDatesForPlayer[0]].rank;
+
+                // Find lowest rank (worst position) across all sessions
+                let lowestRank = startingRank;
+                for (const date of sessionDatesForPlayer) {
+                    const sessionRank = p.rankingDetail[date].rank;
+                    if (sessionRank > lowestRank) {
+                        lowestRank = sessionRank;
                     }
                 }
+
+                // Current rank is the final rank
+                const currentRank = p.rank;
+
+                // Calculate improvement: lowest rank - current rank
+                const rankImprovement = lowestRank - currentRank;
 
                 // Generate proper avatar URL if player has an avatar
                 const playerAvatar = avatars[name];
@@ -240,14 +248,15 @@ export class YearRecapManager {
 
                 return {
                     name,
-                    previousRank,
-                    currentRank: p.rank,
+                    startingRank,
+                    lowestRank,
+                    currentRank,
                     rankImprovement,
                     rankingPoints: p.rankingPoints,
                     avatarUrl
                 };
             })
-            .filter((p) => p.previousRank !== null && p.rankImprovement > 0)
+            .filter((p) => p !== null && p.rankImprovement > 0)
             .sort((a, b) => b.rankImprovement - a.rankImprovement)
             .slice(0, 3);
     }

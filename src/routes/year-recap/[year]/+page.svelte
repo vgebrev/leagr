@@ -7,7 +7,9 @@
         ChevronLeftOutline,
         ChevronRightOutline,
         VolumeMuteSolid,
-        VolumeUpSolid
+        VolumeUpSolid,
+        PlaySolid,
+        PauseSolid
     } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
@@ -36,8 +38,13 @@
     let slideDirection = $state(1); // 1 for forward, -1 for backward
     let audioElement = $state(null);
     let isMuted = $state(true); // Muted by default
+    let isPaused = $state(false); // Auto-progress is playing by default
     let isInitialized = $state(false);
     let confettiEffect = $state(null);
+
+    // Auto-progression timing
+    let slideStartTime = $state(0);
+    let cumulativeElapsed = $state(0); // Total time slide has been shown (excluding paused time)
 
     // Touch/swipe tracking
     let touchStartX = $state(0);
@@ -118,6 +125,7 @@
     function prevSlide() {
         slideDirection = -1;
         currentSlide = currentSlide === 0 ? totalSlides - 1 : currentSlide - 1;
+        cumulativeElapsed = 0; // Reset timer on manual navigation
     }
 
     /**
@@ -126,6 +134,7 @@
     function nextSlide() {
         slideDirection = 1;
         currentSlide = currentSlide === totalSlides - 1 ? 0 : currentSlide + 1;
+        cumulativeElapsed = 0; // Reset timer on manual navigation
     }
 
     /**
@@ -134,6 +143,7 @@
     function goToSlide(index) {
         slideDirection = index > currentSlide ? 1 : -1;
         currentSlide = index;
+        cumulativeElapsed = 0; // Reset timer on manual navigation
     }
 
     /**
@@ -154,6 +164,17 @@
             audioElement.muted = true;
             isMuted = true;
         }
+    }
+
+    /**
+     * Toggle pause/play for auto-progression
+     */
+    function togglePause() {
+        if (!isPaused) {
+            // About to pause - accumulate elapsed time since last resume/start
+            cumulativeElapsed += Date.now() - slideStartTime;
+        }
+        isPaused = !isPaused;
     }
 
     /**
@@ -224,18 +245,36 @@
         }
     });
 
-    // Auto-slide every 10 seconds (resets on manual navigation)
+    // Auto-slide every 10 seconds (resets on manual navigation, disabled when paused)
     $effect(() => {
-        if (!yearRecap) return;
+        if (!yearRecap || isPaused) return;
 
         // Track currentSlide to reset interval on any slide change
         currentSlide;
 
-        const interval = setInterval(() => {
-            nextSlide();
-        }, 10000);
+        const slideDuration = 10000; // 10 seconds
+        let intervalId = null;
 
-        return () => clearInterval(interval);
+        // Calculate remaining time based on cumulative elapsed time
+        const remainingTime = Math.max(0, slideDuration - cumulativeElapsed);
+
+        // Start tracking from now (for calculating elapsed time if paused again)
+        slideStartTime = Date.now();
+
+        // Use remaining time for first timeout (or full duration if starting fresh)
+        const initialTimeout = setTimeout(() => {
+            nextSlide();
+
+            // After first slide, use regular interval
+            intervalId = setInterval(() => {
+                nextSlide();
+            }, slideDuration);
+        }, remainingTime);
+
+        return () => {
+            clearTimeout(initialTimeout);
+            if (intervalId) clearInterval(intervalId);
+        };
     });
 
     // Trigger confetti on PlayerOfYear and TeamOfYear slides
@@ -329,7 +368,10 @@
                         <!-- Progress indicator inside card -->
                         <div
                             class="absolute top-[1px] right-[3px] left-[3px] z-20 h-0.5 overflow-hidden rounded-t-3xl bg-gray-200/50 dark:bg-gray-700/50">
-                            <div class="progress-bar bg-primary-500 h-full opacity-75"></div>
+                            <div
+                                class="progress-bar bg-primary-500 h-full opacity-75"
+                                class:paused={isPaused}>
+                            </div>
                         </div>
                         {#if currentSlide === 0}
                             <YearOverview data={yearRecap.overview} />
@@ -384,10 +426,22 @@
                 {/each}
             </div>
 
+            <!-- Pause/Play Toggle Button - positioned in bottom left -->
+            <button
+                onclick={togglePause}
+                class="glass-weak absolute bottom-2 left-2 z-10 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                aria-label={isPaused ? 'Resume auto-progression' : 'Pause auto-progression'}>
+                {#if isPaused}
+                    <PlaySolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+                {:else}
+                    <PauseSolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
+                {/if}
+            </button>
+
             <!-- Audio Toggle Button - positioned in bottom right -->
             <button
                 onclick={toggleAudio}
-                class="glass absolute right-3 bottom-3 z-10 rounded-full border border-gray-200 p-3 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
+                class="glass-weak absolute right-2 bottom-2 z-10 rounded-full border border-gray-200 p-2 shadow-lg transition-all hover:scale-110 hover:bg-gray-50/20 hover:shadow-md hover:backdrop-blur-lg md:p-3 dark:border-gray-700 dark:hover:bg-gray-800/20"
                 aria-label={isMuted ? 'Unmute audio' : 'Mute audio'}>
                 {#if isMuted}
                     <VolumeMuteSolid class="h-5 w-5 text-gray-900 md:h-6 md:w-6 dark:text-white" />
@@ -422,6 +476,10 @@
         width: 0;
         transform-origin: left;
         animation: progress 10s linear forwards;
+    }
+
+    .progress-bar.paused {
+        animation-play-state: paused;
     }
 
     @keyframes progress {

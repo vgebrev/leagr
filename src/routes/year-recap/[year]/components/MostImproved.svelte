@@ -34,22 +34,15 @@
                                     class="text-base font-bold text-gray-900 md:text-xl dark:text-white">
                                     {player.name}
                                 </div>
+                                <div class="text-xs text-gray-500 md:text-sm dark:text-gray-400">
+                                    Start #{player.startingRank} • Low #{player.lowestRank} • Now #{player.currentRank}
+                                </div>
                             </div>
                         </div>
                         <div class="text-right">
-                            <div class="flex items-center justify-end gap-1 md:gap-2">
-                                <span class="text-sm text-gray-500 md:text-base">
-                                    #{player.previousRank}
-                                </span>
-                                <span class="text-base md:text-xl">→</span>
-                                <span
-                                    class="text-primary-600 dark:text-primary-500 text-xl font-bold md:text-2xl">
-                                    #{player.currentRank}
-                                </span>
-                            </div>
                             <div
-                                class="text-xs font-semibold text-green-600 md:text-sm dark:text-green-400">
-                                +{player.rankImprovement} positions
+                                class="text-xl font-bold text-green-600 md:text-2xl dark:text-green-400">
+                                +{player.rankImprovement}
                             </div>
                         </div>
                     </div>

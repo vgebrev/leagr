@@ -42,6 +42,9 @@
                                         <CrownIcon class="h-3 w-3 md:h-4 md:w-4" />
                                         {player.leagueWins} Leagues
                                     </div>
+                                    <span
+                                        class="text-xs text-gray-500 md:text-sm dark:text-gray-400"
+                                        >•</span>
                                     <div
                                         class="flex items-center gap-1 text-xs font-semibold text-orange-600 md:text-sm dark:text-orange-400">
                                         <TrophyIcon

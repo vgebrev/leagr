@@ -137,60 +137,95 @@ describe('YearRecapManager', () => {
     });
 
     describe('calculateMostImproved', () => {
-        it('should calculate year-over-year improvement', async () => {
-            const players = {
-                Alice: { rank: 3, rankingPoints: 100, rankingDetail: {} },
-                Bob: { rank: 1, rankingPoints: 120, rankingDetail: {} },
-                Charlie: { rank: 6, rankingPoints: 80, rankingDetail: {} }
-            };
-            const previousYear = {
-                players: {
-                    Alice: { rank: 10 },
-                    Bob: { rank: 5 },
-                    Charlie: { rank: 6 } // No change in rank
-                }
-            };
-
-            const result = await manager.calculateMostImproved(players, previousYear);
-
-            expect(result).toHaveLength(2); // Only Alice and Bob improved
-            expect(result[0].name).toBe('Alice'); // 10 -> 3 = +7
-            expect(result[0].rankImprovement).toBe(7);
-            expect(result[1].name).toBe('Bob'); // 5 -> 1 = +4
-            expect(result[1].rankImprovement).toBe(4);
-        });
-
-        it('should fall back to within-year improvement', async () => {
+        it('should calculate improvement from lowest rank to current rank', async () => {
             const players = {
                 Alice: {
                     rank: 3,
                     rankingPoints: 100,
+                    appearances: 10,
+                    rankingDetail: {
+                        '2025-01-01': { rank: 8 }, // Started at 8
+                        '2025-03-01': { rank: 12 }, // Dropped to 12 (lowest)
+                        '2025-06-01': { rank: 7 },
+                        '2025-12-31': { rank: 3 } // Ended at 3
+                    }
+                },
+                Bob: {
+                    rank: 1,
+                    rankingPoints: 120,
+                    appearances: 10,
+                    rankingDetail: {
+                        '2025-01-01': { rank: 5 }, // Started at 5
+                        '2025-03-01': { rank: 8 }, // Dropped to 8 (lowest)
+                        '2025-12-31': { rank: 1 } // Ended at 1
+                    }
+                },
+                Charlie: {
+                    rank: 6,
+                    rankingPoints: 80,
+                    appearances: 10,
+                    rankingDetail: {
+                        '2025-01-01': { rank: 6 },
+                        '2025-12-31': { rank: 6 } // No change
+                    }
+                }
+            };
+            const result = await manager.calculateMostImproved(players);
+
+            expect(result).toHaveLength(2); // Only Alice and Bob improved
+            expect(result[0].name).toBe('Alice'); // 12 -> 3 = +9
+            expect(result[0].startingRank).toBe(8);
+            expect(result[0].lowestRank).toBe(12);
+            expect(result[0].currentRank).toBe(3);
+            expect(result[0].rankImprovement).toBe(9);
+            expect(result[1].name).toBe('Bob'); // 8 -> 1 = +7
+            expect(result[1].startingRank).toBe(5);
+            expect(result[1].lowestRank).toBe(8);
+            expect(result[1].currentRank).toBe(1);
+            expect(result[1].rankImprovement).toBe(7);
+        });
+
+        it('should only include players with full confidence (66%+ appearances)', async () => {
+            const players = {
+                Alice: {
+                    rank: 3,
+                    rankingPoints: 100,
+                    appearances: 10, // Full confidence
                     rankingDetail: {
                         '2025-01-01': { rank: 10 },
                         '2025-12-31': { rank: 3 }
                     }
+                },
+                Bob: {
+                    rank: 5,
+                    rankingPoints: 80,
+                    appearances: 5, // Below confidence threshold (66% of 10 = 7)
+                    rankingDetail: {
+                        '2025-01-01': { rank: 15 },
+                        '2025-12-31': { rank: 5 }
+                    }
                 }
             };
-            const previousYear = null;
+            const result = await manager.calculateMostImproved(players);
 
-            const result = await manager.calculateMostImproved(players, previousYear);
-
-            expect(result).toHaveLength(1);
+            expect(result).toHaveLength(1); // Only Alice has full confidence
             expect(result[0].name).toBe('Alice');
-            expect(result[0].rankImprovement).toBe(7); // 10 -> 3
         });
 
-        it('should exclude players who declined in rank', async () => {
+        it('should exclude players who did not improve', async () => {
             const players = {
-                Alice: { rank: 10, rankingPoints: 50, rankingDetail: {} }
-            };
-            const previousYear = {
-                players: {
-                    Alice: { rank: 3 }
+                Alice: {
+                    rank: 10,
+                    rankingPoints: 50,
+                    appearances: 10,
+                    rankingDetail: {
+                        '2025-01-01': { rank: 3 }, // Started better
+                        '2025-12-31': { rank: 10 } // Ended worse
+                    }
                 }
             };
 
-            const result = await manager.calculateMostImproved(players, previousYear);
+            const result = await manager.calculateMostImproved(players);
 
             expect(result).toHaveLength(0);
         });
