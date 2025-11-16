@@ -36,7 +36,7 @@
                                     class="text-base font-bold text-gray-900 md:text-xl dark:text-white">
                                     {player.name}
                                 </div>
-                                <div class="mt-0.5 flex gap-2 md:mt-1 md:gap-3">
+                                <div class="mt-0.5 flex gap-1 md:mt-1 md:gap-2">
                                     <div
                                         class="flex items-center gap-1 text-xs font-semibold text-yellow-600 md:text-sm dark:text-yellow-400">
                                         <CrownIcon class="h-3 w-3 md:h-4 md:w-4" />
