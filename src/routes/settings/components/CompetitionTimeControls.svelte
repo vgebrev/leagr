@@ -63,14 +63,14 @@
                     type="number"
                     step={1}
                     min={0}
-                    class="w-16 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    class="!w-16 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="2" />
                 <span>days before, at</span>
                 <Input
                     bind:value={leagueSettings.registrationWindow.startTime}
                     type="time"
                     onchange={onSave}
-                    class="w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    class="!w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="07:30" />
             </div>
 
@@ -83,14 +83,14 @@
                     type="number"
                     step={1}
                     min={0}
-                    class="w-16 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    class="!w-16 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="0" />
                 <span>days before, at</span>
                 <Input
                     bind:value={leagueSettings.registrationWindow.endTime}
                     type="time"
                     onchange={onSave}
-                    class="w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    class="!w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="12:00" />
             </div>
         </div>

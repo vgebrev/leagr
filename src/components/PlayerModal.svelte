@@ -65,8 +65,7 @@
     bind:open
     size="md"
     class="glass-strong mx-auto w-[95vw] border backdrop:backdrop-blur-xs md:w-2/3 lg:w-1/2 xl:w-1/3"
-    bodyClass="p-4"
-    closeBtnClass="p-0">
+    classes={{ body: 'p-4', close: 'p-0' }}>
     {#snippet header()}
         {#if playerData || loadingError}
             <PlayerHeader

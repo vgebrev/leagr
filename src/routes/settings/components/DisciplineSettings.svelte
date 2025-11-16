@@ -38,7 +38,7 @@
                     min={1}
                     max={10}
                     onchange={onSave}
-                    class="w-20 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    class="!w-20 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="2" />
                 <span class="text-gray-600 dark:text-gray-400">no-shows before suspension</span>
             </div>

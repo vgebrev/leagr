@@ -11,7 +11,6 @@
     bind:open
     title="Suspensions Watchlist"
     size="sm"
-    headerClass="p-4 text-md font-semibold"
-    closeBtnClass="p-0">
+    classes={{ header: 'p-4 text-md font-semibold', close: 'p-0' }}>
     <SuspensionsList {suspendedPlayers} />
 </Modal>

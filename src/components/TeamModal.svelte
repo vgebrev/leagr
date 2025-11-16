@@ -81,8 +81,7 @@
     bind:open
     size="md"
     class="glass-strong max-w-md border backdrop:backdrop-blur-xs"
-    bodyClass="p-2"
-    closeBtnClass="p-0">
+    classes={{ body: 'p-2', close: 'p-0' }}>
     {#snippet header()}
         {#if teamName}
             <div class="flex w-full items-center justify-center">
