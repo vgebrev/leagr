@@ -45,16 +45,19 @@
     }
 
     /**
-     * Set up click listener on the trigger button
+     * Set up event listeners on the trigger button for both click and mouseover
      */
     onMount(() => {
         const triggerButton = document.getElementById(triggerId);
         if (triggerButton) {
-            triggerButton.addEventListener('click', () => {
+            const handleTrigger = () => {
                 if (!hasLoaded && !loading) {
                     loadTrophySessions();
                 }
-            });
+            };
+
+            triggerButton.addEventListener('click', handleTrigger);
+            triggerButton.addEventListener('mouseover', handleTrigger);
         }
     });
 </script>
