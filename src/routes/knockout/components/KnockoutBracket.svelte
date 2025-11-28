@@ -223,7 +223,7 @@
                                         max="20"
                                         value={match.homeScore ?? ''}
                                         size="sm"
-                                        class="w-12 text-center"
+                                        class="!w-12 !text-center"
                                         disabled={isScoreInputDisabled(match)}
                                         onchange={(e) => handleScoreChange(match, 'home', e)}
                                         onfocus={(e) => e.target.select()} />
@@ -264,7 +264,7 @@
                                         max="20"
                                         value={match.awayScore ?? ''}
                                         size="sm"
-                                        class="w-12 text-center"
+                                        class="!w-12 !text-center"
                                         disabled={isScoreInputDisabled(match)}
                                         onchange={(e) => handleScoreChange(match, 'away', e)}
                                         onfocus={(e) => e.target.select()} />
