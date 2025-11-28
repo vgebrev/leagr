@@ -2,6 +2,7 @@
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import PlayerSummaryCard from './components/PlayerSummaryCard.svelte';
     import RankProgressionChart from './components/RankProgressionChart.svelte';
+    import PerformanceSection from './components/PerformanceSection.svelte';
     import AppearanceHistorySection from './components/AppearanceHistorySection.svelte';
     import AvatarUploadButton from '$components/avatars/AvatarUploadButton.svelte';
     import { Alert, Spinner, Dropdown, DropdownItem, Button, Badge } from 'flowbite-svelte';
@@ -262,6 +263,7 @@
 
     {#if playerData}
         <PlayerSummaryCard {playerData} />
+        <PerformanceSection {playerData} />
         <RankProgressionChart {playerData}>
             {#snippet limitDropdown()}
                 {#if playerData}

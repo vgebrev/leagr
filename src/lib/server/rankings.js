@@ -292,6 +292,95 @@ export class RankingsManager {
     }
 
     /**
+     * Determine cup progress for each team based on knockout bracket results
+     * Returns the furthest round each team reached (raw round name from bracket)
+     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @returns {Object} Map of team names to cup progress (raw round names or 'winner')
+     */
+    getTeamCupProgress(knockoutBracket) {
+        const cupProgress = {};
+
+        if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
+            return cupProgress;
+        }
+
+        // Check if there are any completed knockout matches
+        const hasCompletedMatches = knockoutBracket.some(
+            (match) => match.homeScore !== null && match.awayScore !== null
+        );
+
+        if (!hasCompletedMatches) {
+            return cupProgress;
+        }
+
+        // Track which teams participated in each round and their results
+        const teamRounds = {};
+
+        for (const match of knockoutBracket) {
+            if (match.homeScore === null || match.awayScore === null) {
+                continue; // Skip incomplete matches
+            }
+
+            const { home, away, homeScore, awayScore, round } = match;
+            const winner = homeScore > awayScore ? home : away;
+
+            // Initialize team tracking
+            if (!teamRounds[home]) teamRounds[home] = { rounds: new Set(), wonFinal: false };
+            if (!teamRounds[away]) teamRounds[away] = { rounds: new Set(), wonFinal: false };
+
+            // Track participation in this round
+            teamRounds[home].rounds.add(round);
+            teamRounds[away].rounds.add(round);
+
+            // Track final winner
+            if (round === 'final') {
+                teamRounds[winner].wonFinal = true;
+            }
+        }
+
+        // Helper to get team count from round name for sorting
+        const getTeamCount = (roundName) => {
+            if (roundName === 'final') return 2;
+            if (roundName === 'semi') return 4;
+            if (roundName === 'quarter') return 8;
+            if (roundName === 'round-of-16') return 16;
+            if (roundName.startsWith('round-of-')) {
+                return parseInt(roundName.replace('round-of-', ''), 10);
+            }
+            return 999;
+        };
+
+        // Determine cup progress for each team (furthest round reached)
+        for (const [team, data] of Object.entries(teamRounds)) {
+            if (data.wonFinal) {
+                cupProgress[team] = 'winner';
+            } else {
+                // Find the furthest round (smallest team count)
+                const roundNames = Array.from(data.rounds);
+                const furthestRound = roundNames.sort(
+                    (a, b) => getTeamCount(a) - getTeamCount(b)
+                )[0];
+                cupProgress[team] = furthestRound;
+            }
+        }
+
+        return cupProgress;
+    }
+
+    /**
+     * Convert team standings to league positions (1-indexed)
+     * @param {Object} standings - Team standings object (team name -> 0-indexed position)
+     * @returns {Object} Map of team names to league positions (1-indexed)
+     */
+    getLeaguePositions(standings) {
+        const positions = {};
+        for (const [teamName, zeroIndexedPosition] of Object.entries(standings)) {
+            positions[teamName] = zeroIndexedPosition + 1;
+        }
+        return positions;
+    }
+
+    /**
      * Process ELO ratings for all games in a session
      * @param {Map} playerTracker - Map of all player data
      * @param {Object} teams - Teams data with player lists
@@ -790,6 +879,10 @@ export class RankingsManager {
                 const knockoutBracket = games?.['knockout-games']?.bracket;
                 const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
 
+                // Calculate league positions and cup progress for performance tracking
+                const leaguePositions = this.getLeaguePositions(standings);
+                const teamCupProgress = this.getTeamCupProgress(knockoutBracket);
+
                 // Process ELO ratings for all games in this session
                 this.processEloRatings(
                     playerTracker,
@@ -839,7 +932,9 @@ export class RankingsManager {
                             totalPoints: totalDatePoints,
                             eloRating: playerData.elo
                                 ? Math.round(playerData.elo.rating)
-                                : ELO_BASELINE_RATING
+                                : ELO_BASELINE_RATING,
+                            leaguePosition: leaguePositions[teamName] || null,
+                            cupProgress: teamCupProgress[teamName] || null
                         };
 
                         // Add championship flags

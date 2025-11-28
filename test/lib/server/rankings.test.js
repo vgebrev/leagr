@@ -1227,4 +1227,315 @@ describe('RankingsManager - Yearly Rankings', () => {
             expect(playerData.elo.gamesPlayed).toBe(0);
         });
     });
+
+    describe('Performance Tracking', () => {
+        describe('getLeaguePositions', () => {
+            it('should convert 0-indexed standings to 1-indexed positions', () => {
+                const standings = {
+                    'Red Team': 0,
+                    'Blue Team': 1,
+                    'Green Team': 2,
+                    'Yellow Team': 3
+                };
+
+                const positions = rankingsManager.getLeaguePositions(standings);
+
+                expect(positions['Red Team']).toBe(1);
+                expect(positions['Blue Team']).toBe(2);
+                expect(positions['Green Team']).toBe(3);
+                expect(positions['Yellow Team']).toBe(4);
+            });
+
+            it('should handle empty standings', () => {
+                const positions = rankingsManager.getLeaguePositions({});
+                expect(positions).toEqual({});
+            });
+
+            it('should handle single team', () => {
+                const standings = { 'Red Team': 0 };
+                const positions = rankingsManager.getLeaguePositions(standings);
+                expect(positions['Red Team']).toBe(1);
+            });
+        });
+
+        describe('getTeamCupProgress', () => {
+            it('should identify cup winner', () => {
+                const bracket = [
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 2,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'semi',
+                        match: 2,
+                        home: 'Green Team',
+                        away: 'Yellow Team',
+                        homeScore: 3,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Red Team',
+                        away: 'Green Team',
+                        homeScore: 2,
+                        awayScore: 1
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                expect(progress['Red Team']).toBe('winner');
+                expect(progress['Green Team']).toBe('final');
+                expect(progress['Blue Team']).toBe('semi');
+                expect(progress['Yellow Team']).toBe('semi');
+            });
+
+            it('should handle teams eliminated in different rounds', () => {
+                const bracket = [
+                    {
+                        round: 'quarter',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team B',
+                        homeScore: 2,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'quarter',
+                        match: 2,
+                        home: 'Team C',
+                        away: 'Team D',
+                        homeScore: 1,
+                        awayScore: 0
+                    },
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team C',
+                        homeScore: 3,
+                        awayScore: 2
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Other Team',
+                        homeScore: 1,
+                        awayScore: 2
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                expect(progress['Team A']).toBe('final');
+                expect(progress['Team C']).toBe('semi');
+                expect(progress['Team B']).toBe('quarter');
+                expect(progress['Team D']).toBe('quarter');
+                expect(progress['Other Team']).toBe('winner');
+            });
+
+            it('should handle round-of-16 and other named rounds', () => {
+                const bracket = [
+                    {
+                        round: 'round-of-16',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team B',
+                        homeScore: 2,
+                        awayScore: 0
+                    },
+                    {
+                        round: 'quarter',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team C',
+                        homeScore: 1,
+                        awayScore: 2
+                    },
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Team C',
+                        away: 'Team D',
+                        homeScore: 2,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Team C',
+                        away: 'Team E',
+                        homeScore: 3,
+                        awayScore: 1
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                expect(progress['Team A']).toBe('quarter');
+                expect(progress['Team B']).toBe('round-of-16');
+                expect(progress['Team C']).toBe('winner');
+                expect(progress['Team D']).toBe('semi');
+                expect(progress['Team E']).toBe('final');
+            });
+
+            it('should handle round-of-32 format', () => {
+                const bracket = [
+                    {
+                        round: 'round-of-32',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team B',
+                        homeScore: 2,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'round-of-16',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team C',
+                        homeScore: 0,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'quarter',
+                        match: 1,
+                        home: 'Team C',
+                        away: 'Team D',
+                        homeScore: 2,
+                        awayScore: 0
+                    },
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Team C',
+                        away: 'Team E',
+                        homeScore: 1,
+                        awayScore: 0
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Team C',
+                        away: 'Team F',
+                        homeScore: 2,
+                        awayScore: 1
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                expect(progress['Team A']).toBe('round-of-16');
+                expect(progress['Team B']).toBe('round-of-32');
+                expect(progress['Team C']).toBe('winner');
+                expect(progress['Team D']).toBe('quarter');
+                expect(progress['Team E']).toBe('semi');
+                expect(progress['Team F']).toBe('final');
+            });
+
+            it('should return empty object when bracket is null', () => {
+                const progress = rankingsManager.getTeamCupProgress(null);
+                expect(progress).toEqual({});
+            });
+
+            it('should return empty object when bracket is undefined', () => {
+                const progress = rankingsManager.getTeamCupProgress(undefined);
+                expect(progress).toEqual({});
+            });
+
+            it('should return empty object when no completed matches', () => {
+                const bracket = [
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: null,
+                        awayScore: null
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+                expect(progress).toEqual({});
+            });
+
+            it('should ignore incomplete matches but process complete ones', () => {
+                const bracket = [
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 2,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'semi',
+                        match: 2,
+                        home: 'Green Team',
+                        away: 'Yellow Team',
+                        homeScore: null,
+                        awayScore: null
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Red Team',
+                        away: 'TBD',
+                        homeScore: null,
+                        awayScore: null
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                expect(progress['Red Team']).toBe('semi');
+                expect(progress['Blue Team']).toBe('semi');
+                expect(progress['Green Team']).toBeUndefined();
+                expect(progress['Yellow Team']).toBeUndefined();
+            });
+
+            it('should track furthest round when team plays multiple rounds', () => {
+                const bracket = [
+                    {
+                        round: 'quarter',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team B',
+                        homeScore: 2,
+                        awayScore: 0
+                    },
+                    {
+                        round: 'semi',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team C',
+                        homeScore: 3,
+                        awayScore: 1
+                    },
+                    {
+                        round: 'final',
+                        match: 1,
+                        home: 'Team A',
+                        away: 'Team D',
+                        homeScore: 0,
+                        awayScore: 1
+                    }
+                ];
+
+                const progress = rankingsManager.getTeamCupProgress(bracket);
+
+                // Team A reached final but didn't win
+                expect(progress['Team A']).toBe('final');
+                // Team D won the cup
+                expect(progress['Team D']).toBe('winner');
+            });
+        });
+    });
 });

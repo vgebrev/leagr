@@ -43,7 +43,10 @@ function createUnifiedDetails(playerData, limit = null) {
                       totalPoints: entry.totalPoints || 0,
                       leagueWinner: entry.leagueWinner || false,
                       cupWinner: entry.cupWinner || false,
-                      eloRating: entry.eloRating || 1000
+                      eloRating: entry.eloRating || 1000,
+                      leaguePosition:
+                          entry.leaguePosition !== undefined ? entry.leaguePosition : null,
+                      cupProgress: entry.cupProgress !== undefined ? entry.cupProgress : undefined
                   }
                 : {})
         });
