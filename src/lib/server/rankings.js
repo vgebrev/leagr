@@ -17,9 +17,9 @@ const PULL_STRENGTH = 1.0; // Multiplier for proportional pull below the thresho
 
 // ELO rating configuration
 const ELO_BASELINE_RATING = 1000;
-const ELO_K_LEAGUE = 16;
-const ELO_K_CUP = 10;
-const ELO_DECAY_RATE = 0.05; // 5% per week
+const ELO_K_LEAGUE = 24; // Increased from 16 for better skill separation
+const ELO_K_CUP = 15; // Increased from 10 for better skill separation
+const ELO_DECAY_RATE = 0.02; // Reduced from 0.05 (2% per week) to maintain differentiation
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 
 /**
@@ -456,6 +456,22 @@ export class RankingsManager {
     }
 
     /**
+     * Calculate win margin multiplier for ELO K-factor
+     * Uses logarithmic scaling with strict cap to avoid perverse incentives
+     * @param {number} goalDifference - Goal difference (positive or negative)
+     * @returns {number} - Multiplier for K-factor (1.0 to 1.3)
+     */
+    calculateMarginMultiplier(goalDifference) {
+        const absDiff = Math.abs(goalDifference);
+
+        if (absDiff === 0) return 1.0; // Draw - no bonus
+        if (absDiff === 1) return 1.0; // Narrow win - standard
+        if (absDiff === 2) return 1.15; // +15% bonus
+        if (absDiff === 3) return 1.25; // +25% bonus
+        return 1.3; // +30% max (caps at 4+ goal margin)
+    }
+
+    /**
      * Calculate team average ELO rating from player ratings
      * @param {string[]} players - Array of player names (may contain nulls)
      * @param {Object} playerRatings - Player rankings data
@@ -568,17 +584,21 @@ export class RankingsManager {
         // Determine K factor based on phase
         const kFactor = phase === 'league' ? ELO_K_LEAGUE : ELO_K_CUP;
 
+        // Calculate margin multiplier based on goal difference
+        const marginMultiplier = this.calculateMarginMultiplier(homeScore - awayScore);
+        const effectiveKFactor = kFactor * marginMultiplier;
+
         // Update home team players
         homePlayersValid.forEach((playerName) => {
             const playerData = playerTracker.get(playerName);
-            playerData.elo.rating += kFactor * (homeActual - homeExpected);
+            playerData.elo.rating += effectiveKFactor * (homeActual - homeExpected);
             playerData.elo.gamesPlayed++;
         });
 
         // Update away team players
         awayPlayersValid.forEach((playerName) => {
             const playerData = playerTracker.get(playerName);
-            playerData.elo.rating += kFactor * (awayActual - awayExpected);
+            playerData.elo.rating += effectiveKFactor * (awayActual - awayExpected);
             playerData.elo.gamesPlayed++;
         });
     }

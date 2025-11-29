@@ -24,6 +24,7 @@ vite.config.ts.timestamp-*
 /data/
 /deploy.ps1
 /deploy.sh
+/copy-live-data.sh
 *.tar
 
 #IIS
@@ -31,3 +32,4 @@ vite.config.ts.timestamp-*
 
 # AI Agents
 /.junie
+

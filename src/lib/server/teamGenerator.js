@@ -301,27 +301,36 @@ export class TeamGenerator {
     }
 
     /**
-     * Check if a team configuration violates hard constraints (pairs with too many previous pairings)
+     * Check if a team configuration violates hard constraints
      * @param {Object} teams - Teams object with team names as keys and player arrays as values
-     * @param {number} hardLimit - Maximum allowed previous pairings (default: 3)
+     * @param {number} pairingLimit - Maximum allowed previous pairings (default: 3)
+     * @param {number} eloDeltaLimit - Maximum allowed ELO delta between teams (optional)
      * @returns {boolean} True if configuration violates constraints
      */
-    violatesHardConstraints(teams, hardLimit = 3) {
-        if (!this.teammateHistory) {
-            return false; // No constraints if no history available
+    violatesHardConstraints(teams, pairingLimit = 3, eloDeltaLimit = null) {
+        // Check pairing constraints
+        if (this.teammateHistory) {
+            const pairs = this.extractTeammatePairs(teams);
+
+            for (const [player1, player2] of pairs) {
+                const index1 = this.teammateHistory.players.indexOf(player1);
+                const index2 = this.teammateHistory.players.indexOf(player2);
+
+                if (index1 >= 0 && index2 >= 0) {
+                    const pairingCount = this.teammateHistory.matrix[index1][index2];
+                    if (pairingCount >= pairingLimit) {
+                        return true; // Pairing constraint violated
+                    }
+                }
+            }
         }
 
-        const pairs = this.extractTeammatePairs(teams);
-
-        for (const [player1, player2] of pairs) {
-            const index1 = this.teammateHistory.players.indexOf(player1);
-            const index2 = this.teammateHistory.players.indexOf(player2);
-
-            if (index1 >= 0 && index2 >= 0) {
-                const pairingCount = this.teammateHistory.matrix[index1][index2];
-                if (pairingCount >= hardLimit) {
-                    return true; // Constraint violated
-                }
+        // Check ELO delta constraint
+        if (eloDeltaLimit !== null) {
+            const teamAverages = this.calculateTeamEloAverages(teams);
+            const eloDelta = this.calculateEloDelta(teamAverages);
+            if (eloDelta > eloDeltaLimit) {
+                return true; // ELO balance constraint violated
             }
         }
 
@@ -368,6 +377,51 @@ export class TeamGenerator {
     }
 
     /**
+     * Calculate ELO spread balance to ensure each team has similar distribution of skill levels.
+     * Prevents one team from getting all "top of pot" players while another gets all "bottom of pot".
+     * @param {Object} teams - Generated teams object
+     * @returns {number} Spread imbalance score (lower is better)
+     */
+    calculateEloSpreadBalance(teams) {
+        const defaultElo = 1000;
+        const teamEloDistributions = [];
+
+        // Calculate ELO distribution for each team
+        Object.values(teams).forEach((teamPlayers) => {
+            const elos = teamPlayers.map((playerName) => {
+                const playerRanking = this.rankings?.players?.[playerName];
+                return playerRanking?.elo?.rating ?? defaultElo;
+            });
+
+            if (elos.length > 0) {
+                elos.sort((a, b) => b - a); // Sort descending
+                teamEloDistributions.push({
+                    max: elos[0],
+                    min: elos[elos.length - 1],
+                    median: elos[Math.floor(elos.length / 2)]
+                });
+            }
+        });
+
+        if (teamEloDistributions.length < 2) return 0;
+
+        // Calculate variance in max players across teams
+        const maxElos = teamEloDistributions.map((d) => d.max);
+        const maxRange = Math.max(...maxElos) - Math.min(...maxElos);
+
+        // Calculate variance in min players across teams
+        const minElos = teamEloDistributions.map((d) => d.min);
+        const minRange = Math.max(...minElos) - Math.min(...minElos);
+
+        // Calculate variance in median players across teams
+        const medianElos = teamEloDistributions.map((d) => d.median);
+        const medianRange = Math.max(...medianElos) - Math.min(...medianElos);
+
+        // Combined spread imbalance (weight median most, then max, then min)
+        return medianRange * 1.0 + maxRange * 0.6 + minRange * 0.4;
+    }
+
+    /**
      * Generate a single iteration of seeded teams (without optimization)
      * @param {Object} config - Team configuration { teams, teamSizes }
      * @param {Array} teamNames - Pre-generated team names
@@ -393,8 +447,8 @@ export class TeamGenerator {
             teamNames.some((name, i) => teams[name].length < teamSizes[i]) &&
             playerIndex < sortedPlayers.length
         ) {
-            // Create a pot of players for this round (double size for variability)
-            const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
+            // Create a pot of players for this round (1.5x teams for tighter variance)
+            const potSize = Math.min(Math.ceil(numTeams * 1.5), sortedPlayers.length - playerIndex);
             const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
             // Randomise within the pot
@@ -617,9 +671,26 @@ export class TeamGenerator {
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
 
-        // Looser ELO delta target for more pairing variety
-        const targetEloDelta = 20;
-        const maxIterations = 75; // Increased iterations to find constraint-satisfying solutions
+        // Calculate adaptive ELO delta target based on player pool variance
+        const playerElos = sortedPlayers.map((name) => {
+            const playerData = this.rankings?.players?.[name];
+            const eloGames = playerData?.elo?.gamesPlayed ?? 0;
+            return eloGames >= minGamesForElo
+                ? (playerData?.elo?.rating ?? defaultElo)
+                : defaultElo;
+        });
+        const eloRange = Math.max(...playerElos) - Math.min(...playerElos);
+
+        // Adaptive targets based on player pool variance
+        // Base target: 12 ELO (ideal), scales up proportionally with pool variance
+        // Hard limit: Reject solutions worse than ~15% of player pool range
+        const baseTarget = 12;
+        const adaptiveFactor = Math.floor(eloRange / 100) * 3; // +3 per 100 ELO spread
+        const targetEloDelta = Math.min(baseTarget + adaptiveFactor, 40);
+        // Hard limit: max(60, 15% of pool range) - allows up to ~100 for extreme variance
+        const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
+
+        const maxIterations = 300; // Increased for stricter constraints
         const varianceWeight = 15; // Increased weight for pairing penalty in scoring
         const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
 
@@ -641,8 +712,8 @@ export class TeamGenerator {
             );
 
             // Check hard constraints first - reject if violated
-            if (this.violatesHardConstraints(teams, hardConstraintLimit)) {
-                continue; // Skip this iteration - hard constraint violated
+            if (this.violatesHardConstraints(teams, hardConstraintLimit, hardEloDeltaLimit)) {
+                continue; // Skip this iteration - hard constraints violated
             }
 
             // Calculate team ELO balance
@@ -652,8 +723,11 @@ export class TeamGenerator {
             // Calculate pairing penalty (exponential penalty for frequent pairs)
             const pairingPenalty = this.calculatePairingPenalty(teams);
 
-            // Combined score: ELO balance + variance penalty
-            const totalScore = eloDelta + pairingPenalty * varianceWeight;
+            // Calculate ELO spread balance (prevents lottery effect from pot variance)
+            const spreadBalance = this.calculateEloSpreadBalance(teams);
+
+            // Combined score: ELO balance + variance penalty + spread balance
+            const totalScore = eloDelta + pairingPenalty * varianceWeight + spreadBalance * 0.3;
 
             // Track the best result (lowest combined score)
             if (totalScore < bestScore) {
@@ -664,9 +738,9 @@ export class TeamGenerator {
                 }
             }
 
-            // Stop early if we achieve excellent balance and no penalized pairings
-            if (eloDelta <= targetEloDelta && pairingPenalty <= -5) {
-                break; // Perfect balance with no penalized pairings!
+            // Stop early if we achieve excellent balance across all metrics
+            if (eloDelta <= targetEloDelta && pairingPenalty <= -5 && spreadBalance <= 20) {
+                break; // Excellent balance: tight ELO delta, good variety, and even skill distribution!
             }
         }
 
@@ -678,7 +752,10 @@ export class TeamGenerator {
 
             // Create pots based on the seeded algorithm structure
             while (playerIndex < sortedPlayers.length) {
-                const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
+                const potSize = Math.min(
+                    Math.ceil(numTeams * 1.5),
+                    sortedPlayers.length - playerIndex
+                );
                 const potPlayers = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
                 this.initialPots.push({
@@ -716,7 +793,8 @@ export class TeamGenerator {
                 const teamAverages = this.calculateTeamEloAverages(teams);
                 const eloDelta = this.calculateEloDelta(teamAverages);
                 const pairingPenalty = this.calculatePairingPenalty(teams);
-                const totalScore = eloDelta + pairingPenalty * varianceWeight;
+                const spreadBalance = this.calculateEloSpreadBalance(teams);
+                const totalScore = eloDelta + pairingPenalty * varianceWeight + spreadBalance * 0.3;
 
                 if (totalScore < bestScore) {
                     bestScore = totalScore;

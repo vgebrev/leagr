@@ -710,6 +710,35 @@ describe('RankingsManager - Knockout Points', () => {
             });
         });
 
+        describe('calculateMarginMultiplier', () => {
+            it('should return 1.0 for draws', () => {
+                expect(rankingsManager.calculateMarginMultiplier(0)).toBe(1.0);
+            });
+
+            it('should return 1.0 for 1-goal margins', () => {
+                expect(rankingsManager.calculateMarginMultiplier(1)).toBe(1.0);
+                expect(rankingsManager.calculateMarginMultiplier(-1)).toBe(1.0);
+            });
+
+            it('should return 1.15 for 2-goal margins', () => {
+                expect(rankingsManager.calculateMarginMultiplier(2)).toBe(1.15);
+                expect(rankingsManager.calculateMarginMultiplier(-2)).toBe(1.15);
+            });
+
+            it('should return 1.25 for 3-goal margins', () => {
+                expect(rankingsManager.calculateMarginMultiplier(3)).toBe(1.25);
+                expect(rankingsManager.calculateMarginMultiplier(-3)).toBe(1.25);
+            });
+
+            it('should cap at 1.3 for 4+ goal margins', () => {
+                expect(rankingsManager.calculateMarginMultiplier(4)).toBe(1.3);
+                expect(rankingsManager.calculateMarginMultiplier(5)).toBe(1.3);
+                expect(rankingsManager.calculateMarginMultiplier(10)).toBe(1.3);
+                expect(rankingsManager.calculateMarginMultiplier(-4)).toBe(1.3);
+                expect(rankingsManager.calculateMarginMultiplier(-10)).toBe(1.3);
+            });
+        });
+
         describe('calculateTeamEloRating', () => {
             it('should calculate team average ELO rating', () => {
                 const players = ['Alice', 'Bob'];
@@ -756,8 +785,8 @@ describe('RankingsManager - Knockout Points', () => {
                 expect(newRating).toBeLessThan(originalRating);
                 expect(newRating).toBeGreaterThan(1000);
 
-                // More precise calculation: 1000 + (1200-1000) * (0.95^2) with 5% decay
-                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.95, 2);
+                // More precise calculation: 1000 + (1200-1000) * (0.98^2) with 2% decay
+                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.98, 2);
                 expect(newRating).toBeCloseTo(expectedRating, 2);
             });
 
@@ -804,8 +833,8 @@ describe('RankingsManager - Knockout Points', () => {
                 expect(alice.elo.rating).toBeLessThan(1200);
                 expect(alice.elo.lastDecayAt).toBe('2024-01-15');
 
-                // Calculate expected rating: 2 weeks from 2024-01-01 to 2024-01-15 with 5% decay
-                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.95, 2);
+                // Calculate expected rating: 2 weeks from 2024-01-01 to 2024-01-15 with 2% decay
+                const expectedRating = 1000 + (1200 - 1000) * Math.pow(0.98, 2);
                 expect(alice.elo.rating).toBeCloseTo(expectedRating, 2);
             });
 
