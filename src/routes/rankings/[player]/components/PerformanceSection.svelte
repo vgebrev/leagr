@@ -226,7 +226,7 @@
         </div>
     {:else}
         <!-- Distribution Charts -->
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-2 sm:grid-cols-2">
             <!-- League Position Chart -->
             {#if hasLeagueData}
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
@@ -409,7 +409,7 @@
         </div>
 
         <!-- Achievements Section -->
-        <div class="glass mt-4 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+        <div class="glass mt-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
             <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
                 <div class="text-center">
                     <div
