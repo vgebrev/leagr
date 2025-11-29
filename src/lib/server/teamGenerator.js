@@ -150,25 +150,6 @@ export class TeamGenerator {
     }
 
     /**
-     * Record a step in the draw history
-     * @param {string} player - Player name being assigned
-     * @param {number} fromPot - Index of the pot the player is coming from
-     * @param {string} toTeam - Team name the player is assigned to
-     * @param {number} potPlayersRemaining - Number of players remaining in the pot
-     */
-    recordDrawStep(player, fromPot, toTeam, potPlayersRemaining) {
-        if (!this.recordHistory) return;
-
-        this.drawHistory.push({
-            step: this.drawHistory.length + 1,
-            player,
-            fromPot,
-            toTeam,
-            potPlayersRemaining
-        });
-    }
-
-    /**
      * Generate teams using random distribution
      * @param {Object} config - Team configuration { teams, teamSizes }
      * @returns {Object} Generated teams object
@@ -182,25 +163,6 @@ export class TeamGenerator {
         const teamSizes = config.teamSizes;
         const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
         const teamNames = this.generateTeamNames(teamSizes.length);
-
-        // Record initial pot for history (in original registration order)
-        if (this.recordHistory) {
-            this.initialPots = [
-                {
-                    name: 'All Players',
-                    players: this.players.map((name) => {
-                        const playerRanking = this.rankings?.players?.[name];
-                        return {
-                            name,
-                            elo: playerRanking?.elo?.rating
-                                ? Math.round(playerRanking.elo.rating)
-                                : 1000,
-                            avatar: playerRanking?.avatar || null
-                        };
-                    })
-                }
-            ];
-        }
 
         // Initialize empty teams
         for (let i = 0; i < teamSizes.length; i++) {
@@ -227,16 +189,35 @@ export class TeamGenerator {
 
                 const player = shuffledPlayers[playerIndex];
                 teams[teamName].push(player);
-
-                this.recordDrawStep(
-                    player,
-                    0, // Single pot index
-                    teamName,
-                    shuffledPlayers.length - playerIndex - 1
-                );
-
                 playerIndex++;
             }
+        }
+
+        // Set up initial pots for history reconstruction if recording is enabled
+        if (this.recordHistory) {
+            const defaultElo = 1000;
+            this.initialPots = [
+                {
+                    name: 'All Players',
+                    players: this.players.map((name) => {
+                        const playerRanking = this.rankings?.players?.[name];
+                        return {
+                            name,
+                            elo: playerRanking?.elo?.rating
+                                ? Math.round(playerRanking.elo.rating)
+                                : defaultElo,
+                            avatar: playerRanking?.avatar || null
+                        };
+                    })
+                }
+            ];
+
+            // Reconstruct draw history from final teams
+            this.drawHistory = this.buildDrawHistoryFromFinalTeams(
+                teams,
+                this.initialPots,
+                teamNames
+            );
         }
 
         return teams;
@@ -338,42 +319,48 @@ export class TeamGenerator {
     }
 
     /**
-     * Calculate pairing score based on teammate history.
-     * Rewards infrequent pairs and penalizes frequent pairs.
+     * Calculate normalized pairing score (0-1) where lower is better (more novel).
+     * Uses soft penalties for repeats and rewards fresh pairings.
      * @param {Object} teams - Generated teams object
-     * @returns {number} Total pairing score
+     * @returns {number} Normalized pairing score between 0 (ideal) and 1 (stale)
      */
-    calculatePairingPenalty(teams) {
+    calculatePairingScoreNormalized(teams) {
         if (!this.teammateHistory) {
-            return 0; // No score if no history available
+            return 0; // Neutral/best score when no history is available
         }
 
         const pairs = this.extractTeammatePairs(teams);
+        if (pairs.length === 0) return 0;
+
         let totalScore = 0;
 
         pairs.forEach(([player1, player2]) => {
             const index1 = this.teammateHistory.players.indexOf(player1);
             const index2 = this.teammateHistory.players.indexOf(player2);
 
-            if (index1 >= 0 && index2 >= 0) {
-                // Get pairing count from history matrix
-                const pairingCount = this.teammateHistory.matrix[index1][index2];
+            // Treat unknown players as never teamed
+            const pairingCount =
+                index1 >= 0 && index2 >= 0 ? this.teammateHistory.matrix[index1][index2] : 0;
 
-                if (pairingCount === 0) {
-                    totalScore -= 2; // Reward for a new pair
-                } else if (pairingCount === 1) {
-                    totalScore -= 1; // Lesser reward for a rare pair
-                } else {
-                    // Apply exponential penalty for frequent pairs: 2→4, 3→9, 4→16, etc.
-                    totalScore += Math.pow(pairingCount, 2);
-                }
+            let pairScore = 0;
+            if (pairingCount === 0) {
+                pairScore = -1.0;
+            } else if (pairingCount === 1) {
+                pairScore = -0.5;
+            } else if (pairingCount === 2) {
+                pairScore = 0;
+            } else if (pairingCount === 3) {
+                pairScore = 0.5;
             } else {
-                // If players not in history, it's a new pair
-                totalScore -= 2;
+                pairScore = 1.0;
             }
+
+            totalScore += pairScore;
         });
 
-        return totalScore;
+        const averageScore = totalScore / pairs.length; // [-1, 1]
+        const normalizedScore = (averageScore + 1) / 2; // [0, 1], lower is better
+        return Math.min(1, Math.max(0, normalizedScore));
     }
 
     /**
@@ -422,123 +409,184 @@ export class TeamGenerator {
     }
 
     /**
-     * Generate a single iteration of seeded teams (without optimization)
-     * @param {Object} config - Team configuration { teams, teamSizes }
-     * @param {Array} teamNames - Pre-generated team names
-     * @param {Array} sortedPlayers - Players sorted by ELO/ranking
-     * @param {boolean} recordHistory - Whether to record draw steps
-     * @returns {Object} Generated teams object
+     * Calculate ELO range for the current pool, respecting minimum games for reliable ratings.
+     * @param {Array<string>} sortedPlayers - Players in consideration
+     * @param {number} minGamesForElo - Minimum games before ELO is trusted
+     * @param {number} defaultElo - Default ELO used when unreliable
+     * @returns {number} Range between max and min ELO in the pool
      */
-    generateSeededTeamsIteration(config, teamNames, sortedPlayers, recordHistory = false) {
-        const teamSizes = config.teamSizes;
-        const numTeams = teamSizes.length;
-        const teams = {};
-
-        // Initialise teams
-        for (let i = 0; i < numTeams; i++) {
-            teams[teamNames[i]] = [];
-        }
-
-        let playerIndex = 0;
-        let currentPotIndex = 0;
-
-        // Fill teams round by round until all are complete
-        while (
-            teamNames.some((name, i) => teams[name].length < teamSizes[i]) &&
-            playerIndex < sortedPlayers.length
-        ) {
-            // Create a pot of players for this round (1.5x teams for tighter variance)
-            const potSize = Math.min(Math.ceil(numTeams * 1.5), sortedPlayers.length - playerIndex);
-            const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
-
-            // Randomise within the pot
-            currentPot.sort(() => Math.random() - 0.5);
-
-            // Create NEW randomized team order for THIS pot (snake draft pattern)
-            const teamIndices = Array.from({ length: numTeams }, (_, i) => i);
-            teamIndices.sort(() => Math.random() - 0.5); // Fresh randomization per pot
-
-            let potPlayerIndex = 0;
-            let roundInPot = 0;
-
-            // Use snake draft pattern within this pot
-            while (potPlayerIndex < currentPot.length) {
-                let assignedThisRound = false;
-
-                // Determine team order for this round (snake pattern)
-                const currentTeamOrder =
-                    roundInPot % 2 === 0
-                        ? [...teamIndices] // Even rounds: normal order
-                        : [...teamIndices].reverse(); // Odd rounds: reverse order
-
-                // Go through teams in the determined order
-                for (
-                    let orderIndex = 0;
-                    orderIndex < currentTeamOrder.length && potPlayerIndex < currentPot.length;
-                    orderIndex++
-                ) {
-                    const teamIndex = currentTeamOrder[orderIndex];
-                    const teamName = teamNames[teamIndex];
-                    const currentTeamSize = teams[teamName].length;
-                    const targetTeamSize = teamSizes[teamIndex];
-
-                    // Skip if the team is already full
-                    if (currentTeamSize >= targetTeamSize) continue;
-
-                    // Assign exactly 1 player per team per round (snake draft)
-                    const player = currentPot[potPlayerIndex];
-                    teams[teamName].push(player);
-
-                    if (recordHistory) {
-                        this.recordDrawStep(
-                            player,
-                            currentPotIndex,
-                            teamName,
-                            currentPot.length - potPlayerIndex - 1
-                        );
-                    }
-
-                    potPlayerIndex++;
-                    assignedThisRound = true;
-                }
-
-                // Safety check: if no players were assigned this round, break to avoid infinite loop
-                if (!assignedThisRound) break;
-
-                roundInPot++;
-            }
-
-            // Move to the next batch of players
-            playerIndex += potSize;
-            currentPotIndex++;
-        }
-
-        return teams;
+    calculatePoolEloRange(sortedPlayers, minGamesForElo = 5, defaultElo = 1000) {
+        if (!Array.isArray(sortedPlayers) || sortedPlayers.length === 0) return 0;
+        const elos = sortedPlayers.map((name) => {
+            const playerData = this.rankings?.players?.[name];
+            const eloGames = playerData?.elo?.gamesPlayed ?? 0;
+            return eloGames >= minGamesForElo
+                ? (playerData?.elo?.rating ?? defaultElo)
+                : defaultElo;
+        });
+        return Math.max(...elos) - Math.min(...elos);
     }
 
     /**
-     * Optimize teams using within-pot swaps to improve variance and balance
+     * Calculate normalized scoring metrics for a given team configuration.
+     * @param {Object} teams - Generated teams object
+     * @param {number} eloRange - Range of ELO values in the current pool
+     * @param {number} hardEloDeltaLimit - Hard cap for acceptable ELO delta
+     * @returns {{
+     *  totalNorm: number,
+     *  eloNorm: number,
+     *  spreadNorm: number,
+     *  pairNorm: number,
+     *  eloDelta: number,s
+     *  spreadBalance: number
+     * }} Normalized metrics where lower is better
+     */
+    calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit) {
+        const W_ELO = 2.0;
+        const W_SPREAD = 0.7;
+        const W_PAIR = 1.3;
+        const clamp01 = (value) => Math.min(1, Math.max(0, value));
+
+        // Calculate team ELO balance
+        const teamAverages = this.calculateTeamEloAverages(teams);
+        const eloDelta = this.calculateEloDelta(teamAverages);
+        const eloNorm = clamp01(hardEloDeltaLimit ? eloDelta / hardEloDeltaLimit : 0);
+
+        // Pairing novelty score
+        const pairNorm = this.calculatePairingScoreNormalized(teams);
+
+        // Spread balance normalization
+        const spreadBalance = this.calculateEloSpreadBalance(teams);
+        const spreadIdeal = eloRange * 0.5;
+        const spreadWorst = Math.max(spreadIdeal + 1, eloRange * 1.5);
+        const spreadNorm =
+            spreadWorst === spreadIdeal
+                ? 0
+                : clamp01((spreadBalance - spreadIdeal) / (spreadWorst - spreadIdeal));
+
+        const totalNorm =
+            (eloNorm * W_ELO + spreadNorm * W_SPREAD + pairNorm * W_PAIR) /
+            (W_ELO + W_SPREAD + W_PAIR);
+
+        return {
+            totalNorm,
+            eloNorm,
+            spreadNorm,
+            pairNorm,
+            eloDelta,
+            spreadBalance
+        };
+    }
+
+    /**
+     * Reconstruct draw history from final teams using snake draft pattern.
+     * Since team generation is randomized and iterative, we reconstruct a plausible
+     * draw history that matches the final team assignments and follows the snake draft pattern.
+     *
+     * @param {Object} teams - Final teams object
+     * @param {Array} initialPots - Pots captured after best team selection
+     * @param {Array<string>} teamNames - Team names in assignment order
+     * @returns {Array<Object>} Reconstructed draw steps
+     */
+    buildDrawHistoryFromFinalTeams(teams, initialPots, teamNames) {
+        if (!initialPots || initialPots.length === 0 || !teamNames?.length) return [];
+
+        // Build mapping of player -> pot index
+        const playerPotMap = new Map();
+        for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
+            const pot = initialPots[potIndex];
+            for (const player of pot.players) {
+                playerPotMap.set(player.name, potIndex);
+            }
+        }
+
+        const steps = [];
+
+        // Group players from each team by their pot
+        const teamsByPot = teamNames.map((teamName) => {
+            const playersByPot = [];
+            for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
+                playersByPot.push([]);
+            }
+
+            for (const player of teams[teamName]) {
+                const potIndex = playerPotMap.get(player) ?? 0;
+                playersByPot[potIndex].push(player);
+            }
+
+            return {
+                name: teamName,
+                playersByPot
+            };
+        });
+
+        // Process each pot sequentially
+        for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
+            // Determine how many rounds needed for this pot (max players any team has from this pot)
+            const maxPlayersInPot = Math.max(
+                ...teamsByPot.map((t) => t.playersByPot[potIndex].length)
+            );
+
+            // Traverse this pot in snake draft order: 1,2,3,4,4,3,2,1,1,2,3,4...
+            for (let round = 0; round < maxPlayersInPot; round++) {
+                // Snake pattern: alternate between forward and reverse
+                const teamOrder = round % 2 === 0 ? teamsByPot : [...teamsByPot].reverse();
+
+                for (const team of teamOrder) {
+                    if (team.playersByPot[potIndex].length > 0) {
+                        const player = team.playersByPot[potIndex].shift();
+
+                        // Count remaining players in this pot across all teams
+                        let potPlayersRemaining = 0;
+                        for (const otherTeam of teamsByPot) {
+                            potPlayersRemaining += otherTeam.playersByPot[potIndex].length;
+                        }
+
+                        steps.push({
+                            step: steps.length + 1,
+                            player,
+                            fromPot: potIndex,
+                            toTeam: team.name,
+                            potPlayersRemaining
+                        });
+                    }
+                }
+            }
+        }
+
+        return steps;
+    }
+
+    /**
+     * Optimize teams using within-pot swaps to improve balance using normalized scoring.
      * @param {Object} teams - Current team assignments
      * @param {Array} sortedPlayers - Players sorted by ELO (same order used in generation)
-     * @param {number} maxSwaps - Maximum number of swaps to attempt (default: 200)
-     * @param {number} eloDeltaCap - Maximum allowed ELO delta after swaps (default: 20)
+     * @param {Object} options - { maxSwaps, eloRange, hardEloDeltaLimit }
      * @returns {Object} Optimized teams object
      */
-    optimizeTeamsWithSwaps(teams, sortedPlayers, maxSwaps = 200, eloDeltaCap = 20) {
+    optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
+        const { maxSwaps = 200, eloRange = null, hardEloDeltaLimit = null } = options;
         if (!this.teammateHistory || !this.initialPots || this.initialPots.length === 0) {
             return teams; // Need history and pot structure for optimization
         }
-
         const teamNames = Object.keys(teams);
         let optimizedTeams = structuredClone(teams);
         let swapsAttempted = 0;
         let improvementsMade = true;
 
+        const defaultElo = 1000;
+        const minGamesForElo = 5;
+        const effectiveEloRange =
+            eloRange ?? this.calculatePoolEloRange(sortedPlayers, minGamesForElo, defaultElo) ?? 0;
+        const effectiveHardEloDeltaLimit =
+            hardEloDeltaLimit ?? Math.max(60, Math.floor(effectiveEloRange * 0.15));
+
         while (improvementsMade && swapsAttempted < maxSwaps) {
             improvementsMade = false;
-            const currentScore = this.calculatePairingPenalty(optimizedTeams);
-            const currentEloDelta = this.calculateEloDelta(
-                this.calculateTeamEloAverages(optimizedTeams)
+            const currentMetrics = this.calculateNormalizedScore(
+                optimizedTeams,
+                effectiveEloRange,
+                effectiveHardEloDeltaLimit
             );
 
             // Try swaps within each pot using existing pot structure
@@ -552,7 +600,6 @@ export class TeamGenerator {
                 // Group pot players by their current team assignment
                 const playersByTeam = {};
                 pot.players.forEach(({ name: playerName }) => {
-                    // Find which team this player is currently in
                     const currentTeam = teamNames.find((team) =>
                         optimizedTeams[team].includes(playerName)
                     );
@@ -572,39 +619,31 @@ export class TeamGenerator {
                         const playersA = playersByTeam[teamA];
                         const playersB = playersByTeam[teamB];
 
-                        // Try swapping each player from team A with each player from team B in this pot
                         for (const playerA of playersA) {
                             for (const playerB of playersB) {
                                 swapsAttempted++;
 
-                                // Create test swap
                                 const testTeams = structuredClone(optimizedTeams);
                                 const teamAIndex = testTeams[teamA].indexOf(playerA);
                                 const teamBIndex = testTeams[teamB].indexOf(playerB);
 
-                                // Perform swap
                                 testTeams[teamA][teamAIndex] = playerB;
                                 testTeams[teamB][teamBIndex] = playerA;
 
-                                // Check if swap improves things
-                                const testEloDelta = this.calculateEloDelta(
-                                    this.calculateTeamEloAverages(testTeams)
+                                const testMetrics = this.calculateNormalizedScore(
+                                    testTeams,
+                                    effectiveEloRange,
+                                    effectiveHardEloDeltaLimit
                                 );
-                                const testScore = this.calculatePairingPenalty(testTeams);
 
-                                // Accept swap if:
-                                // 1. ELO delta stays within cap
-                                // 2. Pairing score improves (or if tied, ELO delta improves)
                                 if (
-                                    testEloDelta <= eloDeltaCap &&
-                                    (testScore < currentScore ||
-                                        (testScore === currentScore &&
-                                            testEloDelta < currentEloDelta))
+                                    testMetrics.eloDelta <= effectiveHardEloDeltaLimit &&
+                                    (testMetrics.totalNorm < currentMetrics.totalNorm ||
+                                        (testMetrics.totalNorm === currentMetrics.totalNorm &&
+                                            testMetrics.eloDelta < currentMetrics.eloDelta))
                                 ) {
                                     optimizedTeams = testTeams;
                                     improvementsMade = true;
-
-                                    // Break out of inner loops to restart with new baseline
                                     break;
                                 }
                             }
@@ -618,6 +657,88 @@ export class TeamGenerator {
             }
         }
         return optimizedTeams;
+    }
+
+    /**
+     * Generate a single iteration of seeded teams (without optimization)
+     * @param {Object} config - Team configuration { teams, teamSizes }
+     * @param {Array} teamNames - Pre-generated team names
+     * @param {Array} sortedPlayers - Players sorted by ELO/ranking
+     * @returns {Object} Generated teams object
+     */
+    generateSeededTeamsIteration(config, teamNames, sortedPlayers) {
+        const teamSizes = config.teamSizes;
+        const numTeams = teamSizes.length;
+        const teams = {};
+
+        // Initialise teams
+        for (let i = 0; i < numTeams; i++) {
+            teams[teamNames[i]] = [];
+        }
+
+        let playerIndex = 0;
+
+        // Fill teams round by round until all are complete
+        while (
+            teamNames.some((name, i) => teams[name].length < teamSizes[i]) &&
+            playerIndex < sortedPlayers.length
+        ) {
+            // Create a pot of players for this round (2x teams for tighter variance)
+            const potSize = Math.min(Math.ceil(numTeams * 2), sortedPlayers.length - playerIndex);
+            const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
+
+            // Randomise within the pot
+            currentPot.sort(() => Math.random() - 0.5);
+
+            // Use consistent team order across all pots for accurate history reconstruction
+            // Randomization is preserved through: shuffled players in pots, multiple iterations, and optimization
+            const teamIndices = Array.from({ length: numTeams }, (_, i) => i);
+
+            let potPlayerIndex = 0;
+            let roundInPot = 0;
+
+            // Use snake draft pattern within this pot
+            while (potPlayerIndex < currentPot.length) {
+                let assignedThisRound = false;
+
+                // Determine team order for this round (snake pattern using consistent team indices)
+                const currentTeamOrder =
+                    roundInPot % 2 === 0
+                        ? teamIndices // Even rounds: forward order (0,1,2,3...)
+                        : [...teamIndices].reverse(); // Odd rounds: reverse order (...3,2,1,0)
+
+                // Go through teams in the determined order
+                for (
+                    let orderIndex = 0;
+                    orderIndex < currentTeamOrder.length && potPlayerIndex < currentPot.length;
+                    orderIndex++
+                ) {
+                    const teamIndex = currentTeamOrder[orderIndex];
+                    const teamName = teamNames[teamIndex];
+                    const currentTeamSize = teams[teamName].length;
+                    const targetTeamSize = teamSizes[teamIndex];
+
+                    // Skip if the team is already full
+                    if (currentTeamSize >= targetTeamSize) continue;
+
+                    // Assign exactly 1 player per team per round (snake draft)
+                    const player = currentPot[potPlayerIndex];
+                    teams[teamName].push(player);
+                    potPlayerIndex++;
+                    assignedThisRound = true;
+                }
+
+                // Safety check: if no players were assigned this round, break to avoid infinite loop
+                if (!assignedThisRound) break;
+
+                roundInPot++;
+            }
+
+            // Move to the next batch of players
+            playerIndex += potSize;
+        }
+
+        return teams;
     }
 
     /**
@@ -672,142 +793,81 @@ export class TeamGenerator {
         });
 
         // Calculate adaptive ELO delta target based on player pool variance
-        const playerElos = sortedPlayers.map((name) => {
-            const playerData = this.rankings?.players?.[name];
-            const eloGames = playerData?.elo?.gamesPlayed ?? 0;
-            return eloGames >= minGamesForElo
-                ? (playerData?.elo?.rating ?? defaultElo)
-                : defaultElo;
-        });
-        const eloRange = Math.max(...playerElos) - Math.min(...playerElos);
-
-        // Adaptive targets based on player pool variance
-        // Base target: 12 ELO (ideal), scales up proportionally with pool variance
-        // Hard limit: Reject solutions worse than ~15% of player pool range
-        const baseTarget = 12;
-        const adaptiveFactor = Math.floor(eloRange / 100) * 3; // +3 per 100 ELO spread
-        const targetEloDelta = Math.min(baseTarget + adaptiveFactor, 40);
+        const eloRange = this.calculatePoolEloRange(sortedPlayers, minGamesForElo, defaultElo);
         // Hard limit: max(60, 15% of pool range) - allows up to ~100 for extreme variance
         const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
 
-        const maxIterations = 300; // Increased for stricter constraints
-        const varianceWeight = 15; // Increased weight for pairing penalty in scoring
+        const maxIterations = 1000;
         const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
 
         let bestTeams = null;
         let bestScore = Infinity; // Now tracking combined score instead of just ELO delta
-        let bestDrawHistory = [];
 
+        let iteration = 0;
         // Iterate to find the best balance of ELO balance and pairing variety
-        for (let iteration = 0; iteration < maxIterations; iteration++) {
-            // Reset history tracking for this iteration
-            this.drawHistory = [];
-
+        for (iteration = 0; iteration < maxIterations; iteration++) {
             // Generate teams for this iteration
-            const teams = this.generateSeededTeamsIteration(
-                config,
-                teamNames,
-                sortedPlayers,
-                this.recordHistory
-            );
+            const teams = this.generateSeededTeamsIteration(config, teamNames, sortedPlayers);
 
             // Check hard constraints first - reject if violated
             if (this.violatesHardConstraints(teams, hardConstraintLimit, hardEloDeltaLimit)) {
                 continue; // Skip this iteration - hard constraints violated
             }
 
-            // Calculate team ELO balance
-            const teamAverages = this.calculateTeamEloAverages(teams);
-            const eloDelta = this.calculateEloDelta(teamAverages);
-
-            // Calculate pairing penalty (exponential penalty for frequent pairs)
-            const pairingPenalty = this.calculatePairingPenalty(teams);
-
-            // Calculate ELO spread balance (prevents lottery effect from pot variance)
-            const spreadBalance = this.calculateEloSpreadBalance(teams);
-
-            // Combined score: ELO balance + variance penalty + spread balance
-            const totalScore = eloDelta + pairingPenalty * varianceWeight + spreadBalance * 0.3;
+            const metrics = this.calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit);
+            const { totalNorm } = metrics;
 
             // Track the best result (lowest combined score)
-            if (totalScore < bestScore) {
-                bestScore = totalScore;
+            if (totalNorm < bestScore) {
+                bestScore = totalNorm;
                 bestTeams = structuredClone(teams);
-                if (this.recordHistory) {
-                    bestDrawHistory = [...this.drawHistory];
-                }
             }
 
             // Stop early if we achieve excellent balance across all metrics
-            if (eloDelta <= targetEloDelta && pairingPenalty <= -5 && spreadBalance <= 20) {
-                break; // Excellent balance: tight ELO delta, good variety, and even skill distribution!
+            if (iteration > 500 && totalNorm <= 0.25) {
+                break;
             }
         }
 
-        // Set up initial pots for history (static for all iterations)
-        if (this.recordHistory) {
-            this.initialPots = [];
-            let playerIndex = 0;
-            let potNumber = 1;
+        // Set up initial pots for history/optimization (static for all iterations)
+        this.initialPots = [];
+        let playerIndex = 0;
+        let potNumber = 1;
 
-            // Create pots based on the seeded algorithm structure
-            while (playerIndex < sortedPlayers.length) {
-                const potSize = Math.min(
-                    Math.ceil(numTeams * 1.5),
-                    sortedPlayers.length - playerIndex
-                );
-                const potPlayers = sortedPlayers.slice(playerIndex, playerIndex + potSize);
+        // Create pots based on the seeded algorithm structure
+        while (playerIndex < sortedPlayers.length) {
+            const potSize = Math.min(Math.ceil(numTeams * 2), sortedPlayers.length - playerIndex);
+            const potPlayers = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
-                this.initialPots.push({
-                    name: `Pot ${potNumber}`,
-                    players: potPlayers.map((name) => ({
-                        name,
-                        elo: this.rankings?.players?.[name]?.elo?.rating
-                            ? Math.round(this.rankings.players[name].elo.rating)
-                            : defaultElo,
-                        avatar: this.rankings?.players?.[name]?.avatar || null
-                    }))
-                });
+            this.initialPots.push({
+                name: `Pot ${potNumber}`,
+                players: potPlayers.map((name) => ({
+                    name,
+                    elo: this.rankings?.players?.[name]?.elo?.rating
+                        ? Math.round(this.rankings.players[name].elo.rating)
+                        : defaultElo,
+                    avatar: this.rankings?.players?.[name]?.avatar || null
+                }))
+            });
 
-                playerIndex += potSize;
-                potNumber++;
-            }
-
-            // Restore the best draw history for the final result
-            this.drawHistory = bestDrawHistory;
+            playerIndex += potSize;
+            potNumber++;
         }
 
         // If no valid teams found, fall back to generation without hard constraints
         if (!bestTeams) {
             // Try one more time without hard constraints
             for (let fallbackIteration = 0; fallbackIteration < 5; fallbackIteration++) {
-                this.drawHistory = [];
+                const teams = this.generateSeededTeamsIteration(config, teamNames, sortedPlayers);
 
-                const teams = this.generateSeededTeamsIteration(
-                    config,
-                    teamNames,
-                    sortedPlayers,
-                    this.recordHistory
-                );
+                const metrics = this.calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit);
+                const { totalNorm } = metrics;
 
-                const teamAverages = this.calculateTeamEloAverages(teams);
-                const eloDelta = this.calculateEloDelta(teamAverages);
-                const pairingPenalty = this.calculatePairingPenalty(teams);
-                const spreadBalance = this.calculateEloSpreadBalance(teams);
-                const totalScore = eloDelta + pairingPenalty * varianceWeight + spreadBalance * 0.3;
-
-                if (totalScore < bestScore) {
-                    bestScore = totalScore;
+                if (totalNorm < bestScore) {
+                    bestScore = totalNorm;
                     bestTeams = structuredClone(teams);
-                    if (this.recordHistory) {
-                        bestDrawHistory = [...this.drawHistory];
-                    }
                     break; // Take first reasonable solution
                 }
-            }
-
-            if (bestTeams && this.recordHistory) {
-                this.drawHistory = bestDrawHistory;
             }
         }
 
@@ -817,92 +877,20 @@ export class TeamGenerator {
 
         // Apply post-generation swap optimization if we have teammate history
         if (this.teammateHistory && Object.keys(bestTeams).length >= 2) {
-            bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers);
+            bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers, {
+                eloRange,
+                hardEloDeltaLimit
+            });
         }
 
-        // Sync draw history with final optimized teams so replay matches final rosters
-        // while preserving the original snake draft team order
-        if (this.recordHistory && Array.isArray(this.drawHistory) && this.drawHistory.length > 0) {
-            // Create mapping of final team assignments
-            const finalTeamOf = new Map();
-            for (const [teamName, players] of Object.entries(bestTeams)) {
-                for (const player of players) {
-                    finalTeamOf.set(player, teamName);
-                }
-            }
-
-            // Group draw history by pot and reconstruct with final players
-            const potGroups = new Map();
-            for (const step of this.drawHistory) {
-                if (!potGroups.has(step.fromPot)) {
-                    potGroups.set(step.fromPot, []);
-                }
-                potGroups.get(step.fromPot).push(step);
-            }
-
-            const correctedHistory = [];
-
-            // Process each pot, preserving team assignment order
-            for (const [, potSteps] of potGroups) {
-                // Get the original snake draft team order for this pot
-                const teamAssignmentOrder = potSteps.map((step) => step.toTeam);
-
-                // Get players from this pot who ended up in each team
-                const playersFromPotByFinalTeam = new Map();
-                for (const step of potSteps) {
-                    const finalTeam = finalTeamOf.get(step.player);
-                    if (!playersFromPotByFinalTeam.has(finalTeam)) {
-                        playersFromPotByFinalTeam.set(finalTeam, []);
-                    }
-                    playersFromPotByFinalTeam.get(finalTeam).push(step.player);
-                }
-
-                // Rebuild history maintaining team order but with final team players
-                for (let i = 0; i < potSteps.length; i++) {
-                    const originalStep = potSteps[i];
-                    const originalTeamAssignment = teamAssignmentOrder[i];
-
-                    // Try to find a player from this pot who ended up in the originally assigned team
-                    const playersInOriginalTeam =
-                        playersFromPotByFinalTeam.get(originalTeamAssignment) || [];
-
-                    let playerForSlot;
-                    if (playersInOriginalTeam.length > 0) {
-                        // Use a player who ended up in the original team (prefer original if available)
-                        playerForSlot = playersInOriginalTeam.includes(originalStep.player)
-                            ? originalStep.player
-                            : playersInOriginalTeam[0];
-                        // Remove used player to avoid duplicates
-                        const playerIndex = playersFromPotByFinalTeam
-                            .get(originalTeamAssignment)
-                            .indexOf(playerForSlot);
-                        if (playerIndex > -1) {
-                            playersFromPotByFinalTeam
-                                .get(originalTeamAssignment)
-                                .splice(playerIndex, 1);
-                        }
-                    } else {
-                        // No player from this pot ended up in original team, use original player
-                        playerForSlot = originalStep.player;
-                    }
-
-                    const finalTeam = finalTeamOf.get(playerForSlot);
-                    const correctedStep = {
-                        ...originalStep,
-                        player: playerForSlot,
-                        toTeam: finalTeam
-                    };
-
-                    // Track original team if different from final
-                    if (finalTeam !== originalTeamAssignment) {
-                        correctedStep.originalToTeam = originalTeamAssignment;
-                    }
-
-                    correctedHistory.push(correctedStep);
-                }
-            }
-
-            this.drawHistory = correctedHistory;
+        // Reconstruct draw history from final teams using the pot structure and snake draft
+        if (this.recordHistory) {
+            // Use original teamNames order (creation order) to match front-end display
+            this.drawHistory = this.buildDrawHistoryFromFinalTeams(
+                bestTeams,
+                this.initialPots,
+                teamNames
+            );
         }
 
         return bestTeams;

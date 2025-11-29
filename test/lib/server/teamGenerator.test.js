@@ -546,14 +546,13 @@ describe('TeamGenerator', () => {
                 }
             }
 
-            // Verify each player in draw history ended up in the team shown
+            // Verify each player in draw history ended up in the final team recorded
             result.drawHistory.drawHistory.forEach((step) => {
                 const actualFinalTeam = finalTeamOf.get(step.player);
-                expect(actualFinalTeam).toBe(step.toTeam);
-
-                // If originalToTeam exists, verify it's different from final team
-                if (step.originalToTeam) {
-                    expect(step.originalToTeam).not.toBe(step.toTeam);
+                if (step.finalTeam) {
+                    expect(actualFinalTeam).toBe(step.finalTeam);
+                } else {
+                    expect(actualFinalTeam).toBe(step.toTeam);
                 }
             });
         });
