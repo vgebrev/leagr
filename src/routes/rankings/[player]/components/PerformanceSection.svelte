@@ -232,7 +232,7 @@
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                     <h3
                         class="mb-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                        League Position Distribution
+                        League Position Finishes
                     </h3>
                     <svg
                         width="100%"
@@ -327,7 +327,7 @@
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                     <h3
                         class="mb-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                        Cup Progress Distribution
+                        Cup Progress
                     </h3>
                     <svg
                         width="100%"
@@ -412,8 +412,9 @@
         <div class="glass mt-4 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
             <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
                 <div class="text-center">
-                    <div class="text-sm text-gray-600 dark:text-gray-300">
-                        Longest League Streak
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Longest League Win Streak
                     </div>
                     <div class="flex items-center justify-center gap-1">
                         <CrownIcon class="h-5 w-5 text-yellow-500" />
@@ -423,7 +424,10 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <div class="text-sm text-gray-600 dark:text-gray-300">Longest Cup Streak</div>
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Longest Cup Win Streak
+                    </div>
                     <div class="flex items-center justify-center gap-1">
                         <TrophyIcon class="h-5 w-5 text-amber-600" />
                         <div class="text-2xl font-bold dark:text-gray-200">
