@@ -33,8 +33,8 @@
             .join(' ')
     );
     const sizeStyles = {
-        sm: 'text-xs px-2 py-1',
-        md: 'text-sm p-2'
+        sm: 'text-sm px-2 py-1',
+        md: 'text-sm px-2 py-1'
     };
 
     // Check if this is an unassigned/waiting list table
@@ -183,23 +183,23 @@
         </thead>
         <tbody>
             {#if showTeamRatings && !isPlayerList && (teamAverageAttacking !== null || teamAverageControl !== null)}
-                <tr class={`${styles.row} border-b ${styles.border}`}>
+                <tr class={`${styles.row}`}>
                     <td class="p-2">
-                        <div class="space-y-1.5">
+                        <div class="border-b pb-2 ${styles.border}">
                             {#if teamAverageAttacking !== null}
                                 <div class="flex items-center gap-2">
-                                    <span class={`w-12 text-xs ${headerTextClass}`}>Attack</span>
+                                    <span class={`w-11 text-xs ${headerTextClass}`}>Attack</span>
                                     <div
                                         class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
                                         <div
-                                            class={`h-2 rounded-full transition-all ${headerBgClass}`}
+                                            class={`h-2 w-full rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
                                                 applyGammaSpread(teamAverageAttacking) * 100
                                             ).toFixed(1)}%">
                                         </div>
                                     </div>
                                     <span
-                                        class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        class={`text-right text-xs ${headerTextClass}`}
                                         title={`Raw ${(teamAverageAttacking * 100).toFixed(0)}%`}>
                                         {(applyGammaSpread(teamAverageAttacking) * 100).toFixed(0)}
                                     </span>
@@ -207,9 +207,9 @@
                             {/if}
                             {#if teamAverageControl !== null}
                                 <div class="flex items-center gap-2">
-                                    <span class={`w-12 text-xs ${headerTextClass}`}>Defense</span>
+                                    <span class={`w-11 text-xs ${headerTextClass}`}>Defense</span>
                                     <div
-                                        class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                                        class="h-2 w-full flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
@@ -218,7 +218,7 @@
                                         </div>
                                     </div>
                                     <span
-                                        class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        class={`text-right text-xs ${headerTextClass}`}
                                         title={`Raw ${(teamAverageControl * 100).toFixed(0)}%`}>
                                         {(applyGammaSpread(teamAverageControl) * 100).toFixed(0)}
                                     </span>
