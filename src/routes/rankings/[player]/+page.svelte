@@ -187,6 +187,13 @@
     // Check if there's a pending avatar
     let hasPendingAvatar = $derived(!!playerData?.pendingAvatar);
 
+    // Display helper for attack/defense bars (cosmetic only)
+    function applyGammaSpread(value, gamma = 0.45) {
+        if (value === null || value === undefined) return null;
+        const clamped = Math.min(1, Math.max(0, value));
+        return Math.pow(clamped, gamma);
+    }
+
     onMount(loadPlayerData);
 </script>
 
@@ -197,7 +204,7 @@
 <div class="container mx-auto">
     <!-- Header -->
     <div class="mb-2 flex items-start justify-between">
-        <div class="ms-2 flex items-center gap-4">
+        <div class="ms-2 flex min-w-0 flex-1 items-center gap-4">
             {#if playerData}
                 <AvatarUploadButton
                     {avatarUrl}
@@ -205,9 +212,52 @@
                     size="lg"
                     onUpload={handleAvatarUpload} />
             {/if}
-            <div>
+            <div class="min-w-0 flex-1">
                 <h1 class="text-2xl font-bold">{player || 'Loading...'}</h1>
-                <h6 class="text-gray-400">Player Profile</h6>
+                {#if playerData && (playerData.attackingRating !== null || playerData.controlRating !== null)}
+                    <div class="mt-1 space-y-1 text-sm">
+                        {#if playerData.attackingRating !== null}
+                            <div class="flex items-center gap-1.5">
+                                <span
+                                    class="w-14 shrink-0 tracking-wide text-gray-500 dark:text-gray-300"
+                                    >Attack</span>
+                                <div
+                                    class="h-2 w-full rounded-full bg-gray-200/70 dark:bg-gray-700">
+                                    <div
+                                        class="bg-primary-500 h-2 w-full rounded-full transition-all"
+                                        style={`width: ${(applyGammaSpread(playerData.attackingRating) * 100).toFixed(1)}%`}>
+                                    </div>
+                                </div>
+                                <span
+                                    class="w-10 text-right text-sm text-gray-500 dark:text-gray-300"
+                                    title={`Raw ${(playerData.attackingRating * 100).toFixed(0)}%`}>
+                                    {(applyGammaSpread(playerData.attackingRating) * 100).toFixed(
+                                        0
+                                    )}
+                                </span>
+                            </div>
+                        {/if}
+                        {#if playerData.controlRating !== null}
+                            <div class="flex items-center gap-1.5">
+                                <span
+                                    class="w-14 shrink-0 tracking-wide text-gray-500 dark:text-gray-300"
+                                    >Defense</span>
+                                <div
+                                    class="h-2 w-full rounded-full bg-gray-200/70 dark:bg-gray-700">
+                                    <div
+                                        class="bg-primary-500 h-2 w-full rounded-full transition-all"
+                                        style={`width: ${(applyGammaSpread(playerData.controlRating) * 100).toFixed(1)}%`}>
+                                    </div>
+                                </div>
+                                <span
+                                    class="w-10 text-right text-sm text-gray-500 dark:text-gray-300"
+                                    title={`Raw ${(playerData.controlRating * 100).toFixed(0)}%`}>
+                                    {(applyGammaSpread(playerData.controlRating) * 100).toFixed(0)}
+                                </span>
+                            </div>
+                        {/if}
+                    </div>
+                {/if}
             </div>
         </div>
         <div class="flex flex-col items-center gap-2">

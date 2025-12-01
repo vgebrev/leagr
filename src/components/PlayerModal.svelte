@@ -65,13 +65,15 @@
     bind:open
     size="md"
     class="glass-strong mx-auto w-[95vw] border backdrop:backdrop-blur-xs md:w-2/3 lg:w-1/2 xl:w-1/3"
-    classes={{ body: 'p-4', close: 'p-0' }}>
+    classes={{ body: 'p-4', close: 'p-0', header: '!min-w-0 !w-full' }}>
     {#snippet header()}
         {#if playerData || loadingError}
-            <PlayerHeader
-                {playerData}
-                {playerName}
-                showStatus={false} />
+            <div class="w-full">
+                <PlayerHeader
+                    {playerData}
+                    {playerName}
+                    showStatus={false} />
+            </div>
         {:else}
             <div class="p-4">
                 <h3 class="text-xl font-semibold">{playerName || 'Player Profile'}</h3>

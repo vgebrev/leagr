@@ -65,7 +65,7 @@
     });
 
     // Apply a gentle gamma spread to stretch the bar display (cosmetic only)
-    function applyGammaSpread(value, gamma = 0.6) {
+    function applyGammaSpread(value, gamma = 0.45) {
         if (value === null || value === undefined) return null;
         const clamped = Math.min(1, Math.max(0, value));
         return Math.pow(clamped, gamma);
