@@ -78,5 +78,5 @@ describe('TeamGenerator color distribution', () => {
         // Sanity check to ensure the test actually ran and didn't result in all zeros
         const totalOccurrences = Object.values(colorCounts).reduce((sum, count) => sum + count, 0);
         expect(totalOccurrences).toBe(1000);
-    });
+    }, 15_000); // 15s timeout to allow for 1000 team generations of up to 5000 iterations each
 });

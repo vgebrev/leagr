@@ -357,10 +357,7 @@ export class RankingsManager {
             } else {
                 // Find the furthest round (smallest team count)
                 const roundNames = Array.from(data.rounds);
-                const furthestRound = roundNames.sort(
-                    (a, b) => getTeamCount(a) - getTeamCount(b)
-                )[0];
-                cupProgress[team] = furthestRound;
+                cupProgress[team] = roundNames.sort((a, b) => getTeamCount(a) - getTeamCount(b))[0];
             }
         }
 
@@ -831,6 +828,8 @@ export class RankingsManager {
         return {
             points: 0,
             appearances: 0,
+            goalsFor: 0,
+            goalsAgainst: 0,
             rankingDetail: {},
             elo: {
                 rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
@@ -851,7 +850,7 @@ export class RankingsManager {
             const targetYear = year ?? new Date().getFullYear();
 
             // Load previous year's ELO ratings for carry-over
-            let previousYearRankings = null;
+            let previousYearRankings;
             try {
                 const prevYearPath = this.getRankingsPath(targetYear - 1);
                 const raw = await fs.readFile(prevYearPath, 'utf-8');
@@ -942,6 +941,17 @@ export class RankingsManager {
                         const totalDatePoints =
                             appearancePoints + matchPoints + bonusPoints + knockoutPoints;
 
+                        // Update cumulative goals (before incrementing appearances)
+                        playerData.goalsFor += teamStats[teamName].gf;
+                        playerData.goalsAgainst += teamStats[teamName].ga;
+                        playerData.points += totalDatePoints;
+                        playerData.appearances += 1;
+
+                        // Calculate running averages
+                        const goalsForPerSession = playerData.goalsFor / playerData.appearances;
+                        const goalsAgainstPerSession =
+                            playerData.goalsAgainst / playerData.appearances;
+
                         // Store appearance data for this date
                         playerData.rankingDetail[date] = {
                             team: teamName,
@@ -950,6 +960,8 @@ export class RankingsManager {
                             bonusPoints,
                             knockoutPoints,
                             totalPoints: totalDatePoints,
+                            goalsForPerSession: parseFloat(goalsForPerSession.toFixed(2)),
+                            goalsAgainstPerSession: parseFloat(goalsAgainstPerSession.toFixed(2)),
                             eloRating: playerData.elo
                                 ? Math.round(playerData.elo.rating)
                                 : ELO_BASELINE_RATING,
@@ -959,10 +971,6 @@ export class RankingsManager {
 
                         // Add championship flags
                         this.addChampionshipFlags(playerData.rankingDetail[date], sessionData);
-
-                        // Update cumulative totals
-                        playerData.points += totalDatePoints;
-                        playerData.appearances += 1;
                     }
                 }
 
@@ -1010,6 +1018,9 @@ export class RankingsManager {
                 playerData.cupWins = championships.cupWins;
             });
 
+            // Calculate normalized attack/control ratings for team balancing
+            this.calculateAttackControlRatings(enhancedRankings);
+
             await this.saveRankingsUnsafe(enhancedRankings, targetYear);
             return enhancedRankings;
         });
@@ -1053,6 +1064,8 @@ export class RankingsManager {
                         bonusPoints: null,
                         knockoutPoints: null,
                         totalPoints: null,
+                        goalsForPerSession: null,
+                        goalsAgainstPerSession: null,
                         eloRating: playerData.elo
                             ? Math.round(playerData.elo.rating)
                             : ELO_BASELINE_RATING
@@ -1101,6 +1114,155 @@ export class RankingsManager {
             playerData.previousRank = previousRank;
             playerData.rankMovement = previousRank - currentRank; // Positive = moved up
             playerData.isNew = false;
+        });
+    }
+
+    /**
+     * Calculate normalized attack/control ratings using min-max normalization
+     * Adds attackingRating and controlRating (0-1 scale) to each player and each date
+     * @param {Object} enhancedRankings - Enhanced rankings with complete history
+     */
+    calculateAttackControlRatings(enhancedRankings) {
+        // Minimum sessions required to be included in ratings
+        // This prevents outliers from 1-2 session players skewing the scale
+        const MIN_SESSIONS_FOR_RATING = 5;
+
+        // Get all unique dates sorted
+        const allDates = new Set();
+        Object.values(enhancedRankings.players).forEach((playerData) => {
+            Object.keys(playerData.rankingDetail).forEach((date) => allDates.add(date));
+        });
+        const sortedDates = Array.from(allDates).sort();
+
+        // First pass: calculate goalsForPerSession and goalsAgainstPerSession for all dates
+        // (carrying forward when players don't play)
+        Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+            const dates = Object.keys(playerData.rankingDetail).sort();
+            let sessionsUpToDate = 0;
+            let lastGFPerSession = null;
+            let lastGAPerSession = null;
+
+            dates.forEach((date) => {
+                const detail = playerData.rankingDetail[date];
+
+                // Count this session if player appeared
+                if (detail.team !== null) {
+                    sessionsUpToDate++;
+                }
+
+                // If player appeared and has goals data, use it
+                if (detail.goalsForPerSession !== null && detail.goalsAgainstPerSession !== null) {
+                    lastGFPerSession = detail.goalsForPerSession;
+                    lastGAPerSession = detail.goalsAgainstPerSession;
+                } else if (
+                    sessionsUpToDate >= MIN_SESSIONS_FOR_RATING &&
+                    lastGFPerSession !== null
+                ) {
+                    // Player didn't play but has 5+ sessions - carry forward last values
+                    detail.goalsForPerSession = lastGFPerSession;
+                    detail.goalsAgainstPerSession = lastGAPerSession;
+                }
+            });
+        });
+
+        // Second pass: for each date, calculate min/max from all qualified players' current values
+        const dateMinMax = {};
+
+        sortedDates.forEach((date) => {
+            const gfValues = [];
+            const gaValues = [];
+
+            Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+                const dates = Object.keys(playerData.rankingDetail).sort();
+                let sessionsUpToDate = 0;
+
+                // Count sessions up to this date
+                dates.forEach((d) => {
+                    if (d <= date && playerData.rankingDetail[d].team !== null) {
+                        sessionsUpToDate++;
+                    }
+                });
+
+                // Include if player has 5+ sessions and has current values (played or carried forward)
+                if (sessionsUpToDate >= MIN_SESSIONS_FOR_RATING) {
+                    const detail = playerData.rankingDetail[date];
+                    if (
+                        detail &&
+                        detail.goalsForPerSession !== null &&
+                        detail.goalsAgainstPerSession !== null
+                    ) {
+                        gfValues.push(detail.goalsForPerSession);
+                        gaValues.push(detail.goalsAgainstPerSession);
+                    }
+                }
+            });
+
+            // Store min/max for this date
+            if (gfValues.length > 0) {
+                dateMinMax[date] = {
+                    minGF: Math.min(...gfValues),
+                    maxGF: Math.max(...gfValues),
+                    minGA: Math.min(...gaValues),
+                    maxGA: Math.max(...gaValues)
+                };
+            }
+        });
+
+        // Third pass: calculate normalized ratings using date-specific min/max
+        Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+            const dates = Object.keys(playerData.rankingDetail).sort();
+            let sessionsUpToDate = 0;
+            let latestAttackingRating = null;
+            let latestControlRating = null;
+
+            dates.forEach((date) => {
+                const detail = playerData.rankingDetail[date];
+
+                // Count this session if player appeared
+                if (detail.team !== null) {
+                    sessionsUpToDate++;
+                }
+
+                // Calculate rating if player has 5+ sessions and we have min/max data
+                if (
+                    sessionsUpToDate >= MIN_SESSIONS_FOR_RATING &&
+                    dateMinMax[date] &&
+                    detail.goalsForPerSession !== null &&
+                    detail.goalsAgainstPerSession !== null
+                ) {
+                    const { minGF, maxGF, minGA, maxGA } = dateMinMax[date];
+                    const gfRange = maxGF - minGF;
+                    const gaRange = maxGA - minGA;
+
+                    // Min-max normalization (0-1 scale)
+                    let attackingRating = 0.5; // Default to middle if no range
+                    if (gfRange > 0) {
+                        attackingRating = (detail.goalsForPerSession - minGF) / gfRange;
+                    }
+
+                    // Control: lower GA/session is better (invert the scale)
+                    let controlRating = 0.5; // Default to middle if no range
+                    if (gaRange > 0) {
+                        controlRating = (maxGA - detail.goalsAgainstPerSession) / gaRange;
+                    }
+
+                    // Store in rankingDetail for this date
+                    detail.attackingRating = parseFloat(attackingRating.toFixed(3));
+                    detail.controlRating = parseFloat(controlRating.toFixed(3));
+
+                    // Track latest for player-level data
+                    latestAttackingRating = detail.attackingRating;
+                    latestControlRating = detail.controlRating;
+                } else {
+                    // Player doesn't have enough sessions yet - no ratings
+                    detail.attackingRating = null;
+                    detail.controlRating = null;
+                }
+            });
+
+            // Store latest ratings at player level (for convenience)
+            playerData.attackingRating = latestAttackingRating;
+            playerData.controlRating = latestControlRating;
         });
     }
 

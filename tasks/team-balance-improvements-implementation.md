@@ -10,56 +10,72 @@ Implemented comprehensive improvements to team generation balance and ELO rating
 
 ## Changes Implemented
 
-### 1. Reduced Pot Size (Team Generation)
+### 1. Pot Size (Team Generation)
 
 **File**: `src/lib/server/teamGenerator.js`
 
-**Change**: Lines 397, 681
+**Change**: Lines 687, 839
 
 ```javascript
-// Before
-const potSize = Math.min(numTeams * 2, sortedPlayers.length - playerIndex);
-
-// After
-const potSize = Math.min(Math.ceil(numTeams * 1.5), sortedPlayers.length - playerIndex);
+const potSize = Math.min(Math.ceil(numTeams * 2), sortedPlayers.length - playerIndex);
 ```
 
-**Impact**:
+**Status**: Kept at 2× team count (previously experimented with 1.5×, reverted)
 
-- Reduces within-pot ELO variance from ~70 to ~40-50 points
-- More granular snake draft distribution
-- Reduces "lottery effect" where one team gets all top-of-pot players
+**Rationale**:
+
+- With 2× pot size, each team gets exactly 2 players per pot in snake draft
+- Creates intuitive draw replay pattern (snake order aligns across pots and teams)
+- Balance is achieved through other mechanisms:
+    - Normalized multi-metric scoring (ELO, spread, pairing)
+    - 5000 iterations (vs previous 75)
+    - Post-generation optimization
+- With 1.5× pot size, teams filled unevenly causing counter-intuitive draw patterns
 
 ---
 
-### 2. Adaptive ELO Balance Targets + Hard Constraints
+### 2. Normalized Multi-Metric Scoring + Hard Constraints
 
 **File**: `src/lib/server/teamGenerator.js`
 
-**Changes**: Lines 674-689, 310-338, 691
+**Changes**: Lines 444-479, 798-830, 813
 
 ```javascript
-// Calculate adaptive targets based on player pool variance
+// Calculate hard ELO constraint based on player pool variance
 const eloRange = Math.max(...playerElos) - Math.min(...playerElos);
-const adaptiveFactor = Math.floor(eloRange / 100) * 3;
-const targetEloDelta = Math.min(baseTarget + adaptiveFactor, 40);
 const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
-const maxIterations = 300; // Tripled from 75
+const maxIterations = 5000; // Increased from 75
+const hardConstraintLimit = 4; // Reject 4+ previous pairings
 
-// Hard constraint: reject solutions exceeding ELO delta limit
-violatesHardConstraints(teams, pairingLimit, eloDeltaLimit);
+// Normalized scoring with fixed weights (all metrics 0-1 scale)
+const W_ELO = 1.0;      // ELO balance weight
+const W_SPREAD = 0.7;   // ELO spread balance weight
+const W_PAIR = 1.3;     // Pairing novelty weight
+
+const totalNorm = (eloNorm * W_ELO + spreadNorm * W_SPREAD + pairNorm * W_PAIR)
+                / (W_ELO + W_SPREAD + W_PAIR);
+
+// Hard constraint: reject solutions exceeding limits
+if (violatesHardConstraints(teams, hardConstraintLimit, hardEloDeltaLimit)) {
+    continue; // Skip this iteration
+}
+
+// Early stop if excellent balance achieved
+if (iteration > 2000 && totalNorm <= 0.25) {
+    break;
+}
 ```
 
 **Impact**:
 
-- **Adaptive targets**: Automatically adjusts based on player pool variance
-    - Low variance (200 ELO spread): Target 18 ELO
-    - Medium variance (400 ELO spread): Target 24 ELO
-    - High variance (600 ELO spread): Target 30 ELO
-    - Extreme variance (800 ELO spread): Target 36 ELO (capped at 40)
-- **Hard ELO constraint**: Rejects any team configuration exceeding 15% of player pool range (min 60)
-- **Tripled iterations** (75 → 300): Much better chance of finding optimal balance
-- **Realistic goals**: No longer tries to achieve impossible targets when player pool has high variance
+- **Normalized scoring**: All metrics (ELO balance, spread balance, pairing novelty) normalized to 0-1 scale
+- **Multi-objective optimization**: Combines three dimensions of balance with tunable weights
+- **Hard constraints**:
+    - ELO delta limit: max(60, 15% of player pool range) - adapts to pool variance
+    - Pairing limit: Rejects teams with players paired 3+ times previously
+- **5000 iterations** (vs 75): Much better chance of finding optimal balance
+- **Early stopping**: Stops at 2000+ iterations if excellent balance achieved (totalNorm ≤ 0.25)
+- **Realistic goals**: Adapts expectations to player pool variance while seeking best possible balance
 
 ---
 
@@ -122,30 +138,38 @@ const ELO_DECAY_RATE = 0.02; // 2% per week
 
 **File**: `src/lib/server/teamGenerator.js`
 
-**New Function**: Lines 370-413 - `calculateEloSpreadBalance()`
+**New Function**: Lines 372-411 - `calculateEloSpreadBalance()`
 
-**Integration**: Lines 700-704
+**Integration**: Lines 444-479 (normalized scoring)
 
 ```javascript
 // Calculate ELO spread balance (prevents lottery effect from pot variance)
 const spreadBalance = this.calculateEloSpreadBalance(teams);
 
-// Combined score: ELO balance + variance penalty + spread balance
-const totalScore = eloDelta + pairingPenalty * varianceWeight + spreadBalance * 0.3;
+// Normalize spread balance to 0-1 scale
+const spreadIdeal = eloRange * 0.5;
+const spreadWorst = Math.max(spreadIdeal + 1, eloRange * 1.5);
+const spreadNorm = clamp01((spreadBalance - spreadIdeal) / (spreadWorst - spreadIdeal));
+
+// Combined with other normalized metrics (weighted)
+const W_SPREAD = 0.7; // Spread balance weight in normalized scoring
+const totalNorm =
+    (eloNorm * W_ELO + spreadNorm * W_SPREAD + pairNorm * W_PAIR) / (W_ELO + W_SPREAD + W_PAIR);
 ```
 
 **How it Works**:
 
 - Calculates max, min, and median ELO for each team
-- Measures variance across teams' distributions
-- Prevents one team from getting all "top of pot" players
+- Measures variance across teams' distributions using weighted scoring
 - Weighted scoring: median × 1.0 + max × 0.6 + min × 0.4
+- Normalizes to 0-1 scale based on ideal/worst spread for player pool
+- Prevents one team from getting all "top of pot" players
 
 **Impact**:
 
 - Ensures teams have similar skill distribution shapes
 - Complements average ELO balancing
-- Addresses root cause of lottery effect
+- Part of multi-objective optimization with weight 0.7 (vs ELO 2.0, pairing 1.3)
 
 ---
 
@@ -212,19 +236,23 @@ const effectiveKFactor = kFactor * marginMultiplier;
 
 ## Expected Impact
 
-### Phase 1 Impact (Pot Size + ELO Delta)
+### Phase 1 Impact (Team Generation Improvements)
 
-- **Runaway winners**: 67.9% → ~40-45%
-- **Dominated teams**: 60.7% → ~35-40%
+- **Runaway winners**: 67.9% → ~35-40%
+- **Dominated teams**: 60.7% → ~30-35%
 - **Points range**: 10.8 → ~8-9
 
-### Phase 2 Impact (+ K-factors + Decay)
+**Contributing factors**: Normalized multi-metric scoring, 5000 iterations, hard constraints, spread balance
 
-- **Runaway winners**: → ~30-35%
-- **Dominated teams**: → ~25-30%
+### Phase 2 Impact (+ ELO System Improvements)
+
+- **Runaway winners**: → ~25-30%
+- **Dominated teams**: → ~20-25%
 - **Points range**: → ~7-8
 
-### Full Impact (All 6 changes)
+**Contributing factors**: Higher K-factors (faster skill separation), lower decay (maintained differentiation), win margin multiplier (faster convergence)
+
+### Full Impact (All 9 Improvements After 8+ Weeks)
 
 - **Runaway winners**: → ~20-25% (target <25%)
 - **Dominated teams**: → ~15-20% (target <20%)
@@ -259,14 +287,19 @@ All changes use constants that can be easily tuned:
 
 ```javascript
 // teamGenerator.js
-const potMultiplier = 1.5; // Currently 1.5× teams (was 2×)
-const maxIterations = 300; // Max attempts (was 75)
-const spreadBalanceWeight = 0.3; // Spread balance scoring weight
+const potMultiplier = 2.0; // Pot size = teams × 2 (stable at 2×)
+const maxIterations = 5000; // Max attempts (increased from 75)
+const earlyStopThreshold = 0.25; // Stop early if totalNorm ≤ 0.25
+const earlyStopMinIterations = 2000; // Don't stop before this many iterations
 
-// Adaptive targets (calculated from player pool variance)
-const baseTarget = 12; // Base target ELO delta
-const adaptiveFactor = Math.floor(eloRange / 100) * 3; // Scales with variance
-const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15)); // Hard rejection limit
+// Normalized scoring weights (all metrics 0-1 scale)
+const W_ELO = 2.0; // ELO balance weight (highest priority)
+const W_SPREAD = 0.7; // Spread balance weight
+const W_PAIR = 1.3; // Pairing novelty weight
+
+// Hard constraints
+const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15)); // ELO limit (adapts to pool)
+const hardConstraintLimit = 4; // Pairing limit (reject 4+ previous pairings)
 ```
 
 ### ELO System
@@ -368,16 +401,22 @@ Can selectively revert individual changes:
 
 ## Conclusion
 
-Implemented 7 comprehensive improvements targeting the root causes of team imbalance:
+Implemented 9 comprehensive improvements targeting the root causes of team imbalance:
 
-1. **Reduced pot size** (2× → 1.5× teams) - Addresses lottery effect
-2. **Adaptive ELO targets** - Realistic balance goals based on player pool variance
-3. **Hard ELO constraints** - Rejects excessively unbalanced teams
-4. **Tripled iterations** (75 → 300) - More chances to find optimal balance
-5. **Increased K-factors** (+50%) - Faster skill separation
-6. **Reduced decay** (5% → 2%) - Maintains differentiation
-7. **Spread balance metric** - Prevents skill distribution skew
-8. **Win margin multiplier** - Rewards dominant performance
+### Team Generation (6 improvements)
+
+1. **Pot size** (2× teams) - Creates intuitive snake draft, balanced via other mechanisms
+2. **Normalized multi-metric scoring** - Combines ELO, spread, and pairing on 0-1 scale with tunable weights
+3. **Hard ELO constraints** - Rejects teams exceeding 15% of player pool variance (min 60)
+4. **Hard pairing constraints** - Rejects teams with 4+ previous pairings
+5. **5000 iterations** (vs 75) with early stopping - Much better chance of optimal balance
+6. **Spread balance metric** - Prevents teams from getting skewed skill distributions
+
+### ELO Rating System (3 improvements)
+
+7. **Increased K-factors** (+50%: 24/15 vs 16/10) - Faster skill separation and convergence
+8. **Reduced decay** (2% vs 5% per week) - Maintains skill differentiation longer
+9. **Win margin multiplier** - Dominant wins (3-0, 4-0) grant up to 30% more ELO points
 
 All changes tested and deployed successfully. Expected to reduce runaway winners from 67.9% to ~20-25% and dominated teams from 60.7% to ~15-20% over the next 2 months.
 
@@ -402,10 +441,10 @@ Looking at the data, about 68% of our sessions had one team dominating (winning 
 
 **1. Smarter Team Generation**
 
-- Teams are now drawn from smaller "pots" of players (6 instead of 8), which reduces the luck factor
-- The algorithm tries 300 different combinations (up from 75) to find the best balance
-- It now adapts to how spread out everyone's skill levels are - if we have a massive skill gap, it adjusts expectations accordingly
-- Added a hard limit that rejects any team setup that's too unbalanced
+- The algorithm now tries up to 5000 different combinations (up from 75) to find the best balance
+- Uses a smart scoring system that balances three things at once: average team strength, skill spread within teams, and pairing variety
+- Adapts to how spread out everyone's skill levels are - if we have a massive skill gap, it adjusts expectations accordingly
+- Added hard limits that reject any team setup that's too unbalanced or has too many repeat pairings
 
 **2. Better Player Ratings**
 

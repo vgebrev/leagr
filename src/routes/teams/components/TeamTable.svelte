@@ -15,10 +15,23 @@
         assignablePlayers = [],
         allTeams = {},
         size = 'md',
-        showPlayerRankings = false
+        showPlayerRankings = false,
+        showTeamRatings = true
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
+    const headerBgClass = $derived(
+        styles.header
+            .split(' ')
+            .filter((cls) => cls.startsWith('bg-') || cls.startsWith('dark:bg-'))
+            .join(' ')
+    );
+    const headerTextClass = $derived(
+        styles.header
+            .split(' ')
+            .filter((cls) => cls.startsWith('text-') || cls.startsWith('dark:text-'))
+            .join(' ')
+    );
     const sizeStyles = {
         sm: 'text-xs px-2 py-1',
         md: 'text-sm p-2'
@@ -49,6 +62,40 @@
         });
 
         return assignedPlayerCount > 0 ? total / assignedPlayerCount : 0;
+    });
+
+    // Calculate team average attacking rating
+    const teamAverageAttacking = $derived.by(() => {
+        if (!team) return null;
+
+        let total = 0;
+        let count = 0;
+
+        team.forEach((player) => {
+            if (player && typeof player === 'object' && player.attackingRating !== null) {
+                total += player.attackingRating;
+                count++;
+            }
+        });
+
+        return count > 0 ? total / count : null;
+    });
+
+    // Calculate team average control rating
+    const teamAverageControl = $derived.by(() => {
+        if (!team) return null;
+
+        let total = 0;
+        let count = 0;
+
+        team.forEach((player) => {
+            if (player && typeof player === 'object' && player.controlRating !== null) {
+                total += player.controlRating;
+                count++;
+            }
+        });
+
+        return count > 0 ? total / count : null;
     });
 
     // Get teams with available slots for player assignment
@@ -128,6 +175,44 @@
             </tr>
         </thead>
         <tbody>
+            {#if showTeamRatings && !isPlayerList && (teamAverageAttacking !== null || teamAverageControl !== null)}
+                <tr class={`${styles.row} border-b ${styles.border}`}>
+                    <td class="p-2">
+                        <div class="space-y-1.5">
+                            {#if teamAverageAttacking !== null}
+                                <div class="flex items-center gap-2">
+                                    <span class={`w-12 text-xs ${headerTextClass}`}>Attack</span>
+                                    <div
+                                        class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                                        <div
+                                            class={`h-2 rounded-full transition-all ${headerBgClass}`}
+                                            style="width: {(teamAverageAttacking * 100).toFixed(
+                                                1
+                                            )}%">
+                                        </div>
+                                    </div>
+                                    <span class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        >{(teamAverageAttacking * 100).toFixed(0)}</span>
+                                </div>
+                            {/if}
+                            {#if teamAverageControl !== null}
+                                <div class="flex items-center gap-2">
+                                    <span class={`w-12 text-xs ${headerTextClass}`}>Defense</span>
+                                    <div
+                                        class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                                        <div
+                                            class={`h-2 rounded-full transition-all ${headerBgClass}`}
+                                            style="width: {(teamAverageControl * 100).toFixed(1)}%">
+                                        </div>
+                                    </div>
+                                    <span class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        >{(teamAverageControl * 100).toFixed(0)}</span>
+                                </div>
+                            {/if}
+                        </div>
+                    </td>
+                </tr>
+            {/if}
             {#each team as player, i (i)}
                 <tr class={`${styles.row}`}>
                     <td class="m-0 {sizeStyles[size]}"

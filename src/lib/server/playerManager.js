@@ -605,21 +605,26 @@ export class PlayerManager {
                 return null; // Preserve null slots for teams
             }
 
-            // Get ELO from before the session date (most recent prior ranking detail)
+            // Get ELO and ratings from most recent calculation (up to and including session date)
             const playerRanking = rankings.players?.[playerName];
             let elo = 1000; // Default for new players
+            let attackingRating = null;
+            let controlRating = null;
 
             if (playerRanking?.rankingDetail) {
-                // Find the most recent ranking detail entry before the session date
+                // Find the most recent ranking detail entry up to the session date
                 const rankingDates = Object.keys(playerRanking.rankingDetail)
-                    .filter((date) => date < this.date)
+                    .filter((date) => date <= this.date)
                     .sort();
 
                 if (rankingDates.length > 0) {
-                    const mostRecentPriorDate = rankingDates[rankingDates.length - 1];
-                    elo = playerRanking.rankingDetail[mostRecentPriorDate]?.eloRating ?? 1000;
+                    const mostRecentDate = rankingDates[rankingDates.length - 1];
+                    const detail = playerRanking.rankingDetail[mostRecentDate];
+                    elo = detail?.eloRating ?? 1000;
+                    attackingRating = detail?.attackingRating ?? null;
+                    controlRating = detail?.controlRating ?? null;
                 }
-                // If no prior ranking detail exists, keep the default 1000 ELO for new players
+                // If no ranking detail exists, keep defaults
             }
 
             // Get avatar data
@@ -629,7 +634,9 @@ export class PlayerManager {
             return {
                 name: playerName,
                 elo,
-                avatar
+                avatar,
+                attackingRating,
+                controlRating
             };
         });
     }

@@ -50,6 +50,7 @@
         "vitest": "^4.0.9"
     },
     "dependencies": {
+        "@openai/codex": "^0.63.0",
         "async-mutex": "^0.5.0",
         "canvas-confetti": "^1.9.3",
         "flowbite": "^4.0.0",

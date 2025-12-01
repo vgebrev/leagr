@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTeamGenerator, TeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
+import TeamGenerator, { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 
 describe('TeamGenerator', () => {
     let teamGenerator;

@@ -15,7 +15,7 @@ export class TeamError extends Error {
 /**
  * Server-side team generation service
  */
-export class TeamGenerator {
+class TeamGenerator {
     constructor() {
         this.settings = null;
         this.players = [];
@@ -342,7 +342,7 @@ export class TeamGenerator {
             const pairingCount =
                 index1 >= 0 && index2 >= 0 ? this.teammateHistory.matrix[index1][index2] : 0;
 
-            let pairScore = 0;
+            let pairScore;
             if (pairingCount === 0) {
                 pairScore = -1.0;
             } else if (pairingCount === 1) {
@@ -442,7 +442,7 @@ export class TeamGenerator {
      * }} Normalized metrics where lower is better
      */
     calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit) {
-        const W_ELO = 2.0;
+        const W_ELO = 1.0;
         const W_SPREAD = 0.7;
         const W_PAIR = 1.3;
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -797,13 +797,13 @@ export class TeamGenerator {
         // Hard limit: max(60, 15% of pool range) - allows up to ~100 for extreme variance
         const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
 
-        const maxIterations = 1000;
-        const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
+        const maxIterations = 5000;
+        const hardConstraintLimit = 3; // Completely reject teams with pairs having 4+ previous pairings
 
         let bestTeams = null;
         let bestScore = Infinity; // Now tracking combined score instead of just ELO delta
 
-        let iteration = 0;
+        let iteration;
         // Iterate to find the best balance of ELO balance and pairing variety
         for (iteration = 0; iteration < maxIterations; iteration++) {
             // Generate teams for this iteration
@@ -824,7 +824,7 @@ export class TeamGenerator {
             }
 
             // Stop early if we achieve excellent balance across all metrics
-            if (iteration > 500 && totalNorm <= 0.25) {
+            if (iteration > 2000 && totalNorm <= 0.25) {
                 break;
             }
         }
@@ -846,7 +846,9 @@ export class TeamGenerator {
                     elo: this.rankings?.players?.[name]?.elo?.rating
                         ? Math.round(this.rankings.players[name].elo.rating)
                         : defaultElo,
-                    avatar: this.rankings?.players?.[name]?.avatar || null
+                    avatar: this.rankings?.players?.[name]?.avatar || null,
+                    attackingRating: this.rankings?.players?.[name]?.attackingRating ?? null,
+                    controlRating: this.rankings?.players?.[name]?.controlRating ?? null
                 }))
             });
 
@@ -954,6 +956,8 @@ export class TeamGenerator {
         return result;
     }
 }
+
+export default TeamGenerator;
 
 /**
  * Create a new TeamGenerator instance

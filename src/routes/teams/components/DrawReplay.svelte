@@ -652,7 +652,8 @@
                         onassign={null}
                         assignablePlayers={[]}
                         size="sm"
-                        {showPlayerRankings} />
+                        {showPlayerRankings}
+                        showTeamRatings={false} />
                 {/each}
             </div>
         </div>
