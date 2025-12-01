@@ -64,6 +64,13 @@
         return assignedPlayerCount > 0 ? total / assignedPlayerCount : 0;
     });
 
+    // Apply a gentle gamma spread to stretch the bar display (cosmetic only)
+    function applyGammaSpread(value, gamma = 0.6) {
+        if (value === null || value === undefined) return null;
+        const clamped = Math.min(1, Math.max(0, value));
+        return Math.pow(clamped, gamma);
+    }
+
     // Calculate team average attacking rating
     const teamAverageAttacking = $derived.by(() => {
         if (!team) return null;
@@ -186,13 +193,16 @@
                                         class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {(teamAverageAttacking * 100).toFixed(
-                                                1
-                                            )}%">
+                                            style="width: {(
+                                                applyGammaSpread(teamAverageAttacking) * 100
+                                            ).toFixed(1)}%">
                                         </div>
                                     </div>
-                                    <span class={`w-8 text-right text-xs ${headerTextClass}`}
-                                        >{(teamAverageAttacking * 100).toFixed(0)}</span>
+                                    <span
+                                        class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        title={`Raw ${(teamAverageAttacking * 100).toFixed(0)}%`}>
+                                        {(applyGammaSpread(teamAverageAttacking) * 100).toFixed(0)}
+                                    </span>
                                 </div>
                             {/if}
                             {#if teamAverageControl !== null}
@@ -202,11 +212,16 @@
                                         class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {(teamAverageControl * 100).toFixed(1)}%">
+                                            style="width: {(
+                                                applyGammaSpread(teamAverageControl) * 100
+                                            ).toFixed(1)}%">
                                         </div>
                                     </div>
-                                    <span class={`w-8 text-right text-xs ${headerTextClass}`}
-                                        >{(teamAverageControl * 100).toFixed(0)}</span>
+                                    <span
+                                        class={`w-8 text-right text-xs ${headerTextClass}`}
+                                        title={`Raw ${(teamAverageControl * 100).toFixed(0)}%`}>
+                                        {(applyGammaSpread(teamAverageControl) * 100).toFixed(0)}
+                                    </span>
                                 </div>
                             {/if}
                         </div>
