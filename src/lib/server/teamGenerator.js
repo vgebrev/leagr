@@ -246,6 +246,41 @@ class TeamGenerator {
     }
 
     /**
+     * Calculate team average rating for a given player rating key (e.g., attackingRating).
+     * Unrated players are skipped; if a team has no rated players, fall back to a neutral 0.5.
+     * @param {Object} teams - Teams object with player names
+     * @param {'attackingRating'|'controlRating'} ratingKey
+     * @param {number} [defaultValue=0.5] - Neutral fallback when no rated players are present
+     * @returns {Array<number>} Array of team rating averages (0-1 scale)
+     */
+    calculateTeamRatingAverages(teams, ratingKey, defaultValue = 0.5) {
+        const teamAverages = [];
+
+        Object.values(teams).forEach((teamPlayers) => {
+            if (!Array.isArray(teamPlayers) || teamPlayers.length === 0) {
+                teamAverages.push(defaultValue);
+                return;
+            }
+
+            const { sum, count } = teamPlayers.reduce(
+                (acc, playerName) => {
+                    const rating = this.rankings?.players?.[playerName]?.[ratingKey];
+                    if (typeof rating === 'number') {
+                        acc.sum += rating;
+                        acc.count += 1;
+                    }
+                    return acc;
+                },
+                { sum: 0, count: 0 }
+            );
+
+            teamAverages.push(count > 0 ? sum / count : defaultValue);
+        });
+
+        return teamAverages;
+    }
+
+    /**
      * Calculate ELO delta (difference between strongest and weakest team)
      * @param {Array} teamEloAverages - Array of team ELO averages
      * @returns {number} ELO delta
@@ -437,20 +472,41 @@ class TeamGenerator {
      *  eloNorm: number,
      *  spreadNorm: number,
      *  pairNorm: number,
-     *  eloDelta: number,s
-     *  spreadBalance: number
+     *  attackNorm: number,
+     *  controlNorm: number,
+     *  eloDelta: number,
+     *  spreadBalance: number,
+     *  attackDelta: number,
+     *  controlDelta: number
      * }} Normalized metrics where lower is better
      */
     calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit) {
         const W_ELO = 1.0;
         const W_SPREAD = 0.7;
         const W_PAIR = 1.3;
+        const W_ATTACK = 0.8;
+        const W_CONTROL = 0.8;
+        const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
         // Calculate team ELO balance
         const teamAverages = this.calculateTeamEloAverages(teams);
         const eloDelta = this.calculateEloDelta(teamAverages);
         const eloNorm = clamp01(hardEloDeltaLimit ? eloDelta / hardEloDeltaLimit : 0);
+
+        // Attacking / control balance (skip unrated players, neutral fallback per team)
+        const attackAverages = this.calculateTeamRatingAverages(teams, 'attackingRating', 0.5);
+        const controlAverages = this.calculateTeamRatingAverages(teams, 'controlRating', 0.5);
+        const attackDelta =
+            attackAverages.length > 0
+                ? Math.max(...attackAverages) - Math.min(...attackAverages)
+                : 0;
+        const controlDelta =
+            controlAverages.length > 0
+                ? Math.max(...controlAverages) - Math.min(...controlAverages)
+                : 0;
+        const attackNorm = clamp01(attackDelta / RATING_DELTA_CAP);
+        const controlNorm = clamp01(controlDelta / RATING_DELTA_CAP);
 
         // Pairing novelty score
         const pairNorm = this.calculatePairingScoreNormalized(teams);
@@ -465,16 +521,24 @@ class TeamGenerator {
                 : clamp01((spreadBalance - spreadIdeal) / (spreadWorst - spreadIdeal));
 
         const totalNorm =
-            (eloNorm * W_ELO + spreadNorm * W_SPREAD + pairNorm * W_PAIR) /
-            (W_ELO + W_SPREAD + W_PAIR);
+            (eloNorm * W_ELO +
+                spreadNorm * W_SPREAD +
+                pairNorm * W_PAIR +
+                attackNorm * W_ATTACK +
+                controlNorm * W_CONTROL) /
+            (W_ELO + W_SPREAD + W_PAIR + W_ATTACK + W_CONTROL);
 
         return {
             totalNorm,
             eloNorm,
             spreadNorm,
             pairNorm,
+            attackNorm,
+            controlNorm,
             eloDelta,
-            spreadBalance
+            spreadBalance,
+            attackDelta,
+            controlDelta
         };
     }
 
