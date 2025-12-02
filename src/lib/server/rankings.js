@@ -965,6 +965,7 @@ export class RankingsManager {
                             eloRating: playerData.elo
                                 ? Math.round(playerData.elo.rating)
                                 : ELO_BASELINE_RATING,
+                            eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
                             leaguePosition: leaguePositions[teamName] || null,
                             cupProgress: teamCupProgress[teamName] || null
                         };
@@ -1203,7 +1204,9 @@ export class RankingsManager {
                     minGF: Math.min(...gfValues),
                     maxGF: Math.max(...gfValues),
                     minGA: Math.min(...gaValues),
-                    maxGA: Math.max(...gaValues)
+                    maxGA: Math.max(...gaValues),
+                    gfValues: gfValues.slice().sort((a, b) => b - a), // Desc for GF
+                    gaValues: gaValues.slice().sort((a, b) => a - b) // Asc for GA
                 };
             }
         });
@@ -1214,6 +1217,12 @@ export class RankingsManager {
             let sessionsUpToDate = 0;
             let latestAttackingRating = null;
             let latestControlRating = null;
+            let latestGfRank = null;
+            let latestGfCount = null;
+            let latestGaRank = null;
+            let latestGaCount = null;
+            let latestGoalsForPerSession = null;
+            let latestGoalsAgainstPerSession = null;
 
             dates.forEach((date) => {
                 const detail = playerData.rankingDetail[date];
@@ -1231,6 +1240,8 @@ export class RankingsManager {
                     detail.goalsAgainstPerSession !== null
                 ) {
                     const { minGF, maxGF, minGA, maxGA } = dateMinMax[date];
+                    const gfList = dateMinMax[date].gfValues;
+                    const gaList = dateMinMax[date].gaValues;
                     const gfRange = maxGF - minGF;
                     const gaRange = maxGA - minGA;
 
@@ -1250,19 +1261,51 @@ export class RankingsManager {
                     detail.attackingRating = parseFloat(attackingRating.toFixed(3));
                     detail.controlRating = parseFloat(controlRating.toFixed(3));
 
+                    // Rank by goals for/against per session among qualified players on this date
+                    const gfRank =
+                        gfList?.length > 0
+                            ? gfList.findIndex((v) => v === detail.goalsForPerSession) + 1
+                            : null;
+                    const gaRank =
+                        gaList?.length > 0
+                            ? gaList.findIndex((v) => v === detail.goalsAgainstPerSession) + 1
+                            : null;
+                    detail.gfRank = gfRank || null;
+                    detail.gfCount = gfList?.length || null;
+                    detail.gaRank = gaRank || null;
+                    detail.gaCount = gaList?.length || null;
+
                     // Track latest for player-level data
                     latestAttackingRating = detail.attackingRating;
                     latestControlRating = detail.controlRating;
+                    latestGfRank = gfRank || null;
+                    latestGfCount = gfList?.length || null;
+                    latestGaRank = gaRank || null;
+                    latestGaCount = gaList?.length || null;
+                    latestGoalsForPerSession =
+                        detail.goalsForPerSession ?? latestGoalsForPerSession;
+                    latestGoalsAgainstPerSession =
+                        detail.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
                 } else {
                     // Player doesn't have enough sessions yet - no ratings
                     detail.attackingRating = null;
                     detail.controlRating = null;
+                    detail.gfRank = null;
+                    detail.gfCount = null;
+                    detail.gaRank = null;
+                    detail.gaCount = null;
                 }
             });
 
             // Store latest ratings at player level (for convenience)
             playerData.attackingRating = latestAttackingRating;
             playerData.controlRating = latestControlRating;
+            playerData.gfRank = latestGfRank;
+            playerData.gfCount = latestGfCount;
+            playerData.gaRank = latestGaRank;
+            playerData.gaCount = latestGaCount;
+            playerData.goalsForPerSession = latestGoalsForPerSession;
+            playerData.goalsAgainstPerSession = latestGoalsAgainstPerSession;
         });
     }
 

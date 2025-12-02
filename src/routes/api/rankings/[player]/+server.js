@@ -85,6 +85,9 @@ export async function GET({ params, locals, url }) {
             ? parseInt(limitParam, 10)
             : null;
 
+    const dateParam = url.searchParams.get('date');
+    const selectedDate = dateParam && dateParam.trim().length > 0 ? dateParam.trim() : null;
+
     // Parse year parameter, default to current year
     const year = url.searchParams.get('year')
         ? parseInt(url.searchParams.get('year'), 10)
@@ -110,8 +113,52 @@ export async function GET({ params, locals, url }) {
             return error(404, `Player "${player}" not found in rankings`);
         }
 
-        // Create unified details array
-        const details = createUnifiedDetails(playerData, limit);
+        // Create unified details array (include rating stats where present)
+        const details = createUnifiedDetails(playerData, limit).map((d) => {
+            if (!playerData.rankingDetail?.[d.date]) return d;
+            const detail = playerData.rankingDetail[d.date];
+            return {
+                ...d,
+                goalsForPerSession: detail.goalsForPerSession ?? null,
+                goalsAgainstPerSession: detail.goalsAgainstPerSession ?? null,
+                attackingRating: detail.attackingRating ?? null,
+                controlRating: detail.controlRating ?? null,
+                gfRank: detail.gfRank ?? null,
+                gfCount: detail.gfCount ?? null,
+                gaRank: detail.gaRank ?? null,
+                gaCount: detail.gaCount ?? null,
+                eloGames: detail.eloGames ?? null
+            };
+        });
+
+        // Determine which date to use for the snapshot: requested date or latest
+        let snapshotDate = selectedDate;
+        if (!snapshotDate) {
+            const allDates = Object.keys(playerData.rankingDetail || {}).sort();
+            snapshotDate = allDates[allDates.length - 1];
+        }
+
+        let detailForDate = null;
+        if (snapshotDate && playerData.rankingDetail?.[snapshotDate]) {
+            const detail = playerData.rankingDetail[snapshotDate];
+            detailForDate = {
+                date: snapshotDate,
+                rank: detail.rank ?? null,
+                totalPlayers: detail.totalPlayers ?? null,
+                rankingPoints: detail.rankingPoints ?? null,
+                points: detail.totalPoints ?? null,
+                goalsForPerSession: detail.goalsForPerSession ?? null,
+                goalsAgainstPerSession: detail.goalsAgainstPerSession ?? null,
+                attackingRating: detail.attackingRating ?? null,
+                controlRating: detail.controlRating ?? null,
+                gfRank: detail.gfRank ?? null,
+                gfCount: detail.gfCount ?? null,
+                gaRank: detail.gaRank ?? null,
+                gaCount: detail.gaCount ?? null,
+                eloGames: detail.eloGames ?? null,
+                elo: detail.eloRating ? { rating: detail.eloRating } : null
+            };
+        }
 
         // Remove rankingDetail from response to reduce payload size
         // eslint-disable-next-line no-unused-vars
@@ -126,7 +173,8 @@ export async function GET({ params, locals, url }) {
                 ...cleanPlayerData,
                 avatar: playerAvatar.avatar || null,
                 pendingAvatar: playerAvatar.pendingAvatar || null,
-                details: details // Single source of truth - client handles sorting/filtering
+                details: details, // Single source of truth - client handles sorting/filtering
+                detailForDate
             },
             rankingMetadata: rankings.rankingMetadata,
             limit: limit

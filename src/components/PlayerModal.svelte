@@ -8,11 +8,35 @@
     import { scale } from 'svelte/transition';
 
     /**
-     * @type {{ playerName: string | null, open: boolean }}
+     * @type {{ playerName: string | null, open: boolean, date?: string | null }}
      */
-    let { playerName = $bindable(null), open = $bindable(false) } = $props();
+    let { playerName = $bindable(null), open = $bindable(false), date = null } = $props();
 
     let playerData = $state(null);
+    let playerDisplayData = $derived.by(() => {
+        if (!playerData) return null;
+        const detail = playerData.detailForDate;
+        if (!detail) return playerData;
+        return {
+            ...playerData,
+            rank: detail.rank ?? playerData.rank,
+            totalPlayers: detail.totalPlayers ?? playerData.totalPlayers,
+            rankingPoints: detail.rankingPoints ?? playerData.rankingPoints,
+            points: detail.points ?? playerData.points,
+            isSnapshot: true,
+            goalsForPerSession: detail.goalsForPerSession ?? playerData.goalsForPerSession,
+            goalsAgainstPerSession:
+                detail.goalsAgainstPerSession ?? playerData.goalsAgainstPerSession,
+            attackingRating: detail.attackingRating ?? playerData.attackingRating,
+            controlRating: detail.controlRating ?? playerData.controlRating,
+            gfRank: detail.gfRank ?? playerData.gfRank,
+            gfCount: detail.gfCount ?? playerData.gfCount,
+            gaRank: detail.gaRank ?? playerData.gaRank,
+            gaCount: detail.gaCount ?? playerData.gaCount,
+            elo: detail.elo ?? playerData.elo,
+            asOfDate: detail.date ?? null
+        };
+    });
     let loadingError = $state(false);
 
     /**
@@ -30,7 +54,7 @@
         await withLoading(
             async () => {
                 const response = await api.get(
-                    `rankings/${encodeURIComponent(playerName)}?limit=0`
+                    `rankings/${encodeURIComponent(playerName)}?limit=0${date ? `&date=${encodeURIComponent(date)}` : ''}`
                 );
                 playerData = response.playerData;
             },
@@ -46,7 +70,7 @@
     }
 
     /**
-     * Load player data when modal opens or playerName changes
+     * Load player data when modal opens or playerName/date changes
      * Reset data when modal closes
      */
     $effect(() => {
@@ -70,8 +94,9 @@
         {#if playerData || loadingError}
             <div class="w-full">
                 <PlayerHeader
-                    {playerData}
+                    playerData={playerDisplayData}
                     {playerName}
+                    asOfDate={playerDisplayData?.asOfDate ?? date}
                     showStatus={false} />
             </div>
         {:else}
@@ -90,7 +115,7 @@
         <div class="p-4 text-center text-sm text-gray-400">New player - no stats yet</div>
     {:else if playerData}
         <PlayerSummaryCard
-            {playerData}
+            playerData={playerDisplayData}
             showAverages={false} />
     {/if}
 </Modal>

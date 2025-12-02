@@ -104,4 +104,5 @@
 
 <PlayerModal
     bind:playerName={selectedPlayer}
-    bind:open={showPlayerModal} />
+    bind:open={showPlayerModal}
+    date={data.date} />

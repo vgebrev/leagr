@@ -113,7 +113,8 @@
 
 <PlayerModal
     bind:playerName={selectedPlayer}
-    bind:open={showPlayerModal} />
+    bind:open={showPlayerModal}
+    {date} />
 
 <TeamModal
     bind:teamName={selectedTeam}

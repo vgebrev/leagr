@@ -268,8 +268,9 @@
                                 {y}
                                 width={barWidth}
                                 height={leagueChartData.barHeight}
-                                class="fill-primary-600"
-                                rx="2" />
+                                class="fill-primary-500"
+                                rx="10"
+                                ry="10" />
 
                             <!-- Count label -->
                             <text
@@ -306,8 +307,9 @@
                                 {y}
                                 width={barWidth}
                                 height={leagueChartData.barHeight}
-                                class="fill-gray-400"
-                                rx="2" />
+                                class="fill-gray-200/70 dark:fill-gray-700"
+                                rx="10"
+                                ry="10" />
 
                             <!-- Count label -->
                             <text
@@ -355,8 +357,9 @@
                                 {y}
                                 width={barWidth}
                                 height={cupChartData.barHeight}
-                                class="fill-primary-600"
-                                rx="2" />
+                                class="fill-primary-500"
+                                rx="10"
+                                ry="10" />
 
                             <!-- Count label -->
                             <text
@@ -391,8 +394,9 @@
                                 {y}
                                 width={barWidth}
                                 height={cupChartData.barHeight}
-                                class="fill-gray-400"
-                                rx="2" />
+                                class="fill-gray-200/70 dark:fill-gray-700"
+                                rx="10"
+                                ry="10" />
 
                             <!-- Count label -->
                             <text
