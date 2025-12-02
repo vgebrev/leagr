@@ -190,7 +190,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class={`w-11 text-xs ${headerTextClass}`}>Attack</span>
                                     <div
-                                        class="h-2 flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                                        class="h-2 flex-1 rounded-full bg-gray-200/60 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 w-full rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
@@ -209,7 +209,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class={`w-11 text-xs ${headerTextClass}`}>Defense</span>
                                     <div
-                                        class="h-2 w-full flex-1 rounded-full bg-gray-200 dark:bg-gray-700">
+                                        class="h-2 w-full flex-1 rounded-full bg-gray-200/60 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
