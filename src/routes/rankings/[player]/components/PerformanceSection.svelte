@@ -168,7 +168,7 @@
      */
     function renderBarChart(data, missedCount, includeMissed) {
         const barHeight = 24;
-        const barSpacing = 8;
+        const barSpacing = 12;
         const itemCount = data.length + (includeMissed && missedCount > 0 ? 1 : 0);
         const chartHeight = itemCount * (barHeight + barSpacing);
         const chartWidth = 400;

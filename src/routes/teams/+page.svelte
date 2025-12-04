@@ -27,6 +27,12 @@
         showTeamModal = true;
     }
 
+    async function handleRename(oldName, newName) {
+        await playersService.renamePlayer(oldName, newName);
+        // Reload teams data to show updated name
+        await teamsService.loadTeams(date);
+    }
+
     // Use the Teams service for all team-related data and operations
     let teams = $derived(teamsService.teams);
     let teamConfig = $derived(teamsService.teamConfig);
@@ -101,6 +107,7 @@
         {date}
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)}
+        onrename={handleRename}
         onPlayerClick={handlePlayerClick}
         onTeamClick={handleTeamClick} />
 

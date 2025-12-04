@@ -1,6 +1,7 @@
 <script>
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
+    import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
     import { settings } from '$lib/client/stores/settings.js';
 
     let {
@@ -10,6 +11,7 @@
         canModifyList = true,
         onremove = null,
         onassign = null,
+        onrename = null,
         onPlayerClick = null,
         onTeamClick = null,
         assignablePlayers = [],
@@ -149,6 +151,45 @@
     import { playersService } from '$lib/client/services/players.svelte.js';
     const leagueId = $derived(getLeagueId());
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
+
+    let showRenameModal = $state(false);
+    let playerToRename = $state('');
+
+    // Get all players for duplicate checking in the modal
+    const allPlayers = $derived.by(() => {
+        const players = [];
+
+        // Add all players from all teams
+        if (allTeams) {
+            Object.values(allTeams).forEach((teamRoster) => {
+                teamRoster.forEach((player) => {
+                    if (player) {
+                        const playerName =
+                            typeof player === 'string' ? player : player.name || player;
+                        if (!players.includes(playerName)) {
+                            players.push(playerName);
+                        }
+                    }
+                });
+            });
+        }
+
+        // Add assignable players (unassigned/waiting)
+        assignablePlayers.forEach((player) => {
+            const playerName = typeof player === 'string' ? player : player.name || player;
+            if (!players.includes(playerName)) {
+                players.push(playerName);
+            }
+        });
+
+        return players;
+    });
+
+    function handleRename(oldName, newName) {
+        if (onrename) {
+            onrename(oldName, newName);
+        }
+    }
 </script>
 
 <div class="relative overflow-hidden rounded-md">
@@ -265,6 +306,14 @@
                                             onclick: () => handleAssignPlayer(playerName, teamName)
                                         })),
                                         {
+                                            type: 'rename',
+                                            label: 'Rename',
+                                            onclick: () => {
+                                                playerToRename = playerName;
+                                                showRenameModal = true;
+                                            }
+                                        },
+                                        {
                                             type: 'remove',
                                             label: 'Remove',
                                             onclick: () => handleRemoveFromList(playerName)
@@ -285,6 +334,14 @@
                                             label: 'Move to waiting list',
                                             onclick: () =>
                                                 handleRemovePlayer(playerName, 'waitingList')
+                                        },
+                                        {
+                                            type: 'rename',
+                                            label: 'Rename',
+                                            onclick: () => {
+                                                playerToRename = playerName;
+                                                showRenameModal = true;
+                                            }
                                         },
                                         {
                                             type: 'remove',
@@ -348,3 +405,9 @@
         </tbody>
     </table>
 </div>
+
+<RenamePlayerModal
+    currentName={playerToRename}
+    {allPlayers}
+    bind:open={showRenameModal}
+    onrename={handleRename} />

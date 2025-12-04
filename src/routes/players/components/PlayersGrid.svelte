@@ -7,10 +7,14 @@
         canModifyList,
         onremove,
         onmove,
+        onrename,
         onPlayerClick,
         /** type { string } */
         date
     } = $props();
+
+    // Get all players for duplicate checking in rename modal
+    const allPlayers = $derived([...availablePlayers, ...waitingList]);
 
     /**
      * Checks if a player can be moved to another list based on the current settings.
@@ -35,9 +39,11 @@
         <PlayersList
             label={`Players (${availablePlayers?.length || 0}/${effectivePlayerLimit})`}
             players={availablePlayers}
+            {allPlayers}
             {canModifyList}
             onremove={async (name) => await onremove(name, 'available')}
             {onmove}
+            {onrename}
             {onPlayerClick}
             sourceList="available"
             destinationList="waitingList"
@@ -49,9 +55,11 @@
         <PlayersList
             label="Waiting list"
             players={waitingList}
+            {allPlayers}
             {canModifyList}
             onremove={async (name) => await onremove(name, 'waitingList')}
             {onmove}
+            {onrename}
             {onPlayerClick}
             sourceList="waitingList"
             destinationList="available"

@@ -8,6 +8,7 @@
         canModifyList,
         onremove,
         onassign,
+        onrename,
         onPlayerClick,
         onTeamClick,
         showPlayerRankings = false,
@@ -27,6 +28,7 @@
             {canModifyList}
             {onassign}
             {onremove}
+            {onrename}
             {onPlayerClick}
             {onTeamClick}
             {assignablePlayers}
@@ -44,6 +46,7 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
+                    {onrename}
                     {onPlayerClick}
                     {showPlayerRankings}
                     {date} />
@@ -57,6 +60,7 @@
                     allTeams={teams}
                     {onassign}
                     {onremove}
+                    {onrename}
                     {onPlayerClick}
                     {showPlayerRankings}
                     {date} />

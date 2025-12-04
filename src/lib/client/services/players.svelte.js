@@ -293,6 +293,59 @@ class PlayersService {
             }
         );
     }
+
+    /**
+     * Rename a player
+     * @param {string} oldName - Current player name
+     * @param {string} newName - New player name
+     * @returns {Promise<void>}
+     */
+    async renamePlayer(oldName, newName) {
+        if (!this.canModifyList) {
+            setNotification('Player lists cannot be changed.', 'warning');
+            return;
+        }
+
+        // Validate new name
+        const validation = validatePlayerNameForUI(newName);
+        if (!validation.isValid) {
+            setNotification(validation.errorMessage, 'warning');
+            return;
+        }
+
+        const sanitizedNewName = validation.sanitizedName;
+
+        // Check if new name already exists
+        if (
+            this.players.includes(sanitizedNewName) ||
+            this.waitingList.includes(sanitizedNewName)
+        ) {
+            setNotification(`Player ${sanitizedNewName} already exists.`, 'warning');
+            return;
+        }
+
+        await withLoading(
+            async () => {
+                const result = await api.patch('players', this.currentDate, {
+                    playerName: oldName,
+                    newName: sanitizedNewName
+                });
+                this.players = result.available || [];
+                this.waitingList = result.waitingList || [];
+                this.ownedByMe = result.ownedByMe || this.ownedByMe;
+                setNotification(`Player renamed to ${sanitizedNewName}`, 'success');
+            },
+            (error) => {
+                console.error('Error renaming player:', error);
+                setNotification(
+                    error.message || 'Failed to rename player. Please try again.',
+                    'error'
+                );
+                throw error; // Re-throw so modal can handle it
+            }
+        );
+    }
+
     /**
      * Reset the player service state
      */

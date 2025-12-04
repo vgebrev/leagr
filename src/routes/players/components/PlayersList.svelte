@@ -1,13 +1,16 @@
 <script>
     import { Listgroup, ListgroupItem } from 'flowbite-svelte';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
+    import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
 
     let {
         label,
         players,
+        allPlayers,
         canModifyList,
         onremove,
         onmove,
+        onrename,
         sourceList,
         destinationList,
         moveLabel,
@@ -20,6 +23,15 @@
     import { playersService } from '$lib/client/services/players.svelte.js';
     const leagueId = $derived(getLeagueId());
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
+
+    let showRenameModal = $state(false);
+    let playerToRename = $state('');
+
+    function handleRename(oldName, newName) {
+        if (onrename) {
+            onrename(oldName, newName);
+        }
+    }
 </script>
 
 <div class="flex flex-col gap-2">
@@ -34,11 +46,6 @@
                     >{i + 1}. {player}</button>
                 {#if onremove}
                     {@const actions = [
-                        {
-                            type: 'remove',
-                            label: 'Remove',
-                            onclick: async () => await onremove(player)
-                        },
                         ...(onmove && sourceList && destinationList
                             ? [
                                   {
@@ -54,7 +61,20 @@
                                           : false
                                   }
                               ]
-                            : [])
+                            : []),
+                        {
+                            type: 'rename',
+                            label: 'Rename',
+                            onclick: () => {
+                                playerToRename = player;
+                                showRenameModal = true;
+                            }
+                        },
+                        {
+                            type: 'remove',
+                            label: 'Remove',
+                            onclick: async () => await onremove(player)
+                        }
                     ]}
                     <PlayerActionsDropdown
                         {actions}
@@ -65,3 +85,9 @@
         {/each}
     </Listgroup>
 </div>
+
+<RenamePlayerModal
+    currentName={playerToRename}
+    {allPlayers}
+    bind:open={showRenameModal}
+    onrename={handleRename} />

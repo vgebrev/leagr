@@ -60,6 +60,15 @@
     async function movePlayer(name, fromList, toList) {
         await playersService.movePlayer(name, fromList, toList);
     }
+
+    /**
+     * Rename a player.
+     * @param {string} oldName - Current player name
+     * @param {string} newName - New player name
+     */
+    async function renamePlayer(oldName, newName) {
+        await playersService.renamePlayer(oldName, newName);
+    }
 </script>
 
 <div class="flex flex-col gap-2">
@@ -80,6 +89,7 @@
             canModifyList={playersService.canModifyList}
             onremove={removePlayer}
             onmove={movePlayer}
+            onrename={renamePlayer}
             onPlayerClick={handlePlayerClick}
             date={data.date} />
     </div>

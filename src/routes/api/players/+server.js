@@ -246,75 +246,144 @@ export const PATCH = async ({ request, url, locals }) => {
         return error(400, bodyParseResult.error);
     }
 
-    // Validate request body structure
-    const bodyValidation = validateRequestBody(bodyParseResult.data, [
-        'playerName',
-        'fromList',
-        'toList'
-    ]);
-    if (!bodyValidation.isValid) {
-        return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
-    }
+    // Detect operation type: rename if newName is present, otherwise move
+    const isRenameOperation = bodyParseResult.data.newName !== undefined;
 
-    // Validate and sanitise player name
-    const nameValidation = validateAndSanitizePlayerName(bodyParseResult.data.playerName);
-    if (!nameValidation.isValid) {
-        return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);
-    }
+    if (isRenameOperation) {
+        // Validate request body structure for rename
+        const bodyValidation = validateRequestBody(bodyParseResult.data, ['playerName', 'newName']);
+        if (!bodyValidation.isValid) {
+            return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
+        }
 
-    // Validate fromList parameter
-    const fromListValidation = validateList(bodyParseResult.data.fromList);
-    if (!fromListValidation.isValid) {
-        return error(400, `Invalid fromList parameter: ${fromListValidation.errors.join(', ')}`);
-    }
+        // Validate and sanitise old player name
+        const oldNameValidation = validateAndSanitizePlayerName(bodyParseResult.data.playerName);
+        if (!oldNameValidation.isValid) {
+            return error(400, `Invalid player name: ${oldNameValidation.errors.join(', ')}`);
+        }
 
-    // Validate toList parameter
-    const toListValidation = validateList(bodyParseResult.data.toList);
-    if (!toListValidation.isValid) {
-        return error(400, `Invalid toList parameter: ${toListValidation.errors.join(', ')}`);
-    }
+        // Validate and sanitise new player name
+        const newNameValidation = validateAndSanitizePlayerName(bodyParseResult.data.newName);
+        if (!newNameValidation.isValid) {
+            return error(400, `Invalid new name: ${newNameValidation.errors.join(', ')}`);
+        }
 
-    try {
-        const playerManager = createPlayerManager()
-            .setDate(dateValidation.date)
-            .setLeague(locals.leagueId)
-            .setAccessControl(
-                createPlayerAccessControl().setContext(
-                    dateValidation.date,
-                    locals.leagueId,
-                    locals.clientId,
-                    locals.isAdmin
-                )
+        try {
+            const playerManager = createPlayerManager()
+                .setDate(dateValidation.date)
+                .setLeague(locals.leagueId)
+                .setAccessControl(
+                    createPlayerAccessControl().setContext(
+                        dateValidation.date,
+                        locals.leagueId,
+                        locals.clientId,
+                        locals.isAdmin
+                    )
+                );
+
+            // Get settings to validate competition state
+            const gameData = await playerManager.getData({
+                players: false,
+                teams: false,
+                settings: true
+            });
+
+            // Validate if operations are allowed based on competition end state
+            const operationValidation = validateCompetitionOperationsAllowed(
+                dateValidation.date,
+                gameData.settings
             );
+            if (!operationValidation.isValid) {
+                return error(400, operationValidation.error);
+            }
 
-        // Get settings to validate competition state
-        const gameData = await playerManager.getData({
-            players: false,
-            teams: false,
-            settings: true
-        });
-
-        // Validate if operations are allowed based on competition end state
-        const operationValidation = validateCompetitionOperationsAllowed(
-            dateValidation.date,
-            gameData.settings
-        );
-        if (!operationValidation.isValid) {
-            return error(400, operationValidation.error);
+            const result = await playerManager.renamePlayer(
+                oldNameValidation.sanitizedName,
+                newNameValidation.sanitizedName
+            );
+            const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+            return json({ ...result, ownedByMe });
+        } catch (err) {
+            console.error('Error renaming player:', err);
+            if (err instanceof PlayerError) {
+                return error(err.statusCode, err.message);
+            }
+            return error(500, 'Failed to rename player');
+        }
+    } else {
+        // Validate request body structure for move
+        const bodyValidation = validateRequestBody(bodyParseResult.data, [
+            'playerName',
+            'fromList',
+            'toList'
+        ]);
+        if (!bodyValidation.isValid) {
+            return error(400, `Invalid request body: ${bodyValidation.errors.join(', ')}`);
         }
 
-        const result = await playerManager.movePlayer(
-            nameValidation.sanitizedName,
-            bodyParseResult.data.fromList,
-            bodyParseResult.data.toList
-        );
-        const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
-        return json({ ...result, ownedByMe });
-    } catch (err) {
-        console.error('Error moving player:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
+        // Validate and sanitise player name
+        const nameValidation = validateAndSanitizePlayerName(bodyParseResult.data.playerName);
+        if (!nameValidation.isValid) {
+            return error(400, `Invalid player name: ${nameValidation.errors.join(', ')}`);
         }
-        return error(500, 'Failed to move player');
+
+        // Validate fromList parameter
+        const fromListValidation = validateList(bodyParseResult.data.fromList);
+        if (!fromListValidation.isValid) {
+            return error(
+                400,
+                `Invalid fromList parameter: ${fromListValidation.errors.join(', ')}`
+            );
+        }
+
+        // Validate toList parameter
+        const toListValidation = validateList(bodyParseResult.data.toList);
+        if (!toListValidation.isValid) {
+            return error(400, `Invalid toList parameter: ${toListValidation.errors.join(', ')}`);
+        }
+
+        try {
+            const playerManager = createPlayerManager()
+                .setDate(dateValidation.date)
+                .setLeague(locals.leagueId)
+                .setAccessControl(
+                    createPlayerAccessControl().setContext(
+                        dateValidation.date,
+                        locals.leagueId,
+                        locals.clientId,
+                        locals.isAdmin
+                    )
+                );
+
+            // Get settings to validate competition state
+            const gameData = await playerManager.getData({
+                players: false,
+                teams: false,
+                settings: true
+            });
+
+            // Validate if operations are allowed based on competition end state
+            const operationValidation = validateCompetitionOperationsAllowed(
+                dateValidation.date,
+                gameData.settings
+            );
+            if (!operationValidation.isValid) {
+                return error(400, operationValidation.error);
+            }
+
+            const result = await playerManager.movePlayer(
+                nameValidation.sanitizedName,
+                bodyParseResult.data.fromList,
+                bodyParseResult.data.toList
+            );
+            const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
+            return json({ ...result, ownedByMe });
+        } catch (err) {
+            console.error('Error moving player:', err);
+            if (err instanceof PlayerError) {
+                return error(err.statusCode, err.message);
+            }
+            return error(500, 'Failed to move player');
+        }
     }
 };

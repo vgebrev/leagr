@@ -312,6 +312,49 @@ export class PlayerState {
         newState.validateState();
         return newState;
     }
+
+    /**
+     * Rename a player in all lists and teams
+     * @param {string} oldName - Current player name
+     * @param {string} newName - New player name
+     * @returns {PlayerState} New state
+     */
+    renamePlayer(oldName, newName) {
+        const location = this.getPlayerLocation(oldName);
+        if (!location.location) {
+            throw new PlayerError(`Player ${oldName} is not registered.`, 400);
+        }
+
+        // Check if new name already exists
+        const newNameLocation = this.getPlayerLocation(newName);
+        if (newNameLocation.location) {
+            throw new PlayerError(`Player ${newName} is already registered.`, 400);
+        }
+
+        const newState = new PlayerState(this.players, this.teams, this.settings);
+
+        // Update in available list
+        const availableIndex = newState.players.available.indexOf(oldName);
+        if (availableIndex !== -1) {
+            newState.players.available[availableIndex] = newName;
+        }
+
+        // Update in waiting list
+        const waitingIndex = newState.players.waitingList.indexOf(oldName);
+        if (waitingIndex !== -1) {
+            newState.players.waitingList[waitingIndex] = newName;
+        }
+
+        // Update in all teams
+        for (const teamName of Object.keys(newState.teams)) {
+            newState.teams[teamName] = newState.teams[teamName].map((p) =>
+                p === oldName ? newName : p
+            );
+        }
+
+        newState.validateState();
+        return newState;
+    }
 }
 
 export class PlayerManager {
@@ -753,6 +796,29 @@ export class PlayerManager {
             // Enforce ownership for list moves (prevents freeing spots by others)
             this.#ensureOwnerOrAdminSync(playerName);
             return state.movePlayerBetweenLists(playerName, fromList, toList);
+        });
+        return result.players;
+    }
+
+    /**
+     * Rename a player in all lists and teams
+     */
+    async renamePlayer(oldName, newName) {
+        const result = await this.executeTransaction((state) => {
+            // Enforce ownership for renaming
+            this.#ensureOwnerOrAdminSync(oldName);
+
+            // Perform the rename in state
+            const newState = state.renamePlayer(oldName, newName);
+
+            // Update ownership mapping
+            if (this.#owners && this.#owners[oldName]) {
+                this.#owners[newName] = this.#owners[oldName];
+                delete this.#owners[oldName];
+                this.#ownersDirty = true;
+            }
+
+            return newState;
         });
         return result.players;
     }
