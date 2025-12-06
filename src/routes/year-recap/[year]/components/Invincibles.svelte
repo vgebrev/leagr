@@ -9,6 +9,9 @@
 
     let { data, initialDelay = 400, duration = 400 } = $props();
 
+    // Extract team color from team name (first word)
+    const teamColor = $derived(data?.teamName?.split(' ')[0]?.toLowerCase() || 'default');
+
     // Calculate delays
     const badgeDelay = initialDelay;
     const playersStartDelay = initialDelay + 200;
@@ -51,7 +54,8 @@
                             <div class="shrink-0 leading-[0] [&>div]:block">
                                 <Avatar
                                     avatarUrl={player.avatarUrl}
-                                    size="sm" />
+                                    size="sm"
+                                    color={teamColor} />
                             </div>
                             <div
                                 class="text-center text-xs font-medium text-gray-900 dark:text-white">
