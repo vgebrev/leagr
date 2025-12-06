@@ -73,6 +73,9 @@ export class YearRecapManager {
      * @returns {Promise<Object>} - Year recap statistics
      */
     async generateYearRecap(year) {
+        // Store year for use in other methods
+        this.currentYear = year;
+
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
         const rankingsData = await rankingsManager.loadEnhancedRankings(year);
 
@@ -105,6 +108,7 @@ export class YearRecapManager {
         const ironManAward = await this.calculateIronManAward(players);
         const mostImproved = await this.calculateMostImproved(players);
         const kingOfKings = await this.calculateKingOfKings(players);
+        const playersFavourite = await this.calculatePlayersFavourite();
         const playerOfYear = await this.calculatePlayerOfYear(players);
 
         // Team Awards
@@ -120,6 +124,7 @@ export class YearRecapManager {
             ironManAward,
             mostImproved,
             kingOfKings,
+            playersFavourite,
             playerOfYear,
             teamOfYear,
             dreamTeam,
@@ -288,6 +293,56 @@ export class YearRecapManager {
             .filter((p) => p.totalTrophies > 0)
             .sort((a, b) => b.totalTrophies - a.totalTrophies)
             .slice(0, 3);
+    }
+
+    /**
+     * Calculate Players' Favourite (manually voted award)
+     * @returns {Promise<Object|null>} - Top 3 players and other nominations, or null if no data
+     */
+    async calculatePlayersFavourite() {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+        const dataPath = this.getDataPath();
+
+        // Get the year from the current context (stored during generateYearRecap)
+        const year = this.currentYear;
+        const filePath = `${dataPath}/players-favourite-${year}.json`;
+
+        try {
+            const fileContent = await fs.readFile(filePath, 'utf-8');
+            const votesData = JSON.parse(fileContent);
+
+            // Convert the format [{ "player name": vote count }, ...] to a flat array
+            const playerVotes = [];
+            for (const voteObj of votesData) {
+                for (const [playerName, voteCount] of Object.entries(voteObj)) {
+                    playerVotes.push({
+                        name: playerName,
+                        votes: voteCount,
+                        avatarUrl: avatars[playerName]?.avatar
+                            ? `/api/rankings/${encodeURIComponent(playerName)}/avatar`
+                            : null
+                    });
+                }
+            }
+
+            // Sort by votes descending
+            playerVotes.sort((a, b) => b.votes - a.votes);
+
+            // Top 3
+            const topThree = playerVotes.slice(0, 3);
+
+            // Other nominations (everyone else with votes)
+            const otherNominations = playerVotes.slice(3);
+
+            return {
+                topThree,
+                otherNominations
+            };
+        } catch {
+            // File doesn't exist or couldn't be read - return null
+            return null;
+        }
     }
 
     /**

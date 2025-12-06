@@ -21,6 +21,7 @@
     import IronManAward from './components/IronManAward.svelte';
     import MostImproved from './components/MostImproved.svelte';
     import KingOfKings from './components/KingOfKings.svelte';
+    import PlayersFavourite from './components/PlayersFavourite.svelte';
     import PlayerOfYear from './components/PlayerOfYear.svelte';
     import Underdogs from './components/Underdogs.svelte';
     import Invincibles from './components/Invincibles.svelte';
@@ -57,7 +58,7 @@
     let yearOptions = $derived(getYearOptions());
 
     // Total number of slides
-    const totalSlides = 10;
+    const totalSlides = 11;
 
     /**
      * Update URL with current slide
@@ -277,12 +278,12 @@
         };
     });
 
-    // Trigger confetti on PlayerOfYear and TeamOfYear slides
+    // Trigger confetti on PlayersFavourite, PlayerOfYear and TeamOfYear slides
     $effect(() => {
         if (!yearRecap || !confettiEffect) return;
 
-        // Slide 4 = PlayerOfYear, Slide 7 = TeamOfYear
-        if (currentSlide === 4 || currentSlide === 7) {
+        // Slide 4 = PlayersFavourite, Slide 5 = PlayerOfYear, Slide 8 = TeamOfYear
+        if (currentSlide === 4 || currentSlide === 5 || currentSlide === 8) {
             // Delay confetti to allow slide transition to complete
             setTimeout(() => {
                 confettiEffect?.trigger(['#efb100', '#fff085']);
@@ -382,16 +383,18 @@
                         {:else if currentSlide === 3}
                             <KingOfKings data={yearRecap.kingOfKings} />
                         {:else if currentSlide === 4}
-                            <PlayerOfYear data={yearRecap.playerOfYear} />
+                            <PlayersFavourite data={yearRecap.playersFavourite} />
                         {:else if currentSlide === 5}
-                            <Underdogs data={yearRecap.underdogs} />
+                            <PlayerOfYear data={yearRecap.playerOfYear} />
                         {:else if currentSlide === 6}
-                            <Invincibles data={yearRecap.invincibles} />
+                            <Underdogs data={yearRecap.underdogs} />
                         {:else if currentSlide === 7}
-                            <TeamOfYear data={yearRecap.teamOfYear} />
+                            <Invincibles data={yearRecap.invincibles} />
                         {:else if currentSlide === 8}
-                            <DreamTeam data={yearRecap.dreamTeam} />
+                            <TeamOfYear data={yearRecap.teamOfYear} />
                         {:else if currentSlide === 9}
+                            <DreamTeam data={yearRecap.dreamTeam} />
+                        {:else if currentSlide === 10}
                             <FunFacts data={yearRecap.funFacts} />
                         {/if}
                     </div>
