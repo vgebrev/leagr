@@ -67,9 +67,12 @@
     });
 
     // Apply a gentle gamma spread to stretch the bar display (cosmetic only)
-    function applyGammaSpread(value, gamma = 0.45) {
+    // Clamp normalized values to [0.1, 1] range before gamma to give everyone a reasonable floor
+    function applyGammaSpread(value, gamma = 0.45, minClamp = 0.1) {
         if (value === null || value === undefined) return null;
-        const clamped = Math.min(1, Math.max(0, value));
+        const normalized = Math.min(1, Math.max(0, value));
+        // Map [0, 1] to [minClamp, 1]
+        const clamped = minClamp + normalized * (1 - minClamp);
         return Math.pow(clamped, gamma);
     }
 

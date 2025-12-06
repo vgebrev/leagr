@@ -17,9 +17,11 @@
         tooltipIdPrefix = 'player-rating'
     } = $props();
 
-    function applyGammaSpread(value, spread = gamma) {
+    function applyGammaSpread(value, spread = gamma, minClamp = 0.1) {
         if (value === null || value === undefined) return null;
-        const clamped = Math.min(1, Math.max(0, value));
+        const normalized = Math.min(1, Math.max(0, value));
+        // Map [0, 1] to [minClamp, 1]
+        const clamped = minClamp + normalized * (1 - minClamp);
         return Math.pow(clamped, spread);
     }
 
@@ -28,9 +30,11 @@
         return spread === null ? null : Math.floor(spread * 100);
     }
 
+    // Calculate overall as the average of the displayed percentages (not raw values)
+    // This ensures the overall matches what users see: (Attack% + Defense%) / 2
     const overall = $derived(
         attackingRating !== null && controlRating !== null
-            ? (attackingRating + controlRating) / 2
+            ? (formatDisplayPercent(attackingRating) + formatDisplayPercent(controlRating)) / 2
             : null
     );
 
@@ -104,7 +108,7 @@
         {#if overall !== null}
             <div
                 class="m-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200/80 text-2xl font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-200">
-                {formatDisplayPercent(overall)}
+                {Math.floor(overall)}
             </div>
         {/if}
     </div>
