@@ -115,6 +115,7 @@ export class YearRecapManager {
         const teamOfYear = await this.calculateTeamOfYear(players);
         const dreamTeam = await this.calculateDreamTeam(players);
         const teamStats = await this.calculateTeamStats(sessions);
+        const trueColours = await this.calculateTrueColours(sessions);
 
         // Fun Facts
         const funFacts = this.calculateFunFacts(sessions);
@@ -130,6 +131,7 @@ export class YearRecapManager {
             dreamTeam,
             invincibles: teamStats.bestTeam,
             underdogs: teamStats.worstTeam,
+            trueColours,
             funFacts
         };
     }
@@ -638,6 +640,215 @@ export class YearRecapManager {
                       }
                     : null
         };
+    }
+
+    /**
+     * Calculate True Colours statistics (team color achievements)
+     * @param {Array} sessions - All session data
+     * @returns {Promise<Array>} - Array of color statistics
+     */
+    async calculateTrueColours(sessions) {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
+        // Track data by color
+        const colorData = {};
+
+        // Process each session
+        for (const session of sessions) {
+            const { teams, games } = session;
+            if (!teams || !games?.rounds) continue;
+
+            // Calculate league standings for this session
+            const standings = {};
+            for (const teamName of Object.keys(teams)) {
+                standings[teamName] = {
+                    wins: 0,
+                    draws: 0,
+                    losses: 0,
+                    points: 0,
+                    goalsFor: 0,
+                    goalsAgainst: 0
+                };
+            }
+
+            // Process league games
+            for (const round of games.rounds) {
+                for (const match of round) {
+                    if (match.homeScore === null || match.awayScore === null) continue;
+
+                    const homeTeam = standings[match.home];
+                    const awayTeam = standings[match.away];
+
+                    // Skip if teams don't exist in standings
+                    if (!homeTeam || !awayTeam) continue;
+
+                    homeTeam.goalsFor += match.homeScore;
+                    homeTeam.goalsAgainst += match.awayScore;
+                    awayTeam.goalsFor += match.awayScore;
+                    awayTeam.goalsAgainst += match.homeScore;
+
+                    if (match.homeScore > match.awayScore) {
+                        homeTeam.wins++;
+                        homeTeam.points += 3;
+                        awayTeam.losses++;
+                    } else if (match.homeScore < match.awayScore) {
+                        awayTeam.wins++;
+                        awayTeam.points += 3;
+                        homeTeam.losses++;
+                    } else {
+                        homeTeam.draws++;
+                        homeTeam.points++;
+                        awayTeam.draws++;
+                        awayTeam.points++;
+                    }
+                }
+            }
+
+            // Find league winner (highest points, then goal difference)
+            let leagueWinner = null;
+            let maxPoints = -1;
+            let maxGD = -Infinity;
+
+            for (const [teamName, stats] of Object.entries(standings)) {
+                const gd = stats.goalsFor - stats.goalsAgainst;
+                if (stats.points > maxPoints || (stats.points === maxPoints && gd > maxGD)) {
+                    maxPoints = stats.points;
+                    maxGD = gd;
+                    leagueWinner = teamName;
+                }
+            }
+
+            // Extract color from league winner
+            if (leagueWinner) {
+                const color = leagueWinner.split(' ')[0];
+                if (!colorData[color]) {
+                    colorData[color] = {
+                        leagueWins: 0,
+                        cupWins: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        playerCaps: {}
+                    };
+                }
+                colorData[color].leagueWins++;
+            }
+
+            // Aggregate W/D/L for all teams by color
+            for (const [teamName, stats] of Object.entries(standings)) {
+                const color = teamName.split(' ')[0];
+                if (!colorData[color]) {
+                    colorData[color] = {
+                        leagueWins: 0,
+                        cupWins: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        playerCaps: {}
+                    };
+                }
+                colorData[color].wins += stats.wins;
+                colorData[color].draws += stats.draws;
+                colorData[color].losses += stats.losses;
+            }
+
+            // Check for cup winner
+            const knockoutGames = games['knockout-games'] || games.knockout;
+            if (knockoutGames?.bracket) {
+                // Find the final
+                const final = knockoutGames.bracket.find((match) => match.round === 'final');
+                if (final && final.homeScore !== null && final.awayScore !== null) {
+                    const cupWinner = final.homeScore > final.awayScore ? final.home : final.away;
+                    const color = cupWinner.split(' ')[0];
+                    if (!colorData[color]) {
+                        colorData[color] = {
+                            leagueWins: 0,
+                            cupWins: 0,
+                            wins: 0,
+                            draws: 0,
+                            losses: 0,
+                            playerCaps: {}
+                        };
+                    }
+                    colorData[color].cupWins++;
+                }
+            }
+
+            // Track player appearances by color
+            for (const [teamName, players] of Object.entries(teams)) {
+                const color = teamName.split(' ')[0];
+                if (!colorData[color]) {
+                    colorData[color] = {
+                        leagueWins: 0,
+                        cupWins: 0,
+                        wins: 0,
+                        draws: 0,
+                        losses: 0,
+                        playerCaps: {}
+                    };
+                }
+
+                for (const playerName of players) {
+                    if (!colorData[color].playerCaps[playerName]) {
+                        colorData[color].playerCaps[playerName] = 0;
+                    }
+                    colorData[color].playerCaps[playerName]++;
+                }
+            }
+        }
+
+        // For each team/color, get their top player
+        const teamPriorities = [];
+        for (const [color, data] of Object.entries(colorData)) {
+            const sortedPlayers = Object.entries(data.playerCaps).sort((a, b) => b[1] - a[1]);
+            if (sortedPlayers.length > 0) {
+                const [, topCaps] = sortedPlayers[0];
+                teamPriorities.push({
+                    color,
+                    players: sortedPlayers, // All players sorted by caps for this team
+                    topCaps // Highest cap count for this team
+                });
+            }
+        }
+
+        // Sort teams by their top player's cap count (highest first)
+        teamPriorities.sort((a, b) => b.topCaps - a.topCaps);
+
+        // Build result array - get top 3 players for each team
+        const result = [];
+        for (const team of teamPriorities) {
+            const { color, players } = team;
+
+            // Get top 4 players for this team
+            const topPlayers = players.slice(0, 4).map(([playerName, caps]) => ({
+                name: playerName,
+                caps: caps,
+                avatarUrl: avatars[playerName]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(playerName)}/avatar`
+                    : null
+            }));
+
+            result.push({
+                color,
+                leagueWins: colorData[color].leagueWins,
+                cupWins: colorData[color].cupWins,
+                wins: colorData[color].wins,
+                draws: colorData[color].draws,
+                losses: colorData[color].losses,
+                topPlayers
+            });
+        }
+
+        // Sort by total trophies (league + cup wins), then alphabetically
+        result.sort((a, b) => {
+            const aTrophies = a.leagueWins + a.cupWins;
+            const bTrophies = b.leagueWins + b.cupWins;
+            if (bTrophies !== aTrophies) return bTrophies - aTrophies;
+            return a.color.localeCompare(b.color);
+        });
+
+        return result;
     }
 
     /**
