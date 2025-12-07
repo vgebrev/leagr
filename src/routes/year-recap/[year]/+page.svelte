@@ -30,6 +30,7 @@
     import DreamTeam from './components/DreamTeam.svelte';
     import TrueColours from './components/TrueColours.svelte';
     import FunFacts from './components/FunFacts.svelte';
+    import ThankYou from './components/ThankYou.svelte';
     import ConfettiEffect from '$components/ConfettiEffect.svelte';
 
     let { data } = $props();
@@ -60,7 +61,7 @@
     let yearOptions = $derived(getYearOptions());
 
     // Total number of slides
-    const totalSlides = 13;
+    const totalSlides = 14;
 
     /**
      * Update URL with current slide
@@ -402,6 +403,8 @@
                             <TrueColours data={yearRecap.trueColours} />
                         {:else if currentSlide === 12}
                             <FunFacts data={yearRecap.funFacts} />
+                        {:else if currentSlide === 13}
+                            <ThankYou />
                         {/if}
                     </div>
                 {/key}
