@@ -117,6 +117,9 @@ export class YearRecapManager {
         const teamStats = await this.calculateTeamStats(sessions);
         const trueColours = await this.calculateTrueColours(sessions);
 
+        // Other Awards
+        const bottle = await this.calculateBottle();
+
         // Fun Facts
         const funFacts = this.calculateFunFacts(sessions);
 
@@ -132,6 +135,7 @@ export class YearRecapManager {
             invincibles: teamStats.bestTeam,
             underdogs: teamStats.worstTeam,
             trueColours,
+            bottle,
             funFacts
         };
     }
@@ -849,6 +853,79 @@ export class YearRecapManager {
         });
 
         return result;
+    }
+
+    /**
+     * Calculate Bottle statistics (2nd place finishes and cup final losses)
+     * @returns {Promise<Object>} - Top bottlers
+     */
+    async calculateBottle() {
+        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatars = await avatarManager.loadAvatars();
+
+        // Track counts for each player
+        const leagueSecondPlace = {};
+        const cupFinalLosses = {};
+
+        // Get detailed player data from rankings
+        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const detailedRankings = await rankingsManager.loadEnhancedRankings(this.currentYear);
+
+        for (const [playerName, playerData] of Object.entries(detailedRankings.players)) {
+            if (!playerData.rankingDetail) continue;
+
+            let secondPlaces = 0;
+            let finalLosses = 0;
+
+            // Iterate through each date entry in rankingDetail
+            for (const [, detail] of Object.entries(playerData.rankingDetail)) {
+                // Count league 2nd place finishes
+                if (detail.leaguePosition === 2) {
+                    secondPlaces++;
+                }
+
+                // Count cup final losses (reached final but didn't win)
+                if (detail.cupProgress === 'final' && !detail.cupWinner) {
+                    finalLosses++;
+                }
+            }
+
+            if (secondPlaces > 0) {
+                leagueSecondPlace[playerName] = secondPlaces;
+            }
+
+            if (finalLosses > 0) {
+                cupFinalLosses[playerName] = finalLosses;
+            }
+        }
+
+        // Get top 3 for each category
+        const topLeagueSecond = Object.entries(leagueSecondPlace)
+            .map(([name, count]) => ({
+                name,
+                count,
+                avatarUrl: avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+        const topCupFinalLosses = Object.entries(cupFinalLosses)
+            .map(([name, count]) => ({
+                name,
+                count,
+                avatarUrl: avatars[name]?.avatar
+                    ? `/api/rankings/${encodeURIComponent(name)}/avatar`
+                    : null
+            }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 3);
+
+        return {
+            leagueSecond: topLeagueSecond,
+            cupFinalLosses: topCupFinalLosses
+        };
     }
 
     /**

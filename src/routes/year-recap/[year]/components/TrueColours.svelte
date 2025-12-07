@@ -14,7 +14,7 @@
 <SlideCard
     icon="🎨"
     heading="True Colours"
-    description="Team Record by Colour">
+    description="Team Records by Colour">
     <div class="mt-4 space-y-2">
         {#if data && data.length > 0}
             {#each data as colorData, index (index)}
@@ -56,14 +56,14 @@
                             </div>
                             <!-- W/D/L Record -->
                             <div class="flex items-center gap-1 text-xs md:text-sm">
-                                <span class="font-bold">W</span>
-                                <span class="font-semibold">{colorData.wins}</span>
+                                <span class="font-semibold">W</span>
+                                <span class="font-bold">{colorData.wins}</span>
                                 <span>•</span>
-                                <span class="font-bold">D</span>
-                                <span class="font-semibold">{colorData.draws}</span>
+                                <span class="font-semibold">D</span>
+                                <span class="font-bold">{colorData.draws}</span>
                                 <span>•</span>
-                                <span class="font-bold">L</span>
-                                <span class="font-semibold">{colorData.losses}</span>
+                                <span class="font-semibold">L</span>
+                                <span class="font-bold">{colorData.losses}</span>
                             </div>
                         </div>
 

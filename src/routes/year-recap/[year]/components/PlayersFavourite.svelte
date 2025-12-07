@@ -10,7 +10,7 @@
 </script>
 
 <SlideCard
-    icon="💙"
+    icon="❤️"
     heading="Players' Player of the Year"
     description="Voted by the Players">
     <div class="mt-4 space-y-3">
