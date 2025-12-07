@@ -871,6 +871,14 @@ export class YearRecapManager {
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
         const detailedRankings = await rankingsManager.loadEnhancedRankings(this.currentYear);
 
+        // If no rankings data exists, return empty arrays
+        if (!detailedRankings || !detailedRankings.players) {
+            return {
+                leagueSecond: [],
+                cupFinalLosses: []
+            };
+        }
+
         for (const [playerName, playerData] of Object.entries(detailedRankings.players)) {
             if (!playerData.rankingDetail) continue;
 
