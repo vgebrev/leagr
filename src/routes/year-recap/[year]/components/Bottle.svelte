@@ -17,7 +17,7 @@
     description="So Close, Yet So Far">
     <div class="mt-4 grid grid-cols-2 gap-3 md:gap-4">
         <!-- League 2nd Place -->
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-3">
             <div
                 class="text-center text-xs font-semibold text-yellow-600 md:text-sm dark:text-yellow-500">
                 <CrownIcon class="mb-1 inline-block h-3 w-3 md:h-4 md:w-4" />
@@ -56,7 +56,7 @@
         </div>
 
         <!-- Cup Final Losses -->
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-3">
             <div
                 class="text-center text-xs font-semibold text-amber-600 md:text-sm dark:text-amber-600">
                 <TrophyIcon

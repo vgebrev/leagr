@@ -34,7 +34,7 @@
             type="fade"
             {duration}>
             <p class="mt-8 text-xl font-semibold text-gray-900 md:text-2xl dark:text-white">
-                See you next season! ⚽
+                See you next year! ⚽
             </p>
         </AnimatedIn>
     </div>
