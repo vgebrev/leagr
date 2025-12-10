@@ -246,6 +246,35 @@ export class RankingsManager {
     }
 
     /**
+     * Add knockout game goals to team stats
+     * @param {Object} teamStats - Team statistics object to update
+     * @param {Array} knockoutBracket - Knockout tournament bracket
+     */
+    addKnockoutGoalsToTeamStats(teamStats, knockoutBracket) {
+        if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
+            return;
+        }
+
+        for (const match of knockoutBracket) {
+            // Skip bye matches and incomplete matches
+            if (match.bye || match.homeScore === null || match.awayScore === null) {
+                continue;
+            }
+
+            // Only add goals for teams that exist in teamStats (they played in the league)
+            if (teamStats[match.home]) {
+                teamStats[match.home].gf += match.homeScore;
+                teamStats[match.home].ga += match.awayScore;
+            }
+
+            if (teamStats[match.away]) {
+                teamStats[match.away].gf += match.awayScore;
+                teamStats[match.away].ga += match.homeScore;
+            }
+        }
+    }
+
+    /**
      * Calculate knockout points for players based on knockout game results
      * @param {Array} knockoutBracket - Knockout tournament bracket
      * @param {Object} teams - Teams data with player lists
@@ -894,8 +923,12 @@ export class RankingsManager {
                 const teamNames = teamEntries.map(([name]) => name);
                 const results = this.getMatchResults(rounds);
                 const teamStats = this.getTeamStats(teamNames, results);
-                const standings = this.getStandings(teamNames, results);
                 const knockoutBracket = games?.['knockout-games']?.bracket;
+
+                // Add knockout game goals to team stats (must be done before calculating goalsForPerSession)
+                this.addKnockoutGoalsToTeamStats(teamStats, knockoutBracket);
+
+                const standings = this.getStandings(teamNames, results);
                 const playerKnockoutWins = this.getKnockoutPoints(knockoutBracket, teams);
 
                 // Calculate league positions and cup progress for performance tracking
@@ -1124,9 +1157,11 @@ export class RankingsManager {
      * @param {Object} enhancedRankings - Enhanced rankings with complete history
      */
     calculateAttackControlRatings(enhancedRankings) {
-        // Minimum sessions required to be included in ratings
+        // Minimum sessions required to be included in the min/max normalization pool
         // This prevents outliers from 1-2 session players skewing the scale
-        const MIN_SESSIONS_FOR_RATING = 5;
+        // Note: All players now get ratings calculated, but only established players (5+ sessions)
+        // contribute to the min/max bounds used for normalization
+        const MIN_SESSIONS_FOR_NORMALIZATION_POOL = 5;
 
         // Get all unique dates sorted
         const allDates = new Set();
@@ -1139,39 +1174,31 @@ export class RankingsManager {
         // (carrying forward when players don't play)
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
             const dates = Object.keys(playerData.rankingDetail).sort();
-            let sessionsUpToDate = 0;
             let lastGFPerSession = null;
             let lastGAPerSession = null;
 
             dates.forEach((date) => {
                 const detail = playerData.rankingDetail[date];
-
-                // Count this session if player appeared
-                if (detail.team !== null) {
-                    sessionsUpToDate++;
-                }
-
                 // If player appeared and has goals data, use it
                 if (detail.goalsForPerSession !== null && detail.goalsAgainstPerSession !== null) {
                     lastGFPerSession = detail.goalsForPerSession;
                     lastGAPerSession = detail.goalsAgainstPerSession;
-                } else if (
-                    sessionsUpToDate >= MIN_SESSIONS_FOR_RATING &&
-                    lastGFPerSession !== null
-                ) {
-                    // Player didn't play but has 5+ sessions - carry forward last values
+                } else if (lastGFPerSession !== null) {
+                    // Player didn't play - carry forward last values (for all players, not just 5+)
                     detail.goalsForPerSession = lastGFPerSession;
                     detail.goalsAgainstPerSession = lastGAPerSession;
                 }
             });
         });
 
-        // Second pass: for each date, calculate min/max from all qualified players' current values
+        // Second pass: for each date, calculate min/max from established players AND ranking lists from all players
         const dateMinMax = {};
 
         sortedDates.forEach((date) => {
-            const gfValues = [];
-            const gaValues = [];
+            const gfValuesEstablished = []; // For min/max bounds
+            const gaValuesEstablished = [];
+            const gfValuesAll = []; // For ranking all players
+            const gaValuesAll = [];
 
             Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
                 const dates = Object.keys(playerData.rankingDetail).sort();
@@ -1184,29 +1211,36 @@ export class RankingsManager {
                     }
                 });
 
-                // Include if player has 5+ sessions and has current values (played or carried forward)
-                if (sessionsUpToDate >= MIN_SESSIONS_FOR_RATING) {
-                    const detail = playerData.rankingDetail[date];
-                    if (
-                        detail &&
-                        detail.goalsForPerSession !== null &&
-                        detail.goalsAgainstPerSession !== null
-                    ) {
-                        gfValues.push(detail.goalsForPerSession);
-                        gaValues.push(detail.goalsAgainstPerSession);
+                const detail = playerData.rankingDetail[date];
+                const hasGoalsData =
+                    detail &&
+                    detail.goalsForPerSession !== null &&
+                    detail.goalsAgainstPerSession !== null;
+
+                if (hasGoalsData) {
+                    // All players with goals data go into ranking lists
+                    gfValuesAll.push(detail.goalsForPerSession);
+                    gaValuesAll.push(detail.goalsAgainstPerSession);
+
+                    // Only established players contribute to normalization bounds
+                    if (sessionsUpToDate >= MIN_SESSIONS_FOR_NORMALIZATION_POOL) {
+                        gfValuesEstablished.push(detail.goalsForPerSession);
+                        gaValuesEstablished.push(detail.goalsAgainstPerSession);
                     }
                 }
             });
 
-            // Store min/max for this date
-            if (gfValues.length > 0) {
+            // Store min/max and ranking lists for this date
+            if (gfValuesEstablished.length > 0) {
                 dateMinMax[date] = {
-                    minGF: Math.min(...gfValues),
-                    maxGF: Math.max(...gfValues),
-                    minGA: Math.min(...gaValues),
-                    maxGA: Math.max(...gaValues),
-                    gfValues: gfValues.slice().sort((a, b) => b - a), // Desc for GF
-                    gaValues: gaValues.slice().sort((a, b) => a - b) // Asc for GA
+                    // Min/max from established players only
+                    minGF: Math.min(...gfValuesEstablished),
+                    maxGF: Math.max(...gfValuesEstablished),
+                    minGA: Math.min(...gaValuesEstablished),
+                    maxGA: Math.max(...gaValuesEstablished),
+                    // Ranking lists include ALL players
+                    gfList: gfValuesAll.slice().sort((a, b) => b - a), // Desc for GF
+                    gaList: gaValuesAll.slice().sort((a, b) => a - b) // Asc for GA
                 };
             }
         });
@@ -1214,7 +1248,6 @@ export class RankingsManager {
         // Third pass: calculate normalized ratings using date-specific min/max
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
             const dates = Object.keys(playerData.rankingDetail).sort();
-            let sessionsUpToDate = 0;
             let latestAttackingRating = null;
             let latestControlRating = null;
             let latestGfRank = null;
@@ -1227,41 +1260,42 @@ export class RankingsManager {
             dates.forEach((date) => {
                 const detail = playerData.rankingDetail[date];
 
-                // Count this session if player appeared
-                if (detail.team !== null) {
-                    sessionsUpToDate++;
-                }
-
-                // Calculate rating if player has 5+ sessions and we have min/max data
+                // Calculate rating for ALL players who have goals data, using established players' bounds
+                // Players with <5 sessions still get ratings, they're just normalized against the established pool
                 if (
-                    sessionsUpToDate >= MIN_SESSIONS_FOR_RATING &&
                     dateMinMax[date] &&
                     detail.goalsForPerSession !== null &&
                     detail.goalsAgainstPerSession !== null
                 ) {
                     const { minGF, maxGF, minGA, maxGA } = dateMinMax[date];
-                    const gfList = dateMinMax[date].gfValues;
-                    const gaList = dateMinMax[date].gaValues;
+                    const gfList = dateMinMax[date].gfList;
+                    const gaList = dateMinMax[date].gaList;
                     const gfRange = maxGF - minGF;
                     const gaRange = maxGA - minGA;
 
                     // Min-max normalization (0-1 scale)
+                    // New players may fall outside [0,1] range if their stats exceed established bounds
                     let attackingRating = 0.5; // Default to middle if no range
                     if (gfRange > 0) {
                         attackingRating = (detail.goalsForPerSession - minGF) / gfRange;
+                        // Clamp to [0, 1] - new players with exceptional stats get capped
+                        attackingRating = Math.max(0, Math.min(1, attackingRating));
                     }
 
                     // Control: lower GA/session is better (invert the scale)
                     let controlRating = 0.5; // Default to middle if no range
                     if (gaRange > 0) {
                         controlRating = (maxGA - detail.goalsAgainstPerSession) / gaRange;
+                        // Clamp to [0, 1]
+                        controlRating = Math.max(0, Math.min(1, controlRating));
                     }
 
                     // Store in rankingDetail for this date
                     detail.attackingRating = parseFloat(attackingRating.toFixed(3));
                     detail.controlRating = parseFloat(controlRating.toFixed(3));
 
-                    // Rank by goals for/against per session among qualified players on this date
+                    // Calculate rank for all players (including new ones) against the established pool
+                    // This gives new players context of where they stand relative to trusted players
                     const gfRank =
                         gfList?.length > 0
                             ? gfList.findIndex((v) => v === detail.goalsForPerSession) + 1
@@ -1270,30 +1304,49 @@ export class RankingsManager {
                         gaList?.length > 0
                             ? gaList.findIndex((v) => v === detail.goalsAgainstPerSession) + 1
                             : null;
-                    detail.gfRank = gfRank || null;
+                    // If player's value isn't in the established list, they rank outside (count + 1)
+                    // or we can leave as null - for now, store null if not found in list
+                    detail.gfRank = gfRank > 0 ? gfRank : null;
                     detail.gfCount = gfList?.length || null;
-                    detail.gaRank = gaRank || null;
+                    detail.gaRank = gaRank > 0 ? gaRank : null;
                     detail.gaCount = gaList?.length || null;
 
                     // Track latest for player-level data
                     latestAttackingRating = detail.attackingRating;
                     latestControlRating = detail.controlRating;
-                    latestGfRank = gfRank || null;
+                    latestGfRank = gfRank > 0 ? gfRank : null;
                     latestGfCount = gfList?.length || null;
-                    latestGaRank = gaRank || null;
+                    latestGaRank = gaRank > 0 ? gaRank : null;
                     latestGaCount = gaList?.length || null;
                     latestGoalsForPerSession =
                         detail.goalsForPerSession ?? latestGoalsForPerSession;
                     latestGoalsAgainstPerSession =
                         detail.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
-                } else {
-                    // Player doesn't have enough sessions yet - no ratings
+                } else if (
+                    detail.goalsForPerSession === null ||
+                    detail.goalsAgainstPerSession === null
+                ) {
+                    // Player has no goals data yet (first session not processed yet)
                     detail.attackingRating = null;
                     detail.controlRating = null;
                     detail.gfRank = null;
                     detail.gfCount = null;
                     detail.gaRank = null;
                     detail.gaCount = null;
+                } else {
+                    // No established players yet to form normalization bounds - use neutral 0.5
+                    detail.attackingRating = 0.5;
+                    detail.controlRating = 0.5;
+                    detail.gfRank = null;
+                    detail.gfCount = null;
+                    detail.gaRank = null;
+                    detail.gaCount = null;
+                    latestAttackingRating = 0.5;
+                    latestControlRating = 0.5;
+                    latestGoalsForPerSession =
+                        detail.goalsForPerSession ?? latestGoalsForPerSession;
+                    latestGoalsAgainstPerSession =
+                        detail.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
                 }
             });
 

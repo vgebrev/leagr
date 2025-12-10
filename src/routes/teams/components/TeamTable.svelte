@@ -293,8 +293,13 @@
                                 {#if player && showPlayerRankings && typeof player === 'object'}
                                     {@const playerElo = player.elo ?? player.rankingPoints}
                                     {#if playerElo !== null && playerElo !== undefined}
-                                        <span class="text-xs whitespace-nowrap opacity-50">
-                                            {playerElo}
+                                        <span
+                                            class="text-xs whitespace-nowrap opacity-50"
+                                            class:italic={player.isProvisional}
+                                            title={player.isProvisional
+                                                ? `Provisional (actual: ${player.actualElo ?? playerElo})`
+                                                : 'Established rating'}>
+                                            {#if player.isProvisional}~{/if}{playerElo}
                                         </span>
                                     {/if}
                                 {/if}

@@ -636,13 +636,79 @@ export class PlayerManager {
     }
 
     /**
-     * Helper method to enhance player list with ELO and avatar data
+     * Calculate provisional rating using linear interpolation from anchor to actual
+     * @param {number} actualRating - The player's actual rating
+     * @param {number} appearances - Number of sessions the player has attended
+     * @param {number} anchorValue - The starting anchor value
+     * @param {number} threshold - Sessions before rating is fully trusted
+     * @returns {number} - Provisional rating
+     */
+    #calculateProvisionalRating(actualRating, appearances, anchorValue, threshold) {
+        if (appearances >= threshold) return actualRating;
+        const pullFactor = appearances / threshold;
+        return anchorValue + (actualRating - anchorValue) * pullFactor;
+    }
+
+    /**
+     * Calculate provisional anchor values from established players in the rankings.
+     * Uses weakest established player's rating × 0.99 as anchor.
+     * @param {Object} rankings - Enhanced rankings data
+     * @param {number} threshold - Sessions threshold for established status
+     * @returns {{elo: number, attack: number, control: number}}
+     */
+    #calculateProvisionalAnchors(rankings, threshold) {
+        const DEFAULT_ELO = 1000;
+        const DEFAULT_RATING = 0.5;
+
+        if (!rankings?.players) {
+            return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
+        }
+
+        // Find the weakest established player
+        let weakestElo = null;
+        let weakestAttack = null;
+        let weakestControl = null;
+
+        for (const playerData of Object.values(rankings.players)) {
+            if ((playerData.appearances ?? 0) >= threshold) {
+                const elo = playerData.elo?.rating ?? DEFAULT_ELO;
+                const attack = playerData.attackingRating ?? DEFAULT_RATING;
+                const control = playerData.controlRating ?? DEFAULT_RATING;
+
+                if (weakestElo === null || elo < weakestElo) weakestElo = elo;
+                if (weakestAttack === null || attack < weakestAttack) weakestAttack = attack;
+                if (weakestControl === null || control < weakestControl) weakestControl = control;
+            }
+        }
+
+        // If no established players, use defaults
+        if (weakestElo === null) {
+            return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
+        }
+
+        return {
+            elo: weakestElo * 0.99,
+            attack: weakestAttack * 0.99,
+            control: weakestControl * 0.99
+        };
+    }
+
+    /**
+     * Helper method to enhance player list with ELO and avatar data.
+     * Returns provisional ratings for players with < 5 appearances.
      * @param {string[]} players - Array of player names (can include null values for teams)
      * @param {Object} rankings - Enhanced rankings data
      * @param {Object} avatars - Avatar data from avatarManager
-     * @returns {Object[]} Array of player objects with name, elo, and avatar (preserving nulls)
+     * @returns {Object[]} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
      */
     #enhancePlayersWithEloAndAvatar(players, rankings, avatars) {
+        const PROVISIONAL_THRESHOLD = 5; // Sessions before rating is fully trusted
+        const DEFAULT_ELO = 1000;
+        const DEFAULT_RATING = 0.5;
+
+        // Calculate anchors once for all provisional players
+        const anchors = this.#calculateProvisionalAnchors(rankings, PROVISIONAL_THRESHOLD);
+
         return players.map((playerName) => {
             if (playerName === null) {
                 return null; // Preserve null slots for teams
@@ -650,9 +716,9 @@ export class PlayerManager {
 
             // Get ELO and ratings from most recent calculation (up to and including session date)
             const playerRanking = rankings.players?.[playerName];
-            let elo = 1000; // Default for new players
-            let attackingRating = null;
-            let controlRating = null;
+            let actualElo = DEFAULT_ELO;
+            let attackingRating = DEFAULT_RATING;
+            let controlRating = DEFAULT_RATING;
 
             if (playerRanking?.rankingDetail) {
                 // Find the most recent ranking detail entry up to the session date
@@ -663,23 +729,51 @@ export class PlayerManager {
                 if (rankingDates.length > 0) {
                     const mostRecentDate = rankingDates[rankingDates.length - 1];
                     const detail = playerRanking.rankingDetail[mostRecentDate];
-                    elo = detail?.eloRating ?? 1000;
-                    attackingRating = detail?.attackingRating ?? null;
-                    controlRating = detail?.controlRating ?? null;
+                    actualElo = detail?.eloRating ?? DEFAULT_ELO;
+                    attackingRating = detail?.attackingRating ?? DEFAULT_RATING;
+                    controlRating = detail?.controlRating ?? DEFAULT_RATING;
                 }
-                // If no ranking detail exists, keep defaults
             }
 
             // Get avatar data
             const playerAvatar = avatars?.[playerName];
             const avatar = playerAvatar?.avatar || null;
 
+            // Determine if player is provisional (less than threshold appearances)
+            const appearances = playerRanking?.appearances ?? 0;
+            const isProvisional = appearances < PROVISIONAL_THRESHOLD;
+
+            // Calculate provisional ratings (established players get their actual ratings)
+            const provisionalElo = Math.round(
+                this.#calculateProvisionalRating(
+                    actualElo,
+                    appearances,
+                    anchors.elo,
+                    PROVISIONAL_THRESHOLD
+                )
+            );
+            const provisionalAttack = this.#calculateProvisionalRating(
+                attackingRating,
+                appearances,
+                anchors.attack,
+                PROVISIONAL_THRESHOLD
+            );
+            const provisionalControl = this.#calculateProvisionalRating(
+                controlRating,
+                appearances,
+                anchors.control,
+                PROVISIONAL_THRESHOLD
+            );
+
             return {
                 name: playerName,
-                elo,
+                elo: provisionalElo,
+                actualElo: Math.round(actualElo),
                 avatar,
-                attackingRating,
-                controlRating
+                attackingRating: provisionalAttack,
+                controlRating: provisionalControl,
+                isProvisional,
+                appearances
             };
         });
     }

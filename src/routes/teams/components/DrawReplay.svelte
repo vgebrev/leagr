@@ -554,8 +554,14 @@
                                     {player.name}
                                 </div>
                                 {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
-                                    <div class="text-xs font-light whitespace-nowrap opacity-70">
-                                        {player.elo ?? player.rankingPoints}
+                                    <div
+                                        class="text-xs font-light whitespace-nowrap opacity-70"
+                                        class:italic={player.isProvisional}
+                                        title={player.isProvisional
+                                            ? `Provisional (actual: ${player.actualElo ?? player.elo})`
+                                            : ''}>
+                                        {#if player.isProvisional}~{/if}{player.elo ??
+                                            player.rankingPoints}
                                     </div>
                                 {/if}
                             </div>
@@ -615,8 +621,13 @@
                                                 </div>
                                                 {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
                                                     <div
-                                                        class="text-xs font-light whitespace-nowrap opacity-70">
-                                                        {player.elo ?? player.rankingPoints}
+                                                        class="text-xs font-light whitespace-nowrap opacity-70"
+                                                        class:italic={player.isProvisional}
+                                                        title={player.isProvisional
+                                                            ? `Provisional (actual: ${player.actualElo ?? player.elo})`
+                                                            : ''}>
+                                                        {#if player.isProvisional}~{/if}{player.elo ??
+                                                            player.rankingPoints}
                                                     </div>
                                                 {/if}
                                             </div>

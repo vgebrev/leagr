@@ -1,6 +1,11 @@
 import { nouns } from '$lib/shared/nouns.js';
 import { teamColours } from '$lib/shared/helpers.js';
 
+// Provisional rating constants
+const PROVISIONAL_THRESHOLD = 5; // Sessions before rating is fully trusted
+const DEFAULT_ELO = 1000;
+const DEFAULT_RATING = 0.5; // Neutral attack/control rating
+
 /**
  * Team generation error class
  */
@@ -76,6 +81,92 @@ class TeamGenerator {
         this.drawHistory = [];
         this.initialPots = [];
         return this;
+    }
+
+    /**
+     * Calculate provisional rating using linear interpolation from anchor to actual
+     * @param {number} actualRating - The player's actual rating
+     * @param {number} appearances - Number of sessions the player has attended
+     * @param {number} anchorValue - The starting anchor value (weakest pot mean or fallback)
+     * @param {number} [threshold=PROVISIONAL_THRESHOLD] - Sessions before rating is fully trusted
+     * @returns {number} - Provisional rating
+     */
+    calculateProvisionalRating(
+        actualRating,
+        appearances,
+        anchorValue,
+        threshold = PROVISIONAL_THRESHOLD
+    ) {
+        if (appearances >= threshold) return actualRating;
+        const pullFactor = appearances / threshold;
+        return anchorValue + (actualRating - anchorValue) * pullFactor;
+    }
+
+    /**
+     * Calculate provisional rating anchors from established players.
+     * Uses the weakest established player's rating × 0.95 as the starting point
+     * for provisional players. This ensures newcomers start conservatively below
+     * the weakest trusted player.
+     *
+     * Fallback: If no established players exist, use absolute defaults.
+     *
+     * @param {Array<string>} sortedEstablishedPlayers - Established players sorted by ELO (descending)
+     * @returns {{elo: number, attack: number, control: number}} - Anchor values for provisional calculations
+     */
+    calculateProvisionalAnchors(sortedEstablishedPlayers) {
+        // Fallback: No established players at all (new league/year start)
+        if (!sortedEstablishedPlayers || sortedEstablishedPlayers.length === 0) {
+            return {
+                elo: DEFAULT_ELO,
+                attack: DEFAULT_RATING,
+                control: DEFAULT_RATING
+            };
+        }
+
+        // Use weakest established player's rating × 0.95
+        const weakestPlayer = sortedEstablishedPlayers[sortedEstablishedPlayers.length - 1];
+        const weakestData = this.rankings?.players?.[weakestPlayer];
+
+        return {
+            elo: (weakestData?.elo?.rating ?? DEFAULT_ELO) * 0.99,
+            attack: (weakestData?.attackingRating ?? DEFAULT_RATING) * 0.99,
+            control: (weakestData?.controlRating ?? DEFAULT_RATING) * 0.99
+        };
+    }
+
+    /**
+     * Get player data with provisional ratings calculated
+     * @param {string} playerName - Player name
+     * @param {{elo: number, attack: number, control: number}} anchors - Anchor values for provisional calc
+     * @returns {{name: string, elo: number, actualElo: number, isProvisional: boolean, attackingRating: number, controlRating: number, avatar: string|null, appearances: number}}
+     */
+    getProvisionalPlayerData(playerName, anchors) {
+        const playerData = this.rankings?.players?.[playerName];
+        const appearances = playerData?.appearances ?? 0;
+        const isProvisional = appearances < PROVISIONAL_THRESHOLD;
+
+        const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
+        const actualAttack = playerData?.attackingRating ?? DEFAULT_RATING;
+        const actualControl = playerData?.controlRating ?? DEFAULT_RATING;
+
+        return {
+            name: playerName,
+            elo: Math.round(this.calculateProvisionalRating(actualElo, appearances, anchors.elo)),
+            actualElo: Math.round(actualElo),
+            isProvisional,
+            attackingRating: this.calculateProvisionalRating(
+                actualAttack,
+                appearances,
+                anchors.attack
+            ),
+            controlRating: this.calculateProvisionalRating(
+                actualControl,
+                appearances,
+                anchors.control
+            ),
+            avatar: playerData?.avatar || null,
+            appearances
+        };
     }
 
     /**
@@ -195,20 +286,16 @@ class TeamGenerator {
 
         // Set up initial pots for history reconstruction if recording is enabled
         if (this.recordHistory) {
-            const defaultElo = 1000;
+            // For random teams, calculate anchors using all players (no established filtering)
+            // since pot structure doesn't matter for random distribution
+            const anchors = { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
+
             this.initialPots = [
                 {
                     name: 'All Players',
-                    players: this.players.map((name) => {
-                        const playerRanking = this.rankings?.players?.[name];
-                        return {
-                            name,
-                            elo: playerRanking?.elo?.rating
-                                ? Math.round(playerRanking.elo.rating)
-                                : defaultElo,
-                            avatar: playerRanking?.avatar || null
-                        };
-                    })
+                    players: this.players.map((name) =>
+                        this.getProvisionalPlayerData(name, anchors)
+                    )
                 }
             ];
 
@@ -224,19 +311,30 @@ class TeamGenerator {
     }
 
     /**
-     * Calculate team ELO averages for balance assessment
+     * Calculate team ELO averages for balance assessment using provisional ratings
      * @param {Object} teams - Teams object with player names
      * @returns {Array} Array of team ELO averages
      */
     calculateTeamEloAverages(teams) {
-        const defaultElo = 1000;
         const teamAverages = [];
+        const anchors = this._provisionalAnchors || {
+            elo: DEFAULT_ELO,
+            attack: DEFAULT_RATING,
+            control: DEFAULT_RATING
+        };
 
         Object.values(teams).forEach((teamPlayers) => {
             const teamEloSum = teamPlayers.reduce((sum, playerName) => {
-                const playerRanking = this.rankings?.players?.[playerName];
-                const playerElo = playerRanking?.elo?.rating ?? defaultElo;
-                return sum + playerElo;
+                const playerData = this.rankings?.players?.[playerName];
+                const appearances = playerData?.appearances ?? 0;
+                const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
+                // Use provisional ELO for consistency with pot sorting
+                const provisionalElo = this.calculateProvisionalRating(
+                    actualElo,
+                    appearances,
+                    anchors.elo
+                );
+                return sum + provisionalElo;
             }, 0);
 
             teamAverages.push(teamPlayers.length > 0 ? teamEloSum / teamPlayers.length : 0);
@@ -246,8 +344,8 @@ class TeamGenerator {
     }
 
     /**
-     * Calculate team average rating for a given player rating key (e.g., attackingRating).
-     * Unrated players are skipped; if a team has no rated players, fall back to a neutral 0.5.
+     * Calculate team average rating for a given player rating key using provisional ratings.
+     * All players now contribute (no skipping), with provisional values for newcomers.
      * @param {Object} teams - Teams object with player names
      * @param {'attackingRating'|'controlRating'} ratingKey
      * @param {number} [defaultValue=0.5] - Neutral fallback when no rated players are present
@@ -255,6 +353,12 @@ class TeamGenerator {
      */
     calculateTeamRatingAverages(teams, ratingKey, defaultValue = 0.5) {
         const teamAverages = [];
+        const anchors = this._provisionalAnchors || {
+            elo: DEFAULT_ELO,
+            attack: DEFAULT_RATING,
+            control: DEFAULT_RATING
+        };
+        const anchorValue = ratingKey === 'attackingRating' ? anchors.attack : anchors.control;
 
         Object.values(teams).forEach((teamPlayers) => {
             if (!Array.isArray(teamPlayers) || teamPlayers.length === 0) {
@@ -262,19 +366,20 @@ class TeamGenerator {
                 return;
             }
 
-            const { sum, count } = teamPlayers.reduce(
-                (acc, playerName) => {
-                    const rating = this.rankings?.players?.[playerName]?.[ratingKey];
-                    if (typeof rating === 'number') {
-                        acc.sum += rating;
-                        acc.count += 1;
-                    }
-                    return acc;
-                },
-                { sum: 0, count: 0 }
-            );
+            const sum = teamPlayers.reduce((acc, playerName) => {
+                const playerData = this.rankings?.players?.[playerName];
+                const appearances = playerData?.appearances ?? 0;
+                const actualRating = playerData?.[ratingKey] ?? DEFAULT_RATING;
+                // Use provisional rating for all players
+                const provisionalRating = this.calculateProvisionalRating(
+                    actualRating,
+                    appearances,
+                    anchorValue
+                );
+                return acc + provisionalRating;
+            }, 0);
 
-            teamAverages.push(count > 0 ? sum / count : defaultValue);
+            teamAverages.push(sum / teamPlayers.length);
         });
 
         return teamAverages;
@@ -401,18 +506,25 @@ class TeamGenerator {
     /**
      * Calculate ELO spread balance to ensure each team has similar distribution of skill levels.
      * Prevents one team from getting all "top of pot" players while another gets all "bottom of pot".
+     * Uses provisional ratings for consistency with pot sorting.
      * @param {Object} teams - Generated teams object
      * @returns {number} Spread imbalance score (lower is better)
      */
     calculateEloSpreadBalance(teams) {
-        const defaultElo = 1000;
         const teamEloDistributions = [];
+        const anchors = this._provisionalAnchors || {
+            elo: DEFAULT_ELO,
+            attack: DEFAULT_RATING,
+            control: DEFAULT_RATING
+        };
 
-        // Calculate ELO distribution for each team
+        // Calculate ELO distribution for each team using provisional ratings
         Object.values(teams).forEach((teamPlayers) => {
             const elos = teamPlayers.map((playerName) => {
-                const playerRanking = this.rankings?.players?.[playerName];
-                return playerRanking?.elo?.rating ?? defaultElo;
+                const playerData = this.rankings?.players?.[playerName];
+                const appearances = playerData?.appearances ?? 0;
+                const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
+                return this.calculateProvisionalRating(actualElo, appearances, anchors.elo);
             });
 
             if (elos.length > 0) {
@@ -807,6 +919,8 @@ class TeamGenerator {
 
     /**
      * Generate teams using seeded distribution based on rankings
+     * Uses two-pass sorting: first establish pot structure from trusted players,
+     * then calculate provisional ratings for newcomers based on weakest pot mean.
      * @param {Object} config - Team configuration { teams, teamSizes }
      * @returns {Object} Generated teams object
      */
@@ -819,35 +933,54 @@ class TeamGenerator {
         const numTeams = teamSizes.length;
         const teamNames = this.generateTeamNames(numTeams);
 
-        // Default ELO rating for unranked players
-        const defaultElo = 1000;
-        const minGamesForElo = 5; // Minimum games before ELO is considered reliable
+        // STEP 1: First pass - sort ONLY established players (5+ sessions) by actual ELO
+        // to determine pot structure and calculate anchor values
+        const establishedPlayers = this.players.filter((name) => {
+            const appearances = this.rankings?.players?.[name]?.appearances ?? 0;
+            return appearances >= PROVISIONAL_THRESHOLD;
+        });
 
-        // Sort players by ELO rating first, then ranking points, then total points, then appearances
-        const sortedPlayers = [...this.players].sort((a, b) => {
+        const sortedEstablished = [...establishedPlayers].sort((a, b) => {
             const playerA = this.rankings?.players?.[a];
             const playerB = this.rankings?.players?.[b];
+            const eloA = playerA?.elo?.rating ?? DEFAULT_ELO;
+            const eloB = playerB?.elo?.rating ?? DEFAULT_ELO;
 
-            // Use ELO rating as primary sort criterion
-            // Players with fewer than minGamesForElo are treated as baseline for balance
-            const eloGamesA = playerA?.elo?.gamesPlayed ?? 0;
-            const eloGamesB = playerB?.elo?.gamesPlayed ?? 0;
-            const eloA =
-                eloGamesA >= minGamesForElo ? (playerA?.elo?.rating ?? defaultElo) : defaultElo;
-            const eloB =
-                eloGamesB >= minGamesForElo ? (playerB?.elo?.rating ?? defaultElo) : defaultElo;
+            if (eloA !== eloB) return eloB - eloA;
 
-            if (eloA !== eloB) {
-                return eloB - eloA;
-            }
-
-            // Fall back to ranking points for ties
             const rankingA = playerA?.rankingPoints ?? 0;
             const rankingB = playerB?.rankingPoints ?? 0;
+            if (rankingA !== rankingB) return rankingB - rankingA;
 
-            if (rankingA !== rankingB) {
-                return rankingB - rankingA;
-            }
+            return (playerB?.points || 0) - (playerA?.points || 0);
+        });
+
+        // Calculate anchor values from established players' weakest pot
+        const anchors = this.calculateProvisionalAnchors(sortedEstablished);
+
+        // Store anchors for use by balance calculation methods
+        this._provisionalAnchors = anchors;
+
+        // STEP 2: Build provisional player data for all players
+        const playerDataMap = new Map();
+        for (const playerName of this.players) {
+            playerDataMap.set(playerName, this.getProvisionalPlayerData(playerName, anchors));
+        }
+
+        // STEP 3: Second pass - sort ALL players by provisional ELO
+        const sortedPlayers = [...this.players].sort((a, b) => {
+            const dataA = playerDataMap.get(a);
+            const dataB = playerDataMap.get(b);
+
+            // Primary: provisional ELO
+            if (dataA.elo !== dataB.elo) return dataB.elo - dataA.elo;
+
+            // Fallback to ranking points for ties
+            const playerA = this.rankings?.players?.[a];
+            const playerB = this.rankings?.players?.[b];
+            const rankingA = playerA?.rankingPoints ?? 0;
+            const rankingB = playerB?.rankingPoints ?? 0;
+            if (rankingA !== rankingB) return rankingB - rankingA;
 
             if ((playerA?.points || 0) !== (playerB?.points || 0)) {
                 return (playerB?.points || 0) - (playerA?.points || 0);
@@ -856,8 +989,12 @@ class TeamGenerator {
             return (playerB?.appearances || 0) - (playerA?.appearances || 0);
         });
 
-        // Calculate adaptive ELO delta target based on player pool variance
-        const eloRange = this.calculatePoolEloRange(sortedPlayers, minGamesForElo, defaultElo);
+        // Calculate adaptive ELO delta target based on provisional player pool variance
+        const provisionalElos = sortedPlayers.map((name) => playerDataMap.get(name).elo);
+        const eloRange =
+            provisionalElos.length > 0
+                ? Math.max(...provisionalElos) - Math.min(...provisionalElos)
+                : 0;
         // Hard limit: max(60, 15% of pool range) - allows up to ~100 for extreme variance
         const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
 
@@ -893,27 +1030,19 @@ class TeamGenerator {
             }
         }
 
-        // Set up initial pots for history/optimization (static for all iterations)
+        // Set up initial pots for history/optimization with provisional player data
         this.initialPots = [];
         let playerIndex = 0;
         let potNumber = 1;
 
-        // Create pots based on the seeded algorithm structure
+        // Create pots based on the seeded algorithm structure with provisional ratings
         while (playerIndex < sortedPlayers.length) {
             const potSize = Math.min(Math.ceil(numTeams * 2), sortedPlayers.length - playerIndex);
             const potPlayers = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
             this.initialPots.push({
                 name: `Pot ${potNumber}`,
-                players: potPlayers.map((name) => ({
-                    name,
-                    elo: this.rankings?.players?.[name]?.elo?.rating
-                        ? Math.round(this.rankings.players[name].elo.rating)
-                        : defaultElo,
-                    avatar: this.rankings?.players?.[name]?.avatar || null,
-                    attackingRating: this.rankings?.players?.[name]?.attackingRating ?? null,
-                    controlRating: this.rankings?.players?.[name]?.controlRating ?? null
-                }))
+                players: potPlayers.map((name) => playerDataMap.get(name))
             });
 
             playerIndex += potSize;

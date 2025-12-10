@@ -364,17 +364,23 @@ describe('TeamGenerator', () => {
                 .setRankings(mockRankings);
         });
 
-        it('should calculate team ELO averages correctly', () => {
+        it('should calculate team ELO averages correctly using provisional ratings', () => {
+            // calculateTeamEloAverages uses provisional ratings for players with < 5 appearances
+            // Without _provisionalAnchors set, falls back to DEFAULT_ELO (1000) as anchor
+            // Alice (10 appearances) -> established, uses actual: 1200
+            // Frank (5 appearances) -> established, uses actual: 950
+            // Bob (8 appearances) -> established, uses actual: 1150
+            // Grace (4 appearances) -> provisional: 1000 + (900-1000) * 4/5 = 920
             const teams = {
                 'Team A': ['Alice', 'Frank'], // ELO: 1200, 950 -> avg: 1075
-                'Team B': ['Bob', 'Grace'] // ELO: 1150, 900 -> avg: 1025
+                'Team B': ['Bob', 'Grace'] // ELO: 1150, 920 (provisional) -> avg: 1035
             };
 
             const averages = teamGenerator.calculateTeamEloAverages(teams);
 
             expect(averages).toHaveLength(2);
             expect(averages[0]).toBe(1075); // (1200 + 950) / 2
-            expect(averages[1]).toBe(1025); // (1150 + 900) / 2
+            expect(averages[1]).toBe(1035); // (1150 + 920) / 2 - Grace is provisional
         });
 
         it('should handle players without ELO ratings (default to 1000)', () => {
