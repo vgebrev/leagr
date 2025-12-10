@@ -15,8 +15,7 @@
             type="fade"
             {duration}>
             <p class="text-base leading-relaxed text-gray-700 md:text-lg dark:text-gray-300">
-                Thank you for another incredible year of football, banter, and unforgettable
-                moments.
+                Thank you for an incredible year of football, banter, and unforgettable moments.
             </p>
         </AnimatedIn>
 
