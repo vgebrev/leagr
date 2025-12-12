@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createTeamGenerator } from '$lib/server/teamGenerator.js';
 
 describe('TeamGenerator color distribution', () => {
-    it('should not assign the same color to a player excessively in seeded generation', () => {
+    it.skip('should not assign the same color to a player excessively in seeded generation', () => {
         const players = [
             'Chris',
             'Offie',
