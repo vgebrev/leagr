@@ -12,11 +12,17 @@ Features include:
     - View and manage player availability.
     - Waiting list after a limit is reached.
     - Moving players between lists.
+    - Player renaming capability.
+    - Quick-access player information modals.
 - **Team Management**
     - Generate random teams, either completely random or using player ELO as seeds.
-    - Multi-iteration team generation algorithm that tries to maximise team variance and balance.
+    - Provisional rating system ensures balanced teams even with new players.
+    - Multi-iteration team generation algorithm that maximises team variance and balance using attack/defense ratings.
+    - Visual indicators for provisional vs. established players.
+    - Team attack/defense rating displays.
     - Replay team draws for dramatic effect.
     - Players can be moved from a team to the waiting list (and vice versa), removed, or marked as a no-show.
+    - Quick-access team information modals.
 - **Discipline**
     - Automatic suspension of players after no-shows.
 - **Game Scheduling and Score Tracking**
@@ -25,9 +31,12 @@ Features include:
     - Knockout tournament generation with teams seeded by standings.
 - **Player Rankings**
     - Cumulative player rankings based on team performances and consistency.
-    - Player ELO tracks individual matches for long-term team balance optimisation.
-    - Player profile - ranking details, history, and profile photos (Admin-approved).
-    - Champions hall: tracks league and cup winners.
+    - Player ELO with provisional ratings system for new players (<5 sessions).
+    - Attack/defense ratings displayed on player profiles and teams.
+    - Teams-based Individual goal statistics tracking.
+    - Performance tracking: league positions, cup progress, win streaks, and achievements.
+    - Player profile modals - ranking details, history, profile photos (Admin-approved), and performance stats accessible throughout the app.
+    - Champions hall: tracks league and cup winners (yearly and all-time views).
     - Annually reset rankings to keep competition fresh and motivating.
 - **Year Recap**
     - An annual highlight reel of the league
@@ -45,6 +54,12 @@ For development (needs [Node.js](https://nodejs.org/en)):
 - `npm ci` - Ensures dependencies are installed.
 - `npm run dev` - Starts the dev server. The app is available at http://localhost:5173.
 - `npm run dev -- --host` - Starts the dev server and allows access from other devices on your network (useful for mobile testing, or if you're using [WSL](https://learn.microsoft.com/en-us/windows/wsl/)).
+- `npm test` - Runs all tests (backend + frontend).
+- `npm run test:backend` - Runs backend tests only.
+- `npm run test:frontend` - Runs frontend tests only.
+- `npm run check` - Type checking.
+- `npm run lint` - Code linting.
+- `npm run format` - Code formatting.
 
 ### Subdomain Setup
 
@@ -91,11 +106,22 @@ The application includes rudimentary security features to prevent abuse:
 - Built-in rate limiting: 60 requests per minute per IP address
 - Automatically blocks excessive requests with HTTP 429 status
 
+### Testing
+
+The application includes comprehensive automated testing:
+
+- **500+ tests** covering backend logic and frontend components
+- **Backend tests** use Node environment (unit and integration tests)
+- **Frontend tests** use jsdom environment (component and store tests)
+- **Automated test execution** runs before every deployment
+- Tests must pass before deployment succeeds
+
 ### Production Deployment
 
 For production (needs [Docker](https://www.docker.com/)):
 
 - Build a docker image with a production build of the app
+- Note: Automated tests run during the build process and must pass
 
 ```bash
 docker build -t leagr:latest
