@@ -535,24 +535,27 @@ export class YearRecapManager {
                     totalAvailablePoints > 0 ? (points / totalAvailablePoints) * 100 : 0;
                 const goalDifference = goalsFor - goalsAgainst;
 
-                // Each team is unique per session
-                allTeams.push({
-                    sessionDate: date,
-                    teamName,
-                    wins,
-                    draws,
-                    losses,
-                    goalsFor,
-                    goalsAgainst,
-                    goalDifference,
-                    totalGames,
-                    points,
-                    totalAvailablePoints,
-                    pointsPercentage,
-                    players: teams[teamName] || [],
-                    leagueStats,
-                    cupStats
-                });
+                // Only include teams that have actually played at least one game
+                if (totalGames > 0) {
+                    // Each team is unique per session
+                    allTeams.push({
+                        sessionDate: date,
+                        teamName,
+                        wins,
+                        draws,
+                        losses,
+                        goalsFor,
+                        goalsAgainst,
+                        goalDifference,
+                        totalGames,
+                        points,
+                        totalAvailablePoints,
+                        pointsPercentage,
+                        players: teams[teamName] || [],
+                        leagueStats,
+                        cupStats
+                    });
+                }
             }
         }
 
