@@ -1,0 +1,11 @@
+# CODEOWNERS
+# This file defines who will be automatically requested for review when PRs are opened.
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything in the repo
+* @vgebrev
+
+# You can add specific patterns later, for example:
+# /src/lib/server/ @backend-expert
+# *.svelte @frontend-expert
+# /test/ @qa-team
