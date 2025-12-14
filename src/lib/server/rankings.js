@@ -1157,11 +1157,11 @@ export class RankingsManager {
      * @param {Object} enhancedRankings - Enhanced rankings with complete history
      */
     calculateAttackControlRatings(enhancedRankings) {
-        // Minimum sessions required to be included in the min/max normalization pool
-        // This prevents outliers from 1-2 session players skewing the scale
-        // Note: All players now get ratings calculated, but only established players (5+ sessions)
+        // Minimum games played required to be included in the min/max normalization pool
+        // This prevents outliers from players with few games skewing the scale
+        // Note: All players now get ratings calculated, but only established players (35+ games)
         // contribute to the min/max bounds used for normalization
-        const MIN_SESSIONS_FOR_NORMALIZATION_POOL = 5;
+        const MIN_GAMES_FOR_NORMALIZATION_POOL = 35;
 
         // Get all unique dates sorted
         const allDates = new Set();
@@ -1184,7 +1184,7 @@ export class RankingsManager {
                     lastGFPerSession = detail.goalsForPerSession;
                     lastGAPerSession = detail.goalsAgainstPerSession;
                 } else if (lastGFPerSession !== null) {
-                    // Player didn't play - carry forward last values (for all players, not just 5+)
+                    // Player didn't play - carry forward last values (for all players, not just 35+)
                     detail.goalsForPerSession = lastGFPerSession;
                     detail.goalsAgainstPerSession = lastGAPerSession;
                 }
@@ -1201,16 +1201,6 @@ export class RankingsManager {
             const gaValuesAll = [];
 
             Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-                const dates = Object.keys(playerData.rankingDetail).sort();
-                let sessionsUpToDate = 0;
-
-                // Count sessions up to this date
-                dates.forEach((d) => {
-                    if (d <= date && playerData.rankingDetail[d].team !== null) {
-                        sessionsUpToDate++;
-                    }
-                });
-
                 const detail = playerData.rankingDetail[date];
                 const hasGoalsData =
                     detail &&
@@ -1223,7 +1213,8 @@ export class RankingsManager {
                     gaValuesAll.push(detail.goalsAgainstPerSession);
 
                     // Only established players contribute to normalization bounds
-                    if (sessionsUpToDate >= MIN_SESSIONS_FOR_NORMALIZATION_POOL) {
+                    const gamesPlayed = detail.eloGames ?? 0;
+                    if (gamesPlayed >= MIN_GAMES_FOR_NORMALIZATION_POOL) {
                         gfValuesEstablished.push(detail.goalsForPerSession);
                         gaValuesEstablished.push(detail.goalsAgainstPerSession);
                     }
@@ -1261,7 +1252,7 @@ export class RankingsManager {
                 const detail = playerData.rankingDetail[date];
 
                 // Calculate rating for ALL players who have goals data, using established players' bounds
-                // Players with <5 sessions still get ratings, they're just normalized against the established pool
+                // Players with <35 games still get ratings, they're just normalized against the established pool
                 if (
                     dateMinMax[date] &&
                     detail.goalsForPerSession !== null &&

@@ -2,7 +2,7 @@ import { nouns } from '$lib/shared/nouns.js';
 import { teamColours } from '$lib/shared/helpers.js';
 
 // Provisional rating constants
-const PROVISIONAL_THRESHOLD = 5; // Sessions before rating is fully trusted
+const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
 const DEFAULT_ELO = 1000;
 const DEFAULT_RATING = 0.5; // Neutral attack/control rating
 
@@ -86,19 +86,19 @@ class TeamGenerator {
     /**
      * Calculate provisional rating using linear interpolation from anchor to actual
      * @param {number} actualRating - The player's actual rating
-     * @param {number} appearances - Number of sessions the player has attended
+     * @param {number} gamesPlayed - Number of games the player has played (ELO games)
      * @param {number} anchorValue - The starting anchor value (weakest pot mean or fallback)
-     * @param {number} [threshold=PROVISIONAL_THRESHOLD] - Sessions before rating is fully trusted
+     * @param {number} [threshold=GAMES_THRESHOLD] - Games played before rating is fully trusted
      * @returns {number} - Provisional rating
      */
     calculateProvisionalRating(
         actualRating,
-        appearances,
+        gamesPlayed,
         anchorValue,
-        threshold = PROVISIONAL_THRESHOLD
+        threshold = GAMES_THRESHOLD
     ) {
-        if (appearances >= threshold) return actualRating;
-        const pullFactor = appearances / threshold;
+        if (gamesPlayed >= threshold) return actualRating;
+        const pullFactor = gamesPlayed / threshold;
         return anchorValue + (actualRating - anchorValue) * pullFactor;
     }
 
@@ -143,7 +143,8 @@ class TeamGenerator {
     getProvisionalPlayerData(playerName, anchors) {
         const playerData = this.rankings?.players?.[playerName];
         const appearances = playerData?.appearances ?? 0;
-        const isProvisional = appearances < PROVISIONAL_THRESHOLD;
+        const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
+        const isProvisional = gamesPlayed < GAMES_THRESHOLD;
 
         const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
         const actualAttack = playerData?.attackingRating ?? DEFAULT_RATING;
@@ -151,17 +152,17 @@ class TeamGenerator {
 
         return {
             name: playerName,
-            elo: Math.round(this.calculateProvisionalRating(actualElo, appearances, anchors.elo)),
+            elo: Math.round(this.calculateProvisionalRating(actualElo, gamesPlayed, anchors.elo)),
             actualElo: Math.round(actualElo),
             isProvisional,
             attackingRating: this.calculateProvisionalRating(
                 actualAttack,
-                appearances,
+                gamesPlayed,
                 anchors.attack
             ),
             controlRating: this.calculateProvisionalRating(
                 actualControl,
-                appearances,
+                gamesPlayed,
                 anchors.control
             ),
             avatar: playerData?.avatar || null,
@@ -326,12 +327,12 @@ class TeamGenerator {
         Object.values(teams).forEach((teamPlayers) => {
             const teamEloSum = teamPlayers.reduce((sum, playerName) => {
                 const playerData = this.rankings?.players?.[playerName];
-                const appearances = playerData?.appearances ?? 0;
+                const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
                 // Use provisional ELO for consistency with pot sorting
                 const provisionalElo = this.calculateProvisionalRating(
                     actualElo,
-                    appearances,
+                    gamesPlayed,
                     anchors.elo
                 );
                 return sum + provisionalElo;
@@ -368,12 +369,12 @@ class TeamGenerator {
 
             const sum = teamPlayers.reduce((acc, playerName) => {
                 const playerData = this.rankings?.players?.[playerName];
-                const appearances = playerData?.appearances ?? 0;
+                const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualRating = playerData?.[ratingKey] ?? DEFAULT_RATING;
                 // Use provisional rating for all players
                 const provisionalRating = this.calculateProvisionalRating(
                     actualRating,
-                    appearances,
+                    gamesPlayed,
                     anchorValue
                 );
                 return acc + provisionalRating;
@@ -522,9 +523,9 @@ class TeamGenerator {
         Object.values(teams).forEach((teamPlayers) => {
             const elos = teamPlayers.map((playerName) => {
                 const playerData = this.rankings?.players?.[playerName];
-                const appearances = playerData?.appearances ?? 0;
+                const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
-                return this.calculateProvisionalRating(actualElo, appearances, anchors.elo);
+                return this.calculateProvisionalRating(actualElo, gamesPlayed, anchors.elo);
             });
 
             if (elos.length > 0) {
@@ -562,7 +563,7 @@ class TeamGenerator {
      * @param {number} defaultElo - Default ELO used when unreliable
      * @returns {number} Range between max and min ELO in the pool
      */
-    calculatePoolEloRange(sortedPlayers, minGamesForElo = 5, defaultElo = 1000) {
+    calculatePoolEloRange(sortedPlayers, minGamesForElo = 35, defaultElo = 1000) {
         if (!Array.isArray(sortedPlayers) || sortedPlayers.length === 0) return 0;
         const elos = sortedPlayers.map((name) => {
             const playerData = this.rankings?.players?.[name];
@@ -751,7 +752,7 @@ class TeamGenerator {
         let improvementsMade = true;
 
         const defaultElo = 1000;
-        const minGamesForElo = 5;
+        const minGamesForElo = 35;
         const effectiveEloRange =
             eloRange ?? this.calculatePoolEloRange(sortedPlayers, minGamesForElo, defaultElo) ?? 0;
         const effectiveHardEloDeltaLimit =
@@ -933,11 +934,11 @@ class TeamGenerator {
         const numTeams = teamSizes.length;
         const teamNames = this.generateTeamNames(numTeams);
 
-        // STEP 1: First pass - sort ONLY established players (5+ sessions) by actual ELO
+        // STEP 1: First pass - sort ONLY established players (35+ games) by actual ELO
         // to determine pot structure and calculate anchor values
         const establishedPlayers = this.players.filter((name) => {
-            const appearances = this.rankings?.players?.[name]?.appearances ?? 0;
-            return appearances >= PROVISIONAL_THRESHOLD;
+            const gamesPlayed = this.rankings?.players?.[name]?.elo?.gamesPlayed ?? 0;
+            return gamesPlayed >= GAMES_THRESHOLD;
         });
 
         const sortedEstablished = [...establishedPlayers].sort((a, b) => {
