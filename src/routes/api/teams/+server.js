@@ -117,7 +117,10 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Get rankings for both seeded and random teams (needed for draw history ELO display)
-        const rankings = await createRankingsManager().setLeague(leagueId).loadEnhancedRankings();
+        // Use fallback to previous year to ensure ELO data is available for team balancing
+        const rankings = await createRankingsManager()
+            .setLeague(leagueId)
+            .loadEnhancedRankings(undefined, { fallbackToPreviousYear: true });
 
         // Load avatars and merge them into rankings data
         const avatars = await createAvatarManager().setLeague(leagueId).loadAvatars();

@@ -697,11 +697,12 @@ export class PlayerManager {
      * Helper method to enhance player list with ELO and avatar data.
      * Returns provisional ratings for players with < 35 games played.
      * @param {string[]} players - Array of player names (can include null values for teams)
-     * @param {Object} rankings - Enhanced rankings data
+     * @param {Object} rankings - Enhanced rankings data (current year)
+     * @param {Object} previousYearRankings - Rankings from previous year (for carry-over lookup)
      * @param {Object} avatars - Avatar data from avatarManager
      * @returns {Object[]} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
      */
-    #enhancePlayersWithEloAndAvatar(players, rankings, avatars) {
+    #enhancePlayersWithEloAndAvatar(players, rankings, previousYearRankings, avatars) {
         const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
         const DEFAULT_ELO = 1000;
         const DEFAULT_RATING = 0.5;
@@ -715,11 +716,16 @@ export class PlayerManager {
             }
 
             // Get ELO and ratings from most recent calculation (up to and including session date)
-            const playerRanking = rankings.players?.[playerName];
+            let playerRanking = rankings.players?.[playerName];
             let actualElo = DEFAULT_ELO;
             let attackingRating = DEFAULT_RATING;
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
+
+            // If player not in current year rankings, check previous year for carry-over
+            if (!playerRanking && previousYearRankings?.players?.[playerName]) {
+                playerRanking = previousYearRankings.players[playerName];
+            }
 
             if (playerRanking?.rankingDetail) {
                 // Find the most recent ranking detail entry up to the session date
@@ -788,10 +794,17 @@ export class PlayerManager {
         // Get basic teams data
         const gameData = await this.getData({ players: false, teams: true, settings: false });
 
-        // Load rankings to get player ELO ratings
-        const rankings = await createRankingsManager()
-            .setLeague(this.leagueId)
-            .loadEnhancedRankings();
+        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+
+        // Load rankings to get player ELO ratings (with fallback to previous year for balancing)
+        const rankings = await rankingsManager.loadEnhancedRankings(undefined, {
+            fallbackToPreviousYear: true
+        });
+
+        // Load previous year rankings for players not yet in current year
+        const currentYear = new Date(this.date).getFullYear();
+        const previousYear = currentYear - 1;
+        const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
         const avatarManager = createAvatarManager().setLeague(this.leagueId);
@@ -803,6 +816,7 @@ export class PlayerManager {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
                 players,
                 rankings,
+                previousYearRankings,
                 avatars
             );
         }
@@ -818,10 +832,17 @@ export class PlayerManager {
         // Get basic game data
         const gameData = await this.getData({ players: true, teams: true, settings: false });
 
-        // Load rankings to get player ELO ratings
-        const rankings = await createRankingsManager()
-            .setLeague(this.leagueId)
-            .loadEnhancedRankings();
+        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+
+        // Load rankings to get player ELO ratings (with fallback to previous year for balancing)
+        const rankings = await rankingsManager.loadEnhancedRankings(undefined, {
+            fallbackToPreviousYear: true
+        });
+
+        // Load previous year rankings for players not yet in current year
+        const currentYear = new Date(this.date).getFullYear();
+        const previousYear = currentYear - 1;
+        const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
         const avatarManager = createAvatarManager().setLeague(this.leagueId);
@@ -833,6 +854,7 @@ export class PlayerManager {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
                 players,
                 rankings,
+                previousYearRankings,
                 avatars
             );
         }
@@ -842,11 +864,13 @@ export class PlayerManager {
             available: this.#enhancePlayersWithEloAndAvatar(
                 gameData.players.available,
                 rankings,
+                previousYearRankings,
                 avatars
             ),
             waitingList: this.#enhancePlayersWithEloAndAvatar(
                 gameData.players.waitingList,
                 rankings,
+                previousYearRankings,
                 avatars
             )
         };

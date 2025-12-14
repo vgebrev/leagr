@@ -1356,10 +1356,23 @@ export class RankingsManager {
     /**
      * Load rankings and ensure they have enhanced data
      * @param {number} [year] - Year to load rankings for (defaults to current year)
+     * @param {Object} [options] - Loading options
+     * @param {boolean} [options.fallbackToPreviousYear=false] - If true, falls back to previous year when current year has no data
      * @returns {Promise<Object>} - Enhanced rankings
      */
-    async loadEnhancedRankings(year) {
-        const rawRankings = await this.loadRankings(year);
+    async loadEnhancedRankings(year, options = {}) {
+        const { fallbackToPreviousYear = false } = options;
+        const targetYear = year ?? new Date().getFullYear();
+        let rawRankings = await this.loadRankings(targetYear);
+
+        // If current year has no players yet and fallback is enabled, use previous year
+        if (
+            fallbackToPreviousYear &&
+            (!rawRankings.players || Object.keys(rawRankings.players).length === 0)
+        ) {
+            const previousYear = targetYear - 1;
+            rawRankings = await this.loadRankings(previousYear);
+        }
 
         // Check if rankings already have enhanced data
         if (rawRankings.rankingMetadata && rawRankings.players) {
