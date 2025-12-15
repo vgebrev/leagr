@@ -716,16 +716,11 @@ export class PlayerManager {
             }
 
             // Get ELO and ratings from most recent calculation (up to and including session date)
-            let playerRanking = rankings.players?.[playerName];
+            const playerRanking = rankings.players?.[playerName];
             let actualElo = DEFAULT_ELO;
             let attackingRating = DEFAULT_RATING;
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
-
-            // If player not in current year rankings, check previous year for carry-over
-            if (!playerRanking && previousYearRankings?.players?.[playerName]) {
-                playerRanking = previousYearRankings.players[playerName];
-            }
 
             if (playerRanking?.rankingDetail) {
                 // Find the most recent ranking detail entry up to the session date
@@ -741,6 +736,16 @@ export class PlayerManager {
                     controlRating = detail?.controlRating ?? DEFAULT_RATING;
                     gamesPlayed = detail?.eloGames ?? 0;
                 }
+            }
+
+            // If player not in current year rankings, check previous year for ELO carry-over ONLY
+            // Attack/control ratings should reset to defaults (based on current year session data)
+            if (!playerRanking && previousYearRankings?.players?.[playerName]) {
+                const prevYearPlayer = previousYearRankings.players[playerName];
+                // Only carry over ELO data, not attack/control ratings
+                actualElo = prevYearPlayer.elo?.rating ?? DEFAULT_ELO;
+                gamesPlayed = prevYearPlayer.elo?.gamesPlayed ?? 0;
+                // attackingRating and controlRating stay at DEFAULT_RATING (0.5)
             }
 
             // Get avatar data

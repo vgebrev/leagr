@@ -837,9 +837,13 @@ export class RankingsManager {
         const eloCarryOver = {};
         for (const [playerName, playerData] of Object.entries(previousRankings.players)) {
             if (playerData.elo && playerData.elo.rating !== undefined) {
+                // Find last appearance date for decay tracking across year boundary
+                const lastAppearance = this.findLastAppearance(playerData.rankingDetail);
+
                 eloCarryOver[playerName] = {
                     rating: playerData.elo.rating,
-                    gamesPlayed: playerData.elo.gamesPlayed || 0
+                    gamesPlayed: playerData.elo.gamesPlayed || 0,
+                    lastAppearance: lastAppearance // Used for decay calculation
                 };
             }
         }
@@ -862,7 +866,7 @@ export class RankingsManager {
             rankingDetail: {},
             elo: {
                 rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
-                lastDecayAt: null,
+                lastDecayAt: carryOverData?.lastAppearance ?? null, // Carry over last appearance for decay
                 gamesPlayed: carryOverData?.gamesPlayed ?? 0
             }
         };
