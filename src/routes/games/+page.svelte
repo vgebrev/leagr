@@ -15,8 +15,12 @@
     const date = data.date;
 
     let showTeamModal = $state(false);
+    /** @type {string | null} */
     let selectedTeam = $state(null);
 
+    /**
+     * @param {string} teamName
+     */
     function handleTeamClick(teamName) {
         selectedTeam = teamName;
         showTeamModal = true;
@@ -33,6 +37,9 @@
 
     /** @type {number} */
     let teamCount = $state(0);
+
+    /** @type {Object} */
+    let teams = $state({});
 
     /** @type {boolean} */
     let hasTeams = $derived(teamCount > 0);
@@ -127,12 +134,16 @@
     onMount(async () => {
         await withLoading(
             async () => {
-                // Load games data (now includes team count)
-                const gamesData = await api.get('games', date);
+                // Load games and teams data
+                const [gamesData, teamsData] = await Promise.all([
+                    api.get('games', date),
+                    api.get('teams', date)
+                ]);
 
                 schedule = gamesData?.rounds || [];
                 anchorIndex = gamesData?.anchorIndex || 0;
                 teamCount = gamesData?.teamCount || 0;
+                teams = teamsData?.teams || {};
             },
             (err) => {
                 console.error('Error fetching data:', err);
@@ -158,6 +169,7 @@
 <!-- Schedule Display Component -->
 <ScheduleDisplay
     {schedule}
+    {teams}
     disabled={competitionEnded}
     onMatchUpdate={handleMatchUpdate}
     onTeamClick={handleTeamClick} />

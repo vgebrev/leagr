@@ -5,7 +5,8 @@ import { createGameScheduler, GameSchedulerError } from '$lib/server/gameSchedul
 import {
     validateDateParameter,
     parseRequestBody,
-    validateCompetitionOperationsAllowed
+    validateCompetitionOperationsAllowed,
+    validateMatchScorers
 } from '$lib/shared/validation.js';
 import { getConsolidatedSettings } from '$lib/server/settings.js';
 
@@ -132,9 +133,26 @@ export const POST = async ({ request, url, locals }) => {
             // Update existing schedule (scores, etc.)
             const validatedData = gameScheduler.validateGameRequest(requestData);
 
-            // Get team count for score updates too
+            // Get teams data for scorer validation
             const teams = await getTeamsForDate(dateValidation.date, leagueId);
             const scoreUpdateTeamCount = teams ? Object.keys(teams).length : 0;
+
+            // Validate scorer data if present
+            if (validatedData.rounds && teams) {
+                for (const round of validatedData.rounds) {
+                    for (const match of round) {
+                        if (match.homeScorers || match.awayScorers) {
+                            const scorerValidation = validateMatchScorers(match, teams);
+                            if (!scorerValidation.isValid) {
+                                return error(
+                                    400,
+                                    `Scorer validation failed: ${scorerValidation.errors.join(', ')}`
+                                );
+                            }
+                        }
+                    }
+                }
+            }
 
             // Add schedule status information
             const status = gameScheduler.getScheduleStatus(validatedData.rounds);

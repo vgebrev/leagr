@@ -6,7 +6,6 @@
     import PlayersGrid from './components/PlayersGrid.svelte';
     import SuspensionsModal from './components/SuspensionsModal.svelte';
     import PlayerModal from '$components/PlayerModal.svelte';
-    import YearRecapModal from '$components/YearRecapModal.svelte';
     import { Button } from 'flowbite-svelte';
     import { BanOutline } from 'flowbite-svelte-icons';
     import { settings } from '$lib/client/stores/settings.js';
@@ -117,5 +116,3 @@
     bind:playerName={selectedPlayer}
     bind:open={showPlayerModal}
     date={data.date} />
-
-<YearRecapModal />

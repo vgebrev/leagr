@@ -8,7 +8,10 @@ import {
     parseRequestBody,
     validateRequestBody,
     validateList,
-    validateRequiredFields
+    validateRequiredFields,
+    validateScorers,
+    validateMatchScorers,
+    RESERVED_SCORER_KEYS
 } from '$lib/shared/validation.js';
 
 describe('Player Name Validation', () => {
@@ -562,6 +565,447 @@ describe('API Validation Functions', () => {
             const result = validateRequiredFields(null, ['name']);
             expect(result.isValid).toBe(false);
             expect(result.errors).toContain('Data must be a valid object');
+        });
+    });
+});
+
+describe('Scorer Validation', () => {
+    describe('validateScorers', () => {
+        const teamPlayers = ['Veli', 'Dan', 'Chris', 'Bobinho'];
+
+        describe('valid scorer data', () => {
+            it('should accept null scorers (optional field)', () => {
+                const result = validateScorers(null, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept undefined scorers (optional field)', () => {
+                const result = validateScorers(undefined, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept valid scorer assignment', () => {
+                const scorers = { Veli: 2, Dan: 1 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept partial goal assignment', () => {
+                const scorers = { Veli: 1 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept all goals assigned to one player', () => {
+                const scorers = { Veli: 5 };
+                const result = validateScorers(scorers, 5, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept own goals with reserved key', () => {
+                const scorers = { Veli: 2, [RESERVED_SCORER_KEYS.OWN_GOAL]: 1 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept only own goals', () => {
+                const scorers = { [RESERVED_SCORER_KEYS.OWN_GOAL]: 1 };
+                const result = validateScorers(scorers, 1, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept empty scorers object with null score', () => {
+                const scorers = {};
+                const result = validateScorers(scorers, null, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept multiple players scoring', () => {
+                const scorers = { Veli: 1, Dan: 1, Chris: 1, Bobinho: 2 };
+                const result = validateScorers(scorers, 5, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept maximum allowed own goals (2)', () => {
+                const scorers = { [RESERVED_SCORER_KEYS.OWN_GOAL]: 2 };
+                const result = validateScorers(scorers, 2, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+        });
+
+        describe('invalid scorer data', () => {
+            it('should reject non-object scorers', () => {
+                const result = validateScorers('invalid', 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain(
+                    'Scorers must be an object mapping player names to goal counts'
+                );
+            });
+
+            it('should reject array scorers', () => {
+                const result = validateScorers(['Veli', 'Dan'], 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain(
+                    'Scorers must be an object mapping player names to goal counts'
+                );
+            });
+
+            it('should reject scorers when score is null', () => {
+                const scorers = { Veli: 1 };
+                const result = validateScorers(scorers, null, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Cannot assign scorers when score is not set');
+            });
+
+            it('should reject scorers when score is undefined', () => {
+                const scorers = { Veli: 1 };
+                const result = validateScorers(scorers, undefined, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Cannot assign scorers when score is not set');
+            });
+
+            it('should reject total assigned goals exceeding score', () => {
+                const scorers = { Veli: 2, Dan: 2 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Total assigned goals (4) exceeds team score (3)');
+            });
+
+            it('should reject player not on team', () => {
+                const scorers = { 'Unknown Player': 1 };
+                const result = validateScorers(scorers, 1, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Unknown Player is not on this team');
+            });
+
+            it('should reject negative goal counts', () => {
+                const scorers = { Veli: -1 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Invalid goal count for Veli: cannot be negative');
+            });
+
+            it('should reject zero goal counts', () => {
+                const scorers = { Veli: 0 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain(
+                    'Invalid goal count for Veli: use 0 goals by not including the player'
+                );
+            });
+
+            it('should reject non-integer goal counts', () => {
+                const scorers = { Veli: 1.5 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Invalid goal count for Veli: must be an integer');
+            });
+
+            it('should reject string goal counts', () => {
+                const scorers = { Veli: '2' };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Invalid goal count for Veli: must be an integer');
+            });
+
+            it('should reject excessive own goals (>2)', () => {
+                const scorers = { [RESERVED_SCORER_KEYS.OWN_GOAL]: 3 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain(
+                    'Own goal count seems unusually high (3). Maximum allowed: 2'
+                );
+            });
+        });
+
+        describe('edge cases', () => {
+            it('should handle empty team players array', () => {
+                const scorers = { Veli: 1 };
+                const result = validateScorers(scorers, 1, []);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Veli is not on this team');
+            });
+
+            it('should handle missing team players array', () => {
+                const scorers = { Veli: 1 };
+                const result = validateScorers(scorers, 1, null);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Team players array is required for validation');
+            });
+
+            it('should handle multiple validation errors', () => {
+                const scorers = { Unknown: 2, Veli: 3 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors.length).toBeGreaterThan(0);
+                expect(result.errors).toContain('Unknown is not on this team');
+                expect(result.errors).toContain('Total assigned goals (5) exceeds team score (3)');
+            });
+
+            it('should accept empty scorers object with positive score', () => {
+                const scorers = {};
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should handle own goals and regular goals together', () => {
+                const scorers = { Veli: 1, Dan: 1, [RESERVED_SCORER_KEYS.OWN_GOAL]: 1 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should calculate total correctly with own goals', () => {
+                const scorers = { Veli: 2, [RESERVED_SCORER_KEYS.OWN_GOAL]: 2 };
+                const result = validateScorers(scorers, 3, teamPlayers);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Total assigned goals (4) exceeds team score (3)');
+            });
+        });
+    });
+
+    describe('validateMatchScorers', () => {
+        const teams = {
+            'blue quakes': ['Veli', 'Dan', 'Chris'],
+            'green wasps': ['Bobinho', 'Tinashe', 'Brent'],
+            'orange chasers': ['Mandisi', 'Jonathen', 'Lunathi']
+        };
+
+        describe('valid match scorer data', () => {
+            it('should accept match without scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept valid home scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 2 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept valid away scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    awayScorers: { Bobinho: 1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept both home and away scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 1, Dan: 1 },
+                    awayScorers: { Bobinho: 1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept scorers with own goals', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 3,
+                    awayScore: 1,
+                    homeScorers: { Veli: 2, [RESERVED_SCORER_KEYS.OWN_GOAL]: 1 },
+                    awayScorers: { Bobinho: 1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should skip bye matches', () => {
+                const match = {
+                    bye: 'blue quakes',
+                    homeScorers: { invalid: 1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should accept null scorers explicitly', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: null,
+                    awayScorers: null
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+        });
+
+        describe('invalid match scorer data', () => {
+            it('should reject invalid match object', () => {
+                const result = validateMatchScorers(null, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors).toContain('Match must be a valid object');
+            });
+
+            it('should reject invalid home scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 5 } // Exceeds score
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toContain('Home team (blue quakes):');
+                expect(result.errors[0]).toContain('exceeds team score');
+            });
+
+            it('should reject invalid away scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    awayScorers: { Veli: 1 } // Wrong team
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toContain('Away team (green wasps):');
+                expect(result.errors[0]).toContain('Veli is not on this team');
+            });
+
+            it('should reject player from wrong team in home scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Bobinho: 2 } // Bobinho is on green wasps
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toContain('Bobinho is not on this team');
+            });
+
+            it('should reject both invalid home and away scorers', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 5 },
+                    awayScorers: { Dan: 1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors.length).toBe(2);
+                expect(result.errors[0]).toContain('Home team');
+                expect(result.errors[1]).toContain('Away team');
+            });
+        });
+
+        describe('edge cases', () => {
+            it('should handle missing teams object gracefully', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 2 }
+                };
+                const result = validateMatchScorers(match, null);
+                expect(result.isValid).toBe(false);
+                // When teams object is null, teams?.[match.home] returns undefined which becomes []
+                // so the error is "player is not on this team" rather than "array is required"
+                expect(result.errors[0]).toContain('Veli is not on this team');
+            });
+
+            it('should handle team not in teams object', () => {
+                const match = {
+                    home: 'unknown team',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1,
+                    homeScorers: { Veli: 2 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toContain('Veli is not on this team');
+            });
+
+            it('should handle undefined scorers (should pass)', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 2,
+                    awayScore: 1
+                    // homeScorers and awayScorers are undefined
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(true);
+                expect(result.errors).toEqual([]);
+            });
+
+            it('should provide clear error context for home team', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 1,
+                    awayScore: 1,
+                    homeScorers: { Veli: -1 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toMatch(/Home team \(blue quakes\):/);
+            });
+
+            it('should provide clear error context for away team', () => {
+                const match = {
+                    home: 'blue quakes',
+                    away: 'green wasps',
+                    homeScore: 1,
+                    awayScore: 1,
+                    awayScorers: { Bobinho: 2 }
+                };
+                const result = validateMatchScorers(match, teams);
+                expect(result.isValid).toBe(false);
+                expect(result.errors[0]).toMatch(/Away team \(green wasps\):/);
+            });
         });
     });
 });

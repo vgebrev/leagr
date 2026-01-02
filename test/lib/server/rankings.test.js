@@ -1150,6 +1150,11 @@ describe('RankingsManager - Yearly Rankings', () => {
                             rating: 1050,
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 10
+                        },
+                        rankingDetail: {
+                            '2024-12-07': { team: 'Blue', totalPoints: 5 },
+                            '2024-12-14': { team: 'White', totalPoints: 6 },
+                            '2024-12-21': { team: 'Blue', totalPoints: 7 }
                         }
                     },
                     Bob: {
@@ -1157,6 +1162,10 @@ describe('RankingsManager - Yearly Rankings', () => {
                             rating: 980,
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 8
+                        },
+                        rankingDetail: {
+                            '2024-12-07': { team: 'White', totalPoints: 4 },
+                            '2024-12-21': { team: 'Blue', totalPoints: 5 }
                         }
                     },
                     Charlie: {
@@ -1164,6 +1173,10 @@ describe('RankingsManager - Yearly Rankings', () => {
                             rating: 1120,
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 15
+                        },
+                        rankingDetail: {
+                            '2024-12-14': { team: 'Blue', totalPoints: 8 },
+                            '2024-12-28': { team: 'White', totalPoints: 9 }
                         }
                     }
                 }
@@ -1172,9 +1185,9 @@ describe('RankingsManager - Yearly Rankings', () => {
             const eloCarryOver = rankingsManager.loadPreviousYearElo(previousRankings);
 
             expect(eloCarryOver).toEqual({
-                Alice: { rating: 1050, gamesPlayed: 10 },
-                Bob: { rating: 980, gamesPlayed: 8 },
-                Charlie: { rating: 1120, gamesPlayed: 15 }
+                Alice: { rating: 1050, gamesPlayed: 10, lastAppearance: '2024-12-21' },
+                Bob: { rating: 980, gamesPlayed: 8, lastAppearance: '2024-12-21' },
+                Charlie: { rating: 1120, gamesPlayed: 15, lastAppearance: '2024-12-28' }
             });
         });
 
@@ -1199,6 +1212,9 @@ describe('RankingsManager - Yearly Rankings', () => {
                             rating: 1050,
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 10
+                        },
+                        rankingDetail: {
+                            '2024-12-21': { team: 'Blue', totalPoints: 7 }
                         }
                     },
                     Bob: {
@@ -1210,7 +1226,7 @@ describe('RankingsManager - Yearly Rankings', () => {
             const eloCarryOver = rankingsManager.loadPreviousYearElo(previousRankings);
 
             expect(eloCarryOver).toEqual({
-                Alice: { rating: 1050, gamesPlayed: 10 }
+                Alice: { rating: 1050, gamesPlayed: 10, lastAppearance: '2024-12-21' }
             });
         });
     });
@@ -1218,8 +1234,8 @@ describe('RankingsManager - Yearly Rankings', () => {
     describe('initializePlayerWithCarryOverElo', () => {
         it('should initialize player with carried-over ELO', () => {
             const eloCarryOver = {
-                Alice: { rating: 1050, gamesPlayed: 10 },
-                Bob: { rating: 980, gamesPlayed: 8 }
+                Alice: { rating: 1050, gamesPlayed: 10, lastAppearance: '2024-12-21' },
+                Bob: { rating: 980, gamesPlayed: 8, lastAppearance: '2024-12-14' }
             };
 
             const playerData = rankingsManager.initializePlayerWithCarryOverElo(
@@ -1229,7 +1245,7 @@ describe('RankingsManager - Yearly Rankings', () => {
 
             expect(playerData.elo.rating).toBe(1050);
             expect(playerData.elo.gamesPlayed).toBe(10); // Carry over games played
-            expect(playerData.elo.lastDecayAt).toBeNull(); // Reset decay date
+            expect(playerData.elo.lastDecayAt).toBe('2024-12-21'); // Carry over last appearance for decay
             expect(playerData.points).toBe(0);
             expect(playerData.appearances).toBe(0);
         });

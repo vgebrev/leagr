@@ -25,6 +25,7 @@
 
     let knockoutBracket = $state(null);
     let standings = $state([]);
+    let teams = $state({});
     let hasStandings = $derived(standings.length > 0);
 
     /**
@@ -192,6 +193,10 @@
                 const standingsData = await api.get('standings', date);
                 standings = standingsData.standings || [];
 
+                // Load teams data for scorer tracking
+                const teamsData = await api.get('teams', date);
+                teams = teamsData?.teams || {};
+
                 // Load knockout data - this might fail if no tournament exists yet
                 // We'll handle 404 errors gracefully since knockout tournaments are optional
                 try {
@@ -253,6 +258,7 @@
         {#if knockoutBracket}
             <KnockoutBracket
                 bracket={knockoutBracket}
+                {teams}
                 disabled={isCompetitionEnded(date, $settings)}
                 onMatchUpdate={handleKnockoutMatchUpdate}
                 onCelebrate={celebrateTeam}

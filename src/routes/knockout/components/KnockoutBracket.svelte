@@ -1,9 +1,11 @@
 <script>
-    import { Card, Input } from 'flowbite-svelte';
+    import { Card } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
+    import MatchCard from '$components/MatchCard.svelte';
 
     let {
         bracket = null,
+        teams = {},
         onMatchUpdate = null,
         onCelebrate = null,
         onTeamClick = null,
@@ -85,52 +87,6 @@
     }
 
     /**
-     * Handle score input change
-     * @param {Object} match - Match object
-     * @param {string} team - 'home' or 'away'
-     * @param {Event} event - Input event
-     */
-    function handleScoreChange(match, team, event) {
-        if (isScoreInputDisabled(match) || !onMatchUpdate) return;
-
-        const value = event.target.value;
-        const numericValue = value === '' ? null : parseInt(value, 10);
-
-        let homeScore = match.homeScore;
-        let awayScore = match.awayScore;
-
-        if (team === 'home') {
-            homeScore = numericValue;
-            // Auto-set logic
-            if (numericValue === null) {
-                // If the home score is cleared, clear the away score too
-                awayScore = null;
-            } else if (match.awayScore === null || match.awayScore === undefined) {
-                // If the home score is set and the away score is blank, set away to 0
-                awayScore = 0;
-            }
-        } else {
-            awayScore = numericValue;
-            // Auto-set logic
-            if (numericValue === null) {
-                // If the away score is cleared, clear the home score too
-                homeScore = null;
-            } else if (match.homeScore === null || match.homeScore === undefined) {
-                // If the away score is set and the home score is blank, set home to 0
-                homeScore = 0;
-            }
-        }
-
-        const updatedMatch = {
-            ...match,
-            homeScore,
-            awayScore
-        };
-
-        onMatchUpdate(updatedMatch);
-    }
-
-    /**
      * Check if a team is the loser of a match
      * @param {Object} match - Match object
      * @param {string} team - Team name ('home' or 'away')
@@ -152,7 +108,7 @@
      * @param {Object} match - Match object
      * @returns {boolean} True if score input should be disabled
      */
-    function isScoreInputDisabled(match) {
+    function isMatchDisabled(match) {
         // Disable if component is disabled
         if (disabled) return true;
 
@@ -188,87 +144,96 @@
                                     </div>
                                 </div>
 
-                                <!-- Home Team -->
-                                <div class="mt-2 flex justify-between gap-2">
+                                {#if match.home && match.home !== 'BYE' && match.away && match.away !== 'BYE'}
+                                    <!-- Use MatchCard for valid matches -->
                                     <div
-                                        class="flex w-full overflow-hidden"
-                                        onclick={() => handleCelebrate(match.home)}
+                                        onclick={() => {
+                                            // Celebrate the winner if match is complete
+                                            if (
+                                                match.homeScore !== null &&
+                                                match.awayScore !== null
+                                            ) {
+                                                const winner =
+                                                    match.homeScore > match.awayScore
+                                                        ? match.home
+                                                        : match.away;
+                                                handleCelebrate(winner);
+                                            }
+                                        }}
                                         onkeydown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
-                                                handleCelebrate(match.home);
+                                                if (
+                                                    match.homeScore !== null &&
+                                                    match.awayScore !== null
+                                                ) {
+                                                    const winner =
+                                                        match.homeScore > match.awayScore
+                                                            ? match.home
+                                                            : match.away;
+                                                    handleCelebrate(winner);
+                                                }
                                             }
                                         }}
                                         tabindex="0"
                                         role="button">
-                                        {#if match.home && match.home !== 'BYE'}
-                                            <TeamBadge
-                                                teamName={match.home}
-                                                onclick={() => handleTeamBadgeClick(match.home)}
-                                                className="text-sm w-full {isLoser(match, 'home')
-                                                    ? 'line-through opacity-50'
-                                                    : ''}" />
-                                        {:else if match.home === 'BYE'}
-                                            <span
-                                                class="w-full text-center text-sm text-gray-400 italic"
-                                                >BYE</span>
-                                        {:else}
-                                            <span
-                                                class="w-full text-center text-sm text-gray-400 italic"
-                                                >TBD</span>
-                                        {/if}
+                                        <MatchCard
+                                            {match}
+                                            matchId={`${match.round}-${match.match}`}
+                                            {teams}
+                                            orientation="vertical"
+                                            disabled={isMatchDisabled(match)}
+                                            onUpdate={onMatchUpdate}
+                                            onTeamClick={handleTeamBadgeClick} />
                                     </div>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        max="20"
-                                        value={match.homeScore ?? ''}
-                                        size="sm"
-                                        class="!w-12 !text-center"
-                                        disabled={isScoreInputDisabled(match)}
-                                        onchange={(e) => handleScoreChange(match, 'home', e)}
-                                        onfocus={(e) => e.target.select()} />
-                                </div>
-
-                                <!-- Away Team -->
-                                <div class="mt-2 flex justify-between gap-2">
-                                    <div
-                                        class="flex w-full overflow-hidden"
-                                        onclick={() => handleCelebrate(match.away)}
-                                        onkeydown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                handleCelebrate(match.away);
-                                            }
-                                        }}
-                                        tabindex="0"
-                                        role="button">
-                                        {#if match.away && match.away !== 'BYE'}
-                                            <TeamBadge
-                                                teamName={match.away}
-                                                onclick={() => handleTeamBadgeClick(match.away)}
-                                                className="text-sm w-full {isLoser(match, 'away')
-                                                    ? 'line-through opacity-50'
-                                                    : ''}" />
-                                        {:else if match.away === 'BYE'}
-                                            <span
-                                                class="w-full text-center text-sm text-gray-400 italic"
-                                                >BYE</span>
-                                        {:else}
-                                            <span
-                                                class="w-full text-center text-sm text-gray-400 italic"
-                                                >TBD</span>
-                                        {/if}
+                                {:else}
+                                    <!-- Fallback for BYE/TBD teams -->
+                                    <div class="mt-2 flex justify-between gap-2">
+                                        <div class="flex w-full overflow-hidden">
+                                            {#if match.home === 'BYE'}
+                                                <span
+                                                    class="w-full text-center text-sm text-gray-400 italic"
+                                                    >BYE</span>
+                                            {:else if !match.home}
+                                                <span
+                                                    class="w-full text-center text-sm text-gray-400 italic"
+                                                    >TBD</span>
+                                            {:else}
+                                                <TeamBadge
+                                                    teamName={match.home}
+                                                    onclick={() => handleTeamBadgeClick(match.home)}
+                                                    className="w-full text-sm {isLoser(
+                                                        match,
+                                                        'home'
+                                                    )
+                                                        ? 'opacity-50 line-through'
+                                                        : ''}" />
+                                            {/if}
+                                        </div>
                                     </div>
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        max="20"
-                                        value={match.awayScore ?? ''}
-                                        size="sm"
-                                        class="!w-12 !text-center"
-                                        disabled={isScoreInputDisabled(match)}
-                                        onchange={(e) => handleScoreChange(match, 'away', e)}
-                                        onfocus={(e) => e.target.select()} />
-                                </div>
+                                    <div class="mt-2 flex justify-between gap-2">
+                                        <div class="flex w-full overflow-hidden">
+                                            {#if match.away === 'BYE'}
+                                                <span
+                                                    class="w-full text-center text-sm text-gray-400 italic"
+                                                    >BYE</span>
+                                            {:else if !match.away}
+                                                <span
+                                                    class="w-full text-center text-sm text-gray-400 italic"
+                                                    >TBD</span>
+                                            {:else}
+                                                <TeamBadge
+                                                    teamName={match.away}
+                                                    onclick={() => handleTeamBadgeClick(match.away)}
+                                                    className="w-full text-sm {isLoser(
+                                                        match,
+                                                        'away'
+                                                    )
+                                                        ? 'opacity-50 line-through'
+                                                        : ''}" />
+                                            {/if}
+                                        </div>
+                                    </div>
+                                {/if}
                             </Card>
                         {/each}
                     </div>

@@ -10,3 +10,4 @@ Dockerfile
 *.tar
 deploy.ps1
 deploy.sh
+scripts

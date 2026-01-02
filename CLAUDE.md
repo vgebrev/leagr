@@ -351,14 +351,15 @@ await manager.addPlayer('John Doe', date);
 5. **Explain Changes**: Every step of the way, give high-level explanations of what changes you made
 6. **Keep it Simple**: Make every task and code change as simple as possible. Avoid massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
 7. **Run tests frequently** - Use `npm test` to verify changes don't break existing functionality
-8. **Document**: After completing a non-trivial feature or significant change, create a summary document in `tasks/[feature-name]-implementation.md` with:
+8. **Type checking**: Only run `npm run check` when explicitly requested or when type errors are blocking functionality. Focus on working code over perfect types. Add JSDoc type annotations pragmatically when they improve code clarity, not exhaustively.
+9. **Document**: After completing a non-trivial feature or significant change, create a summary document in `tasks/[feature-name]-implementation.md` with:
     - Overview of what was implemented
     - Architecture decisions made
     - Files modified (with brief descriptions)
     - Testing approach
     - Any assumptions or limitations
-9. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
-10. If a task becomes more complex than initially planned, pause and discuss alternatives.
+10. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
+11. If a task becomes more complex than initially planned, pause and discuss alternatives.
 
 **Important Notes:**
 

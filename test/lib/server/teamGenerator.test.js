@@ -27,49 +27,49 @@ describe('TeamGenerator', () => {
                     rankingPoints: 100,
                     weightedAverage: 4.5,
                     appearances: 10,
-                    elo: { rating: 1200 }
+                    elo: { rating: 1200, gamesPlayed: 70 }
                 },
                 Bob: {
                     rankingPoints: 90,
                     weightedAverage: 4.2,
                     appearances: 8,
-                    elo: { rating: 1150 }
+                    elo: { rating: 1150, gamesPlayed: 56 }
                 },
                 Charlie: {
                     rankingPoints: 85,
                     weightedAverage: 4.0,
                     appearances: 9,
-                    elo: { rating: 1100 }
+                    elo: { rating: 1100, gamesPlayed: 63 }
                 },
                 Diana: {
                     rankingPoints: 80,
                     weightedAverage: 3.8,
                     appearances: 7,
-                    elo: { rating: 1050 }
+                    elo: { rating: 1050, gamesPlayed: 49 }
                 },
                 Eve: {
                     rankingPoints: 75,
                     weightedAverage: 3.5,
                     appearances: 6,
-                    elo: { rating: 1000 }
+                    elo: { rating: 1000, gamesPlayed: 42 }
                 },
                 Frank: {
                     rankingPoints: 70,
                     weightedAverage: 3.2,
                     appearances: 5,
-                    elo: { rating: 950 }
+                    elo: { rating: 950, gamesPlayed: 35 }
                 },
                 Grace: {
                     rankingPoints: 65,
                     weightedAverage: 3.0,
                     appearances: 4,
-                    elo: { rating: 900 }
+                    elo: { rating: 900, gamesPlayed: 28 }
                 },
                 Henry: {
                     rankingPoints: 60,
                     weightedAverage: 2.8,
                     appearances: 3,
-                    elo: { rating: 850 }
+                    elo: { rating: 850, gamesPlayed: 21 }
                 }
             }
         };
@@ -365,12 +365,12 @@ describe('TeamGenerator', () => {
         });
 
         it('should calculate team ELO averages correctly using provisional ratings', () => {
-            // calculateTeamEloAverages uses provisional ratings for players with < 5 appearances
+            // calculateTeamEloAverages uses provisional ratings for players with < 35 games
             // Without _provisionalAnchors set, falls back to DEFAULT_ELO (1000) as anchor
-            // Alice (10 appearances) -> established, uses actual: 1200
-            // Frank (5 appearances) -> established, uses actual: 950
-            // Bob (8 appearances) -> established, uses actual: 1150
-            // Grace (4 appearances) -> provisional: 1000 + (900-1000) * 4/5 = 920
+            // Alice (70 games) -> established, uses actual: 1200
+            // Frank (35 games) -> established, uses actual: 950
+            // Bob (56 games) -> established, uses actual: 1150
+            // Grace (28 games) -> provisional: 1000 + (900-1000) * 28/35 = 920
             const teams = {
                 'Team A': ['Alice', 'Frank'], // ELO: 1200, 950 -> avg: 1075
                 'Team B': ['Bob', 'Grace'] // ELO: 1150, 920 (provisional) -> avg: 1035

@@ -69,7 +69,7 @@ describe('Discipline Integration', () => {
         await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2));
 
         // Update rankings - this should trigger the discipline clearing logic
-        await rankingsManager.updateRankings();
+        await rankingsManager.updateRankings(2025);
 
         // Verify player's active no-shows were cleared
         record = await disciplineManager.getPlayerRecord('TestPlayer');
@@ -123,7 +123,7 @@ describe('Discipline Integration', () => {
         await fs.writeFile(sessionPath, JSON.stringify(sessionData, null, 2));
 
         // Update rankings
-        await rankingsManager.updateRankings();
+        await rankingsManager.updateRankings(2025);
 
         // Verify the player still has active no-shows
         const record = await disciplineManager.getPlayerRecord('TestPlayer');
