@@ -1,6 +1,6 @@
 <script>
     import { Listgroup, ListgroupItem } from 'flowbite-svelte';
-    import MatchCard from './MatchCard.svelte';
+    import MatchCard from '$components/MatchCard.svelte';
 
     let {
         schedule = [],
@@ -10,18 +10,6 @@
         disabled = false,
         className = ''
     } = $props();
-
-    /**
-     * Handle match score update
-     * @param {number} roundIndex - Index of the round
-     * @param {number} matchIndex - Index of the match within the round
-     * @param {Object} updatedMatch - Updated match object
-     */
-    function handleMatchUpdate(roundIndex, matchIndex, updatedMatch) {
-        if (onMatchUpdate) {
-            onMatchUpdate(roundIndex, matchIndex, updatedMatch);
-        }
-    }
 </script>
 
 {#if schedule.length > 0}
@@ -37,13 +25,13 @@
                         <ListgroupItem class="p-0">
                             <MatchCard
                                 {match}
+                                matchId={`r${roundIndex}-m${matchIndex}`}
                                 {teams}
+                                orientation="horizontal"
                                 {disabled}
                                 {onTeamClick}
-                                {roundIndex}
-                                {matchIndex}
-                                onScoreChange={(/** @type {any} */ updatedMatch) =>
-                                    handleMatchUpdate(roundIndex, matchIndex, updatedMatch)}
+                                onUpdate={(/** @type {any} */ updatedMatch) =>
+                                    onMatchUpdate?.(roundIndex, matchIndex, updatedMatch)}
                                 className="w-full" />
                         </ListgroupItem>
                     {/if}

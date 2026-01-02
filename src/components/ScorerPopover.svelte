@@ -4,7 +4,14 @@
     import { teamStyles, teamColours } from '$lib/shared/helpers.js';
 
     /** @type {{ triggerId: string, teamName: string, players: Array<string | { name: string }>, scorers?: Record<string, number>, isOpen?: boolean, onUpdate: (change: { player: string, delta: number }) => void }} */
-    let { triggerId, teamName, players, scorers = {}, isOpen = $bindable(false), onUpdate } = $props();
+    let {
+        triggerId,
+        teamName,
+        players,
+        scorers = {},
+        isOpen = $bindable(false),
+        onUpdate
+    } = $props();
 
     /**
      * Helper to get player name from string or object
