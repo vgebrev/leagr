@@ -3,8 +3,8 @@
     import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
     import { teamStyles, teamColours } from '$lib/shared/helpers.js';
 
-    /** @type {{ triggerId: string, teamName: string, players: Array<string | { name: string }>, scorers?: Record<string, number>, onUpdate: (change: { player: string, delta: number }) => void }} */
-    let { triggerId, teamName, players, scorers = {}, onUpdate } = $props();
+    /** @type {{ triggerId: string, teamName: string, players: Array<string | { name: string }>, scorers?: Record<string, number>, isOpen?: boolean, onUpdate: (change: { player: string, delta: number }) => void }} */
+    let { triggerId, teamName, players, scorers = {}, isOpen = $bindable(false), onUpdate } = $props();
 
     /**
      * Helper to get player name from string or object
@@ -38,7 +38,8 @@
     triggeredBy="#{triggerId}"
     placement="bottom"
     class={`${styles.text} ${/** @type {any} */ (styles).border}`}
-    arrow={false}>
+    arrow={false}
+    bind:isOpen>
     <div>
         {#if players.length === 0}
             <div class="py-2 text-center text-xs opacity-70">No players found</div>

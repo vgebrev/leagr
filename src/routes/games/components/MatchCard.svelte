@@ -23,18 +23,8 @@
     let awayScoreInput = $derived(match.awayScore?.toString() || '');
     let homeScoreError = $state('');
     let awayScoreError = $state('');
-
-    // Calculate assigned scorers for display
-    let homeScorersAssigned = $derived(
-        match.homeScorers
-            ? Object.values(match.homeScorers).reduce((sum, count) => sum + count, 0)
-            : 0
-    );
-    let awayScorersAssigned = $derived(
-        match.awayScorers
-            ? Object.values(match.awayScorers).reduce((sum, count) => sum + count, 0)
-            : 0
-    );
+    let homePopoverOpen = $state(false);
+    let awayPopoverOpen = $state(false);
 
     /**
      * Validate and update home score
@@ -152,9 +142,28 @@
         // Update score (preserve manual edits + apply delta)
         const newScore = Math.max(0, currentScore + delta);
 
+        // Auto-set logic: only auto-set opposite to 0 when first entering a score on unscored match
+        let homeScore = match.homeScore;
+        let awayScore = match.awayScore;
+
+        if (team === 'home') {
+            homeScore = newScore;
+            // Only auto-set away to 0 if BOTH scores were null (completely unscored match)
+            if (newScore > 0 && match.homeScore === null && match.awayScore === null) {
+                awayScore = 0;
+            }
+        } else {
+            awayScore = newScore;
+            // Only auto-set home to 0 if BOTH scores were null (completely unscored match)
+            if (newScore > 0 && match.homeScore === null && match.awayScore === null) {
+                homeScore = 0;
+            }
+        }
+
         const updatedMatch = {
             ...match,
-            [team === 'home' ? 'homeScore' : 'awayScore']: newScore > 0 ? newScore : null,
+            homeScore,
+            awayScore,
             [team === 'home' ? 'homeScorers' : 'awayScorers']:
                 Object.keys(newScorers).length > 0 ? newScorers : null
         };
@@ -163,11 +172,11 @@
             onScoreChange(updatedMatch);
         }
 
-        // Close popover by triggering click on trigger element (toggles popover closed)
-        const triggerId = team === 'home' ? homeScoreId : awayScoreId;
-        const triggerElement = document.getElementById(triggerId);
-        if (triggerElement) {
-            triggerElement.click();
+        // Close popover
+        if (team === 'home') {
+            homePopoverOpen = false;
+        } else {
+            awayPopoverOpen = false;
         }
     }
 </script>
@@ -187,7 +196,7 @@
                 id={homeScoreId}
                 type="number"
                 size="sm"
-                class={`!w-8 !text-center md:!w-16 ${homeScoreError ? 'border-red-500' : ''} ${homeScorersAssigned > 0 ? '!border-green-500 !ring-1 !ring-green-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
+                class={`!w-8 !text-center md:!w-16 ${homeScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
                 value={homeScoreInput}
                 onchange={handleHomeScoreChange}
                 onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
@@ -201,6 +210,7 @@
                     teamName={match.home}
                     players={teams[match.home] || []}
                     scorers={match.homeScorers || {}}
+                    bind:isOpen={homePopoverOpen}
                     onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
                         handleScorersUpdate('home', change)} />
             {/if}
@@ -215,7 +225,7 @@
                 id={awayScoreId}
                 type="number"
                 size="sm"
-                class={`!w-8 !text-center md:!w-16 ${awayScoreError ? 'border-red-500' : ''} ${awayScorersAssigned > 0 ? '!border-green-500 !ring-1 !ring-green-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
+                class={`!w-8 !text-center md:!w-16 ${awayScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
                 value={awayScoreInput}
                 onchange={handleAwayScoreChange}
                 onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
@@ -229,6 +239,7 @@
                     teamName={match.away}
                     players={teams[match.away] || []}
                     scorers={match.awayScorers || {}}
+                    bind:isOpen={awayPopoverOpen}
                     onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
                         handleScorersUpdate('away', change)} />
             {/if}

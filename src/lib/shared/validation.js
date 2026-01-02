@@ -522,12 +522,22 @@ export function validateRound(round, roundIndex = 0) {
             );
         }
 
-        sanitizedRound.push({
+        const sanitizedMatch = {
             home: match.home.trim(),
             away: match.away.trim(),
             homeScore: scoreResult.sanitizedMatch?.homeScore ?? match.homeScore,
             awayScore: scoreResult.sanitizedMatch?.awayScore ?? match.awayScore
-        });
+        };
+
+        // Include scorer data if present
+        if (match.homeScorers !== undefined) {
+            sanitizedMatch.homeScorers = match.homeScorers;
+        }
+        if (match.awayScorers !== undefined) {
+            sanitizedMatch.awayScorers = match.awayScorers;
+        }
+
+        sanitizedRound.push(sanitizedMatch);
     }
 
     return {
