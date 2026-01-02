@@ -27,6 +27,7 @@ Features include:
     - Automatic suspension of players after no-shows.
 - **Game Scheduling and Score Tracking**
     - Generate a round-robin home-away match schedule and track results.
+    - Individual goal-scorer tracking with interactive popover UI (league + knockout matches).
     - Standings table based on match results.
     - Knockout tournament generation with teams seeded by standings.
 - **Player Rankings**
