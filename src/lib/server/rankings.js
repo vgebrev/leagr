@@ -1106,14 +1106,18 @@ export class RankingsManager {
                         goalsAgainstPerSession: null,
                         eloRating: playerData.elo
                             ? Math.round(playerData.elo.rating)
-                            : ELO_BASELINE_RATING
+                            : ELO_BASELINE_RATING,
+                        eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                        attackingRating: playerData.attackingRating || null,
+                        controlRating: playerData.controlRating || null
                     };
                 } else {
                     // Player appeared but entry wasn't created yet (edge case)
                     playerData.rankingDetail[date] = {
                         eloRating: playerData.elo
                             ? Math.round(playerData.elo.rating)
-                            : ELO_BASELINE_RATING
+                            : ELO_BASELINE_RATING,
+                        eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0
                     };
                 }
             }

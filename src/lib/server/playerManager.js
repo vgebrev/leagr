@@ -734,7 +734,18 @@ export class PlayerManager {
                     actualElo = detail?.eloRating ?? DEFAULT_ELO;
                     attackingRating = detail?.attackingRating ?? DEFAULT_RATING;
                     controlRating = detail?.controlRating ?? DEFAULT_RATING;
-                    gamesPlayed = detail?.eloGames ?? 0;
+
+                    // For eloGames, fall back to player-level data if missing from ranking detail
+                    // (handles legacy rankings where carry-forward entries didn't include eloGames)
+                    gamesPlayed = detail?.eloGames ?? playerRanking.elo?.gamesPlayed ?? 0;
+
+                    // Similarly, fall back to player-level ratings if missing from detail
+                    if (attackingRating === DEFAULT_RATING && playerRanking.attackingRating != null) {
+                        attackingRating = playerRanking.attackingRating;
+                    }
+                    if (controlRating === DEFAULT_RATING && playerRanking.controlRating != null) {
+                        controlRating = playerRanking.controlRating;
+                    }
                 }
             }
 
