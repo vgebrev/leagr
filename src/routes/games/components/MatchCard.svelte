@@ -2,13 +2,39 @@
     import { Input } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
     import { validateGameScore } from '$lib/shared/validation.js';
+    import ScorerPopover from './ScorerPopover.svelte';
 
-    let { match, onScoreChange, onTeamClick, disabled = false, className = '' } = $props();
+    let {
+        match,
+        teams = {}, // Teams object mapping team names to player arrays
+        onScoreChange,
+        onTeamClick,
+        roundIndex,
+        matchIndex,
+        disabled = false,
+        className = ''
+    } = $props();
+
+    // Generate unique IDs for this specific match instance
+    const homeScoreId = `home-score-r${roundIndex}-m${matchIndex}`;
+    const awayScoreId = `away-score-r${roundIndex}-m${matchIndex}`;
 
     let homeScoreInput = $derived(match.homeScore?.toString() || '');
     let awayScoreInput = $derived(match.awayScore?.toString() || '');
     let homeScoreError = $state('');
     let awayScoreError = $state('');
+
+    // Calculate assigned scorers for display
+    let homeScorersAssigned = $derived(
+        match.homeScorers
+            ? Object.values(match.homeScorers).reduce((sum, count) => sum + count, 0)
+            : 0
+    );
+    let awayScorersAssigned = $derived(
+        match.awayScorers
+            ? Object.values(match.awayScorers).reduce((sum, count) => sum + count, 0)
+            : 0
+    );
 
     /**
      * Validate and update home score
@@ -99,6 +125,51 @@
             onScoreChange(updatedMatch);
         }
     }
+
+    /**
+     * Update scorers for a team with incremental changes
+     * @param {'home' | 'away'} team - Which team to update
+     * @param {{ player: string, delta: number }} change - Player and delta (+1 or -1)
+     */
+    function handleScorersUpdate(team, change) {
+        const { player, delta } = change;
+
+        // Get current scorers and score
+        const currentScorers = team === 'home' ? match.homeScorers || {} : match.awayScorers || {};
+        const currentScore = team === 'home' ? match.homeScore || 0 : match.awayScore || 0;
+
+        // Update scorers
+        const newScorers = { ...currentScorers };
+        const currentCount = newScorers[player] || 0;
+        const newCount = currentCount + delta;
+
+        if (newCount > 0) {
+            newScorers[player] = newCount;
+        } else {
+            delete newScorers[player];
+        }
+
+        // Update score (preserve manual edits + apply delta)
+        const newScore = Math.max(0, currentScore + delta);
+
+        const updatedMatch = {
+            ...match,
+            [team === 'home' ? 'homeScore' : 'awayScore']: newScore > 0 ? newScore : null,
+            [team === 'home' ? 'homeScorers' : 'awayScorers']:
+                Object.keys(newScorers).length > 0 ? newScorers : null
+        };
+
+        if (onScoreChange) {
+            onScoreChange(updatedMatch);
+        }
+
+        // Close popover by triggering click on trigger element (toggles popover closed)
+        const triggerId = team === 'home' ? homeScoreId : awayScoreId;
+        const triggerElement = document.getElementById(triggerId);
+        if (triggerElement) {
+            triggerElement.click();
+        }
+    }
 </script>
 
 {#if !match.bye}
@@ -110,37 +181,57 @@
             teamName={match.home}
             onclick={() => onTeamClick?.(match.home)} />
 
-        <!-- Home score input -->
-        <div class="flex flex-col items-center">
+        <!-- Home score input with scorer popover -->
+        <div class="relative flex flex-col items-center">
             <Input
+                id={homeScoreId}
                 type="number"
                 size="sm"
-                class={`!w-8 !text-center md:!w-16 ${homeScoreError ? 'border-red-500' : ''}`}
+                class={`!w-8 !text-center md:!w-16 ${homeScoreError ? 'border-red-500' : ''} ${homeScorersAssigned > 0 ? '!border-green-500 !ring-1 !ring-green-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
                 value={homeScoreInput}
                 onchange={handleHomeScoreChange}
-                onfocus={(e) => e.target?.select()}
+                onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
                 {disabled}
                 min="0"
                 max="99"
                 aria-label={`${match.home} score`} />
+            {#if !disabled}
+                <ScorerPopover
+                    triggerId={homeScoreId}
+                    teamName={match.home}
+                    players={teams[match.home] || []}
+                    scorers={match.homeScorers || {}}
+                    onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
+                        handleScorersUpdate('home', change)} />
+            {/if}
             {#if homeScoreError}
                 <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
             {/if}
         </div>
 
-        <!-- Away score input -->
-        <div class="flex flex-col items-center">
+        <!-- Away score input with scorer popover -->
+        <div class="relative flex flex-col items-center">
             <Input
+                id={awayScoreId}
                 type="number"
                 size="sm"
-                class={`!w-8 !text-center md:!w-16 ${awayScoreError ? 'border-red-500' : ''}`}
+                class={`!w-8 !text-center md:!w-16 ${awayScoreError ? 'border-red-500' : ''} ${awayScorersAssigned > 0 ? '!border-green-500 !ring-1 !ring-green-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
                 value={awayScoreInput}
                 onchange={handleAwayScoreChange}
-                onfocus={(e) => e.target?.select()}
+                onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
                 {disabled}
                 min="0"
                 max="99"
                 aria-label={`${match.away} score`} />
+            {#if !disabled}
+                <ScorerPopover
+                    triggerId={awayScoreId}
+                    teamName={match.away}
+                    players={teams[match.away] || []}
+                    scorers={match.awayScorers || {}}
+                    onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
+                        handleScorersUpdate('away', change)} />
+            {/if}
             {#if awayScoreError}
                 <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
             {/if}

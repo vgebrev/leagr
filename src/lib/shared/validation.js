@@ -630,6 +630,170 @@ export function validateGameRequest(requestBody) {
 }
 
 /**
+ * Reserved keys for scorer tracking
+ * These keys have special meanings and cannot be used as player names in scorer objects
+ */
+export const RESERVED_SCORER_KEYS = {
+    OWN_GOAL: '__ownGoal__',
+    UNASSIGNED: '__unassigned__'
+};
+
+/**
+ * Configuration for scorer validation
+ */
+const SCORER_CONFIG = {
+    maxOwnGoals: 2, // Maximum own goals per team in a single game (prevents data entry errors)
+    allowPartial: true // Allow partial goal assignment (not all goals assigned to specific players)
+};
+
+/**
+ * Validates scorer data for a game
+ * @param {Object|null|undefined} scorers - Scorers object mapping player names to goal counts
+ * @param {number|null} score - Total score for the team
+ * @param {Array<string>} teamPlayers - Array of player names on this team
+ * @returns {{isValid: boolean, errors: string[]}}
+ */
+export function validateScorers(scorers, score, teamPlayers) {
+    const errors = [];
+
+    // Scorers is optional - null/undefined is valid
+    if (scorers === null || scorers === undefined) {
+        return { isValid: true, errors: [] };
+    }
+
+    // Must be an object
+    if (typeof scorers !== 'object' || Array.isArray(scorers)) {
+        return {
+            isValid: false,
+            errors: ['Scorers must be an object mapping player names to goal counts']
+        };
+    }
+
+    // If score is null/undefined, scorers should also be null
+    if (score === null || score === undefined) {
+        if (Object.keys(scorers).length > 0) {
+            return {
+                isValid: false,
+                errors: ['Cannot assign scorers when score is not set']
+            };
+        }
+        return { isValid: true, errors: [] };
+    }
+
+    // Calculate total assigned goals
+    let totalAssigned = 0;
+    for (const [player, goals] of Object.entries(scorers)) {
+        // Validate goal count is a positive integer
+        if (!Number.isInteger(goals)) {
+            errors.push(`Invalid goal count for ${player}: must be an integer`);
+            continue;
+        }
+
+        if (goals < 0) {
+            errors.push(`Invalid goal count for ${player}: cannot be negative`);
+            continue;
+        }
+
+        if (goals === 0) {
+            errors.push(
+                `Invalid goal count for ${player}: use 0 goals by not including the player`
+            );
+            continue;
+        }
+
+        totalAssigned += goals;
+
+        // Skip reserved keys for player validation
+        if (player === RESERVED_SCORER_KEYS.OWN_GOAL) {
+            // Validate own goal count is reasonable
+            if (goals > SCORER_CONFIG.maxOwnGoals) {
+                errors.push(
+                    `Own goal count seems unusually high (${goals}). Maximum allowed: ${SCORER_CONFIG.maxOwnGoals}`
+                );
+            }
+            continue;
+        }
+
+        if (player === RESERVED_SCORER_KEYS.UNASSIGNED) {
+            // Future reserved key - valid
+            continue;
+        }
+
+        // Validate player belongs to the team
+        if (!teamPlayers || !Array.isArray(teamPlayers)) {
+            errors.push('Team players array is required for validation');
+            break;
+        }
+
+        if (!teamPlayers.includes(player)) {
+            errors.push(`${player} is not on this team`);
+        }
+    }
+
+    // Validate total assigned goals
+    if (totalAssigned > score) {
+        errors.push(`Total assigned goals (${totalAssigned}) exceeds team score (${score})`);
+    }
+
+    // If partial assignment is disabled, require all goals to be assigned
+    if (!SCORER_CONFIG.allowPartial && totalAssigned < score) {
+        errors.push(`All goals must be assigned. Assigned: ${totalAssigned}, Total: ${score}`);
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+}
+
+/**
+ * Validates scorers for both home and away teams in a match
+ * @param {Object} match - Match object with teams, scores, and optional scorers
+ * @param {Object} teams - Teams object mapping team names to player arrays
+ * @returns {{isValid: boolean, errors: string[]}}
+ */
+export function validateMatchScorers(match, teams) {
+    const errors = [];
+
+    if (!match || typeof match !== 'object') {
+        return {
+            isValid: false,
+            errors: ['Match must be a valid object']
+        };
+    }
+
+    // Skip bye matches
+    if (match.bye) {
+        return { isValid: true, errors: [] };
+    }
+
+    // Validate home scorers
+    if (match.homeScorers !== undefined && match.homeScorers !== null) {
+        const homeTeamPlayers = teams?.[match.home] || [];
+        const homeResult = validateScorers(match.homeScorers, match.homeScore, homeTeamPlayers);
+
+        if (!homeResult.isValid) {
+            errors.push(...homeResult.errors.map((err) => `Home team (${match.home}): ${err}`));
+        }
+    }
+
+    // Validate away scorers
+    if (match.awayScorers !== undefined && match.awayScorers !== null) {
+        const awayTeamPlayers = teams?.[match.away] || [];
+        const awayResult = validateScorers(match.awayScorers, match.awayScore, awayTeamPlayers);
+
+        if (!awayResult.isValid) {
+            errors.push(...awayResult.errors.map((err) => `Away team (${match.away}): ${err}`));
+        }
+    }
+
+    return {
+        isValid: errors.length === 0,
+        errors
+    };
+}
+
+/**
  * Validate if competition modification operations are allowed based on timing
  * @param {string} dateString - Date in YYYY-MM-DD format
  * @param {Object} settings - Settings object with registration window configuration

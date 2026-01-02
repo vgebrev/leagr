@@ -33,3 +33,6 @@ vite.config.ts.timestamp-*
 # AI Agents
 /.junie
 
+# Ad-hoc scripts
+/scripts/
+
