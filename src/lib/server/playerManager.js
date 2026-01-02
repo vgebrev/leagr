@@ -650,26 +650,30 @@ export class PlayerManager {
     }
 
     /**
-     * Calculate provisional anchor values from established players in the rankings.
+     * Calculate provisional anchor values from established players in the session.
      * Uses weakest established player's rating × 0.99 as anchor.
+     * @param {string[]} sessionPlayers - List of player names in this session
      * @param {Object} rankings - Enhanced rankings data
      * @param {number} threshold - Games played threshold for established status
      * @returns {{elo: number, attack: number, control: number}}
      */
-    #calculateProvisionalAnchors(rankings, threshold) {
+    #calculateProvisionalAnchors(sessionPlayers, rankings, threshold) {
         const DEFAULT_ELO = 1000;
         const DEFAULT_RATING = 0.5;
 
-        if (!rankings?.players) {
+        if (!rankings?.players || !sessionPlayers?.length) {
             return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
         }
 
-        // Find the weakest established player
+        // Find the weakest established player IN THIS SESSION
         let weakestElo = null;
         let weakestAttack = null;
         let weakestControl = null;
 
-        for (const playerData of Object.values(rankings.players)) {
+        for (const playerName of sessionPlayers) {
+            const playerData = rankings.players[playerName];
+            if (!playerData) continue;
+
             if ((playerData.elo?.gamesPlayed ?? 0) >= threshold) {
                 const elo = playerData.elo?.rating ?? DEFAULT_ELO;
                 const attack = playerData.attackingRating ?? DEFAULT_RATING;
@@ -681,7 +685,7 @@ export class PlayerManager {
             }
         }
 
-        // If no established players, use defaults
+        // If no established players in session, use defaults
         if (weakestElo === null) {
             return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
         }
@@ -700,15 +704,13 @@ export class PlayerManager {
      * @param {Object} rankings - Enhanced rankings data (current year)
      * @param {Object} previousYearRankings - Rankings from previous year (for carry-over lookup)
      * @param {Object} avatars - Avatar data from avatarManager
+     * @param {{elo: number, attack: number, control: number}} anchors - Pre-calculated anchor values
      * @returns {Object[]} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
      */
-    #enhancePlayersWithEloAndAvatar(players, rankings, previousYearRankings, avatars) {
+    #enhancePlayersWithEloAndAvatar(players, rankings, previousYearRankings, avatars, anchors) {
         const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
         const DEFAULT_ELO = 1000;
         const DEFAULT_RATING = 0.5;
-
-        // Calculate anchors once for all provisional players
-        const anchors = this.#calculateProvisionalAnchors(rankings, GAMES_THRESHOLD);
 
         return players.map((playerName) => {
             if (playerName === null) {
@@ -722,20 +724,13 @@ export class PlayerManager {
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
 
-            if (playerRanking?.rankingDetail) {
-                // Find the most recent ranking detail entry up to the session date
-                const rankingDates = Object.keys(playerRanking.rankingDetail)
-                    .filter((date) => date <= this.date)
-                    .sort();
-
-                if (rankingDates.length > 0) {
-                    const mostRecentDate = rankingDates[rankingDates.length - 1];
-                    const detail = playerRanking.rankingDetail[mostRecentDate];
-                    actualElo = detail?.eloRating ?? DEFAULT_ELO;
-                    attackingRating = detail?.attackingRating ?? DEFAULT_RATING;
-                    controlRating = detail?.controlRating ?? DEFAULT_RATING;
-                    gamesPlayed = detail?.eloGames ?? 0;
-                }
+            if (playerRanking) {
+                // Use top-level player data for consistency with TeamGenerator
+                // (detail.eloRating is rounded, but we need the unrounded value for accurate provisional calculation)
+                actualElo = playerRanking.elo?.rating ?? DEFAULT_ELO;
+                gamesPlayed = playerRanking.elo?.gamesPlayed ?? 0;
+                attackingRating = playerRanking.attackingRating ?? DEFAULT_RATING;
+                controlRating = playerRanking.controlRating ?? DEFAULT_RATING;
             }
 
             // If player not in current year rankings, check previous year for ELO carry-over ONLY
@@ -815,6 +810,19 @@ export class PlayerManager {
         const avatarManager = createAvatarManager().setLeague(this.leagueId);
         const avatars = await avatarManager.loadAvatars();
 
+        // Collect all unique players from teams (for session-based anchor calculation)
+        const sessionPlayers = new Set();
+        for (const players of Object.values(gameData.teams)) {
+            for (const player of players) {
+                if (player !== null) {
+                    sessionPlayers.add(player);
+                }
+            }
+        }
+
+        // Calculate anchors from session players
+        const anchors = this.#calculateProvisionalAnchors(Array.from(sessionPlayers), rankings, 35);
+
         // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(gameData.teams)) {
@@ -822,7 +830,8 @@ export class PlayerManager {
                 players,
                 rankings,
                 previousYearRankings,
-                avatars
+                avatars,
+                anchors
             );
         }
 
@@ -853,6 +862,12 @@ export class PlayerManager {
         const avatarManager = createAvatarManager().setLeague(this.leagueId);
         const avatars = await avatarManager.loadAvatars();
 
+        // Collect all session players (available + waitingList) for anchor calculation
+        const sessionPlayers = [...gameData.players.available, ...gameData.players.waitingList];
+
+        // Calculate anchors from session players
+        const anchors = this.#calculateProvisionalAnchors(sessionPlayers, rankings, 35);
+
         // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(gameData.teams)) {
@@ -860,7 +875,8 @@ export class PlayerManager {
                 players,
                 rankings,
                 previousYearRankings,
-                avatars
+                avatars,
+                anchors
             );
         }
 
@@ -870,13 +886,15 @@ export class PlayerManager {
                 gameData.players.available,
                 rankings,
                 previousYearRankings,
-                avatars
+                avatars,
+                anchors
             ),
             waitingList: this.#enhancePlayersWithEloAndAvatar(
                 gameData.players.waitingList,
                 rankings,
                 previousYearRankings,
-                avatars
+                avatars,
+                anchors
             )
         };
 
