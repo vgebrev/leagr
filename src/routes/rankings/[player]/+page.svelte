@@ -5,12 +5,8 @@
     import PerformanceSection from './components/PerformanceSection.svelte';
     import AppearanceHistorySection from './components/AppearanceHistorySection.svelte';
     import AvatarUploadButton from '$components/avatars/AvatarUploadButton.svelte';
-    import { Alert, Spinner, Dropdown, DropdownItem, Button, Badge } from 'flowbite-svelte';
-    import {
-        ChevronDownOutline,
-        ExclamationCircleOutline,
-        HourglassOutline
-    } from 'flowbite-svelte-icons';
+    import { Alert, Spinner, Dropdown, DropdownItem, Button } from 'flowbite-svelte';
+    import { ChevronDownOutline } from 'flowbite-svelte-icons';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
@@ -61,19 +57,19 @@
      * @param {number} appearances - Total number of appearances
      * @returns {'active'|'provisional'|'inactive'}
      */
-    function getPlayerStatus(lastAppearance, appearances) {
-        if (!lastAppearance) return 'inactive';
-
-        const today = new Date();
-        const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, today.getDate());
-        const lastAppearanceDate = new Date(lastAppearance);
-
-        const hasRecentAppearance = lastAppearanceDate >= twoMonthsAgo;
-
-        if (!hasRecentAppearance) return 'inactive';
-        if (appearances < 2) return 'provisional';
-        return 'active';
-    }
+    // function getPlayerStatus(lastAppearance, appearances) {
+    //     if (!lastAppearance) return 'inactive';
+    //
+    //     const today = new Date();
+    //     const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, today.getDate());
+    //     const lastAppearanceDate = new Date(lastAppearance);
+    //
+    //     const hasRecentAppearance = lastAppearanceDate >= twoMonthsAgo;
+    //
+    //     if (!hasRecentAppearance) return 'inactive';
+    //     if (appearances < 2) return 'provisional';
+    //     return 'active';
+    // }
 
     /**
      * Trigger celebration if player is #1
