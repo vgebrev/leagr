@@ -7,7 +7,7 @@
     /**
      * @type {{ playerData: any, playerName: string, showStatus?: boolean, asOfDate?: string | null }}
      */
-    let { playerData, playerName, showStatus = true, asOfDate = null } = $props();
+    let { playerData, playerName, showStatus = false, asOfDate = null } = $props();
 
     /**
      * Get player status: 'active', 'provisional', or 'inactive'

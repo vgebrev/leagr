@@ -657,7 +657,7 @@ export class PlayerManager {
      * @param {number} threshold - Games played threshold for established status
      * @returns {{elo: number, attack: number, control: number}}
      */
-    #calculateProvisionalAnchors(sessionPlayers, rankings, threshold) {
+    #calculateProvisionalAnchors(sessionPlayers, rankings, previousYearRankings, threshold) {
         const DEFAULT_ELO = 1000;
         const DEFAULT_RATING = 0.5;
 
@@ -666,19 +666,64 @@ export class PlayerManager {
         }
 
         // Find the weakest established player IN THIS SESSION
+        // Use the same lookup logic as individual player enhancement (last detail before session)
         let weakestElo = null;
         let weakestAttack = null;
         let weakestControl = null;
 
         for (const playerName of sessionPlayers) {
-            const playerData = rankings.players[playerName];
+            // Try current year first, fall back to previous year for carry-over
+            let playerData = rankings.players[playerName];
+            let usedPreviousYear = false;
+            if (!playerData && previousYearRankings?.players?.[playerName]) {
+                playerData = previousYearRankings.players[playerName];
+                usedPreviousYear = true;
+            }
             if (!playerData) continue;
 
-            if ((playerData.elo?.gamesPlayed ?? 0) >= threshold) {
-                const elo = playerData.elo?.rating ?? DEFAULT_ELO;
-                const attack = playerData.attackingRating ?? DEFAULT_RATING;
-                const control = playerData.controlRating ?? DEFAULT_RATING;
+            let gamesPlayed = 0;
+            let elo = DEFAULT_ELO;
+            let attack = DEFAULT_RATING;
+            let control = DEFAULT_RATING;
 
+            // If using previous year data, use the top-level snapshot (no detail lookup needed)
+            if (usedPreviousYear) {
+                gamesPlayed = playerData.elo?.gamesPlayed ?? 0;
+                elo = playerData.elo?.rating ?? DEFAULT_ELO;
+                attack = playerData.attackingRating ?? DEFAULT_RATING;
+                control = playerData.controlRating ?? DEFAULT_RATING;
+            } else {
+                // Current year: Find the last ranking detail entry before this session date
+                let lastDetailBeforeSession = null;
+                if (playerData.rankingDetail) {
+                    const detailDates = Object.keys(playerData.rankingDetail).sort();
+                    for (const date of detailDates) {
+                        if (date < this.date) {
+                            lastDetailBeforeSession = playerData.rankingDetail[date];
+                        } else {
+                            break;
+                        }
+                    }
+                }
+
+                if (lastDetailBeforeSession) {
+                    gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
+                    elo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
+                    attack = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
+                    control = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+                } else if (previousYearRankings?.players?.[playerName]) {
+                    // No detail found in current year before session - fall back to previous year
+                    const prevYearPlayer = previousYearRankings.players[playerName];
+                    gamesPlayed = prevYearPlayer.elo?.gamesPlayed ?? 0;
+                    elo = prevYearPlayer.elo?.rating ?? DEFAULT_ELO;
+                    attack = prevYearPlayer.attackingRating ?? DEFAULT_RATING;
+                    control = prevYearPlayer.controlRating ?? DEFAULT_RATING;
+                }
+                // else: no data found - use defaults (already initialized above)
+            }
+
+            // Check if player is established (based on pre-session games count)
+            if (gamesPlayed >= threshold) {
                 if (weakestElo === null || elo < weakestElo) weakestElo = elo;
                 if (weakestAttack === null || attack < weakestAttack) weakestAttack = attack;
                 if (weakestControl === null || control < weakestControl) weakestControl = control;
@@ -717,31 +762,42 @@ export class PlayerManager {
                 return null; // Preserve null slots for teams
             }
 
-            // Get ELO and ratings from most recent calculation (up to and including session date)
+            // Get ELO and ratings from last ranking detail BEFORE this session
             const playerRanking = rankings.players?.[playerName];
             let actualElo = DEFAULT_ELO;
             let attackingRating = DEFAULT_RATING;
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
 
-            if (playerRanking) {
-                // Use top-level player data for consistency with TeamGenerator
-                // (detail.eloRating is rounded, but we need the unrounded value for accurate provisional calculation)
-                actualElo = playerRanking.elo?.rating ?? DEFAULT_ELO;
-                gamesPlayed = playerRanking.elo?.gamesPlayed ?? 0;
-                attackingRating = playerRanking.attackingRating ?? DEFAULT_RATING;
-                controlRating = playerRanking.controlRating ?? DEFAULT_RATING;
+            // Find the last ranking detail entry before this session date
+            let lastDetailBeforeSession = null;
+            if (playerRanking?.rankingDetail) {
+                const detailDates = Object.keys(playerRanking.rankingDetail).sort();
+                for (const date of detailDates) {
+                    if (date < this.date) {
+                        lastDetailBeforeSession = playerRanking.rankingDetail[date];
+                    } else {
+                        break; // Stop at or after session date
+                    }
+                }
             }
 
-            // If player not in current year rankings, check previous year for ELO carry-over ONLY
-            // Attack/control ratings should reset to defaults (based on current year session data)
-            if (!playerRanking && previousYearRankings?.players?.[playerName]) {
+            if (lastDetailBeforeSession) {
+                // Use values from the last detail before this session
+                actualElo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
+                gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
+                attackingRating = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
+                controlRating = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+            } else if (previousYearRankings?.players?.[playerName]) {
+                // No detail before session - player hasn't played yet this year (or year boundary case)
+                // Fall back to previous year end-of-year state
                 const prevYearPlayer = previousYearRankings.players[playerName];
-                // Only carry over ELO data, not attack/control ratings
                 actualElo = prevYearPlayer.elo?.rating ?? DEFAULT_ELO;
                 gamesPlayed = prevYearPlayer.elo?.gamesPlayed ?? 0;
-                // attackingRating and controlRating stay at DEFAULT_RATING (0.5)
+                attackingRating = prevYearPlayer.attackingRating ?? DEFAULT_RATING;
+                controlRating = prevYearPlayer.controlRating ?? DEFAULT_RATING;
             }
+            // else: player is completely new (no current or previous year data) - use defaults
 
             // Get avatar data
             const playerAvatar = avatars?.[playerName];
@@ -796,14 +852,16 @@ export class PlayerManager {
 
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
 
-        // Load rankings to get player ELO ratings (with fallback to previous year for balancing)
-        const rankings = await rankingsManager.loadEnhancedRankings(undefined, {
+        // Extract year from session date to load correct year's rankings
+        const currentYear = new Date(this.date).getFullYear();
+        const previousYear = currentYear - 1;
+
+        // Load rankings for current year (with fallback to previous year if empty)
+        const rankings = await rankingsManager.loadEnhancedRankings(currentYear, {
             fallbackToPreviousYear: true
         });
 
-        // Load previous year rankings for players not yet in current year
-        const currentYear = new Date(this.date).getFullYear();
-        const previousYear = currentYear - 1;
+        // Load previous year rankings for carry-over lookups
         const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
@@ -821,7 +879,12 @@ export class PlayerManager {
         }
 
         // Calculate anchors from session players
-        const anchors = this.#calculateProvisionalAnchors(Array.from(sessionPlayers), rankings, 35);
+        const anchors = this.#calculateProvisionalAnchors(
+            Array.from(sessionPlayers),
+            rankings,
+            previousYearRankings,
+            35
+        );
 
         // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};
@@ -848,14 +911,16 @@ export class PlayerManager {
 
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
 
-        // Load rankings to get player ELO ratings (with fallback to previous year for balancing)
-        const rankings = await rankingsManager.loadEnhancedRankings(undefined, {
+        // Extract year from session date to load correct year's rankings
+        const currentYear = new Date(this.date).getFullYear();
+        const previousYear = currentYear - 1;
+
+        // Load rankings for current year (with fallback to previous year if empty)
+        const rankings = await rankingsManager.loadEnhancedRankings(currentYear, {
             fallbackToPreviousYear: true
         });
 
-        // Load previous year rankings for players not yet in current year
-        const currentYear = new Date(this.date).getFullYear();
-        const previousYear = currentYear - 1;
+        // Load previous year rankings for carry-over lookups
         const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
@@ -866,7 +931,12 @@ export class PlayerManager {
         const sessionPlayers = [...gameData.players.available, ...gameData.players.waitingList];
 
         // Calculate anchors from session players
-        const anchors = this.#calculateProvisionalAnchors(sessionPlayers, rankings, 35);
+        const anchors = this.#calculateProvisionalAnchors(
+            sessionPlayers,
+            rankings,
+            previousYearRankings,
+            35
+        );
 
         // Enhance teams with ELO and avatar data using the helper method
         const enhancedTeams = {};

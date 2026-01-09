@@ -117,10 +117,18 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Get rankings for both seeded and random teams (needed for draw history ELO display)
-        // Use fallback to previous year to ensure ELO data is available for team balancing
+        // Load current year rankings (with fallback to previous year if current year is empty)
+        const currentYear = new Date(dateValidation.date).getFullYear();
+        const previousYear = currentYear - 1;
+
         const rankings = await createRankingsManager()
             .setLeague(leagueId)
-            .loadEnhancedRankings(undefined, { fallbackToPreviousYear: true });
+            .loadEnhancedRankings(currentYear, { fallbackToPreviousYear: true });
+
+        // Load previous year rankings for players who haven't played yet this year
+        const previousYearRankings = await createRankingsManager()
+            .setLeague(leagueId)
+            .loadEnhancedRankings(previousYear);
 
         // Load avatars and merge them into rankings data
         const avatars = await createAvatarManager().setLeague(leagueId).loadAvatars();
@@ -128,6 +136,14 @@ export const POST = async ({ request, url, locals }) => {
             for (const [playerName, avatarData] of Object.entries(avatars)) {
                 if (rankings.players[playerName]) {
                     rankings.players[playerName].avatar = avatarData.avatar || null;
+                }
+            }
+        }
+        // Also merge avatars into previous year rankings
+        if (previousYearRankings?.players) {
+            for (const [playerName, avatarData] of Object.entries(avatars)) {
+                if (previousYearRankings.players[playerName]) {
+                    previousYearRankings.players[playerName].avatar = avatarData.avatar || null;
                 }
             }
         }
@@ -160,6 +176,7 @@ export const POST = async ({ request, url, locals }) => {
             .setSettings(gameData.settings)
             .setPlayers(eligiblePlayers)
             .setRankings(rankings)
+            .setPreviousYearRankings(previousYearRankings)
             .setTeammateHistory(teammateHistory)
             .setHistoryRecording(true);
 

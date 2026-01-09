@@ -255,25 +255,25 @@
                 </Dropdown>
             </div>
             <!-- Player Status Badge -->
-            {#if playerData}
-                {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}
-                {#if status === 'inactive'}
-                    <Badge
-                        border
-                        class="flex items-center">
-                        <ExclamationCircleOutline class="me-2 h-4 w-4" />
-                        Inactive Player
-                    </Badge>
-                {:else if status === 'provisional'}
-                    <Badge
-                        border
-                        color="gray"
-                        class="flex items-center">
-                        <HourglassOutline class="me-2 h-4 w-4" />
-                        Provisional Player
-                    </Badge>
-                {/if}
-            {/if}
+            <!--{#if playerData}-->
+            <!--    {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}-->
+            <!--    {#if status === 'inactive'}-->
+            <!--        <Badge-->
+            <!--            border-->
+            <!--            class="flex items-center">-->
+            <!--            <ExclamationCircleOutline class="me-2 h-4 w-4" />-->
+            <!--            Inactive Player-->
+            <!--        </Badge>-->
+            <!--    {:else if status === 'provisional'}-->
+            <!--        <Badge-->
+            <!--            border-->
+            <!--            color="gray"-->
+            <!--            class="flex items-center">-->
+            <!--            <HourglassOutline class="me-2 h-4 w-4" />-->
+            <!--            Provisional Player-->
+            <!--        </Badge>-->
+            <!--    {/if}-->
+            <!--{/if}-->
         </div>
     </div>
 

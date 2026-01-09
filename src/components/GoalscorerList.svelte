@@ -216,7 +216,7 @@
                     <span
                         class="flex-1 font-medium {getTeamColorClass(
                             scorer.teamName
-                        )} overflow-hidden rounded-sm px-1 py-0.5 text-start text-sm font-medium text-nowrap overflow-ellipsis shadow transition-opacity hover:opacity-80">
+                        )} overflow-hidden rounded-sm px-2 py-0.5 text-start text-sm font-medium text-nowrap overflow-ellipsis shadow transition-opacity hover:opacity-80">
                         {scorer.playerName}
                     </span>
 

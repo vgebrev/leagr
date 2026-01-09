@@ -172,8 +172,8 @@ export const teamStyles = {
         confetti: ['#dc2626', '#fecaca']
     },
     gray: {
-        text: '!text-gray-700 dark:text-gray-200 dark:bg-gray-700 bg-gray-200',
-        header: 'dark:bg-gray-700 bg-gray-200',
+        text: '!text-gray-700 dark:!text-gray-200 dark:bg-gray-700 bg-gray-200',
+        header: 'dark:bg-gray-700 bg-gray-200 text-gray-700 dark:text-gray-200',
         row: 'bg-gray-100 dark:bg-gray-600',
         button: 'primary',
         buttonClass:
@@ -182,8 +182,8 @@ export const teamStyles = {
         confetti: ['#6a7282', '#e5e7eb']
     },
     default: {
-        text: '!text-gray-700 dark:text-gray-200 dark:bg-gray-700 bg-gray-200',
-        header: 'dark:bg-gray-700 bg-gray-200',
+        text: '!text-gray-700 dark:!text-gray-200 dark:bg-gray-700 bg-gray-200',
+        header: 'dark:bg-gray-700 bg-gray-200 text-gray-700 dark:text-gray-200',
         row: 'bg-gray-100 dark:bg-gray-600',
         button: 'primary',
         buttonClass:
