@@ -191,7 +191,7 @@
 
 {#if topScorers.length > 0}
     <div class="glass mb-2 w-full rounded-lg border border-gray-200 p-2 pt-1 dark:border-gray-700">
-        <h3 class="mb-1 text-center font-semibold">Golden Boot</h3>
+        <h3 class="mb-1 text-center text-base font-medium">Golden Boot</h3>
         <div class="border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
             {#each topScorers as scorer, index (scorer.playerName)}
                 <div class="flex items-center gap-3">
@@ -223,11 +223,11 @@
                     <!-- Goals stats -->
                     <div class="flex items-center gap-2">
                         <!-- Total goals -->
-                        <div class="flex items-center gap-1">
+                        <div class="flex items-center gap-1 dark:text-white">
                             <LeagueIcon
                                 icon="soccer"
-                                class="h-4 w-4" />
-                            <span class="font-bold">{scorer.totalGoals}</span>
+                                class="h-3 w-3" />
+                            <span class="text-sm font-bold">{scorer.totalGoals}</span>
                         </div>
 
                         <!-- League + Cup breakdown -->
