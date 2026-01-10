@@ -16,9 +16,15 @@ let apiKey = $state('');
 let leagueId = $state('');
 let clientId = $state('');
 let adminCode = $state('');
+let isRedirectingToAuth = false;
+let fetchFn = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
 
 export function setApiKey(key) {
     apiKey = key;
+}
+
+export function setFetch(fn) {
+    fetchFn = fn;
 }
 
 export function setLeagueId(id) {
@@ -97,6 +103,12 @@ function getAuthHeaders() {
 
 function handleAuthError(response) {
     if (response.status === 403) {
+        // Prevent multiple simultaneous redirects from parallel API calls
+        if (isRedirectingToAuth) {
+            return;
+        }
+        isRedirectingToAuth = true;
+
         // Clear stored access code and redirect to auth
         if (leagueId) {
             removeStoredAccessCode(leagueId);
@@ -114,7 +126,7 @@ async function get(key, date) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const headers = getAuthHeaders();
     delete headers['Content-Type']; // GET requests don't need Content-Type
-    const response = await fetch(url, { headers });
+    const response = await fetchFn(url, { headers });
     if (!response.ok) {
         handleAuthError(response);
         const errorData = await response
@@ -126,12 +138,14 @@ async function get(key, date) {
             errorData
         );
     }
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
 async function post(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(value)
@@ -148,12 +162,14 @@ async function post(key, date, value) {
         );
     }
 
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
 async function postDirect(endpoint, value) {
     const url = `${baseUrl}/${endpoint}`;
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify(value)
@@ -170,6 +186,8 @@ async function postDirect(endpoint, value) {
         );
     }
 
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
@@ -179,7 +197,7 @@ async function postFormData(endpoint, formData) {
     // Remove Content-Type header - browser will set it with boundary for FormData
     delete headers['Content-Type'];
 
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'POST',
         headers,
         body: formData
@@ -196,12 +214,14 @@ async function postFormData(endpoint, formData) {
         );
     }
 
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
 async function remove(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'DELETE',
         headers: getAuthHeaders(),
         body: JSON.stringify(value)
@@ -217,12 +237,14 @@ async function remove(key, date, value) {
             errorData
         );
     }
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
 async function patch(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(value)
@@ -238,12 +260,14 @@ async function patch(key, date, value) {
             errorData
         );
     }
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 
 async function patchDirect(endpoint, value) {
     const url = `${baseUrl}/${endpoint}`;
-    const response = await fetch(url, {
+    const response = await fetchFn(url, {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify(value)
@@ -260,6 +284,8 @@ async function patchDirect(endpoint, value) {
         );
     }
 
+    // Successful response - reset auth redirect flag
+    isRedirectingToAuth = false;
     return await response.json();
 }
 

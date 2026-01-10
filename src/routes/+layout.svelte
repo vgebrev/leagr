@@ -16,13 +16,7 @@
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
     import Notification from '$components/Notification.svelte';
-    import {
-        extractAccessCodeFromQuery,
-        storeAccessCode,
-        isAuthenticated,
-        validateAccessCode,
-        removeStoredAccessCode
-    } from '$lib/client/services/auth.js';
+    import { isAuthenticated } from '$lib/client/services/auth.js';
 
     let { data, children } = $props();
     setApiKey(data.apiKey);
@@ -81,41 +75,24 @@
     const publicPages = ['/', '/auth', '/auth/forgot', '/auth/reset'];
     let isPublicPage = $derived(publicPages.includes(page.url.pathname));
 
-    // Handle authentication after navigation
+    // Guard to prevent re-entrant auth redirects
+    let isRedirecting = false;
+
+    // Handle authentication after navigation (for regular page loads without code param)
     afterNavigate(async () => {
         // Only check authentication for league pages (not root domain)
         if (!data.leagueInfo) {
             return;
         }
 
-        // Check for access code in query params (silent auth) - even for public pages
-        // Skip this check for reset page as it uses 'code' for reset codes, not access codes
-        if (page.url.pathname !== '/auth/reset') {
-            const codeFromQuery = extractAccessCodeFromQuery(page.url.searchParams);
-            if (codeFromQuery) {
-                // Validate the code with server before storing
-                const isValid = await validateAccessCode(codeFromQuery);
-                if (isValid) {
-                    storeAccessCode(data.leagueId, codeFromQuery);
+        // If we've successfully landed on a public page, reset the redirect flag
+        if (isPublicPage) {
+            isRedirecting = false;
+        }
 
-                    // Remove code from URL and reload the page to refresh with authenticated state
-                    const newUrl = new URL(page.url);
-                    newUrl.searchParams.delete('code');
-                    window.location.href = newUrl.toString();
-                    return; // Page will reload
-                } else {
-                    // Invalid code in query params, redirect to auth page
-                    removeStoredAccessCode(data.leagueId);
-                    // Preserve query params except the invalid 'code' parameter
-                    const searchParams = $state(new URLSearchParams(page.url.search));
-                    searchParams.delete('code');
-                    const queryString = searchParams.toString();
-                    const fullUrl = page.url.pathname + (queryString ? `?${queryString}` : '');
-                    const redirectUrl = encodeURIComponent(fullUrl);
-                    goto(resolve(`/auth?redirect=${redirectUrl}`));
-                    return;
-                }
-            }
+        // Prevent re-entrant execution during redirects (after resetting flag for public pages)
+        if (isRedirecting) {
+            return;
         }
 
         // Skip authentication requirement for public pages
@@ -127,6 +104,7 @@
         const authenticated = isAuthenticated(data.leagueId);
         if (!authenticated) {
             const redirectUrl = encodeURIComponent(page.url.pathname + page.url.search);
+            isRedirecting = true;
             goto(resolve(`/auth?redirect=${redirectUrl}`));
         }
     });
