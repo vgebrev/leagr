@@ -37,7 +37,9 @@
 
 {#if standings.length > 0}
     <Table
-        classes={{ div: 'w-full min-w-fit text-xs' }}
+        classes={{
+            div: 'w-full min-w-fit text-xs w-full rounded-lg border border-gray-200 dark:border-gray-700 glass mb-2'
+        }}
         class="dark:text-gray-300"
         shadow>
         <TableHead class="bg-gray-200 dark:text-gray-300">

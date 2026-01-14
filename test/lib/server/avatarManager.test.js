@@ -23,9 +23,8 @@ describe('AvatarManager - Pending Avatar Workflow', () => {
         }));
 
         // Re-import to get mocked version
-        const { createAvatarManager: createMockedManager } = await import(
-            '../../../src/lib/server/avatarManager.js'
-        );
+        const { createAvatarManager: createMockedManager } =
+            await import('../../../src/lib/server/avatarManager.js');
         avatarManager = createMockedManager().setLeague(TEST_LEAGUE_ID);
 
         // Create initial rankings.json

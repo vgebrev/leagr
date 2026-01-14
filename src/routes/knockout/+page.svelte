@@ -9,6 +9,7 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
+    import GoalscorerList from '$components/GoalscorerList.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
@@ -26,6 +27,7 @@
     let knockoutBracket = $state(null);
     let standings = $state([]);
     let teams = $state({});
+    let leagueGames = $state([]);
     let hasStandings = $derived(standings.length > 0);
 
     /**
@@ -189,13 +191,16 @@
     onMount(async () => {
         await withLoading(
             async () => {
-                // Load standings to check if we have completed games
-                const standingsData = await api.get('standings', date);
-                standings = standingsData.standings || [];
+                // Load standings, teams, and league games
+                const [standingsData, teamsData, gamesData] = await Promise.all([
+                    api.get('standings', date),
+                    api.get('teams', date),
+                    api.get('games', date)
+                ]);
 
-                // Load teams data for scorer tracking
-                const teamsData = await api.get('teams', date);
+                standings = standingsData.standings || [];
                 teams = teamsData?.teams || {};
+                leagueGames = gamesData?.rounds || [];
 
                 // Load knockout data - this might fail if no tournament exists yet
                 // We'll handle 404 errors gracefully since knockout tournaments are optional
@@ -264,6 +269,13 @@
                 onCelebrate={celebrateTeam}
                 onTeamClick={handleTeamClick} />
         {/if}
+
+        <div class="mt-4">
+            <GoalscorerList
+                {leagueGames}
+                knockoutGames={knockoutBracket?.bracket || []}
+                {teams} />
+        </div>
     {/if}
 </div>
 

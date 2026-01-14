@@ -7,6 +7,7 @@
     import StandingsTable from './components/StandingsTable.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
+    import GoalscorerList from '$components/GoalscorerList.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
@@ -21,6 +22,9 @@
     }
 
     let standings = $state([]);
+    let leagueGames = $state([]);
+    let knockoutGames = $state([]);
+    let teams = $state({});
 
     /**
      * @typedef {Object} WinningTeam
@@ -52,9 +56,29 @@
     onMount(async () => {
         await withLoading(
             async () => {
-                // Load standings
-                const standingsData = await api.get('standings', date);
+                // Load standings, games data, and teams data
+                const [standingsData, gamesData, teamsData] = await Promise.all([
+                    api.get('standings', date),
+                    api.get('games', date),
+                    api.get('teams', date)
+                ]);
+
                 standings = standingsData.standings || [];
+                leagueGames = gamesData?.rounds || [];
+                teams = teamsData?.teams || {};
+
+                // Try to load knockout games (may not exist)
+                try {
+                    const knockoutData = await api.get('games/knockout', date);
+                    knockoutGames = knockoutData?.knockoutGames?.bracket || [];
+                } catch (err) {
+                    // Knockout games might not exist, that's okay
+                    if (err.status !== 404) {
+                        console.warn('Error loading knockout games:', err);
+                    }
+                    knockoutGames = [];
+                }
+
                 if (standings.length > 0) {
                     celebrate(0);
                 }
@@ -70,12 +94,19 @@
     });
 </script>
 
-<div class="overflow-x-auto">
-    <StandingsTable
-        {standings}
-        {date}
-        onCelebrate={celebrate}
-        onTeamClick={handleTeamClick} />
+<div class="flex flex-col gap-4">
+    <div class="overflow-x-auto">
+        <StandingsTable
+            {standings}
+            {date}
+            onCelebrate={celebrate}
+            onTeamClick={handleTeamClick} />
+    </div>
+
+    <GoalscorerList
+        {leagueGames}
+        {knockoutGames}
+        {teams} />
 </div>
 
 <CelebrationOverlay

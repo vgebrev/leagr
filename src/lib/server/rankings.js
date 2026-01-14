@@ -999,9 +999,7 @@ export class RankingsManager {
                             totalPoints: totalDatePoints,
                             goalsForPerSession: parseFloat(goalsForPerSession.toFixed(2)),
                             goalsAgainstPerSession: parseFloat(goalsAgainstPerSession.toFixed(2)),
-                            eloRating: playerData.elo
-                                ? Math.round(playerData.elo.rating)
-                                : ELO_BASELINE_RATING,
+                            eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
                             eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
                             leaguePosition: leaguePositions[teamName] || null,
                             cupProgress: teamCupProgress[teamName] || null
@@ -1104,9 +1102,7 @@ export class RankingsManager {
                         totalPoints: null,
                         goalsForPerSession: null,
                         goalsAgainstPerSession: null,
-                        eloRating: playerData.elo
-                            ? Math.round(playerData.elo.rating)
-                            : ELO_BASELINE_RATING,
+                        eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
                         eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
                         attackingRating: playerData.attackingRating || null,
                         controlRating: playerData.controlRating || null
@@ -1114,9 +1110,7 @@ export class RankingsManager {
                 } else {
                     // Player appeared but entry wasn't created yet (edge case)
                     playerData.rankingDetail[date] = {
-                        eloRating: playerData.elo
-                            ? Math.round(playerData.elo.rating)
-                            : ELO_BASELINE_RATING,
+                        eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
                         eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0
                     };
                 }

@@ -1,5 +1,6 @@
 <script>
     import { Button, Popover } from 'flowbite-svelte';
+    import { PlusOutline, MinusOutline } from 'flowbite-svelte-icons';
     import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
     import { teamStyles, teamColours } from '$lib/shared/helpers.js';
 
@@ -58,20 +59,24 @@
                 <span class="flex-1 truncate text-sm font-medium">{playerName}</span>
                 <div class="flex items-center gap-1">
                     <Button
-                        color={styles.button}
-                        class={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold transition-opacity hover:opacity-70 disabled:opacity-30 ${styles.buttonClass} ${styles.border}`}
+                        size="sm"
+                        class="ms-auto p-0 {styles.buttonClass}"
+                        outline={true}
+                        color="alternative"
                         onclick={() => handleScoreChange(playerName, -1)}
                         disabled={!scorers[playerName]}>
-                        −
+                        <MinusOutline class="h-4 w-4" />
                     </Button>
                     <span class="w-6 text-center text-sm font-bold">
                         {scorers[playerName] || 0}
                     </span>
                     <Button
-                        color={styles.button}
-                        class={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold transition-opacity hover:opacity-70 ${styles.buttonClass} ${styles.border}`}
+                        size="sm"
+                        class="ms-auto p-0 {styles.buttonClass}"
+                        outline={true}
+                        color="alternative"
                         onclick={() => handleScoreChange(playerName, +1)}>
-                        +
+                        <PlusOutline class="h-4 w-4" />
                     </Button>
                 </div>
             </div>
@@ -83,21 +88,25 @@
                 <span class="text-sm font-medium">Own Goal</span>
                 <div class="flex items-center gap-1">
                     <Button
-                        color={styles.button}
-                        class={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold transition-opacity hover:opacity-70 disabled:opacity-30 ${styles.header} ${styles.border}`}
+                        size="sm"
+                        class="ms-auto p-0 {styles.buttonClass}"
+                        outline={true}
+                        color="alternative"
                         onclick={() => handleScoreChange(RESERVED_SCORER_KEYS.OWN_GOAL, -1)}
                         disabled={!scorers[RESERVED_SCORER_KEYS.OWN_GOAL]}>
-                        −
+                        <MinusOutline class="h-4 w-4" />
                     </Button>
                     <span class="w-6 text-center text-sm font-bold">
                         {scorers[RESERVED_SCORER_KEYS.OWN_GOAL] || 0}
                     </span>
                     <Button
-                        color={styles.button}
-                        class={`flex h-6 w-6 items-center justify-center rounded text-xs font-bold transition-opacity hover:opacity-70 disabled:opacity-30 ${styles.buttonClass} ${styles.border}`}
+                        size="sm"
+                        class="ms-auto p-0 {styles.buttonClass}"
+                        outline={true}
+                        color="alternative"
                         onclick={() => handleScoreChange(RESERVED_SCORER_KEYS.OWN_GOAL, +1)}
                         disabled={(scorers[RESERVED_SCORER_KEYS.OWN_GOAL] || 0) >= 2}>
-                        +
+                        <PlusOutline class="h-4 w-4" />
                     </Button>
                 </div>
             </div>

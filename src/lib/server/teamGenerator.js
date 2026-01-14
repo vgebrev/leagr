@@ -25,6 +25,7 @@ class TeamGenerator {
         this.settings = null;
         this.players = [];
         this.rankings = null;
+        this.previousYearRankings = null;
         this.recordHistory = false;
         this.drawHistory = [];
         this.initialPots = [];
@@ -58,6 +59,16 @@ class TeamGenerator {
      */
     setRankings(rankings) {
         this.rankings = rankings;
+        return this;
+    }
+
+    /**
+     * Set the previous year player rankings (for carry-over at year boundaries)
+     * @param {Object} previousYearRankings - Previous year player rankings data
+     * @returns {TeamGenerator} - Fluent interface
+     */
+    setPreviousYearRankings(previousYearRankings) {
+        this.previousYearRankings = previousYearRankings;
         return this;
     }
 
@@ -123,9 +134,14 @@ class TeamGenerator {
             };
         }
 
-        // Use weakest established player's rating × 0.95
+        // Use weakest established player's rating × 0.99
         const weakestPlayer = sortedEstablishedPlayers[sortedEstablishedPlayers.length - 1];
-        const weakestData = this.rankings?.players?.[weakestPlayer];
+
+        // Try current year first, fall back to previous year for carry-over
+        let weakestData = this.rankings?.players?.[weakestPlayer];
+        if (!weakestData && this.previousYearRankings?.players?.[weakestPlayer]) {
+            weakestData = this.previousYearRankings.players[weakestPlayer];
+        }
 
         return {
             elo: (weakestData?.elo?.rating ?? DEFAULT_ELO) * 0.99,
@@ -141,7 +157,14 @@ class TeamGenerator {
      * @returns {{name: string, elo: number, actualElo: number, isProvisional: boolean, attackingRating: number, controlRating: number, avatar: string|null, appearances: number}}
      */
     getProvisionalPlayerData(playerName, anchors) {
-        const playerData = this.rankings?.players?.[playerName];
+        // Try current year rankings first
+        let playerData = this.rankings?.players?.[playerName];
+
+        // If player not in current year, fall back to previous year (for carry-over)
+        if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+            playerData = this.previousYearRankings.players[playerName];
+        }
+
         const appearances = playerData?.appearances ?? 0;
         const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
         const isProvisional = gamesPlayed < GAMES_THRESHOLD;
@@ -326,7 +349,11 @@ class TeamGenerator {
 
         Object.values(teams).forEach((teamPlayers) => {
             const teamEloSum = teamPlayers.reduce((sum, playerName) => {
-                const playerData = this.rankings?.players?.[playerName];
+                // Try current year first, fall back to previous year for carry-over
+                let playerData = this.rankings?.players?.[playerName];
+                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                    playerData = this.previousYearRankings.players[playerName];
+                }
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
                 // Use provisional ELO for consistency with pot sorting
@@ -368,7 +395,11 @@ class TeamGenerator {
             }
 
             const sum = teamPlayers.reduce((acc, playerName) => {
-                const playerData = this.rankings?.players?.[playerName];
+                // Try current year first, fall back to previous year for carry-over
+                let playerData = this.rankings?.players?.[playerName];
+                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                    playerData = this.previousYearRankings.players[playerName];
+                }
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualRating = playerData?.[ratingKey] ?? DEFAULT_RATING;
                 // Use provisional rating for all players
@@ -522,7 +553,11 @@ class TeamGenerator {
         // Calculate ELO distribution for each team using provisional ratings
         Object.values(teams).forEach((teamPlayers) => {
             const elos = teamPlayers.map((playerName) => {
-                const playerData = this.rankings?.players?.[playerName];
+                // Try current year first, fall back to previous year for carry-over
+                let playerData = this.rankings?.players?.[playerName];
+                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                    playerData = this.previousYearRankings.players[playerName];
+                }
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
                 return this.calculateProvisionalRating(actualElo, gamesPlayed, anchors.elo);
@@ -566,7 +601,11 @@ class TeamGenerator {
     calculatePoolEloRange(sortedPlayers, minGamesForElo = 35, defaultElo = 1000) {
         if (!Array.isArray(sortedPlayers) || sortedPlayers.length === 0) return 0;
         const elos = sortedPlayers.map((name) => {
-            const playerData = this.rankings?.players?.[name];
+            // Try current year first, fall back to previous year for carry-over
+            let playerData = this.rankings?.players?.[name];
+            if (!playerData && this.previousYearRankings?.players?.[name]) {
+                playerData = this.previousYearRankings.players[name];
+            }
             const eloGames = playerData?.elo?.gamesPlayed ?? 0;
             return eloGames >= minGamesForElo
                 ? (playerData?.elo?.rating ?? defaultElo)
@@ -937,13 +976,26 @@ class TeamGenerator {
         // STEP 1: First pass - sort ONLY established players (35+ games) by actual ELO
         // to determine pot structure and calculate anchor values
         const establishedPlayers = this.players.filter((name) => {
-            const gamesPlayed = this.rankings?.players?.[name]?.elo?.gamesPlayed ?? 0;
+            // Try current year first, fall back to previous year for carry-over
+            let playerData = this.rankings?.players?.[name];
+            if (!playerData && this.previousYearRankings?.players?.[name]) {
+                playerData = this.previousYearRankings.players[name];
+            }
+            const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
             return gamesPlayed >= GAMES_THRESHOLD;
         });
 
         const sortedEstablished = [...establishedPlayers].sort((a, b) => {
-            const playerA = this.rankings?.players?.[a];
-            const playerB = this.rankings?.players?.[b];
+            // Try current year first, fall back to previous year for carry-over
+            let playerA = this.rankings?.players?.[a];
+            if (!playerA && this.previousYearRankings?.players?.[a]) {
+                playerA = this.previousYearRankings.players[a];
+            }
+            let playerB = this.rankings?.players?.[b];
+            if (!playerB && this.previousYearRankings?.players?.[b]) {
+                playerB = this.previousYearRankings.players[b];
+            }
+
             const eloA = playerA?.elo?.rating ?? DEFAULT_ELO;
             const eloB = playerB?.elo?.rating ?? DEFAULT_ELO;
 
@@ -976,9 +1028,16 @@ class TeamGenerator {
             // Primary: provisional ELO
             if (dataA.elo !== dataB.elo) return dataB.elo - dataA.elo;
 
-            // Fallback to ranking points for ties
-            const playerA = this.rankings?.players?.[a];
-            const playerB = this.rankings?.players?.[b];
+            // Fallback to ranking points for ties (with previous year fallback)
+            let playerA = this.rankings?.players?.[a];
+            if (!playerA && this.previousYearRankings?.players?.[a]) {
+                playerA = this.previousYearRankings.players[a];
+            }
+            let playerB = this.rankings?.players?.[b];
+            if (!playerB && this.previousYearRankings?.players?.[b]) {
+                playerB = this.previousYearRankings.players[b];
+            }
+
             const rankingA = playerA?.rankingPoints ?? 0;
             const rankingB = playerB?.rankingPoints ?? 0;
             if (rankingA !== rankingB) return rankingB - rankingA;
