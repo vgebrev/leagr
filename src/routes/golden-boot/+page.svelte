@@ -154,17 +154,22 @@
         shadow>
         <TableHead class="dark:text-gray-300">
             <TableHeadCell class="px-1 py-1.5 text-center">#</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+            <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-white"
                 >Player</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 text-center text-gray-400">League</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 text-center text-gray-400">Cup</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 text-center font-bold">Total</TableHeadCell>
+            <TableHeadCell
+                class="px-1 py-1.5 text-center font-medium text-gray-500 dark:text-gray-300"
+                >League</TableHeadCell>
+            <TableHeadCell
+                class="px-1 py-1.5 text-center font-medium text-gray-500 dark:text-gray-300"
+                >Cup</TableHeadCell>
+            <TableHeadCell class="px-1 py-1.5 text-center font-bold dark:text-white"
+                >Total</TableHeadCell>
         </TableHead>
         <TableBody>
             {#each scorers as scorer, index (index)}
                 <TableBodyRow>
                     <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100">
+                    <TableBodyCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-white">
                         {#if index === 0}
                             <button
                                 onclick={handleTopScorerClick}
@@ -175,10 +180,12 @@
                             {scorer.playerName}
                         {/if}
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center text-gray-400">
-                        <span class="text-gray-400">{scorer.leagueGoals}</span>
+                    <TableBodyCell
+                        class="px-1 py-1.5 text-center font-medium text-gray-500 dark:text-gray-300">
+                        <span>{scorer.leagueGoals}</span>
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center text-gray-400">
+                    <TableBodyCell
+                        class="px-1 py-1.5 text-center font-medium text-gray-500 dark:text-gray-300">
                         <span>{scorer.cupGoals}</span>
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center font-bold"
