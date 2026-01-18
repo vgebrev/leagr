@@ -164,8 +164,7 @@
             {#each scorers as scorer, index (index)}
                 <TableBodyRow>
                     <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                    <TableBodyCell
-                        class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100">
+                    <TableBodyCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100">
                         {#if index === 0}
                             <button
                                 onclick={handleTopScorerClick}

@@ -192,8 +192,8 @@
     $effect(() => {
         const dates = rankings.calculatedDates;
         if (dates) {
-            // Enable filter when we have enough data (2+ sessions), disable otherwise
-            showActiveOnly = dates.length > 2;
+            // Enable filter when we have enough data (5+ sessions), disable otherwise
+            showActiveOnly = dates.length >= 5;
         }
     });
 </script>
@@ -268,7 +268,8 @@
         <RankingsTable
             {sortedPlayers}
             currentSort={sortBy}
-            onSortChange={handleSortChange} />
+            onSortChange={handleSortChange}
+            year={selectedYear} />
     </div>
     <RankingActions onUpdate={updateRankings} />
 </div>

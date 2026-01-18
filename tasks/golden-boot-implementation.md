@@ -37,17 +37,17 @@ Implemented a season-level golden boot feature that aggregates individual goal s
 ### Modified Files
 
 - `/src/routes/rankings/+page.svelte` - Added Golden Boot button below Champions Hall button
-  - Added import for SoccerBootIcon
-  - Added goldenBootUrl derived value
-  - Added Golden Boot button with flex layout
+    - Added import for SoccerBootIcon
+    - Added goldenBootUrl derived value
+    - Added Golden Boot button with flex layout
 
 ## Data Flow
 
 1. **Request**: Client requests `/api/golden-boot?year=2025` (or `year=all`)
 2. **File scanning**: API reads all session files for the specified year(s)
 3. **Goal extraction**: For each session, extracts scorers from:
-   - League games: `games.rounds[round][match].homeScorers` / `awayScorers`
-   - Cup games: `games.knockout-games.bracket[match].homeScorers` / `awayScorers`
+    - League games: `games.rounds[round][match].homeScorers` / `awayScorers`
+    - Cup games: `games.knockout-games.bracket[match].homeScorers` / `awayScorers`
 4. **Aggregation**: Accumulates goals per player, separating league and cup goals
 5. **Response**: Returns sorted array of scorers with goal breakdown
 
