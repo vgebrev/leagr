@@ -1076,7 +1076,8 @@ export class RankingsManager {
             playersForRanking[playerName] = {
                 points: playerData.points,
                 appearances: playerData.appearances,
-                rankingDetail: {} // Not needed for ranking calculation
+                rankingDetail: {}, // Not needed for ranking calculation
+                elo: playerData.elo // Needed for tiebreaker in rank calculation
             };
         });
 

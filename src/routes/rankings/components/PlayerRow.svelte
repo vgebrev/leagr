@@ -5,8 +5,9 @@
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
     import { scale } from 'svelte/transition';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
 
-    let { player, data, index, currentSort, onSortChange } = $props();
+    let { player, data, index, currentSort, onSortChange, year = null } = $props();
 
     let showRankMovement = $derived(currentSort === 'rankingPoints');
     /**
@@ -19,9 +20,18 @@
     }
 
     function handlePlayerClick() {
-        // Navigate to player detail page, preserving date query parameter
+        // Navigate to player detail page, preserving year and date query parameters
+        const params = new SvelteURLSearchParams();
+        const currentYear = new Date().getFullYear();
+        if (year && year !== currentYear) {
+            params.set('year', String(year));
+        }
         const dateParam = page.url.searchParams.get('date');
-        const url = dateParam ? `/rankings/${player}?date=${dateParam}` : `/rankings/${player}`;
+        if (dateParam) {
+            params.set('date', dateParam);
+        }
+        const queryString = params.toString();
+        const url = queryString ? `/rankings/${player}?${queryString}` : `/rankings/${player}`;
         goto(resolve(url));
     }
 
