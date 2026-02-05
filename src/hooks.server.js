@@ -10,7 +10,8 @@ const RATE_RULES = [
         maxRequests: 1,
         duration: 60 * 60 * 1000, // 1 hour
         message:
-            "You've already added a player recently. Please use the share link to invite other players."
+            "You've already added a player recently. Please use the share link to invite other players.",
+        keyExtractor: (url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
     },
     {
         verb: '*',
@@ -88,9 +89,9 @@ function pickRateRule(method, path) {
     return null;
 }
 
-function isRateLimitedFor(rule, key) {
+function isRateLimitedFor(rule, key, extraKey = '') {
     const now = Date.now();
-    const mapKey = `${rule.verb}:${rule.routePattern}:${key}`;
+    const mapKey = `${rule.verb}:${rule.routePattern}:${key}${extraKey ? `:${extraKey}` : ''}`;
     const data = rateLimitMap.get(mapKey) || { count: 0, firstRequestTime: now };
 
     if (now - data.firstRequestTime > rule.duration) {
@@ -213,7 +214,8 @@ export const handle = async ({ event, resolve }) => {
         const rule = pickRateRule(request.method, url.pathname);
         if (rule) {
             const composite = `${ip}|${clientId || 'public'}`;
-            if (isRateLimitedFor(rule, composite)) {
+            const extraKey = rule.keyExtractor ? rule.keyExtractor(url) : '';
+            if (isRateLimitedFor(rule, composite, extraKey)) {
                 return new Response(JSON.stringify({ message: rule.message }), { status: 429 });
             }
         }
