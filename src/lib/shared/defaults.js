@@ -2,9 +2,14 @@
  * Centralised default values for the application
  */
 
+/** @typedef {import('./types.js').DaySettings} DaySettings */
+/** @typedef {import('./types.js').LeagueInfo} LeagueInfo */
+/** @typedef {import('./types.js').LeagueSettings} LeagueSettings */
+
 /**
  * Settings that can be overridden at the day level
  */
+/** @type {(keyof DaySettings)[]} */
 export const DAY_LEVEL_SETTINGS = ['playerLimit'];
 
 /**
@@ -19,32 +24,6 @@ export const LEAGUE_ONLY_SETTINGS = [
     'seedTeams',
     'discipline'
 ];
-
-/** @typedef {Object} DaySettings
- * @property {number} playerLimit - Maximum number of players for the day
- */
-
-/** @typedef {Object} LeagueSettings
- * @property {number[]} competitionDays - Array of weekdays (0=Sunday, 6=Saturday)
- * @property {Object} registrationWindow - Registration window settings
- * @property {boolean} registrationWindow.enabled - Whether registration is enabled
- * @property {number} registrationWindow.startDayOffset - Days before competition day to start registration
- * @property {string} registrationWindow.startTime - Time on start day (HH:mm)
- * @property {number} registrationWindow.endDayOffset - Days relative to competition day to end registration
- * @property {string} registrationWindow.endTime - Time on end day (HH:mm)
- * @property {Object} teamGeneration - Team generation settings
- * @property {number} teamGeneration.minTeams - Minimum number of teams
- * @property {number} teamGeneration.maxTeams - Maximum number of teams
- * @property {number} teamGeneration.minPlayersPerTeam - Minimum players per team
- * @property {number} teamGeneration.maxPlayersPerTeam - Maximum players per team
- * @property {number} playerLimit - Maximum number of players in the league
- * @property {boolean} canRegenerateTeams - Whether teams can be regenerated
- * @property {boolean} canResetSchedule - Whether the schedule can be reset
- * @property {boolean} seedTeams - Whether teams should be seeded
- * @property {Object} discipline - Discipline system settings
- * @property {boolean} discipline.enabled - Whether discipline system is enabled
- * @property {number} discipline.noShowThreshold - Number of no-shows before suspension
- */
 
 /**
  * Default league settings
@@ -82,8 +61,8 @@ export const defaultPlayers = {
 
 /**
  * Get effective league settings by merging with defaults
- * @param {Object} leagueInfo - League info object from server
- * @returns {Object} - Merged league settings
+ * @param {LeagueInfo | null | undefined} leagueInfo - League info object from server
+ * @returns {LeagueSettings} - Merged league settings
  */
 export function getEffectiveLeagueSettings(leagueInfo) {
     if (!leagueInfo) return defaultSettings;
@@ -96,13 +75,18 @@ export function getEffectiveLeagueSettings(leagueInfo) {
 
 /**
  * Extract day-level settings defaults from league settings
- * @param {Object} leagueSettings - League settings object
+ * @param {LeagueSettings} leagueSettings - League settings object
  * @returns {DaySettings} - Day-level settings with league defaults
  */
 export function getDaySettingsDefaults(leagueSettings) {
-    const dayDefaults = {};
+    /** @type {DaySettings} */
+    const dayDefaults = {
+        playerLimit: leagueSettings.playerLimit
+    };
+
     for (const settingKey of DAY_LEVEL_SETTINGS) {
         dayDefaults[settingKey] = leagueSettings[settingKey];
     }
+
     return dayDefaults;
 }

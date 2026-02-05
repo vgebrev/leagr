@@ -11,7 +11,7 @@
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
 
     let showTeamModal = $state(false);
     let selectedTeam = $state(null);

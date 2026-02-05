@@ -11,7 +11,7 @@
     import TeamModal from '$components/TeamModal.svelte';
 
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
     let showPlayerModal = $state(false);
     let selectedPlayer = $state(null);
     let showTeamModal = $state(false);

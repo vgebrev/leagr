@@ -6,6 +6,7 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { scale } from 'svelte/transition';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     /**
      * @type {{ playerName: string | null, open: boolean, date?: string | null }}
@@ -53,8 +54,13 @@
 
         await withLoading(
             async () => {
+                // Extract year from date (YYYY-MM-DD format) to load from correct rankings file
+                const year = date ? date.substring(0, 4) : null;
+                const params = new SvelteURLSearchParams({ limit: '0' });
+                if (year) params.set('year', year);
+                if (date) params.set('date', date);
                 const response = await api.get(
-                    `rankings/${encodeURIComponent(playerName)}?limit=0${date ? `&date=${encodeURIComponent(date)}` : ''}`
+                    `rankings/${encodeURIComponent(playerName)}?${params.toString()}`
                 );
                 playerData = response.playerData;
             },

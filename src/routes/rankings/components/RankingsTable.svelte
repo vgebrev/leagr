@@ -3,7 +3,7 @@
     import SortableTableHeader from './SortableTableHeader.svelte';
     import PlayerRow from './PlayerRow.svelte';
 
-    let { sortedPlayers = [], currentSort = 'rankingPoints', onSortChange } = $props();
+    let { sortedPlayers = [], currentSort = 'rankingPoints', onSortChange, year = null } = $props();
 </script>
 
 <Table
@@ -51,7 +51,8 @@
                 {data}
                 {index}
                 {currentSort}
-                {onSortChange} />
+                {onSortChange}
+                {year} />
         {/each}
     </TableBody>
 </Table>

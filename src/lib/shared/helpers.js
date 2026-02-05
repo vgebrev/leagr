@@ -1,3 +1,8 @@
+/** @typedef {import('./types.js').LeagueSettings} LeagueSettings */
+/** @typedef {import('./types.js').TeamColour} TeamColour */
+/** @typedef {import('./types.js').TeamStyle} TeamStyle */
+
+/** @param {Date} date */
 export function dateString(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -6,6 +11,7 @@ export function dateString(date) {
     return `${year}-${month}-${day}`;
 }
 
+/** @param {Date | null | undefined} date */
 export function dateTimeString(date) {
     if (!date) return '';
     const time = date.toLocaleTimeString(undefined, {
@@ -24,6 +30,7 @@ export function dateTimeString(date) {
     return `${time}, ${datePart}`;
 }
 
+/** @param {string | null | undefined} dateString */
 export function formatDisplayDate(dateString) {
     if (!dateString) return '';
     const date = new Date(dateString);
@@ -36,6 +43,10 @@ export function formatDisplayDate(dateString) {
     });
 }
 
+/**
+ * @param {Date | null | undefined} date
+ * @param {number[]} [competitionDays]
+ */
 export function isCompetitionDay(date, competitionDays = [6]) {
     if (!date) return false;
     if (!competitionDays || !Array.isArray(competitionDays) || competitionDays.length === 0)
@@ -43,6 +54,10 @@ export function isCompetitionDay(date, competitionDays = [6]) {
     return competitionDays.includes(date.getDay());
 }
 
+/**
+ * @param {Date | string | null | undefined} date
+ * @param {number} hours
+ */
 export function isDateInPast(date, hours = 0) {
     if (!date) return false;
     const limit = new Date(date);
@@ -51,6 +66,10 @@ export function isDateInPast(date, hours = 0) {
     return limit < new Date();
 }
 
+/**
+ * @param {string | null | undefined} dateString
+ * @param {LeagueSettings | null | undefined} settings
+ */
 export function isCompetitionEnded(dateString, settings) {
     if (!dateString) return false;
 
@@ -68,15 +87,21 @@ export function isCompetitionEnded(dateString, settings) {
     return new Date() > competitionEndDate;
 }
 
+/**
+ * @param {unknown} val
+ * @returns {val is Record<string, unknown>}
+ */
 export function isObject(val) {
     return typeof val === 'object' && val !== null && !Array.isArray(val);
 }
 
+/** @param {string | null | undefined} str */
 export function capitalize(str) {
     if (!str) return '';
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
+/** @param {string | null | undefined} str */
 export function titleCase(str) {
     if (!str) return '';
     return str
@@ -85,28 +110,19 @@ export function titleCase(str) {
         .join(' ');
 }
 
+/**
+ * @template T
+ * @param {T[]} arr
+ * @param {number} offset
+ * @returns {T[]}
+ */
 export function rotateArray(arr, offset) {
     const len = arr.length;
     const shift = offset % len;
     return arr.slice(shift).concat(arr.slice(0, shift));
 }
 
-/**
- * @typedef {Object} TeamStyle
- * @property {string} text
- * @property {string} header
- * @property {string} row
- * @property {string} button
- * @property {string} buttonClass
- * @property {string[]} confetti
- */
-
-/**
- * @typedef {'blue'|'orange'|'green'|'red'|'purple'|'yellow'|'pink'|'default'} TeamColour
- */
-
-/** @type {Array<string>} */
-
+/** @type {TeamColour[]} */
 export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
 /** @type {Record<TeamColour, TeamStyle>} */

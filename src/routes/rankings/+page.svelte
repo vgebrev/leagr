@@ -8,6 +8,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
@@ -32,6 +33,12 @@
     let championsUrl = $derived.by(() => {
         const dateParam = page.url.searchParams.get('date');
         return dateParam ? `/champions?date=${dateParam}` : '/champions';
+    });
+
+    // Preserve date parameter when navigating to golden boot
+    let goldenBootUrl = $derived.by(() => {
+        const dateParam = page.url.searchParams.get('date');
+        return dateParam ? `/golden-boot?date=${dateParam}` : '/golden-boot';
     });
 
     /**
@@ -185,8 +192,8 @@
     $effect(() => {
         const dates = rankings.calculatedDates;
         if (dates) {
-            // Enable filter when we have enough data (2+ sessions), disable otherwise
-            showActiveOnly = dates.length > 2;
+            // Enable filter when we have enough data (5+ sessions), disable otherwise
+            showActiveOnly = dates.length >= 5;
         }
     });
 </script>
@@ -194,14 +201,24 @@
 <div class="flex flex-col gap-2">
     <RankingInfoPanel rankingMetadata={rankings.rankingMetadata} />
 
-    <Button
-        href={championsUrl}
-        color="primary"
-        size="sm"
-        class="flex items-center gap-2">
-        <TrophyIcon class="h-4 w-4" />
-        Champions Hall
-    </Button>
+    <div class="flex gap-2">
+        <Button
+            href={championsUrl}
+            color="primary"
+            size="sm"
+            class="flex flex-1 items-center justify-center gap-2">
+            <TrophyIcon class="h-4 w-4" />
+            Champions Hall
+        </Button>
+        <Button
+            href={goldenBootUrl}
+            color="primary"
+            size="sm"
+            class="flex flex-1 items-center justify-center gap-2">
+            <SoccerBootIcon class="h-4 w-4" />
+            Golden Boot
+        </Button>
+    </div>
 
     <div class="flex flex-wrap items-center gap-4">
         <div class="flex items-center gap-1">
@@ -251,7 +268,8 @@
         <RankingsTable
             {sortedPlayers}
             currentSort={sortBy}
-            onSortChange={handleSortChange} />
+            onSortChange={handleSortChange}
+            year={selectedYear} />
     </div>
     <RankingActions onUpdate={updateRankings} />
 </div>
