@@ -54,7 +54,10 @@ export function isCompetitionDay(date, competitionDays = [6]) {
     return competitionDays.includes(date.getDay());
 }
 
-/** @param {Date | string | null | undefined} date */
+/**
+ * @param {Date | string | null | undefined} date
+ * @param {number} hours
+ */
 export function isDateInPast(date, hours = 0) {
     if (!date) return false;
     const limit = new Date(date);

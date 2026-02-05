@@ -5,8 +5,8 @@
     let { playerName = $bindable(), rankedPlayers, canModifyList, onadd } = $props();
 
     let dropdownOpen = $state(false);
-    /** @type {HTMLInputElement} */
-    let input;
+    /** @type {HTMLInputElement | undefined} */
+    let input = $state();
 
     /**
      * @param {Event} event

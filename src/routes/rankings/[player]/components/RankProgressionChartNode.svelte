@@ -6,9 +6,9 @@
     import { scale } from 'svelte/transition';
 
     let { point, x, y } = $props();
-    const played = point.played !== false;
+    const played = $derived(point.played !== false);
     // For popover content, use the same point data since it includes all necessary fields
-    const appearanceDetail = played ? point : null;
+    const appearanceDetail = $derived(played ? point : null);
 
     /**
      * Format date for display
