@@ -7,6 +7,9 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import { resolve } from '$app/paths';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapTeamHighlight} YearRecapTeamHighlight */
+
+    /** @type {{ data: YearRecapTeamHighlight | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Extract team color from team name (first word)
@@ -32,7 +35,7 @@
                 type="fade"
                 {duration}>
                 <a
-                    href={resolve(`/table?date=${data.sessionDate}`)}
+                    href={resolve(/** @type {any} */ (`/table?date=${data.sessionDate}`))}
                     data-sveltekit-preload-data="hover"
                     class="flex flex-col items-center justify-center gap-1 transition-opacity hover:opacity-80 md:gap-2">
                     <TeamBadge teamName={data.teamName} />

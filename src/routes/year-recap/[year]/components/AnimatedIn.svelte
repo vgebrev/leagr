@@ -15,6 +15,7 @@
     });
 
     // Map transition types to functions
+    /** @type {Record<string, typeof fade>} */
     const transitions = {
         fade,
         scale,

@@ -3,6 +3,9 @@
     import AnimatedIn from './AnimatedIn.svelte';
     import Avatar from '$components/avatars/Avatar.svelte';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapMostImprovedEntry} YearRecapMostImprovedEntry */
+
+    /** @type {{ data: YearRecapMostImprovedEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     const medals = ['🥇', '🥈', '🥉'];

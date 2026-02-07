@@ -6,6 +6,61 @@ import { createStandingsManager } from './standings.js';
 import { createDisciplineManager } from './discipline.js';
 import * as fuzzball from 'fuzzball';
 
+/** @typedef {import('../shared/types.js').Match} Match */
+/** @typedef {import('../shared/types.js').Round} Round */
+/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
+
+/**
+ * @typedef {{home: string, away: string, homeScore: number, awayScore: number}} MatchResult
+ */
+
+/**
+ * @typedef {Match & { round?: string }} KnockoutMatch
+ */
+
+/**
+ * @typedef {{points: number, gf: number, ga: number}} TeamStats
+ */
+
+/**
+ * @typedef {{rating: number, lastDecayAt: string | null, gamesPlayed: number}} PlayerElo
+ */
+
+/**
+ * @typedef {{rating: number, gamesPlayed: number, lastAppearance?: string | null}} EloCarryOver
+ */
+
+/** @typedef {Record<string, any>} RankingDetailEntry */
+
+/** @typedef {Record<string, any>} PlayerRankingData */
+
+/**
+ * @typedef {Object} RankingMetadata
+ * @property {number} globalAverage
+ * @property {number} minAverage
+ * @property {number} maxAppearances
+ * @property {number} confidenceThreshold
+ * @property {number} [confidenceFraction]
+ * @property {number} [pullStrength]
+ * @property {number} [totalPlayers]
+ * @property {string} lastCalculated
+ */
+
+/**
+ * @typedef {Object} RankingsData
+ * @property {string | null} lastUpdated
+ * @property {string[]} calculatedDates
+ * @property {Record<string, PlayerRankingData>} players
+ * @property {RankingMetadata} [rankingMetadata]
+ */
+
+/**
+ * @typedef {Object} SessionData
+ * @property {Record<string, string[]>} [teams]
+ * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: Match[] } }} [games]
+ * @property {{ discipline?: { enabled?: boolean } }} [settings]
+ */
+
 const rankingsMutexes = new Map();
 
 const BONUS_MULTIPLIER = 2;
@@ -118,7 +173,7 @@ export class RankingsManager {
 
     /**
      * Save rankings without mutex protection (internal use)
-     * @param {Object} rankings - Rankings data to save
+     * @param {RankingsData} rankings - Rankings data to save
      * @param {number} [year] - Year to save rankings for (defaults to current year)
      * @returns {Promise<void>}
      */
@@ -128,7 +183,7 @@ export class RankingsManager {
 
     /**
      * Check if session has any completed games (games with scores)
-     * @param {Object} sessionData - Session data containing games
+     * @param {SessionData} sessionData - Session data containing games
      * @returns {boolean} - True if there are completed games
      */
     hasCompletedGames(sessionData) {
@@ -160,15 +215,20 @@ export class RankingsManager {
 
     /**
      * Extract match results from game rounds
-     * @param {Array} rounds - Game rounds data
-     * @returns {Array} - Match results
+     * @param {Round[]} rounds - Game rounds data
+     * @returns {MatchResult[]} - Match results
      */
     getMatchResults(rounds) {
         const results = [];
         for (const round of rounds) {
             for (const game of round) {
                 const { home, away, homeScore, awayScore } = game;
-                if (homeScore !== null && awayScore !== null) {
+                if (
+                    homeScore != null &&
+                    awayScore != null &&
+                    typeof home === 'string' &&
+                    typeof away === 'string'
+                ) {
                     results.push({ home, away, homeScore, awayScore });
                 }
             }
@@ -178,11 +238,12 @@ export class RankingsManager {
 
     /**
      * Calculate team statistics from match results
-     * @param {Array} teamNames - Team names
-     * @param {Array} results - Match results
-     * @returns {Object} - Team statistics
+     * @param {string[]} teamNames - Team names
+     * @param {MatchResult[]} results - Match results
+     * @returns {Record<string, TeamStats>} - Team statistics
      */
     getTeamStats(teamNames, results) {
+        /** @type {Record<string, TeamStats>} */
         const stats = {};
 
         for (const name of teamNames) {
@@ -218,9 +279,9 @@ export class RankingsManager {
 
     /**
      * Calculate team standings from match results
-     * @param {Array} teamNames - Team names
-     * @param {Array} results - Match results
-     * @returns {Object} - Team standings
+     * @param {string[]} teamNames - Team names
+     * @param {MatchResult[]} results - Match results
+     * @returns {Record<string, number>} - Team standings
      */
     getStandings(teamNames, results) {
         const stats = this.getTeamStats(teamNames, results);
@@ -237,6 +298,7 @@ export class RankingsManager {
             return b.gf - a.gf;
         });
 
+        /** @type {Record<string, number>} */
         const standings = {};
         ranked.forEach((entry, index) => {
             standings[entry.name] = index;
@@ -247,8 +309,8 @@ export class RankingsManager {
 
     /**
      * Add knockout game goals to team stats
-     * @param {Object} teamStats - Team statistics object to update
-     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Record<string, TeamStats>} teamStats - Team statistics object to update
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
      */
     addKnockoutGoalsToTeamStats(teamStats, knockoutBracket) {
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -257,7 +319,11 @@ export class RankingsManager {
 
         for (const match of knockoutBracket) {
             // Skip bye matches and incomplete matches
-            if (match.bye || match.homeScore === null || match.awayScore === null) {
+            if (match.bye || match.homeScore == null || match.awayScore == null) {
+                continue;
+            }
+
+            if (typeof match.home !== 'string' || typeof match.away !== 'string') {
                 continue;
             }
 
@@ -276,11 +342,12 @@ export class RankingsManager {
 
     /**
      * Calculate knockout points for players based on knockout game results
-     * @param {Array} knockoutBracket - Knockout tournament bracket
-     * @param {Object} teams - Teams data with player lists
-     * @returns {Object} Player knockout wins count
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @param {Record<string, string[]>} teams - Teams data with player lists
+     * @returns {Record<string, number>} Player knockout wins count
      */
     getKnockoutPoints(knockoutBracket, teams) {
+        /** @type {Record<string, number>} */
         const playerKnockoutWins = {};
 
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -294,7 +361,7 @@ export class RankingsManager {
             if (match.bye) {
                 // Bye match: automatically advance the non-bye team
                 winner = match.home === 'BYE' ? match.away : match.home;
-            } else if (match.homeScore !== null && match.awayScore !== null) {
+            } else if (match.homeScore != null && match.awayScore != null) {
                 // Regular completed match: determine winner by score
                 if (match.homeScore > match.awayScore) {
                     winner = match.home;
@@ -323,10 +390,11 @@ export class RankingsManager {
     /**
      * Determine cup progress for each team based on knockout bracket results
      * Returns the furthest round each team reached (raw round name from bracket)
-     * @param {Array} knockoutBracket - Knockout tournament bracket
-     * @returns {Object} Map of team names to cup progress (raw round names or 'winner')
+     * @param {KnockoutMatch[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @returns {Record<string, string>} Map of team names to cup progress (raw round names or 'winner')
      */
     getTeamCupProgress(knockoutBracket) {
+        /** @type {Record<string, string>} */
         const cupProgress = {};
 
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -335,7 +403,7 @@ export class RankingsManager {
 
         // Check if there are any completed knockout matches
         const hasCompletedMatches = knockoutBracket.some(
-            (match) => match.homeScore !== null && match.awayScore !== null
+            (match) => match.homeScore != null && match.awayScore != null
         );
 
         if (!hasCompletedMatches) {
@@ -343,31 +411,37 @@ export class RankingsManager {
         }
 
         // Track which teams participated in each round and their results
+        /** @type {Record<string, { rounds: Set<string>, wonFinal: boolean }>} */
         const teamRounds = {};
 
         for (const match of knockoutBracket) {
-            if (match.homeScore === null || match.awayScore === null) {
+            if (match.homeScore == null || match.awayScore == null) {
                 continue; // Skip incomplete matches
             }
 
             const { home, away, homeScore, awayScore, round } = match;
+            if (typeof home !== 'string' || typeof away !== 'string') {
+                continue;
+            }
             const winner = homeScore > awayScore ? home : away;
+            const roundName = round ?? 'unknown';
 
             // Initialize team tracking
             if (!teamRounds[home]) teamRounds[home] = { rounds: new Set(), wonFinal: false };
             if (!teamRounds[away]) teamRounds[away] = { rounds: new Set(), wonFinal: false };
 
             // Track participation in this round
-            teamRounds[home].rounds.add(round);
-            teamRounds[away].rounds.add(round);
+            teamRounds[home].rounds.add(roundName);
+            teamRounds[away].rounds.add(roundName);
 
             // Track final winner
-            if (round === 'final') {
+            if (roundName === 'final') {
                 teamRounds[winner].wonFinal = true;
             }
         }
 
         // Helper to get team count from round name for sorting
+        /** @param {string} roundName */
         const getTeamCount = (roundName) => {
             if (roundName === 'final') return 2;
             if (roundName === 'semi') return 4;
@@ -395,10 +469,11 @@ export class RankingsManager {
 
     /**
      * Convert team standings to league positions (1-indexed)
-     * @param {Object} standings - Team standings object (team name -> 0-indexed position)
-     * @returns {Object} Map of team names to league positions (1-indexed)
+     * @param {Record<string, number>} standings - Team standings object (team name -> 0-indexed position)
+     * @returns {Record<string, number>} Map of team names to league positions (1-indexed)
      */
     getLeaguePositions(standings) {
+        /** @type {Record<string, number>} */
         const positions = {};
         for (const [teamName, zeroIndexedPosition] of Object.entries(standings)) {
             positions[teamName] = zeroIndexedPosition + 1;
@@ -408,12 +483,12 @@ export class RankingsManager {
 
     /**
      * Process ELO ratings for all games in a session
-     * @param {Map} playerTracker - Map of all player data
-     * @param {Object} teams - Teams data with player lists
-     * @param {Array} rounds - Game rounds data
-     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
+     * @param {Record<string, string[]>} teams - Teams data with player lists
+     * @param {Round[]} rounds - Game rounds data
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
      * @param {string} date - Current session date
-     * @param {Object} eloCarryOver - ELO carry-over data from previous year
+     * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
      */
     processEloRatings(playerTracker, teams, rounds, knockoutBracket, date, eloCarryOver = {}) {
         // Apply ELO decay to all players before processing games for this date
@@ -423,7 +498,12 @@ export class RankingsManager {
         for (const round of rounds) {
             for (const game of round) {
                 const { home, away, homeScore, awayScore } = game;
-                if (homeScore !== null && awayScore !== null) {
+                if (
+                    homeScore != null &&
+                    awayScore != null &&
+                    typeof home === 'string' &&
+                    typeof away === 'string'
+                ) {
                     const homeTeam = teams[home] || [];
                     const awayTeam = teams[away] || [];
                     this.updateEloRatingsForGame(
@@ -442,7 +522,12 @@ export class RankingsManager {
         // Process ELO ratings for knockout games
         if (knockoutBracket && Array.isArray(knockoutBracket)) {
             for (const match of knockoutBracket) {
-                if (match.homeScore !== null && match.awayScore !== null) {
+                if (
+                    match.homeScore != null &&
+                    match.awayScore != null &&
+                    typeof match.home === 'string' &&
+                    typeof match.away === 'string'
+                ) {
                     const homeTeam = teams[match.home] || [];
                     const awayTeam = teams[match.away] || [];
                     this.updateEloRatingsForGame(
@@ -499,8 +584,8 @@ export class RankingsManager {
 
     /**
      * Calculate team average ELO rating from player ratings
-     * @param {string[]} players - Array of player names (may contain nulls)
-     * @param {Object} playerRatings - Player rankings data
+     * @param {Array<string | null | undefined>} players - Array of player names (may contain nulls)
+     * @param {Record<string, PlayerRankingData>} playerRatings - Player rankings data
      * @returns {number} - Average ELO rating of team (ignoring nulls)
      */
     calculateTeamEloRating(players, playerRatings) {
@@ -544,13 +629,13 @@ export class RankingsManager {
 
     /**
      * Update player ELO ratings based on game result
-     * @param {Object} playerTracker - Map of all player data
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
      * @param {string[]} homeTeam - Home team player names
      * @param {string[]} awayTeam - Away team player names
      * @param {number} homeScore - Home team score
      * @param {number} awayScore - Away team score
      * @param {string} phase - Game phase ('league' or cup-related)
-     * @param {Object} eloCarryOver - ELO carry-over data from previous year
+     * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
      */
     updateEloRatingsForGame(
         playerTracker,
@@ -590,6 +675,7 @@ export class RankingsManager {
         });
 
         // Convert playerTracker to simple object for rating calculation
+        /** @type {Record<string, PlayerRankingData>} */
         const playerRatings = {};
         playerTracker.forEach((data, name) => {
             playerRatings[name] = data;
@@ -631,7 +717,7 @@ export class RankingsManager {
 
     /**
      * Apply ELO decay to all players since their last decay date
-     * @param {Map} playerTracker - Map of all player data
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
      * @param {string} currentDate - Current session date (YYYY-MM-DD)
      */
     applyEloDecayToAllPlayers(playerTracker, currentDate) {
@@ -669,7 +755,7 @@ export class RankingsManager {
 
     /**
      * Find the last appearance date for a player (last ranking detail where they scored points)
-     * @param {Object} rankingDetail - Player's ranking detail object
+     * @param {Record<string, RankingDetailEntry>} rankingDetail - Player's ranking detail object
      * @returns {string|null} - Last appearance date (YYYY-MM-DD) or null if no appearances
      */
     findLastAppearance(rankingDetail) {
@@ -691,8 +777,8 @@ export class RankingsManager {
 
     /**
      * Apply hybrid ranking algorithm to raw player data
-     * @param {Object} rawRankings - Rankings with basic points/appearances
-     * @returns {Object} Enhanced rankings with calculated fields
+     * @param {RankingsData} rawRankings - Rankings with basic points/appearances
+     * @returns {RankingsData} Enhanced rankings with calculated fields
      */
     calculateEnhancedRankings(rawRankings) {
         if (!rawRankings || !rawRankings.players || Object.keys(rawRankings.players).length === 0) {
@@ -713,6 +799,7 @@ export class RankingsManager {
         let totalPoints = 0;
         let totalAppearances = 0;
         let maxAppearances = 0;
+        /** @type {number[]} */
         const allAverages = [];
 
         Object.values(rawRankings.players).forEach((player) => {
@@ -727,6 +814,7 @@ export class RankingsManager {
         const confidenceThreshold = Math.max(1, Math.round(maxAppearances * CONFIDENCE_FRACTION));
 
         // Step 2: Calculate enhanced player data
+        /** @type {Record<string, PlayerRankingData>} */
         const enhancedPlayers = {};
 
         Object.entries(rawRankings.players).forEach(([name, data]) => {

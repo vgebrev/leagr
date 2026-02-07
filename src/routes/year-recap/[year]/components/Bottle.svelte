@@ -5,6 +5,9 @@
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapBottle} YearRecapBottle */
+
+    /** @type {{ data: YearRecapBottle | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     const medals = ['🥇', '🥈', '🥉'];

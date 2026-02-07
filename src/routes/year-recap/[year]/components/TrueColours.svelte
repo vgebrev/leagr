@@ -6,7 +6,14 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapTrueColoursEntry} YearRecapTrueColoursEntry */
+    /** @typedef {import('$lib/shared/types.js').TeamStyle} TeamStyle */
+
+    /** @type {{ data: YearRecapTrueColoursEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
+
+    /** @type {Record<string, TeamStyle>} */
+    const teamStylesMap = teamStyles;
 
     const itemStagger = 150; // Delay increment per color
 </script>
@@ -18,7 +25,7 @@
     <div class="mt-4 space-y-2">
         {#if data && data.length > 0}
             {#each data as colorData, index (index)}
-                {@const colorStyle = teamStyles[colorData.color] || teamStyles.default}
+                {@const colorStyle = teamStylesMap[colorData.color] || teamStylesMap.default}
                 <AnimatedIn
                     delay={initialDelay + index * itemStagger}
                     type="scale"
