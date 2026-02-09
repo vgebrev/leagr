@@ -85,7 +85,6 @@ export const nouns = [
     'turtles',
     'vultures',
     'weasels',
-    'wolves',
     'yaks',
     'antelopes',
     'bees',

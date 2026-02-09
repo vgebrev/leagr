@@ -15,6 +15,7 @@
         "format": "prettier --write .",
         "lint": "prettier --check . && eslint .",
         "test": "vitest run --config vitest.config.js && vitest run --config vitest.svelte.config.js",
+        "posttest": "node -e \"import('./test/setup/globalTeardown.js').then(m => m.default())\"",
         "test:backend": "vitest run --config vitest.config.js",
         "test:frontend": "vitest run --config vitest.svelte.config.js"
     },

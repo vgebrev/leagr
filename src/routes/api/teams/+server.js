@@ -173,6 +173,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Generate teams with history recording enabled
         const teamGenerator = createTeamGenerator()
+            .setLeague(leagueId)
             .setSettings(gameData.settings)
             .setPlayers(eligiblePlayers)
             .setRankings(rankings)
@@ -180,7 +181,7 @@ export const POST = async ({ request, url, locals }) => {
             .setTeammateHistory(teammateHistory)
             .setHistoryRecording(true);
 
-        const result = teamGenerator.generateTeams(method, teamConfig);
+        const result = await teamGenerator.generateTeams(method, teamConfig);
 
         // Store the generated teams and draw history
         await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);

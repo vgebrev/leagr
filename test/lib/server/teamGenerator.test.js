@@ -6,9 +6,10 @@ describe('TeamGenerator', () => {
     let mockSettings;
     let mockPlayers;
     let mockRankings;
+    const TEST_LEAGUE_ID = 'test-team-generator';
 
     beforeEach(() => {
-        teamGenerator = createTeamGenerator();
+        teamGenerator = createTeamGenerator().setLeague(TEST_LEAGUE_ID);
 
         mockSettings = {
             teamGeneration: {
@@ -171,19 +172,19 @@ describe('TeamGenerator', () => {
     });
 
     describe('generateTeamNames', () => {
-        it('should generate the correct number of team names', () => {
-            const names = teamGenerator.generateTeamNames(3);
+        it('should generate the correct number of team names', async () => {
+            const names = await teamGenerator.generateTeamNames(3);
             expect(names).toHaveLength(3);
         });
 
-        it('should generate unique team names', () => {
-            const names = teamGenerator.generateTeamNames(5);
+        it('should generate unique team names', async () => {
+            const names = await teamGenerator.generateTeamNames(5);
             const uniqueNames = new Set(names);
             expect(uniqueNames.size).toBe(5);
         });
 
-        it('should include color and noun in each name', () => {
-            const names = teamGenerator.generateTeamNames(2);
+        it('should include color and noun in each name', async () => {
+            const names = await teamGenerator.generateTeamNames(2);
             names.forEach((name) => {
                 expect(name).toMatch(/^[\w-]+ [\w-]+$/); // Format: "Color Noun" (allows hyphens)
                 expect(name.split(' ')).toHaveLength(2);
@@ -196,19 +197,19 @@ describe('TeamGenerator', () => {
             teamGenerator.setSettings(mockSettings).setPlayers(mockPlayers);
         });
 
-        it('should throw TeamError for no players', () => {
+        it('should throw TeamError for no players', async () => {
             teamGenerator.setPlayers([]);
             const config = { teamSizes: [4, 4] };
 
-            expect(() => teamGenerator.generateRandomTeams(config)).toThrow(TeamError);
-            expect(() => teamGenerator.generateRandomTeams(config)).toThrow(
+            await expect(teamGenerator.generateRandomTeams(config)).rejects.toThrow(TeamError);
+            await expect(teamGenerator.generateRandomTeams(config)).rejects.toThrow(
                 'No players available for team generation'
             );
         });
 
-        it('should generate teams with correct sizes', () => {
+        it('should generate teams with correct sizes', async () => {
             const config = { teamSizes: [3, 3, 2] };
-            const teams = teamGenerator.generateRandomTeams(config);
+            const teams = await teamGenerator.generateRandomTeams(config);
 
             const teamNames = Object.keys(teams);
             expect(teamNames).toHaveLength(3);
@@ -217,18 +218,18 @@ describe('TeamGenerator', () => {
             expect(sizes.sort()).toEqual([2, 3, 3]);
         });
 
-        it('should distribute all players', () => {
+        it('should distribute all players', async () => {
             const config = { teamSizes: [4, 4] };
-            const teams = teamGenerator.generateRandomTeams(config);
+            const teams = await teamGenerator.generateRandomTeams(config);
 
             const allAssignedPlayers = Object.values(teams).flat();
             expect(allAssignedPlayers).toHaveLength(8);
             expect(new Set(allAssignedPlayers).size).toBe(8); // All unique
         });
 
-        it('should assign every player from the original list', () => {
+        it('should assign every player from the original list', async () => {
             const config = { teamSizes: [4, 4] };
-            const teams = teamGenerator.generateRandomTeams(config);
+            const teams = await teamGenerator.generateRandomTeams(config);
 
             const allAssignedPlayers = Object.values(teams).flat();
             mockPlayers.forEach((player) => {
@@ -245,19 +246,19 @@ describe('TeamGenerator', () => {
                 .setRankings(mockRankings);
         });
 
-        it('should throw TeamError for no players', () => {
+        it('should throw TeamError for no players', async () => {
             teamGenerator.setPlayers([]);
             const config = { teamSizes: [4, 4] };
 
-            expect(() => teamGenerator.generateSeededTeams(config)).toThrow(TeamError);
-            expect(() => teamGenerator.generateSeededTeams(config)).toThrow(
+            await expect(teamGenerator.generateSeededTeams(config)).rejects.toThrow(TeamError);
+            await expect(teamGenerator.generateSeededTeams(config)).rejects.toThrow(
                 'No players available for team generation'
             );
         });
 
-        it('should generate teams with correct sizes', () => {
+        it('should generate teams with correct sizes', async () => {
             const config = { teamSizes: [3, 3, 2] };
-            const teams = teamGenerator.generateSeededTeams(config);
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             const teamNames = Object.keys(teams);
             expect(teamNames).toHaveLength(3);
@@ -266,32 +267,32 @@ describe('TeamGenerator', () => {
             expect(sizes.sort()).toEqual([2, 3, 3]);
         });
 
-        it('should distribute all players', () => {
+        it('should distribute all players', async () => {
             const config = { teamSizes: [4, 4] };
-            const teams = teamGenerator.generateSeededTeams(config);
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             const allAssignedPlayers = Object.values(teams).flat();
             expect(allAssignedPlayers).toHaveLength(8);
             expect(new Set(allAssignedPlayers).size).toBe(8);
         });
 
-        it('should work without rankings data', () => {
+        it('should work without rankings data', async () => {
             teamGenerator.setRankings(null);
             const config = { teamSizes: [4, 4] };
 
-            expect(() => teamGenerator.generateSeededTeams(config)).not.toThrow();
-            const teams = teamGenerator.generateSeededTeams(config);
+            await expect(teamGenerator.generateSeededTeams(config)).resolves.not.toThrow();
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             const allAssignedPlayers = Object.values(teams).flat();
             expect(allAssignedPlayers).toHaveLength(8);
         });
 
-        it('should handle players not in rankings', () => {
+        it('should handle players not in rankings', async () => {
             const playersWithUnranked = [...mockPlayers, 'NewPlayer1', 'NewPlayer2'];
             teamGenerator.setPlayers(playersWithUnranked);
 
             const config = { teamSizes: [5, 5] };
-            const teams = teamGenerator.generateSeededTeams(config);
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             const allAssignedPlayers = Object.values(teams).flat();
             expect(allAssignedPlayers).toHaveLength(10);
@@ -299,9 +300,9 @@ describe('TeamGenerator', () => {
             expect(allAssignedPlayers).toContain('NewPlayer2');
         });
 
-        it('should optimize team balance based on ELO ratings', () => {
+        it('should optimize team balance based on ELO ratings', async () => {
             const config = { teamSizes: [4, 4] };
-            const teams = teamGenerator.generateSeededTeams(config);
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             // Calculate team ELO averages
             const teamAverages = teamGenerator.calculateTeamEloAverages(teams);
@@ -313,10 +314,10 @@ describe('TeamGenerator', () => {
             expect(teamAverages.every((avg) => avg > 0)).toBe(true);
         });
 
-        it('should achieve better balance with more teams (lower target threshold)', () => {
+        it('should achieve better balance with more teams (lower target threshold)', async () => {
             // Test with 3 teams (target: 12 - 2*3 = 6)
             const config = { teamSizes: [3, 3, 2] };
-            const teams = teamGenerator.generateSeededTeams(config);
+            const teams = await teamGenerator.generateSeededTeams(config);
 
             const teamAverages = teamGenerator.calculateTeamEloAverages(teams);
             const eloDelta = teamGenerator.calculateEloDelta(teamAverages);
@@ -326,14 +327,14 @@ describe('TeamGenerator', () => {
             expect(teamAverages).toHaveLength(3);
         });
 
-        it('should use snake draft pattern for improved pairing variance', () => {
+        it('should use snake draft pattern for improved pairing variance', async () => {
             // Test multiple iterations to verify randomization is working
             const config = { teamSizes: [2, 2, 2, 2] };
             const results = [];
 
             // Generate multiple team combinations
             for (let i = 0; i < 10; i++) {
-                const teams = teamGenerator.generateSeededTeams(config);
+                const teams = await teamGenerator.generateSeededTeams(config);
                 const teamsList = Object.values(teams);
                 results.push(teamsList);
             }
@@ -420,45 +421,47 @@ describe('TeamGenerator', () => {
                 .setRankings(mockRankings);
         });
 
-        it('should throw TeamError if settings not set', () => {
-            const generator = createTeamGenerator().setPlayers(mockPlayers);
+        it('should throw TeamError if settings not set', async () => {
+            const generator = createTeamGenerator()
+                .setLeague(TEST_LEAGUE_ID)
+                .setPlayers(mockPlayers);
             const config = { teamSizes: [4, 4] };
 
-            expect(() => generator.generateTeams('random', config)).toThrow(TeamError);
-            expect(() => generator.generateTeams('random', config)).toThrow(
+            await expect(generator.generateTeams('random', config)).rejects.toThrow(TeamError);
+            await expect(generator.generateTeams('random', config)).rejects.toThrow(
                 'Settings must be set before generating teams'
             );
         });
 
-        it('should throw TeamError for invalid config', () => {
-            expect(() => teamGenerator.generateTeams('random', null)).toThrow(TeamError);
-            expect(() => teamGenerator.generateTeams('random', {})).toThrow(TeamError);
-            expect(() => teamGenerator.generateTeams('random', { teamSizes: 'invalid' })).toThrow(
-                TeamError
-            );
+        it('should throw TeamError for invalid config', async () => {
+            await expect(teamGenerator.generateTeams('random', null)).rejects.toThrow(TeamError);
+            await expect(teamGenerator.generateTeams('random', {})).rejects.toThrow(TeamError);
+            await expect(
+                teamGenerator.generateTeams('random', { teamSizes: 'invalid' })
+            ).rejects.toThrow(TeamError);
         });
 
-        it('should throw TeamError for invalid method', () => {
+        it('should throw TeamError for invalid method', async () => {
             const config = { teamSizes: [4, 4] };
 
-            expect(() => teamGenerator.generateTeams('invalid', config)).toThrow(TeamError);
-            expect(() => teamGenerator.generateTeams('invalid', config)).toThrow(
+            await expect(teamGenerator.generateTeams('invalid', config)).rejects.toThrow(TeamError);
+            await expect(teamGenerator.generateTeams('invalid', config)).rejects.toThrow(
                 'Invalid team generation method: invalid'
             );
         });
 
-        it('should throw TeamError for insufficient players', () => {
+        it('should throw TeamError for insufficient players', async () => {
             const config = { teamSizes: [5, 5, 5] }; // Need 15 players, only have 8
 
-            expect(() => teamGenerator.generateTeams('random', config)).toThrow(TeamError);
-            expect(() => teamGenerator.generateTeams('random', config)).toThrow(
+            await expect(teamGenerator.generateTeams('random', config)).rejects.toThrow(TeamError);
+            await expect(teamGenerator.generateTeams('random', config)).rejects.toThrow(
                 'Not enough players: need 15, have 8'
             );
         });
 
-        it('should generate random teams successfully', () => {
+        it('should generate random teams successfully', async () => {
             const config = { teamSizes: [4, 4] };
-            const result = teamGenerator.generateTeams('random', config);
+            const result = await teamGenerator.generateTeams('random', config);
 
             expect(result).toHaveProperty('teams');
             expect(result).toHaveProperty('config');
@@ -467,9 +470,9 @@ describe('TeamGenerator', () => {
             expect(result.config.playersUsed).toBe(8);
         });
 
-        it('should generate seeded teams successfully', () => {
+        it('should generate seeded teams successfully', async () => {
             const config = { teamSizes: [4, 4] };
-            const result = teamGenerator.generateTeams('seeded', config);
+            const result = await teamGenerator.generateTeams('seeded', config);
 
             expect(result).toHaveProperty('teams');
             expect(result).toHaveProperty('config');
@@ -478,9 +481,9 @@ describe('TeamGenerator', () => {
             expect(result.config.playersUsed).toBe(8);
         });
 
-        it('should handle partial player usage', () => {
+        it('should handle partial player usage', async () => {
             const config = { teamSizes: [3, 3] }; // Use 6 out of 8 players
-            const result = teamGenerator.generateTeams('random', config);
+            const result = await teamGenerator.generateTeams('random', config);
 
             expect(result.config.totalPlayers).toBe(8);
             expect(result.config.playersUsed).toBe(6);
@@ -491,17 +494,18 @@ describe('TeamGenerator', () => {
     });
 
     describe('draw history correction', () => {
-        it('should preserve snake draft team order in draw history after optimization', () => {
+        it('should preserve snake draft team order in draw history after optimization', async () => {
             const testPlayers = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
 
             const generator = createTeamGenerator()
+                .setLeague(TEST_LEAGUE_ID)
                 .setSettings(mockSettings)
                 .setPlayers(testPlayers)
                 .setRankings(mockRankings)
                 .setHistoryRecording(true);
 
             const config = { teamSizes: [2, 2, 2] };
-            const result = generator.generateTeams('seeded', config);
+            const result = await generator.generateTeams('seeded', config);
 
             // Verify draw history exists
             expect(result.drawHistory).toBeDefined();
@@ -531,17 +535,18 @@ describe('TeamGenerator', () => {
             });
         });
 
-        it('should maintain player-team consistency after optimization', () => {
+        it('should maintain player-team consistency after optimization', async () => {
             const testPlayers = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve', 'Frank'];
 
             const generator = createTeamGenerator()
+                .setLeague(TEST_LEAGUE_ID)
                 .setSettings(mockSettings)
                 .setPlayers(testPlayers)
                 .setRankings(mockRankings)
                 .setHistoryRecording(true);
 
             const config = { teamSizes: [2, 2, 2] };
-            const result = generator.generateTeams('seeded', config);
+            const result = await generator.generateTeams('seeded', config);
             const teams = result.teams;
 
             // Create final team mapping from actual teams

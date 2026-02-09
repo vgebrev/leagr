@@ -1,5 +1,5 @@
-import { nouns } from '$lib/shared/nouns.js';
 import { teamColours } from '$lib/shared/helpers.js';
+import { getNextNouns } from './nounPool.js';
 
 /** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('../shared/types.js').TeamGenerationSettings} TeamGenerationSettings */
@@ -48,6 +48,8 @@ export class TeamError extends Error {
  */
 class TeamGenerator {
     constructor() {
+        /** @type {string | null} */
+        this.leagueId = null;
         /** @type {LeagueSettings | null} */
         this.settings = null;
         /** @type {string[]} */
@@ -65,6 +67,16 @@ class TeamGenerator {
         this.teammateHistory = null;
         /** @type {{ elo: number, attack: number, control: number } | null} */
         this._provisionalAnchors = null;
+    }
+
+    /**
+     * Set the league ID for team generation
+     * @param {string} leagueId - League identifier
+     * @returns {TeamGenerator} - Fluent interface
+     */
+    setLeague(leagueId) {
+        this.leagueId = leagueId;
+        return this;
     }
 
     /**
@@ -270,41 +282,28 @@ class TeamGenerator {
     }
 
     /**
-     * Generate random team names
+     * Generate team names using exhaustive noun pool
      * @param {number} count - Number of team names to generate
-     * @returns {string[]} Array of team names
+     * @returns {Promise<string[]>} Array of team names
      */
-    generateTeamNames(count) {
-        const usedNouns = new Set();
-        const teamNames = [];
+    async generateTeamNames(count) {
+        if (!this.leagueId) {
+            throw new TeamError('League ID must be set before generating team names', 400);
+        }
 
+        const selectedNouns = await getNextNouns(count, this.leagueId);
         const colorSlice = teamColours.slice(0, count);
         const shuffledColours = colorSlice.sort(() => Math.random() - 0.5);
 
-        for (let i = 0; i < count; i++) {
-            let noun;
-            let attempts = 0;
-
-            // Find a unique noun, fallback to index-based if all nouns used
-            do {
-                noun = nouns[Math.floor(Math.random() * nouns.length)];
-                attempts++;
-            } while (usedNouns.has(noun) && attempts < 50);
-
-            usedNouns.add(noun);
-            const color = shuffledColours[i % shuffledColours.length];
-            teamNames.push(`${color} ${noun}`);
-        }
-
-        return teamNames;
+        return selectedNouns.map((noun, i) => `${shuffledColours[i]} ${noun}`);
     }
 
     /**
      * Generate teams using random distribution
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
-     * @returns {TeamsMap} Generated teams object
+     * @returns {Promise<TeamsMap>} Generated teams object
      */
-    generateRandomTeams(config) {
+    async generateRandomTeams(config) {
         if (!this.players.length) {
             throw new TeamError('No players available for team generation', 400);
         }
@@ -313,7 +312,7 @@ class TeamGenerator {
         const teams = {};
         const teamSizes = config.teamSizes;
         const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
-        const teamNames = this.generateTeamNames(teamSizes.length);
+        const teamNames = await this.generateTeamNames(teamSizes.length);
 
         // Initialize empty teams
         for (let i = 0; i < teamSizes.length; i++) {
@@ -1012,16 +1011,16 @@ class TeamGenerator {
      * Uses two-pass sorting: first establish pot structure from trusted players,
      * then calculate provisional ratings for newcomers based on weakest pot mean.
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
-     * @returns {TeamsMap} Generated teams object
+     * @returns {Promise<TeamsMap>} Generated teams object
      */
-    generateSeededTeams(config) {
+    async generateSeededTeams(config) {
         if (!this.players.length) {
             throw new TeamError('No players available for team generation', 400);
         }
 
         const teamSizes = config.teamSizes;
         const numTeams = teamSizes.length;
-        const teamNames = this.generateTeamNames(numTeams);
+        const teamNames = await this.generateTeamNames(numTeams);
 
         // STEP 1: First pass - sort ONLY established players (35+ games) by actual ELO
         // to determine pot structure and calculate anchor values
@@ -1205,9 +1204,9 @@ class TeamGenerator {
      * Generate teams using the specified method
      * @param {string} method - 'random' or 'seeded'
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
-     * @returns {Record<string, any>} Generated teams object with metadata
+     * @returns {Promise<Record<string, any>>} Generated teams object with metadata
      */
-    generateTeams(method, config) {
+    async generateTeams(method, config) {
         if (!this.settings) {
             throw new TeamError('Settings must be set before generating teams', 400);
         }
@@ -1234,8 +1233,8 @@ class TeamGenerator {
 
         const teams =
             method === 'seeded'
-                ? this.generateSeededTeams(config)
-                : this.generateRandomTeams(config);
+                ? await this.generateSeededTeams(config)
+                : await this.generateRandomTeams(config);
 
         /** @type {Record<string, any>} */
         const result = {
