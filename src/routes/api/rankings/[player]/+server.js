@@ -110,7 +110,7 @@ export async function GET({ params, locals, url }) {
         const playerData = rankings.players[player];
 
         if (!playerData) {
-            return error(404, `Player "${player}" not found in rankings`);
+            return error(404, `Player "${player}" not found in ${year} rankings`);
         }
 
         // Create unified details array (include rating stats where present)
