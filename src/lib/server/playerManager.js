@@ -777,11 +777,11 @@ export class PlayerManager {
             } else {
                 // Current year: Find the last ranking detail entry before this session date
                 let lastDetailBeforeSession = null;
-                if (playerData.rankingDetail) {
-                    const detailDates = Object.keys(playerData.rankingDetail).sort();
+                if (playerData.history) {
+                    const detailDates = Object.keys(playerData.history).sort();
                     for (const date of detailDates) {
                         if (date < sessionDate) {
-                            lastDetailBeforeSession = playerData.rankingDetail[date];
+                            lastDetailBeforeSession = playerData.history[date];
                         } else {
                             break;
                         }
@@ -789,10 +789,10 @@ export class PlayerManager {
                 }
 
                 if (lastDetailBeforeSession) {
-                    gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
-                    elo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
-                    attack = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
-                    control = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+                    gamesPlayed = lastDetailBeforeSession.ratings?.eloGames ?? 0;
+                    elo = lastDetailBeforeSession.ratings?.elo ?? DEFAULT_ELO;
+                    attack = lastDetailBeforeSession.ratings?.attacking ?? DEFAULT_RATING;
+                    control = lastDetailBeforeSession.ratings?.control ?? DEFAULT_RATING;
                 } else if (previousYearRankings?.players?.[playerName]) {
                     // No detail found in current year before session - fall back to previous year
                     const prevYearPlayer = previousYearRankings.players[playerName];
@@ -853,13 +853,13 @@ export class PlayerManager {
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
 
-            // Find the last ranking detail entry before this session date
+            // Find the last history entry before this session date
             let lastDetailBeforeSession = null;
-            if (playerRanking?.rankingDetail) {
-                const detailDates = Object.keys(playerRanking.rankingDetail).sort();
+            if (playerRanking?.history) {
+                const detailDates = Object.keys(playerRanking.history).sort();
                 for (const date of detailDates) {
                     if (date < sessionDate) {
-                        lastDetailBeforeSession = playerRanking.rankingDetail[date];
+                        lastDetailBeforeSession = playerRanking.history[date];
                     } else {
                         break; // Stop at or after session date
                     }
@@ -867,11 +867,11 @@ export class PlayerManager {
             }
 
             if (lastDetailBeforeSession) {
-                // Use values from the last detail before this session
-                actualElo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
-                gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
-                attackingRating = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
-                controlRating = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+                // Use values from the last history entry before this session
+                actualElo = lastDetailBeforeSession.ratings?.elo ?? DEFAULT_ELO;
+                gamesPlayed = lastDetailBeforeSession.ratings?.eloGames ?? 0;
+                attackingRating = lastDetailBeforeSession.ratings?.attacking ?? DEFAULT_RATING;
+                controlRating = lastDetailBeforeSession.ratings?.control ?? DEFAULT_RATING;
             } else if (previousYearRankings?.players?.[playerName]) {
                 // No detail before session - player hasn't played yet this year (or year boundary case)
                 // Fall back to previous year end-of-year state

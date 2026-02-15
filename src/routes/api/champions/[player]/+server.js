@@ -46,17 +46,17 @@ export async function GET({ params, locals, url }) {
 
         // Only include requested trophy type sessions
         if (!trophyType || trophyType === 'league') {
-            response.leagueSessions = Object.entries(playerData.rankingDetail)
-                .filter(([, session]) => session.leagueWinner === true)
-                .map(([date, session]) => ({ date, ...session }))
-                .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+            response.leagueSessions = Object.entries(playerData.history)
+                .filter(([, entry]) => entry.performance?.leagueWinner === true)
+                .map(([date, entry]) => ({ date, ...entry }))
+                .sort((a, b) => b.date.localeCompare(a.date));
         }
 
         if (!trophyType || trophyType === 'cup') {
-            response.cupSessions = Object.entries(playerData.rankingDetail)
-                .filter(([, session]) => session.cupWinner === true)
-                .map(([date, session]) => ({ date, ...session }))
-                .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+            response.cupSessions = Object.entries(playerData.history)
+                .filter(([, entry]) => entry.performance?.cupWinner === true)
+                .map(([date, entry]) => ({ date, ...entry }))
+                .sort((a, b) => b.date.localeCompare(a.date));
         }
 
         return json(response);

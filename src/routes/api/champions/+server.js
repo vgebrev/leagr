@@ -35,17 +35,17 @@ export async function GET({ locals, url }) {
                             allPlayersData[playerName] = {
                                 leagueWins: 0,
                                 cupWins: 0,
-                                rankingDetail: {}
+                                history: {}
                             };
                         }
                         allPlayersData[playerName].leagueWins += playerData.leagueWins || 0;
                         allPlayersData[playerName].cupWins += playerData.cupWins || 0;
 
-                        // Combine ranking details if needed
-                        if (includeSessionDetails && playerData.rankingDetail) {
-                            allPlayersData[playerName].rankingDetail = {
-                                ...allPlayersData[playerName].rankingDetail,
-                                ...playerData.rankingDetail
+                        // Combine history if needed
+                        if (includeSessionDetails && playerData.history) {
+                            allPlayersData[playerName].history = {
+                                ...allPlayersData[playerName].history,
+                                ...playerData.history
                             };
                         }
                     });
@@ -61,7 +61,7 @@ export async function GET({ locals, url }) {
                 allPlayersData[playerName] = {
                     leagueWins: playerData.leagueWins || 0,
                     cupWins: playerData.cupWins || 0,
-                    rankingDetail: playerData.rankingDetail || {}
+                    history: playerData.history || {}
                 };
             });
         }
@@ -82,14 +82,14 @@ export async function GET({ locals, url }) {
 
                 // Only include session details if requested
                 if (includeSessionDetails) {
-                    championData.leagueSessions = Object.entries(playerData.rankingDetail || {})
-                        .filter(([, session]) => session.leagueWinner === true)
-                        .map(([date, session]) => ({ date, ...session }))
-                        .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
-                    championData.cupSessions = Object.entries(playerData.rankingDetail || {})
-                        .filter(([, session]) => session.cupWinner === true)
-                        .map(([date, session]) => ({ date, ...session }))
-                        .sort((a, b) => b.date.localeCompare(a.date)); // Sort by date descending
+                    championData.leagueSessions = Object.entries(playerData.history || {})
+                        .filter(([, entry]) => entry.performance?.leagueWinner === true)
+                        .map(([date, entry]) => ({ date, ...entry }))
+                        .sort((a, b) => b.date.localeCompare(a.date));
+                    championData.cupSessions = Object.entries(playerData.history || {})
+                        .filter(([, entry]) => entry.performance?.cupWinner === true)
+                        .map(([date, entry]) => ({ date, ...entry }))
+                        .sort((a, b) => b.date.localeCompare(a.date));
                 }
 
                 return championData;

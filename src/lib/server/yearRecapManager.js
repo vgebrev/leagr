@@ -293,8 +293,8 @@ export class YearRecapManager {
                 }
 
                 /** @type {Record<string, any>} */
-                const rankingDetail = p.rankingDetail || {};
-                const sessionDatesForPlayer = Object.keys(rankingDetail).sort();
+                const history = p.history || {};
+                const sessionDatesForPlayer = Object.keys(history).sort();
 
                 // Need at least 2 sessions to show improvement
                 if (sessionDatesForPlayer.length < 2) {
@@ -302,12 +302,12 @@ export class YearRecapManager {
                 }
 
                 // Get starting rank (first session)
-                const startingRank = rankingDetail[sessionDatesForPlayer[0]]?.rank ?? 0;
+                const startingRank = history[sessionDatesForPlayer[0]]?.ranking?.rank ?? 0;
 
                 // Find lowest rank (worst position) across all sessions
                 let lowestRank = startingRank;
                 for (const date of sessionDatesForPlayer) {
-                    const sessionRank = rankingDetail[date]?.rank ?? startingRank;
+                    const sessionRank = history[date]?.ranking?.rank ?? startingRank;
                     if (sessionRank > lowestRank) {
                         lowestRank = sessionRank;
                     }
@@ -1013,20 +1013,21 @@ export class YearRecapManager {
         }
 
         for (const [playerName, playerData] of Object.entries(detailedRankings.players)) {
-            if (!playerData.rankingDetail) continue;
+            if (!playerData.history) continue;
 
             let secondPlaces = 0;
             let finalLosses = 0;
 
-            // Iterate through each date entry in rankingDetail
-            for (const [, detail] of Object.entries(playerData.rankingDetail)) {
+            // Iterate through each appearance entry in history
+            for (const [, entry] of Object.entries(playerData.history)) {
+                if (!entry.performance) continue; // Skip non-appearance entries
                 // Count league 2nd place finishes
-                if (detail.leaguePosition === 2) {
+                if (entry.performance.leaguePosition === 2) {
                     secondPlaces++;
                 }
 
                 // Count cup final losses (reached final but didn't win)
-                if (detail.cupProgress === 'final' && !detail.cupWinner) {
+                if (entry.performance.cupProgress === 'final' && !entry.performance.cupWinner) {
                     finalLosses++;
                 }
             }
