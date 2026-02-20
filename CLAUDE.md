@@ -353,7 +353,7 @@ await manager.addPlayer('John Doe', date);
 7. **Run tests frequently** - Use `npm test` to verify changes don't break existing functionality
 8. **Type checking**: Only run `npm run check` when explicitly requested or when type errors are blocking functionality. Focus on working code over perfect types. Add JSDoc type annotations pragmatically when they improve code clarity, not exhaustively.
 9. **Document**: After completing a non-trivial feature or significant change, create a summary document in `tasks/[yyyyMMddhhmm]-[feature-name]-implementation.md` with:
-    - Timestamp filename prefix, so tasks chronology is easily seen by default at filesystem level  
+    - Timestamp filename prefix, so tasks chronology is easily seen by default at filesystem level
     - Overview of what was implemented
     - Architecture decisions made
     - Files modified (with brief descriptions)
