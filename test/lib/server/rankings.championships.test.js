@@ -100,17 +100,18 @@ describe('RankingsManager - Championships', () => {
                 }
             };
 
-            const rankingDetail = {
+            const historyEntry = {
                 team: 'winning-team',
-                totalPoints: 10,
-                rank: 1
+                points: { total: 10 },
+                performance: {},
+                ranking: { rank: 1 }
             };
 
-            const updated = rankingsManager.addChampionshipFlags(rankingDetail, sessionData);
+            const updated = rankingsManager.addChampionshipFlags(historyEntry, sessionData);
 
-            expect(updated.leagueWinner).toBe(true);
-            expect(updated.cupWinner).toBe(true);
-            expect(updated.totalPoints).toBe(10); // Preserves existing data
+            expect(updated.performance.leagueWinner).toBe(true);
+            expect(updated.performance.cupWinner).toBe(true);
+            expect(updated.points.total).toBe(10); // Preserves existing data
         });
 
         it('should set false flags for non-winners', () => {
@@ -138,35 +139,36 @@ describe('RankingsManager - Championships', () => {
                 }
             };
 
-            const rankingDetail = {
+            const historyEntry = {
                 team: 'losing-team',
-                totalPoints: 8,
-                rank: 2
+                points: { total: 8 },
+                performance: {},
+                ranking: { rank: 2 }
             };
 
-            const updated = rankingsManager.addChampionshipFlags(rankingDetail, sessionData);
+            const updated = rankingsManager.addChampionshipFlags(historyEntry, sessionData);
 
-            expect(updated.leagueWinner).toBe(false);
-            expect(updated.cupWinner).toBe(false);
+            expect(updated.performance.leagueWinner).toBe(false);
+            expect(updated.performance.cupWinner).toBe(false);
         });
     });
 
     describe('countChampionships', () => {
-        it('should count league and cup wins from ranking detail', () => {
-            const rankingDetail = {
-                '2025-01-01': { leagueWinner: true, cupWinner: false },
-                '2025-02-01': { leagueWinner: false, cupWinner: true },
-                '2025-03-01': { leagueWinner: true, cupWinner: true },
-                '2025-04-01': { leagueWinner: false, cupWinner: false }
+        it('should count league and cup wins from history', () => {
+            const history = {
+                '2025-01-01': { performance: { leagueWinner: true, cupWinner: false } },
+                '2025-02-01': { performance: { leagueWinner: false, cupWinner: true } },
+                '2025-03-01': { performance: { leagueWinner: true, cupWinner: true } },
+                '2025-04-01': { performance: { leagueWinner: false, cupWinner: false } }
             };
 
-            const counts = rankingsManager.countChampionships(rankingDetail);
+            const counts = rankingsManager.countChampionships(history);
 
             expect(counts.leagueWins).toBe(2);
             expect(counts.cupWins).toBe(2);
         });
 
-        it('should return zero for empty ranking detail', () => {
+        it('should return zero for empty history', () => {
             const counts = rankingsManager.countChampionships({});
 
             expect(counts.leagueWins).toBe(0);

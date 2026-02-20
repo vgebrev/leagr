@@ -143,30 +143,30 @@ describe('YearRecapManager', () => {
                     rank: 3,
                     rankingPoints: 100,
                     appearances: 10,
-                    rankingDetail: {
-                        '2025-01-01': { rank: 8 }, // Started at 8
-                        '2025-03-01': { rank: 12 }, // Dropped to 12 (lowest)
-                        '2025-06-01': { rank: 7 },
-                        '2025-12-31': { rank: 3 } // Ended at 3
+                    history: {
+                        '2025-01-01': { ranking: { rank: 8 } }, // Started at 8
+                        '2025-03-01': { ranking: { rank: 12 } }, // Dropped to 12 (lowest)
+                        '2025-06-01': { ranking: { rank: 7 } },
+                        '2025-12-31': { ranking: { rank: 3 } } // Ended at 3
                     }
                 },
                 Bob: {
                     rank: 1,
                     rankingPoints: 120,
                     appearances: 10,
-                    rankingDetail: {
-                        '2025-01-01': { rank: 5 }, // Started at 5
-                        '2025-03-01': { rank: 8 }, // Dropped to 8 (lowest)
-                        '2025-12-31': { rank: 1 } // Ended at 1
+                    history: {
+                        '2025-01-01': { ranking: { rank: 5 } }, // Started at 5
+                        '2025-03-01': { ranking: { rank: 8 } }, // Dropped to 8 (lowest)
+                        '2025-12-31': { ranking: { rank: 1 } } // Ended at 1
                     }
                 },
                 Charlie: {
                     rank: 6,
                     rankingPoints: 80,
                     appearances: 10,
-                    rankingDetail: {
-                        '2025-01-01': { rank: 6 },
-                        '2025-12-31': { rank: 6 } // No change
+                    history: {
+                        '2025-01-01': { ranking: { rank: 6 } },
+                        '2025-12-31': { ranking: { rank: 6 } } // No change
                     }
                 }
             };
@@ -191,18 +191,18 @@ describe('YearRecapManager', () => {
                     rank: 3,
                     rankingPoints: 100,
                     appearances: 10, // Full confidence
-                    rankingDetail: {
-                        '2025-01-01': { rank: 10 },
-                        '2025-12-31': { rank: 3 }
+                    history: {
+                        '2025-01-01': { ranking: { rank: 10 } },
+                        '2025-12-31': { ranking: { rank: 3 } }
                     }
                 },
                 Bob: {
                     rank: 5,
                     rankingPoints: 80,
                     appearances: 5, // Below confidence threshold (66% of 10 = 7)
-                    rankingDetail: {
-                        '2025-01-01': { rank: 15 },
-                        '2025-12-31': { rank: 5 }
+                    history: {
+                        '2025-01-01': { ranking: { rank: 15 } },
+                        '2025-12-31': { ranking: { rank: 5 } }
                     }
                 }
             };
@@ -218,9 +218,9 @@ describe('YearRecapManager', () => {
                     rank: 10,
                     rankingPoints: 50,
                     appearances: 10,
-                    rankingDetail: {
-                        '2025-01-01': { rank: 3 }, // Started better
-                        '2025-12-31': { rank: 10 } // Ended worse
+                    history: {
+                        '2025-01-01': { ranking: { rank: 3 } }, // Started better
+                        '2025-12-31': { ranking: { rank: 10 } } // Ended worse
                     }
                 }
             };
@@ -467,7 +467,7 @@ describe('YearRecapManager', () => {
                         appearances: 10,
                         leagueWins: 2,
                         cupWins: 1,
-                        rankingDetail: {}
+                        history: {}
                     }
                 }
             };

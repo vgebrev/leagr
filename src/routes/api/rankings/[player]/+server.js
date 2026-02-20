@@ -5,48 +5,48 @@ import { validateLeagueForAPI } from '$lib/server/league.js';
 
 /**
  * Create unified details array with all necessary data for frontend
- * @param {Object} playerData - Player data with complete rankingDetail
+ * @param {Object} playerData - Player data with complete history
  * @param {number|null} limit - Optional limit for number of recent appearances
  * @returns {Array} Array of unified detail objects
  */
 function createUnifiedDetails(playerData, limit = null) {
     // Get all dates and sort chronologically (oldest first)
-    const allDates = Object.keys(playerData.rankingDetail).sort();
+    const allDates = Object.keys(playerData.history).sort();
 
     let cumulativePoints = 0;
     const allDetails = [];
 
     for (const date of allDates) {
-        const entry = playerData.rankingDetail[date];
+        const entry = playerData.history[date];
+        const attended = 'points' in entry;
 
         // Update cumulative totals if this was an appearance
-        if (entry.totalPoints !== null) {
-            cumulativePoints += entry.totalPoints;
+        if (attended) {
+            cumulativePoints += entry.points.total;
         }
 
         // Create unified detail object with all necessary data
         allDetails.push({
             date: date,
             // Ranking data (for chart)
-            rank: entry.rank,
-            totalPlayers: entry.totalPlayers,
-            rankingPoints: entry.rankingPoints || cumulativePoints,
-            played: entry.team !== null,
+            rank: entry.ranking.rank,
+            totalPlayers: entry.ranking.totalPlayers,
+            rankingPoints: entry.ranking.rankingPoints || cumulativePoints,
+            played: attended,
             // Appearance data (for cards) - only if played
-            ...(entry.team !== null
+            ...(attended
                 ? {
                       team: entry.team,
-                      appearancePoints: entry.appearancePoints || 0,
-                      matchPoints: entry.matchPoints || 0,
-                      bonusPoints: entry.bonusPoints || 0,
-                      knockoutPoints: entry.knockoutPoints || 0,
-                      totalPoints: entry.totalPoints || 0,
-                      leagueWinner: entry.leagueWinner || false,
-                      cupWinner: entry.cupWinner || false,
-                      eloRating: entry.eloRating || 1000,
-                      leaguePosition:
-                          entry.leaguePosition !== undefined ? entry.leaguePosition : null,
-                      cupProgress: entry.cupProgress !== undefined ? entry.cupProgress : undefined
+                      appearancePoints: entry.points.appearance || 0,
+                      matchPoints: entry.points.match || 0,
+                      bonusPoints: entry.points.bonus || 0,
+                      knockoutPoints: entry.points.knockout || 0,
+                      totalPoints: entry.points.total || 0,
+                      leagueWinner: entry.performance.leagueWinner || false,
+                      cupWinner: entry.performance.cupWinner || false,
+                      eloRating: entry.ratings.elo || 1000,
+                      leaguePosition: entry.performance.leaguePosition ?? null,
+                      cupProgress: entry.performance.cupProgress
                   }
                 : {})
         });
@@ -110,59 +110,61 @@ export async function GET({ params, locals, url }) {
         const playerData = rankings.players[player];
 
         if (!playerData) {
-            return error(404, `Player "${player}" not found in rankings`);
+            return error(404, `Player "${player}" not found in ${year} rankings`);
         }
 
         // Create unified details array (include rating stats where present)
         const details = createUnifiedDetails(playerData, limit).map((d) => {
-            if (!playerData.rankingDetail?.[d.date]) return d;
-            const detail = playerData.rankingDetail[d.date];
+            const entry = playerData.history?.[d.date];
+            if (!entry) return d;
+            const r = entry.ratings;
             return {
                 ...d,
-                goalsForPerSession: detail.goalsForPerSession ?? null,
-                goalsAgainstPerSession: detail.goalsAgainstPerSession ?? null,
-                attackingRating: detail.attackingRating ?? null,
-                controlRating: detail.controlRating ?? null,
-                gfRank: detail.gfRank ?? null,
-                gfCount: detail.gfCount ?? null,
-                gaRank: detail.gaRank ?? null,
-                gaCount: detail.gaCount ?? null,
-                eloGames: detail.eloGames ?? null
+                goalsForPerSession: r.goalsForPerSession ?? null,
+                goalsAgainstPerSession: r.goalsAgainstPerSession ?? null,
+                attackingRating: r.attacking ?? null,
+                controlRating: r.control ?? null,
+                gfRank: r.gfRank ?? null,
+                gfCount: r.gfCount ?? null,
+                gaRank: r.gaRank ?? null,
+                gaCount: r.gaCount ?? null,
+                eloGames: r.eloGames ?? null
             };
         });
 
         // Determine which date to use for the snapshot: requested date or latest
         let snapshotDate = selectedDate;
         if (!snapshotDate) {
-            const allDates = Object.keys(playerData.rankingDetail || {}).sort();
+            const allDates = Object.keys(playerData.history || {}).sort();
             snapshotDate = allDates[allDates.length - 1];
         }
 
         let detailForDate = null;
-        if (snapshotDate && playerData.rankingDetail?.[snapshotDate]) {
-            const detail = playerData.rankingDetail[snapshotDate];
+        if (snapshotDate && playerData.history?.[snapshotDate]) {
+            const entry = playerData.history[snapshotDate];
+            const r = entry.ratings;
             detailForDate = {
                 date: snapshotDate,
-                rank: detail.rank ?? null,
-                totalPlayers: detail.totalPlayers ?? null,
-                rankingPoints: detail.rankingPoints ?? null,
-                points: detail.totalPoints ?? null,
-                goalsForPerSession: detail.goalsForPerSession ?? null,
-                goalsAgainstPerSession: detail.goalsAgainstPerSession ?? null,
-                attackingRating: detail.attackingRating ?? null,
-                controlRating: detail.controlRating ?? null,
-                gfRank: detail.gfRank ?? null,
-                gfCount: detail.gfCount ?? null,
-                gaRank: detail.gaRank ?? null,
-                gaCount: detail.gaCount ?? null,
-                eloGames: detail.eloGames ?? null,
-                elo: detail.eloRating ? { rating: detail.eloRating } : null
+                rank: entry.ranking.rank ?? null,
+                totalPlayers: entry.ranking.totalPlayers ?? null,
+                rankingPoints: entry.ranking.rankingPoints ?? null,
+                points: entry.points?.total ?? null,
+                goalsForPerSession: r.goalsForPerSession ?? null,
+                goalsAgainstPerSession: r.goalsAgainstPerSession ?? null,
+                attackingRating: r.attacking ?? null,
+                controlRating: r.control ?? null,
+                gfRank: r.gfRank ?? null,
+                gfCount: r.gfCount ?? null,
+                gaRank: r.gaRank ?? null,
+                gaCount: r.gaCount ?? null,
+                eloGames: r.eloGames ?? null,
+                elo: r.elo ? { rating: r.elo } : null
             };
         }
 
-        // Remove rankingDetail from response to reduce payload size
+        // Remove history from response to reduce payload size
         // eslint-disable-next-line no-unused-vars
-        const { rankingDetail: _, ...cleanPlayerData } = playerData;
+        const { history: _, ...cleanPlayerData } = playerData;
 
         // Get avatar data from avatars.json
         const playerAvatar = avatarsData[player] || {};

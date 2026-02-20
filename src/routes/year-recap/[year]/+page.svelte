@@ -33,17 +33,24 @@
     import ThankYou from './components/ThankYou.svelte';
     import ConfettiEffect from '$components/ConfettiEffect.svelte';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapData} YearRecapData */
+
+    /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
 
+    /** @type {YearRecapData | null} */
     let yearRecap = $state(null);
     let yearDropdownOpen = $state(false);
     let currentSlide = $state(0);
+    /** @type {number | null} */
     let lastLoadedYear = $state(null);
     let slideDirection = $state(1); // 1 for forward, -1 for backward
+    /** @type {HTMLAudioElement | null} */
     let audioElement = $state(null);
     let isMuted = $state(true); // Muted by default
     let isPaused = $state(false); // Auto-progress is playing by default
     let isInitialized = $state(false);
+    /** @type {{ trigger: (colors?: string[]) => void } | null} */
     let confettiEffect = $state(null);
 
     // Auto-progression timing
@@ -112,14 +119,14 @@
     /**
      * Handle year selection
      */
+    /** @param {number} year */
     function handleYearChange(year) {
         // Preserve current slide when changing years
         const slideParam = page.url.searchParams.get('slide');
-        const pathWithQuery = slideParam
-            ? `/year-recap/${year}?slide=${slideParam}`
-            : `/year-recap/${year}`;
+        const basePath = resolve('/year-recap/[year]', { year: String(year) });
+        const pathWithQuery = slideParam ? `${basePath}?slide=${slideParam}` : basePath;
 
-        goto(resolve(pathWithQuery));
+        goto(resolve(/** @type {any} */ (pathWithQuery)));
         yearDropdownOpen = false;
     }
 
@@ -144,6 +151,7 @@
     /**
      * Go to specific slide
      */
+    /** @param {number} index */
     function goToSlide(index) {
         slideDirection = index > currentSlide ? 1 : -1;
         currentSlide = index;
@@ -184,6 +192,7 @@
     /**
      * Handle touch start
      */
+    /** @param {TouchEvent} event */
     function handleTouchStart(event) {
         touchStartX = event.touches[0].clientX;
     }
@@ -191,6 +200,7 @@
     /**
      * Handle touch end and detect swipe
      */
+    /** @param {TouchEvent} event */
     function handleTouchEnd(event) {
         touchEndX = event.changedTouches[0].clientX;
         handleSwipe();
@@ -257,6 +267,7 @@
         currentSlide;
 
         const slideDuration = 10000; // 10 seconds
+        /** @type {ReturnType<typeof setInterval> | null} */
         let intervalId = null;
 
         // Calculate remaining time based on cumulative elapsed time

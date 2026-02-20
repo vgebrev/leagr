@@ -4,10 +4,35 @@ import { getConsolidatedSettings } from './settings.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
 
+/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
+/** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
+
+/** @typedef {{ available: string[], waitingList: string[] }} PlayersData */
+/** @typedef {Record<string, Array<string | null>>} TeamsData */
+/** @typedef {{ players?: PlayersData, teams?: TeamsData, settings?: LeagueSettings }} GameData */
+/** @typedef {{ players?: boolean, teams?: boolean, settings?: boolean }} DataOptions */
+/** @typedef {Record<string, string>} OwnersMap */
+
+/**
+ * @typedef {Object} PlayerWithElo
+ * @property {string} name
+ * @property {number} elo
+ * @property {number} actualElo
+ * @property {string | null} avatar
+ * @property {number} attackingRating
+ * @property {number} controlRating
+ * @property {boolean} isProvisional
+ * @property {number} appearances
+ */
+
 /**
  * Custom error class for player operations that preserves HTTP status codes
  */
 export class PlayerError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode=500]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'PlayerError';
@@ -20,9 +45,17 @@ export class PlayerError extends Error {
  * Ensures consistency between players (available/waiting) and team assignments
  */
 export class PlayerState {
+    /**
+     * @param {PlayersData} players
+     * @param {TeamsData} teams
+     * @param {LeagueSettings} settings
+     */
     constructor(players, teams, settings) {
+        /** @type {PlayersData} */
         this.players = structuredClone(players);
+        /** @type {TeamsData} */
         this.teams = structuredClone(teams);
+        /** @type {LeagueSettings} */
         this.settings = settings;
     }
 
@@ -241,6 +274,10 @@ export class PlayerState {
 
         const newState = new PlayerState(this.players, this.teams, this.settings);
 
+        if (!location.teamName) {
+            throw new PlayerError(`Player ${playerName} is not assigned to a team.`, 400);
+        }
+
         // Remove from the team
         newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
             p === playerName ? null : p
@@ -298,6 +335,9 @@ export class PlayerState {
         } else {
             // Moving to waiting - remove from teams if assigned
             if (location.isAssigned) {
+                if (!location.teamName) {
+                    throw new PlayerError(`Player ${playerName} is not assigned to a team.`, 400);
+                }
                 newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
                     p === playerName ? null : p
                 );
@@ -359,20 +399,27 @@ export class PlayerState {
 
 export class PlayerManager {
     // Private fields for caching
+    /** @type {GameData | null} */
     #dataCache = null;
+    /** @type {string | null} */
     #cacheKey = null; // Tracks what data is cached (date-league combination)
+    /** @type {OwnersMap | null} */
     #owners = null; // { [playerName]: ownerId }
     #ownersDirty = false;
+    /** @type {PlayerAccessControl | null} */
     #accessControl = null;
 
     constructor() {
+        /** @type {string | null} */
         this.date = null;
+        /** @type {string | null} */
         this.leagueId = null;
     }
 
     /**
      * Initialise with a date for operations
      */
+    /** @param {string | null} date */
     setDate(date) {
         if (this.date !== date) {
             this.date = date;
@@ -384,6 +431,7 @@ export class PlayerManager {
     /**
      * Initialise with league id for operations
      */
+    /** @param {string | null} leagueId */
     setLeague(leagueId) {
         if (this.leagueId !== leagueId) {
             this.leagueId = leagueId;
@@ -408,16 +456,10 @@ export class PlayerManager {
     }
 
     /**
-     * Check if cached data is valid for the current date-league combination
-     */
-    #isCacheValid() {
-        return this.#dataCache !== null && this.#cacheKey === this.#getCacheKey();
-    }
-
-    /**
      * Attach access control for ownership enforcement
      * @param {import('./playerAccessControl.js').PlayerAccessControl} access
      */
+    /** @param {PlayerAccessControl} access */
     setAccessControl(access) {
         this.#accessControl = access;
         return this;
@@ -431,17 +473,39 @@ export class PlayerManager {
         if (!this.#accessControl) return [];
         await this.#loadOwners();
         const myOwnerId = this.#accessControl.deriveOwnerId();
-        if (!myOwnerId || !this.#owners) return [];
-        return Object.keys(this.#owners).filter((p) => this.#owners[p] === myOwnerId);
+        const owners = this.#owners || {};
+        if (!myOwnerId) return [];
+        return Object.keys(owners).filter((p) => owners[p] === myOwnerId);
     }
 
+    /** @returns {Promise<OwnersMap>} */
     async #loadOwners() {
         if (this.#owners === null) {
             this.#owners = (await data.get('playerOwners', this.date, this.leagueId)) || {};
         }
+        if (!this.#owners) {
+            this.#owners = {};
+        }
         return this.#owners;
     }
 
+    /** @returns {string} */
+    #requireDate() {
+        if (!this.date) {
+            throw new PlayerError('Date must be set before this operation.', 400);
+        }
+        return this.date;
+    }
+
+    /** @returns {string} */
+    #requireLeagueId() {
+        if (!this.leagueId) {
+            throw new PlayerError('League must be set before this operation.', 400);
+        }
+        return this.leagueId;
+    }
+
+    /** @param {string} playerName */
     #setOwnerIfAbsentSync(playerName) {
         if (!this.#accessControl) return;
         if (!this.#owners) this.#owners = {};
@@ -454,6 +518,7 @@ export class PlayerManager {
         }
     }
 
+    /** @param {string} playerName */
     #deleteOwnerSync(playerName) {
         if (!this.#owners) return;
         if (this.#owners[playerName]) {
@@ -462,6 +527,7 @@ export class PlayerManager {
         }
     }
 
+    /** @param {string} playerName */
     #ensureOwnerOrAdminSync(playerName) {
         if (!this.#accessControl) return; // no enforcement without access control
         const ownerId = this.#owners?.[playerName];
@@ -474,12 +540,17 @@ export class PlayerManager {
 
     /**
      * Execute an atomic transaction on player state
-     * @param {function(PlayerState): PlayerState} operation - Function that takes current state and returns new state
-     * @returns {Promise<{players: Object, teams: Object}>} - The updated game data
+     * @param {(state: PlayerState) => PlayerState} operation - Function that takes current state and returns new state
+     * @returns {Promise<{players: PlayersData, teams: TeamsData}>} - The updated game data
      */
     async executeTransaction(operation) {
+        const sessionDate = this.#requireDate();
         const gameData = await this.getData();
         const { players, teams, settings } = gameData;
+
+        if (!players || !teams || !settings) {
+            throw new PlayerError('Failed to load player data.', 500);
+        }
 
         // Create the current state
         const currentState = new PlayerState(players, teams, settings);
@@ -532,7 +603,7 @@ export class PlayerManager {
         // Execute all saves in a single atomic operation
         if (operations.length > 0) {
             try {
-                await data.setMany(operations, this.date, this.leagueId);
+                await data.setMany(operations, sessionDate, this.leagueId);
                 // Invalidate cache after successful save
                 this.#invalidateCache();
                 this.#ownersDirty = false;
@@ -553,23 +624,25 @@ export class PlayerManager {
 
     /**
      * Get game data with selective loading (with caching)
-     * @param {Object} options - What data to load
-     * @param {boolean} options.players - Load players data (default: true)
-     * @param {boolean} options.teams - Load teams data (default: true)
-     * @param {boolean} options.settings - Load settings data (default: true)
+     * @param {DataOptions} options - What data to load
+     * @returns {Promise<GameData>}
      */
     async getData(options = { players: true, teams: true, settings: true }) {
+        const cache = this.#dataCache;
+        const cacheValid = cache !== null && this.#cacheKey === this.#getCacheKey();
+
         // Return cached data if valid and includes all requested components
-        if (this.#isCacheValid()) {
+        if (cacheValid && cache) {
+            /** @type {GameData} */
             const result = {};
-            if (options.players && this.#dataCache.players) {
-                result.players = structuredClone(this.#dataCache.players);
+            if (options.players && cache.players) {
+                result.players = structuredClone(cache.players);
             }
-            if (options.teams && this.#dataCache.teams) {
-                result.teams = structuredClone(this.#dataCache.teams);
+            if (options.teams && cache.teams) {
+                result.teams = structuredClone(cache.teams);
             }
-            if (options.settings && this.#dataCache.settings) {
-                result.settings = structuredClone(this.#dataCache.settings);
+            if (options.settings && cache.settings) {
+                result.settings = structuredClone(cache.settings);
             }
 
             // If the cache satisfies all requested data, return it
@@ -587,18 +660,22 @@ export class PlayerManager {
         const loadPromises = [];
         const loadKeys = [];
 
+        const sessionDate = options.players || options.teams ? this.#requireDate() : null;
+
         if (options.players) {
-            loadPromises.push(data.get('players', this.date, this.leagueId));
+            loadPromises.push(data.get('players', sessionDate, this.leagueId));
             loadKeys.push('players');
         }
 
         if (options.teams) {
-            loadPromises.push(data.get('teams', this.date, this.leagueId));
+            loadPromises.push(data.get('teams', sessionDate, this.leagueId));
             loadKeys.push('teams');
         }
 
         if (options.settings) {
-            loadPromises.push(getConsolidatedSettings(this.date, this.leagueId));
+            const settingsDate = this.#requireDate();
+            const settingsLeagueId = this.#requireLeagueId();
+            loadPromises.push(getConsolidatedSettings(settingsDate, settingsLeagueId));
             loadKeys.push('settings');
         }
 
@@ -606,6 +683,7 @@ export class PlayerManager {
         const loadedData = await Promise.all(loadPromises);
 
         // Build result object
+        /** @type {GameData} */
         const result = {};
 
         for (let i = 0; i < loadKeys.length; i++) {
@@ -653,7 +731,8 @@ export class PlayerManager {
      * Calculate provisional anchor values from established players in the session.
      * Uses weakest established player's rating × 0.99 as anchor.
      * @param {string[]} sessionPlayers - List of player names in this session
-     * @param {Object} rankings - Enhanced rankings data
+     * @param {Record<string, any>} rankings - Enhanced rankings data
+     * @param {Record<string, any>} previousYearRankings - Rankings from previous year
      * @param {number} threshold - Games played threshold for established status
      * @returns {{elo: number, attack: number, control: number}}
      */
@@ -665,11 +744,14 @@ export class PlayerManager {
             return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
         }
 
+        const sessionDate = this.date || '';
+
         // Find the weakest established player IN THIS SESSION
         // Use the same lookup logic as individual player enhancement (last detail before session)
         let weakestElo = null;
-        let weakestAttack = null;
-        let weakestControl = null;
+        let weakestAttack = DEFAULT_RATING;
+        let weakestControl = DEFAULT_RATING;
+        let hasEstablished = false;
 
         for (const playerName of sessionPlayers) {
             // Try current year first, fall back to previous year for carry-over
@@ -695,11 +777,11 @@ export class PlayerManager {
             } else {
                 // Current year: Find the last ranking detail entry before this session date
                 let lastDetailBeforeSession = null;
-                if (playerData.rankingDetail) {
-                    const detailDates = Object.keys(playerData.rankingDetail).sort();
+                if (playerData.history) {
+                    const detailDates = Object.keys(playerData.history).sort();
                     for (const date of detailDates) {
-                        if (date < this.date) {
-                            lastDetailBeforeSession = playerData.rankingDetail[date];
+                        if (date < sessionDate) {
+                            lastDetailBeforeSession = playerData.history[date];
                         } else {
                             break;
                         }
@@ -707,10 +789,10 @@ export class PlayerManager {
                 }
 
                 if (lastDetailBeforeSession) {
-                    gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
-                    elo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
-                    attack = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
-                    control = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+                    gamesPlayed = lastDetailBeforeSession.ratings?.eloGames ?? 0;
+                    elo = lastDetailBeforeSession.ratings?.elo ?? DEFAULT_ELO;
+                    attack = lastDetailBeforeSession.ratings?.attacking ?? DEFAULT_RATING;
+                    control = lastDetailBeforeSession.ratings?.control ?? DEFAULT_RATING;
                 } else if (previousYearRankings?.players?.[playerName]) {
                     // No detail found in current year before session - fall back to previous year
                     const prevYearPlayer = previousYearRankings.players[playerName];
@@ -724,14 +806,15 @@ export class PlayerManager {
 
             // Check if player is established (based on pre-session games count)
             if (gamesPlayed >= threshold) {
+                hasEstablished = true;
                 if (weakestElo === null || elo < weakestElo) weakestElo = elo;
-                if (weakestAttack === null || attack < weakestAttack) weakestAttack = attack;
-                if (weakestControl === null || control < weakestControl) weakestControl = control;
+                if (attack < weakestAttack) weakestAttack = attack;
+                if (control < weakestControl) weakestControl = control;
             }
         }
 
         // If no established players in session, use defaults
-        if (weakestElo === null) {
+        if (!hasEstablished || weakestElo === null) {
             return { elo: DEFAULT_ELO, attack: DEFAULT_RATING, control: DEFAULT_RATING };
         }
 
@@ -745,17 +828,18 @@ export class PlayerManager {
     /**
      * Helper method to enhance player list with ELO and avatar data.
      * Returns provisional ratings for players with < 35 games played.
-     * @param {string[]} players - Array of player names (can include null values for teams)
-     * @param {Object} rankings - Enhanced rankings data (current year)
-     * @param {Object} previousYearRankings - Rankings from previous year (for carry-over lookup)
-     * @param {Object} avatars - Avatar data from avatarManager
+     * @param {Array<string | null>} players - Array of player names (can include null values for teams)
+     * @param {Record<string, any>} rankings - Enhanced rankings data (current year)
+     * @param {Record<string, any>} previousYearRankings - Rankings from previous year (for carry-over lookup)
+     * @param {Record<string, any>} avatars - Avatar data from avatarManager
      * @param {{elo: number, attack: number, control: number}} anchors - Pre-calculated anchor values
-     * @returns {Object[]} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
+     * @returns {Array<PlayerWithElo | null>} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
      */
     #enhancePlayersWithEloAndAvatar(players, rankings, previousYearRankings, avatars, anchors) {
         const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
         const DEFAULT_ELO = 1000;
         const DEFAULT_RATING = 0.5;
+        const sessionDate = this.date || '';
 
         return players.map((playerName) => {
             if (playerName === null) {
@@ -769,13 +853,13 @@ export class PlayerManager {
             let controlRating = DEFAULT_RATING;
             let gamesPlayed = 0;
 
-            // Find the last ranking detail entry before this session date
+            // Find the last history entry before this session date
             let lastDetailBeforeSession = null;
-            if (playerRanking?.rankingDetail) {
-                const detailDates = Object.keys(playerRanking.rankingDetail).sort();
+            if (playerRanking?.history) {
+                const detailDates = Object.keys(playerRanking.history).sort();
                 for (const date of detailDates) {
-                    if (date < this.date) {
-                        lastDetailBeforeSession = playerRanking.rankingDetail[date];
+                    if (date < sessionDate) {
+                        lastDetailBeforeSession = playerRanking.history[date];
                     } else {
                         break; // Stop at or after session date
                     }
@@ -783,11 +867,11 @@ export class PlayerManager {
             }
 
             if (lastDetailBeforeSession) {
-                // Use values from the last detail before this session
-                actualElo = lastDetailBeforeSession.eloRating ?? DEFAULT_ELO;
-                gamesPlayed = lastDetailBeforeSession.eloGames ?? 0;
-                attackingRating = lastDetailBeforeSession.attackingRating ?? DEFAULT_RATING;
-                controlRating = lastDetailBeforeSession.controlRating ?? DEFAULT_RATING;
+                // Use values from the last history entry before this session
+                actualElo = lastDetailBeforeSession.ratings?.elo ?? DEFAULT_ELO;
+                gamesPlayed = lastDetailBeforeSession.ratings?.eloGames ?? 0;
+                attackingRating = lastDetailBeforeSession.ratings?.attacking ?? DEFAULT_RATING;
+                controlRating = lastDetailBeforeSession.ratings?.control ?? DEFAULT_RATING;
             } else if (previousYearRankings?.players?.[playerName]) {
                 // No detail before session - player hasn't played yet this year (or year boundary case)
                 // Fall back to previous year end-of-year state
@@ -844,16 +928,20 @@ export class PlayerManager {
 
     /**
      * Get teams data enhanced with player ELO and avatar information
-     * @returns {Promise<Object>} Teams object with player objects containing name, elo, and avatar
+     * @returns {Promise<Record<string, Array<PlayerWithElo | null>>>} Teams object with player objects containing name, elo, and avatar
      */
     async getTeamsWithElo() {
+        const sessionDate = this.#requireDate();
+        const leagueId = this.#requireLeagueId();
         // Get basic teams data
         const gameData = await this.getData({ players: false, teams: true, settings: false });
 
-        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const teamsData = gameData.teams || {};
+
+        const rankingsManager = createRankingsManager().setLeague(leagueId);
 
         // Extract year from session date to load correct year's rankings
-        const currentYear = new Date(this.date).getFullYear();
+        const currentYear = new Date(sessionDate).getFullYear();
         const previousYear = currentYear - 1;
 
         // Load rankings for current year (with fallback to previous year if empty)
@@ -865,12 +953,12 @@ export class PlayerManager {
         const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatarManager = createAvatarManager().setLeague(leagueId);
         const avatars = await avatarManager.loadAvatars();
 
         // Collect all unique players from teams (for session-based anchor calculation)
         const sessionPlayers = new Set();
-        for (const players of Object.values(gameData.teams)) {
+        for (const players of Object.values(teamsData)) {
             for (const player of players) {
                 if (player !== null) {
                     sessionPlayers.add(player);
@@ -887,8 +975,9 @@ export class PlayerManager {
         );
 
         // Enhance teams with ELO and avatar data using the helper method
+        /** @type {Record<string, Array<PlayerWithElo | null>>} */
         const enhancedTeams = {};
-        for (const [teamName, players] of Object.entries(gameData.teams)) {
+        for (const [teamName, players] of Object.entries(teamsData)) {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
                 players,
                 rankings,
@@ -903,16 +992,21 @@ export class PlayerManager {
 
     /**
      * Get all data enhanced with player ELO and avatar information for team management UI
-     * @returns {Promise<{teams: Object, players: {available: Object[], waitingList: Object[]}}>}
+     * @returns {Promise<{teams: Record<string, Array<PlayerWithElo | null>>, players: {available: Array<PlayerWithElo | null>, waitingList: Array<PlayerWithElo | null>}}>}
      */
     async getAllDataWithElo() {
+        const sessionDate = this.#requireDate();
+        const leagueId = this.#requireLeagueId();
         // Get basic game data
         const gameData = await this.getData({ players: true, teams: true, settings: false });
 
-        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const teamsData = gameData.teams || {};
+        const playersData = gameData.players || structuredClone(defaultPlayers);
+
+        const rankingsManager = createRankingsManager().setLeague(leagueId);
 
         // Extract year from session date to load correct year's rankings
-        const currentYear = new Date(this.date).getFullYear();
+        const currentYear = new Date(sessionDate).getFullYear();
         const previousYear = currentYear - 1;
 
         // Load rankings for current year (with fallback to previous year if empty)
@@ -924,11 +1018,11 @@ export class PlayerManager {
         const previousYearRankings = await rankingsManager.loadEnhancedRankings(previousYear);
 
         // Load avatar data
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
+        const avatarManager = createAvatarManager().setLeague(leagueId);
         const avatars = await avatarManager.loadAvatars();
 
         // Collect all session players (available + waitingList) for anchor calculation
-        const sessionPlayers = [...gameData.players.available, ...gameData.players.waitingList];
+        const sessionPlayers = [...playersData.available, ...playersData.waitingList];
 
         // Calculate anchors from session players
         const anchors = this.#calculateProvisionalAnchors(
@@ -939,8 +1033,9 @@ export class PlayerManager {
         );
 
         // Enhance teams with ELO and avatar data using the helper method
+        /** @type {Record<string, Array<PlayerWithElo | null>>} */
         const enhancedTeams = {};
-        for (const [teamName, players] of Object.entries(gameData.teams)) {
+        for (const [teamName, players] of Object.entries(teamsData)) {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
                 players,
                 rankings,
@@ -951,16 +1046,17 @@ export class PlayerManager {
         }
 
         // Enhance available and waiting list players with ELO and avatar data
+        /** @type {{ available: Array<PlayerWithElo | null>, waitingList: Array<PlayerWithElo | null> }} */
         const enhancedPlayers = {
             available: this.#enhancePlayersWithEloAndAvatar(
-                gameData.players.available,
+                playersData.available,
                 rankings,
                 previousYearRankings,
                 avatars,
                 anchors
             ),
             waitingList: this.#enhancePlayersWithEloAndAvatar(
-                gameData.players.waitingList,
+                playersData.waitingList,
                 rankings,
                 previousYearRankings,
                 avatars,
@@ -976,6 +1072,8 @@ export class PlayerManager {
 
     /**
      * Add player to available list or waiting list based on the player limit
+     * @param {string} playerName
+     * @param {'auto' | 'available' | 'waitingList'} targetList
      */
     async addPlayer(playerName, targetList = 'auto') {
         const result = await this.executeTransaction((state) => {
@@ -989,6 +1087,7 @@ export class PlayerManager {
 
     /**
      * Remove a player from the lists and from any teams they're assigned to
+     * @param {string} playerName
      */
     async removePlayer(playerName) {
         return await this.executeTransaction((state) => {
@@ -1003,6 +1102,9 @@ export class PlayerManager {
 
     /**
      * Move a player between available and waiting lists, removing from teams if moving to the waiting list
+     * @param {string} playerName
+     * @param {'available' | 'waitingList'} fromList
+     * @param {'available' | 'waitingList'} toList
      */
     async movePlayer(playerName, fromList, toList) {
         const result = await this.executeTransaction((state) => {
@@ -1015,6 +1117,8 @@ export class PlayerManager {
 
     /**
      * Rename a player in all lists and teams
+     * @param {string} oldName
+     * @param {string} newName
      */
     async renamePlayer(oldName, newName) {
         const result = await this.executeTransaction((state) => {
@@ -1038,6 +1142,9 @@ export class PlayerManager {
 
     /**
      * Remove a player from a specific team and optionally move to waiting list or remove completely
+     * @param {string} playerName
+     * @param {string} teamName
+     * @param {'waitingList' | 'unassign' | 'remove'} action
      */
     async removePlayerFromTeam(playerName, teamName, action = 'waitingList') {
         return await this.executeTransaction((state) => {
@@ -1092,6 +1199,8 @@ export class PlayerManager {
 
     /**
      * Fill empty team slot with specific player from the waiting list or available list
+     * @param {string} teamName
+     * @param {string} playerName
      */
     async fillEmptySlotWithPlayer(teamName, playerName) {
         return await this.executeTransaction((state) =>

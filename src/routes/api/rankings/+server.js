@@ -19,7 +19,7 @@ export const GET = async ({ locals, url }) => {
         .loadEnhancedRankings(year);
     const avatarsData = await createAvatarManager().setLeague(leagueId).loadAvatars();
 
-    // Strip rankingDetail data and merge avatar data for API endpoint
+    // Strip history data and merge avatar data for API endpoint
     const strippedRankings = {
         ...rankingsData,
         players: Object.fromEntries(
@@ -27,7 +27,7 @@ export const GET = async ({ locals, url }) => {
                 name,
                 {
                     ...playerData,
-                    rankingDetail: undefined,
+                    history: undefined,
                     // Merge avatar data from avatars.json
                     avatar: avatarsData[name]?.avatar || null,
                     pendingAvatar: avatarsData[name]?.pendingAvatar || null
@@ -53,7 +53,7 @@ export const POST = async ({ locals, url }) => {
     const rankingsData = await createRankingsManager().setLeague(leagueId).updateRankings(year);
     const avatarsData = await createAvatarManager().setLeague(leagueId).loadAvatars();
 
-    // Strip rankingDetail data and merge avatar data for API endpoint
+    // Strip history data and merge avatar data for API endpoint
     const strippedRankings = {
         ...rankingsData,
         players: Object.fromEntries(
@@ -61,7 +61,7 @@ export const POST = async ({ locals, url }) => {
                 name,
                 {
                     ...playerData,
-                    rankingDetail: undefined,
+                    history: undefined,
                     // Merge avatar data from avatars.json
                     avatar: avatarsData[name]?.avatar || null,
                     pendingAvatar: avatarsData[name]?.pendingAvatar || null

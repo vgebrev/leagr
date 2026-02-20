@@ -1,5 +1,27 @@
-import { nouns } from '$lib/shared/nouns.js';
 import { teamColours } from '$lib/shared/helpers.js';
+import { getNextNouns } from './nounPool.js';
+
+/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
+/** @typedef {import('../shared/types.js').TeamGenerationSettings} TeamGenerationSettings */
+
+/** @typedef {{ teams: number, teamSizes: number[] }} TeamConfig */
+/** @typedef {Record<string, string[]>} TeamsMap */
+/** @typedef {{ players: Record<string, any> }} RankingsData */
+/** @typedef {{ players: string[], matrix: number[][] }} TeammateHistory */
+
+/**
+ * @typedef {Object} ProvisionalPlayerData
+ * @property {string} name
+ * @property {number} elo
+ * @property {number} actualElo
+ * @property {boolean} isProvisional
+ * @property {number} attackingRating
+ * @property {number} controlRating
+ * @property {string | null} avatar
+ * @property {number} appearances
+ */
+
+/** @typedef {{ name: string, players: ProvisionalPlayerData[] }} Pot */
 
 // Provisional rating constants
 const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
@@ -10,6 +32,10 @@ const DEFAULT_RATING = 0.5; // Neutral attack/control rating
  * Team generation error class
  */
 export class TeamError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode=500]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'TeamError';
@@ -22,19 +48,40 @@ export class TeamError extends Error {
  */
 class TeamGenerator {
     constructor() {
+        /** @type {string | null} */
+        this.leagueId = null;
+        /** @type {LeagueSettings | null} */
         this.settings = null;
+        /** @type {string[]} */
         this.players = [];
+        /** @type {RankingsData | null} */
         this.rankings = null;
+        /** @type {RankingsData | null} */
         this.previousYearRankings = null;
         this.recordHistory = false;
+        /** @type {Array<Record<string, any>>} */
         this.drawHistory = [];
+        /** @type {Pot[]} */
         this.initialPots = [];
+        /** @type {TeammateHistory | null} */
         this.teammateHistory = null;
+        /** @type {{ elo: number, attack: number, control: number } | null} */
+        this._provisionalAnchors = null;
+    }
+
+    /**
+     * Set the league ID for team generation
+     * @param {string} leagueId - League identifier
+     * @returns {TeamGenerator} - Fluent interface
+     */
+    setLeague(leagueId) {
+        this.leagueId = leagueId;
+        return this;
     }
 
     /**
      * Set the settings for team generation
-     * @param {Object} settings - Team generation settings
+     * @param {LeagueSettings} settings - Team generation settings
      * @returns {TeamGenerator} - Fluent interface
      */
     setSettings(settings) {
@@ -44,7 +91,7 @@ class TeamGenerator {
 
     /**
      * Set the available players
-     * @param {Array} players - Array of player names
+     * @param {string[]} players - Array of player names
      * @returns {TeamGenerator} - Fluent interface
      */
     setPlayers(players) {
@@ -54,7 +101,7 @@ class TeamGenerator {
 
     /**
      * Set the player rankings
-     * @param {Object} rankings - Player rankings data
+     * @param {RankingsData | null} rankings - Player rankings data
      * @returns {TeamGenerator} - Fluent interface
      */
     setRankings(rankings) {
@@ -64,7 +111,7 @@ class TeamGenerator {
 
     /**
      * Set the previous year player rankings (for carry-over at year boundaries)
-     * @param {Object} previousYearRankings - Previous year player rankings data
+     * @param {RankingsData | null} previousYearRankings - Previous year player rankings data
      * @returns {TeamGenerator} - Fluent interface
      */
     setPreviousYearRankings(previousYearRankings) {
@@ -74,7 +121,7 @@ class TeamGenerator {
 
     /**
      * Set the teammate history for variance-conscious team generation
-     * @param {Object} teammateHistory - Teammate history data with matrix and players
+     * @param {TeammateHistory | null} teammateHistory - Teammate history data with matrix and players
      * @returns {TeamGenerator} - Fluent interface
      */
     setTeammateHistory(teammateHistory) {
@@ -196,7 +243,7 @@ class TeamGenerator {
     /**
      * Calculate possible team configurations based on player count and settings
      * @param {?number} playerCount - Number of players available (optional, uses set players if not provided)
-     * @returns {Array} Array of possible team configurations
+     * @returns {TeamConfig[]} Array of possible team configurations
      */
     calculateConfigurations(playerCount = null) {
         const count = playerCount || this.players.length;
@@ -235,49 +282,37 @@ class TeamGenerator {
     }
 
     /**
-     * Generate random team names
+     * Generate team names using exhaustive noun pool
      * @param {number} count - Number of team names to generate
-     * @returns {Array} Array of team names
+     * @returns {Promise<string[]>} Array of team names
      */
-    generateTeamNames(count) {
-        const usedNouns = new Set();
-        const teamNames = [];
+    async generateTeamNames(count) {
+        if (!this.leagueId) {
+            throw new TeamError('League ID must be set before generating team names', 400);
+        }
 
+        const selectedNouns = await getNextNouns(count, this.leagueId);
         const colorSlice = teamColours.slice(0, count);
         const shuffledColours = colorSlice.sort(() => Math.random() - 0.5);
 
-        for (let i = 0; i < count; i++) {
-            let noun;
-            let attempts = 0;
-
-            // Find a unique noun, fallback to index-based if all nouns used
-            do {
-                noun = nouns[Math.floor(Math.random() * nouns.length)];
-                attempts++;
-            } while (usedNouns.has(noun) && attempts < 50);
-
-            usedNouns.add(noun);
-            const color = shuffledColours[i % shuffledColours.length];
-            teamNames.push(`${color} ${noun}`);
-        }
-
-        return teamNames;
+        return selectedNouns.map((noun, i) => `${shuffledColours[i]} ${noun}`);
     }
 
     /**
      * Generate teams using random distribution
-     * @param {Object} config - Team configuration { teams, teamSizes }
-     * @returns {Object} Generated teams object
+     * @param {TeamConfig} config - Team configuration { teams, teamSizes }
+     * @returns {Promise<TeamsMap>} Generated teams object
      */
-    generateRandomTeams(config) {
+    async generateRandomTeams(config) {
         if (!this.players.length) {
             throw new TeamError('No players available for team generation', 400);
         }
 
+        /** @type {TeamsMap} */
         const teams = {};
         const teamSizes = config.teamSizes;
         const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
-        const teamNames = this.generateTeamNames(teamSizes.length);
+        const teamNames = await this.generateTeamNames(teamSizes.length);
 
         // Initialize empty teams
         for (let i = 0; i < teamSizes.length; i++) {
@@ -336,10 +371,11 @@ class TeamGenerator {
 
     /**
      * Calculate team ELO averages for balance assessment using provisional ratings
-     * @param {Object} teams - Teams object with player names
-     * @returns {Array} Array of team ELO averages
+     * @param {TeamsMap} teams - Teams object with player names
+     * @returns {number[]} Array of team ELO averages
      */
     calculateTeamEloAverages(teams) {
+        /** @type {number[]} */
         const teamAverages = [];
         const anchors = this._provisionalAnchors || {
             elo: DEFAULT_ELO,
@@ -374,12 +410,13 @@ class TeamGenerator {
     /**
      * Calculate team average rating for a given player rating key using provisional ratings.
      * All players now contribute (no skipping), with provisional values for newcomers.
-     * @param {Object} teams - Teams object with player names
+     * @param {TeamsMap} teams - Teams object with player names
      * @param {'attackingRating'|'controlRating'} ratingKey
      * @param {number} [defaultValue=0.5] - Neutral fallback when no rated players are present
-     * @returns {Array<number>} Array of team rating averages (0-1 scale)
+     * @returns {number[]} Array of team rating averages (0-1 scale)
      */
     calculateTeamRatingAverages(teams, ratingKey, defaultValue = 0.5) {
+        /** @type {number[]} */
         const teamAverages = [];
         const anchors = this._provisionalAnchors || {
             elo: DEFAULT_ELO,
@@ -419,7 +456,7 @@ class TeamGenerator {
 
     /**
      * Calculate ELO delta (difference between strongest and weakest team)
-     * @param {Array} teamEloAverages - Array of team ELO averages
+     * @param {number[]} teamEloAverages - Array of team ELO averages
      * @returns {number} ELO delta
      */
     calculateEloDelta(teamEloAverages) {
@@ -431,10 +468,11 @@ class TeamGenerator {
 
     /**
      * Extract all teammate pairs from generated teams
-     * @param {Object} teams - Teams object with player names
-     * @returns {Array<Array<string>>} Array of player pairs
+     * @param {TeamsMap} teams - Teams object with player names
+     * @returns {string[][]} Array of player pairs
      */
     extractTeammatePairs(teams) {
+        /** @type {string[][]} */
         const pairs = [];
 
         Object.values(teams).forEach((team) => {
@@ -455,9 +493,9 @@ class TeamGenerator {
 
     /**
      * Check if a team configuration violates hard constraints
-     * @param {Object} teams - Teams object with team names as keys and player arrays as values
+     * @param {TeamsMap} teams - Teams object with team names as keys and player arrays as values
      * @param {number} pairingLimit - Maximum allowed previous pairings (default: 3)
-     * @param {number} eloDeltaLimit - Maximum allowed ELO delta between teams (optional)
+     * @param {number | null} eloDeltaLimit - Maximum allowed ELO delta between teams (optional)
      * @returns {boolean} True if configuration violates constraints
      */
     violatesHardConstraints(teams, pairingLimit = 3, eloDeltaLimit = null) {
@@ -493,7 +531,7 @@ class TeamGenerator {
     /**
      * Calculate normalized pairing score (0-1) where lower is better (more novel).
      * Uses soft penalties for repeats and rewards fresh pairings.
-     * @param {Object} teams - Generated teams object
+     * @param {TeamsMap} teams - Generated teams object
      * @returns {number} Normalized pairing score between 0 (ideal) and 1 (stale)
      */
     calculatePairingScoreNormalized(teams) {
@@ -539,10 +577,11 @@ class TeamGenerator {
      * Calculate ELO spread balance to ensure each team has similar distribution of skill levels.
      * Prevents one team from getting all "top of pot" players while another gets all "bottom of pot".
      * Uses provisional ratings for consistency with pot sorting.
-     * @param {Object} teams - Generated teams object
+     * @param {TeamsMap} teams - Generated teams object
      * @returns {number} Spread imbalance score (lower is better)
      */
     calculateEloSpreadBalance(teams) {
+        /** @type {Array<{ max: number, min: number, median: number }>} */
         const teamEloDistributions = [];
         const anchors = this._provisionalAnchors || {
             elo: DEFAULT_ELO,
@@ -588,7 +627,12 @@ class TeamGenerator {
         const medianRange = Math.max(...medianElos) - Math.min(...medianElos);
 
         // Combined spread imbalance (weight median most, then max, then min)
-        return medianRange * 1.0 + maxRange * 0.6 + minRange * 0.4;
+        const WEIGHTS = {
+            MEDIAN: 1.0,
+            MAX: 0.6,
+            MIN: 0.4
+        };
+        return medianRange * WEIGHTS.MEDIAN + maxRange * WEIGHTS.MAX + minRange * WEIGHTS.MIN;
     }
 
     /**
@@ -616,7 +660,7 @@ class TeamGenerator {
 
     /**
      * Calculate normalized scoring metrics for a given team configuration.
-     * @param {Object} teams - Generated teams object
+     * @param {TeamsMap} teams - Generated teams object
      * @param {number} eloRange - Range of ELO values in the current pool
      * @param {number} hardEloDeltaLimit - Hard cap for acceptable ELO delta
      * @returns {{
@@ -639,6 +683,7 @@ class TeamGenerator {
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
         const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
+        /** @param {number} value */
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
 
         // Calculate team ELO balance
@@ -699,15 +744,16 @@ class TeamGenerator {
      * Since team generation is randomized and iterative, we reconstruct a plausible
      * draw history that matches the final team assignments and follows the snake draft pattern.
      *
-     * @param {Object} teams - Final teams object
-     * @param {Array} initialPots - Pots captured after best team selection
-     * @param {Array<string>} teamNames - Team names in assignment order
-     * @returns {Array<Object>} Reconstructed draw steps
+     * @param {TeamsMap} teams - Final teams object
+     * @param {Pot[]} initialPots - Pots captured after best team selection
+     * @param {string[]} teamNames - Team names in assignment order
+     * @returns {Array<Record<string, any>>} Reconstructed draw steps
      */
     buildDrawHistoryFromFinalTeams(teams, initialPots, teamNames) {
         if (!initialPots || initialPots.length === 0 || !teamNames?.length) return [];
 
         // Build mapping of player -> pot index
+        /** @type {Map<string, number>} */
         const playerPotMap = new Map();
         for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
             const pot = initialPots[potIndex];
@@ -720,6 +766,7 @@ class TeamGenerator {
 
         // Group players from each team by their pot
         const teamsByPot = teamNames.map((teamName) => {
+            /** @type {string[][]} */
             const playersByPot = [];
             for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
                 playersByPot.push([]);
@@ -775,10 +822,10 @@ class TeamGenerator {
 
     /**
      * Optimize teams using within-pot swaps to improve balance using normalized scoring.
-     * @param {Object} teams - Current team assignments
-     * @param {Array} sortedPlayers - Players sorted by ELO (same order used in generation)
-     * @param {Object} options - { maxSwaps, eloRange, hardEloDeltaLimit }
-     * @returns {Object} Optimized teams object
+     * @param {TeamsMap} teams - Current team assignments
+     * @param {string[]} sortedPlayers - Players sorted by ELO (same order used in generation)
+     * @param {{ maxSwaps?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null }} options
+     * @returns {TeamsMap} Optimized teams object
      */
     optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
         const { maxSwaps = 200, eloRange = null, hardEloDeltaLimit = null } = options;
@@ -814,6 +861,7 @@ class TeamGenerator {
                 const pot = this.initialPots[potIndex];
 
                 // Group pot players by their current team assignment
+                /** @type {Record<string, string[]>} */
                 const playersByTeam = {};
                 pot.players.forEach(({ name: playerName }) => {
                     const currentTeam = teamNames.find((team) =>
@@ -877,14 +925,15 @@ class TeamGenerator {
 
     /**
      * Generate a single iteration of seeded teams (without optimization)
-     * @param {Object} config - Team configuration { teams, teamSizes }
-     * @param {Array} teamNames - Pre-generated team names
-     * @param {Array} sortedPlayers - Players sorted by ELO/ranking
-     * @returns {Object} Generated teams object
+     * @param {TeamConfig} config - Team configuration { teams, teamSizes }
+     * @param {string[]} teamNames - Pre-generated team names
+     * @param {string[]} sortedPlayers - Players sorted by ELO/ranking
+     * @returns {TeamsMap} Generated teams object
      */
     generateSeededTeamsIteration(config, teamNames, sortedPlayers) {
         const teamSizes = config.teamSizes;
         const numTeams = teamSizes.length;
+        /** @type {TeamsMap} */
         const teams = {};
 
         // Initialise teams
@@ -961,17 +1010,17 @@ class TeamGenerator {
      * Generate teams using seeded distribution based on rankings
      * Uses two-pass sorting: first establish pot structure from trusted players,
      * then calculate provisional ratings for newcomers based on weakest pot mean.
-     * @param {Object} config - Team configuration { teams, teamSizes }
-     * @returns {Object} Generated teams object
+     * @param {TeamConfig} config - Team configuration { teams, teamSizes }
+     * @returns {Promise<TeamsMap>} Generated teams object
      */
-    generateSeededTeams(config) {
+    async generateSeededTeams(config) {
         if (!this.players.length) {
             throw new TeamError('No players available for team generation', 400);
         }
 
         const teamSizes = config.teamSizes;
         const numTeams = teamSizes.length;
-        const teamNames = this.generateTeamNames(numTeams);
+        const teamNames = await this.generateTeamNames(numTeams);
 
         // STEP 1: First pass - sort ONLY established players (35+ games) by actual ELO
         // to determine pot structure and calculate anchor values
@@ -1154,10 +1203,10 @@ class TeamGenerator {
     /**
      * Generate teams using the specified method
      * @param {string} method - 'random' or 'seeded'
-     * @param {Object} config - Team configuration { teams, teamSizes }
-     * @returns {Object} Generated teams object with metadata
+     * @param {TeamConfig} config - Team configuration { teams, teamSizes }
+     * @returns {Promise<Record<string, any>>} Generated teams object with metadata
      */
-    generateTeams(method, config) {
+    async generateTeams(method, config) {
         if (!this.settings) {
             throw new TeamError('Settings must be set before generating teams', 400);
         }
@@ -1184,9 +1233,10 @@ class TeamGenerator {
 
         const teams =
             method === 'seeded'
-                ? this.generateSeededTeams(config)
-                : this.generateRandomTeams(config);
+                ? await this.generateSeededTeams(config)
+                : await this.generateRandomTeams(config);
 
+        /** @type {Record<string, any>} */
         const result = {
             teams,
             config: {
