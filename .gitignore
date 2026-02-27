@@ -36,3 +36,5 @@ vite.config.ts.timestamp-*
 # Ad-hoc scripts
 /scripts/
 
+# Logs
+/logs/
