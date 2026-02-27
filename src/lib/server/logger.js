@@ -2,11 +2,15 @@
 import fs from 'fs';
 import path from 'path';
 
+const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
+
 /**
  * Simple file logger for production debugging
  * Writes logs to both console and a rotating log file
  */
 class Logger {
+    #minLevel = LEVELS.info;
+
     constructor() {
         // Use project logs directory in development
         this.logsDir =
@@ -14,6 +18,21 @@ class Logger {
         this.logFile = path.join(this.logsDir, 'app.log');
         this.maxLogSize = 10 * 1024 * 1024; // 10MB
         this.ensureLogDir();
+    }
+
+    /**
+     * Set the minimum log level. Messages below this level are silently dropped.
+     * @param {string} level - 'debug' | 'info' | 'warn' | 'error'
+     */
+    initialize(level) {
+        const normalised = level?.toLowerCase();
+        if (normalised && normalised in LEVELS) {
+            this.#minLevel = LEVELS[normalised];
+        }
+    }
+
+    #shouldLog(level) {
+        return LEVELS[level] >= this.#minLevel;
     }
 
     ensureLogDir() {
@@ -76,36 +95,49 @@ class Logger {
     }
 
     log(...args) {
+        if (!this.#shouldLog('info')) return;
         const message = this.formatMessage('INFO', ...args);
         console.log(...args);
         this.writeToFile(message);
     }
 
     error(...args) {
+        if (!this.#shouldLog('error')) return;
         const message = this.formatMessage('ERROR', ...args);
         console.error(...args);
         this.writeToFile(message);
     }
 
     warn(...args) {
+        if (!this.#shouldLog('warn')) return;
         const message = this.formatMessage('WARN', ...args);
         console.warn(...args);
         this.writeToFile(message);
     }
 
     info(...args) {
+        if (!this.#shouldLog('info')) return;
         const message = this.formatMessage('INFO', ...args);
         console.info(...args);
         this.writeToFile(message);
     }
 
     debug(...args) {
-        if (process.env.NODE_ENV === 'development') {
-            const message = this.formatMessage('DEBUG', ...args);
-            console.debug(...args);
-            this.writeToFile(message);
-        }
+        if (!this.#shouldLog('debug')) return;
+        const message = this.formatMessage('DEBUG', ...args);
+        console.debug(...args);
+        this.writeToFile(message);
     }
 }
 
 export const logger = new Logger();
+
+/**
+ * Configure the logger minimum level from an environment variable value.
+ * Call this from hooks.server.js so the env var is resolved at request time
+ * rather than at module initialisation (where Vite may not have injected it yet).
+ * @param {string | undefined} level - Value of LOG_LEVEL env var
+ */
+export function initializeLogger(level) {
+    logger.initialize(level);
+}

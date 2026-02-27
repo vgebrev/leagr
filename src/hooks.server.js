@@ -1,5 +1,6 @@
 import { getLeagueInfo } from '$lib/server/league.js';
 import { initializeEmailService } from '$lib/server/email.js';
+import { logger, initializeLogger } from '$lib/server/logger.js';
 
 const rateLimitMap = new Map();
 // Rule-based rate limiting configuration (first match wins)
@@ -27,9 +28,11 @@ const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
 const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || import.meta.env.VITE_MAILGUN_SENDING_KEY;
 const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || import.meta.env.VITE_MAILGUN_DOMAIN;
+const LOG_LEVEL = process.env.LOG_LEVEL || import.meta.env.VITE_LOG_LEVEL;
 
-// Initialize email service
+// Initialize services
 initializeEmailService(MAILGUN_API_KEY, MAILGUN_DOMAIN, APP_URL);
+initializeLogger(LOG_LEVEL);
 
 /**
  * Extract league identifier from subdomain
@@ -163,7 +166,16 @@ function isPublicEndpoint(method, pathname) {
     );
 }
 
+function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
+    const path = url.pathname + (url.search ? url.search : '');
+    logger.info(`${method} ${path} ${status} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`);
+    if (body) {
+        logger.debug(`${method} ${path} body:`, body);
+    }
+}
+
 export const handle = async ({ event, resolve }) => {
+    const start = Date.now();
     const ip = getIp(event);
     const { url, request } = event;
 
@@ -195,16 +207,19 @@ export const handle = async ({ event, resolve }) => {
 
         if (!allowed) {
             // Use 401 so the client does not treat this as a league auth failure (403 triggers logout)
+            logApiRequest(request.method, url, leagueId, ip, 401, Date.now() - start);
             return new Response(JSON.stringify({ message: 'Origin not allowed' }), { status: 401 });
         }
 
         if (!isPublic && !checkApiKey(request)) {
+            logApiRequest(request.method, url, leagueId, ip, 401, Date.now() - start);
             return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
         }
 
         // Require client identification for all API endpoints (except public)
         const clientId = request.headers.get('x-client-id');
         if (!isPublic && !clientId) {
+            logApiRequest(request.method, url, leagueId, ip, 400, Date.now() - start);
             return new Response(JSON.stringify({ message: 'Unidentified Client' }), {
                 status: 400
             });
@@ -216,6 +231,7 @@ export const handle = async ({ event, resolve }) => {
             const composite = `${ip}|${clientId || 'public'}`;
             const extraKey = rule.keyExtractor ? rule.keyExtractor(url) : '';
             if (isRateLimitedFor(rule, composite, extraKey)) {
+                logApiRequest(request.method, url, leagueId, ip, 429, Date.now() - start);
                 return new Response(JSON.stringify({ message: rule.message }), { status: 429 });
             }
         }
@@ -226,18 +242,21 @@ export const handle = async ({ event, resolve }) => {
 
             // Must have league info and access code for protected endpoints
             if (!event.locals.leagueInfo) {
+                logApiRequest(request.method, url, leagueId, ip, 400, Date.now() - start);
                 return new Response(JSON.stringify({ message: 'League info missing.' }), {
                     status: 400
                 });
             }
 
             if (!accessCode) {
+                logApiRequest(request.method, url, leagueId, ip, 403, Date.now() - start);
                 return new Response(JSON.stringify({ message: 'League access code required.' }), {
                     status: 403
                 });
             }
 
             if (accessCode !== event.locals.leagueInfo.accessCode) {
+                logApiRequest(request.method, url, leagueId, ip, 403, Date.now() - start);
                 return new Response(JSON.stringify({ message: 'Invalid league access code.' }), {
                     status: 403
                 });
@@ -254,7 +273,25 @@ export const handle = async ({ event, resolve }) => {
         event.locals.clientId = clientId;
     }
 
+    let requestBody = null;
+    if (
+        ['POST', 'PATCH', 'PUT', 'DELETE'].includes(request.method) &&
+        url.pathname.startsWith('/api/') &&
+        (request.headers.get('content-type') || '').includes('application/json')
+    ) {
+        try {
+            requestBody = await request.clone().text();
+        } catch {
+            // ignore — body read failure should never affect the request
+        }
+    }
+
     const response = await resolve(event);
+
+    if (url.pathname.startsWith('/api/')) {
+        logApiRequest(request.method, url, leagueId, ip, response.status, Date.now() - start, requestBody);
+    }
+
     response.headers.set('Access-Control-Allow-Origin', allowed ? origin || '*' : 'null');
     return response;
 };

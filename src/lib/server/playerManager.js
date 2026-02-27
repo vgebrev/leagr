@@ -3,6 +3,21 @@ import { defaultPlayers } from '$lib/shared/defaults.js';
 import { getConsolidatedSettings } from './settings.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
+import { Mutex } from 'async-mutex';
+
+// Transaction-level mutexes keyed by `leagueId:date`.
+// Held for the full read-compute-write cycle in executeTransaction, preventing
+// concurrent transactions from reading the same snapshot and then overwriting
+// each other's results.
+const transactionMutexes = new Map();
+
+function getTransactionMutex(leagueId, date) {
+    const key = `${leagueId}:${date}`;
+    if (!transactionMutexes.has(key)) {
+        transactionMutexes.set(key, new Mutex());
+    }
+    return transactionMutexes.get(key);
+}
 
 /** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
@@ -545,81 +560,85 @@ export class PlayerManager {
      */
     async executeTransaction(operation) {
         const sessionDate = this.#requireDate();
-        const gameData = await this.getData();
-        const { players, teams, settings } = gameData;
+        const mutex = getTransactionMutex(this.leagueId, sessionDate);
 
-        if (!players || !teams || !settings) {
-            throw new PlayerError('Failed to load player data.', 500);
-        }
+        return await mutex.runExclusive(async () => {
+            const gameData = await this.getData();
+            const { players, teams, settings } = gameData;
 
-        // Create the current state
-        const currentState = new PlayerState(players, teams, settings);
-
-        // Ensure owners mapping is available only when access control is enabled
-        if (this.#accessControl) {
-            await this.#loadOwners();
-        }
-
-        // Apply operation to get the new state
-        const newState = operation(currentState);
-
-        // Validate the new state
-        newState.validateState();
-
-        // Determine what needs to be saved
-        const playersChanged = JSON.stringify(players) !== JSON.stringify(newState.players);
-        const teamsChanged = JSON.stringify(teams) !== JSON.stringify(newState.teams);
-
-        // Save changes atomically using setMany for true atomicity
-        const operations = [];
-
-        if (playersChanged) {
-            operations.push({
-                key: 'players',
-                value: newState.players,
-                defaultValue: { available: [], waitingList: [] },
-                overwrite: true
-            });
-        }
-
-        if (teamsChanged) {
-            operations.push({
-                key: 'teams',
-                value: newState.teams,
-                defaultValue: {},
-                overwrite: true
-            });
-        }
-
-        if (this.#ownersDirty) {
-            operations.push({
-                key: 'playerOwners',
-                value: this.#owners,
-                defaultValue: {},
-                overwrite: true
-            });
-        }
-
-        // Execute all saves in a single atomic operation
-        if (operations.length > 0) {
-            try {
-                await data.setMany(operations, sessionDate, this.leagueId);
-                // Invalidate cache after successful save
-                this.#invalidateCache();
-                this.#ownersDirty = false;
-            } catch (saveError) {
-                // Log the specific save error for debugging
-                console.error('Failed to save player/team data atomically:', saveError);
-
-                // Re-throw the original error to preserve its type and status code
-                throw saveError;
+            if (!players || !teams || !settings) {
+                throw new PlayerError('Failed to load player data.', 500);
             }
-        }
 
-        return {
-            players: newState.players,
-            teams: newState.teams
-        };
+            // Create the current state
+            const currentState = new PlayerState(players, teams, settings);
+
+            // Ensure owners mapping is available only when access control is enabled
+            if (this.#accessControl) {
+                await this.#loadOwners();
+            }
+
+            // Apply operation to get the new state
+            const newState = operation(currentState);
+
+            // Validate the new state
+            newState.validateState();
+
+            // Determine what needs to be saved
+            const playersChanged = JSON.stringify(players) !== JSON.stringify(newState.players);
+            const teamsChanged = JSON.stringify(teams) !== JSON.stringify(newState.teams);
+
+            // Save changes atomically using setMany for true atomicity
+            const operations = [];
+
+            if (playersChanged) {
+                operations.push({
+                    key: 'players',
+                    value: newState.players,
+                    defaultValue: { available: [], waitingList: [] },
+                    overwrite: true
+                });
+            }
+
+            if (teamsChanged) {
+                operations.push({
+                    key: 'teams',
+                    value: newState.teams,
+                    defaultValue: {},
+                    overwrite: true
+                });
+            }
+
+            if (this.#ownersDirty) {
+                operations.push({
+                    key: 'playerOwners',
+                    value: this.#owners,
+                    defaultValue: {},
+                    overwrite: true
+                });
+            }
+
+            // Execute all saves in a single atomic operation
+            if (operations.length > 0) {
+                try {
+                    await data.setMany(operations, sessionDate, this.leagueId);
+                    // Invalidate cache after successful save
+                    this.#invalidateCache();
+                    this.#ownersDirty = false;
+                } catch (saveError) {
+                    // Log the specific save error for debugging
+                    console.error('Failed to save player/team data atomically:', saveError);
+
+                    // Re-throw the original error to preserve its type and status code
+                    throw saveError;
+                }
+            }
+
+            return {
+                players: newState.players,
+                teams: newState.teams
+            };
+        });
     }
 
     /**
