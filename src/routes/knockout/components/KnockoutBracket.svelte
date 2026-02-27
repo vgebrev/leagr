@@ -2,10 +2,13 @@
     import { Card } from 'flowbite-svelte';
     import TeamBadge from '$components/TeamBadge.svelte';
     import MatchCard from '$components/MatchCard.svelte';
+    import { resolve } from '$app/paths';
+    import { ClipboardListOutline } from 'flowbite-svelte-icons';
 
     let {
         bracket = null,
         teams = {},
+        date = '',
         onMatchUpdate = null,
         onCelebrate = null,
         onTeamClick = null,
@@ -142,6 +145,15 @@
                                     <div class="text-xs text-gray-300">
                                         Match {match.match}
                                     </div>
+                                    {#if date && match.home && match.home !== 'BYE' && match.away && match.away !== 'BYE'}
+                                        <a
+                                            href={resolve(`/games/match?date=${date}&competition=knockout&round=${match.round}&match=${match.match}`, {})}
+                                            class="text-gray-400 hover:text-gray-200"
+                                            aria-label="Open match tracker"
+                                            title="Track this match">
+                                            <ClipboardListOutline class="h-6 w-6" />
+                                        </a>
+                                    {/if}
                                 </div>
 
                                 {#if match.home && match.home !== 'BYE' && match.away && match.away !== 'BYE'}

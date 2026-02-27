@@ -1,10 +1,8 @@
 <script>
     import { onMount } from 'svelte';
     import { Alert, Button } from 'flowbite-svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
     import { settings } from '$lib/client/stores/settings.js';
+    import { gamesService } from '$lib/client/services/games.svelte.js';
     import KnockoutBracket from './components/KnockoutBracket.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
@@ -24,12 +22,6 @@
         showTeamModal = true;
     }
 
-    let knockoutBracket = $state(null);
-    let standings = $state([]);
-    let teams = $state({});
-    let leagueGames = $state([]);
-    let hasStandings = $derived(standings.length > 0);
-
     /**
      * @typedef {Object} WinningTeam
      * @property {string} name
@@ -37,31 +29,26 @@
      */
 
     /** @type {WinningTeam} */
-    let winningTeam = $state({
-        name: '',
-        colour: 'blue'
-    });
-
+    let winningTeam = $state({ name: '', colour: 'blue' });
     let celebrating = $state(false);
     let showConfirmRegenerate = $state(false);
 
     /**
-     * Check for a tournament winner and celebrate
+     * Check for a tournament winner and trigger celebration.
      */
     function checkForWinner() {
-        if (!knockoutBracket || !knockoutBracket.bracket) return;
+        if (!gamesService.knockoutBracket?.bracket) return;
 
-        // Find the final match
-        const finalMatch = knockoutBracket.bracket.find((match) => match.round === 'final');
+        const finalMatch = gamesService.knockoutBracket.bracket.find(
+            (match) => match.round === 'final'
+        );
 
         if (finalMatch && finalMatch.homeScore !== null && finalMatch.awayScore !== null) {
-            // Determine winner
             const winner =
                 finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
 
             if (winner && winner !== winningTeam.name) {
                 winningTeam.name = winner;
-                // Extract team color from name (first word)
                 const firstWord = winner.split(' ')[0].toLowerCase();
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
@@ -70,23 +57,21 @@
     }
 
     /**
-     * Celebrate the winning team when clicked
-     * @param {string} teamName - The team name that was clicked
+     * @param {string} teamName
      */
     function celebrateTeam(teamName) {
-        if (!knockoutBracket || !knockoutBracket.bracket) return;
+        if (!gamesService.knockoutBracket?.bracket) return;
 
-        // Find the final match
-        const finalMatch = knockoutBracket.bracket.find((match) => match.round === 'final');
+        const finalMatch = gamesService.knockoutBracket.bracket.find(
+            (match) => match.round === 'final'
+        );
 
         if (finalMatch && finalMatch.homeScore !== null && finalMatch.awayScore !== null) {
-            // Check if clicked team is the winner
             const winner =
                 finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
 
             if (winner && teamName === winner) {
                 winningTeam.name = winner;
-                // Extract team color from name (first word)
                 const firstWord = winner.split(' ')[0].toLowerCase();
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
@@ -95,140 +80,34 @@
     }
 
     /**
-     * Handle knockout match score update
-     * @param {Object} updatedMatch - Updated match object
+     * @param {Object} updatedMatch
      */
     async function handleKnockoutMatchUpdate(updatedMatch) {
-        if (!knockoutBracket) return;
-
-        // Update the local bracket immediately for responsiveness
-        const updatedBracket = { ...knockoutBracket };
-        const matchIndex = updatedBracket.bracket.findIndex(
-            (match) => match.round === updatedMatch.round && match.match === updatedMatch.match
-        );
-
-        if (matchIndex !== -1) {
-            updatedBracket.bracket[matchIndex] = updatedMatch;
-            knockoutBracket = updatedBracket;
-
-            // Save to server
-            await withLoading(
-                async () => {
-                    const requestData = {
-                        operation: 'updateScores',
-                        bracket: updatedBracket.bracket
-                    };
-
-                    const response = await api.post('games/knockout', date, requestData);
-                    // Update with the response data that includes advanced winners
-                    knockoutBracket = response.knockoutGames;
-                    // Check for tournament winner
-                    checkForWinner();
-                },
-                (err) => {
-                    console.error('Error saving knockout scores:', err);
-                    setNotification(
-                        err.message || 'Failed to save knockout scores. Please try again.',
-                        'error'
-                    );
-                    // Revert on error - reload knockout data
-                    reloadKnockoutData();
-                }
-            );
-        }
+        await gamesService.updateKnockoutMatch(updatedMatch);
+        checkForWinner();
     }
 
     /**
-     * Reload knockout tournament data after error
-     */
-    async function reloadKnockoutData() {
-        await withLoading(
-            async () => {
-                const knockoutData = await api.get('games/knockout', date);
-                knockoutBracket = knockoutData.knockoutGames;
-                checkForWinner();
-            },
-            () => {
-                // If reload fails, just set to null
-                knockoutBracket = null;
-            }
-        );
-    }
-
-    /**
-     * Handle adding knockout games with confirmation if bracket exists
-     * @param {boolean} forceRegenerate - Whether to force regeneration
+     * @param {boolean} [forceRegenerate]
      */
     async function handleAddKnockoutGames(forceRegenerate = false) {
-        if (knockoutBracket && !forceRegenerate) {
+        if (gamesService.knockoutBracket && !forceRegenerate) {
             showConfirmRegenerate = true;
             return;
         }
-
         showConfirmRegenerate = false;
-
-        await withLoading(
-            async () => {
-                const requestData = {
-                    operation: 'generate'
-                };
-
-                const response = await api.post('games/knockout', date, requestData);
-                knockoutBracket = response.knockoutGames;
-                checkForWinner();
-                setNotification('Knockout cup started!', 'success');
-            },
-            (err) => {
-                console.error('Error generating knockout games:', err);
-                setNotification(
-                    err.message || 'Failed to generate knockout games. Please try again.',
-                    'error'
-                );
-            }
-        );
+        await gamesService.addKnockoutGames();
+        checkForWinner();
     }
 
     onMount(async () => {
-        await withLoading(
-            async () => {
-                // Load standings, teams, and league games
-                const [standingsData, teamsData, gamesData] = await Promise.all([
-                    api.get('standings', date),
-                    api.get('teams', date),
-                    api.get('games', date)
-                ]);
-
-                standings = standingsData.standings || [];
-                teams = teamsData?.teams || {};
-                leagueGames = gamesData?.rounds || [];
-
-                // Load knockout data - this might fail if no tournament exists yet
-                // We'll handle 404 errors gracefully since knockout tournaments are optional
-                try {
-                    const knockoutData = await api.get('games/knockout', date);
-                    knockoutBracket = knockoutData.knockoutGames;
-                    checkForWinner();
-                } catch (knockoutErr) {
-                    // If it's a 404, that's fine - no knockout tournament exists
-                    if (knockoutErr.status !== 404) {
-                        throw knockoutErr; // Re-throw non-404 errors
-                    }
-                    knockoutBracket = null;
-                }
-            },
-            (err) => {
-                console.error('Error loading knockout data:', err);
-                setNotification(
-                    err.message || 'Failed to load knockout data. Please try again.',
-                    'error'
-                );
-            }
-        );
+        await gamesService.loadKnockout(date);
+        checkForWinner();
     });
 </script>
 
 <div class="flex flex-col gap-2">
-    {#if !hasStandings}
+    {#if !gamesService.hasStandings}
         <Alert class="glass flex items-center border py-2"
             ><ExclamationCircleSolid /><span>
                 The knockout cup phase is only available after some league <Button
@@ -247,7 +126,6 @@
             Start Knockout Cup Phase
         </Button>
 
-        <!-- Regeneration confirmation -->
         {#if showConfirmRegenerate}
             <Alert class="glass flex items-center border">
                 <ExclamationCircleSolid />
@@ -260,10 +138,12 @@
                 </Button>
             </Alert>
         {/if}
-        {#if knockoutBracket}
+
+        {#if gamesService.knockoutBracket}
             <KnockoutBracket
-                bracket={knockoutBracket}
-                {teams}
+                bracket={gamesService.knockoutBracket}
+                teams={gamesService.teams}
+                {date}
                 disabled={isCompetitionEnded(date, $settings)}
                 onMatchUpdate={handleKnockoutMatchUpdate}
                 onCelebrate={celebrateTeam}
@@ -272,9 +152,9 @@
 
         <div class="mt-4">
             <GoalscorerList
-                {leagueGames}
-                knockoutGames={knockoutBracket?.bracket || []}
-                {teams} />
+                leagueGames={gamesService.leagueGames}
+                knockoutGames={gamesService.knockoutBracket?.bracket || []}
+                teams={gamesService.teams} />
         </div>
     {/if}
 </div>
