@@ -28,7 +28,7 @@
     const modes = [
         { id: 'goals', label: 'Goals', Icon: LeagueIcon, iconProps: { icon: "soccer"} },
         { id: 'offensive', label: 'Attack', Icon: BullseyeIcon },
-        { id: 'defensive', label: 'Defend', Icon: ShieldIcon },
+        { id: 'defensive', label: 'Defence', Icon: ShieldIcon },
         { id: 'saves', label: 'Saves', Icon: GloveIcon }
     ];
 
@@ -60,20 +60,13 @@
     }
 </script>
 
-<div class="overflow-hidden rounded-md {styles.border}">
-    <!-- Row 1: team name header -->
-    <div class="px-2 py-1 text-xs font-semibold uppercase {styles.header}">
-        {titleCase(teamName)}
-    </div>
-
-    <!-- Row 2: mode selector -->
+<div class="overflow-hidden rounded-md {styles.border} {styles.text}">
+    <!-- Row 1: mode selector -->
     <div class="flex {styles.row}">
         {#each modes as { id, label, Icon, iconProps } (id)}
             <button
                 type="button"
-                class="flex flex-1 flex-col items-center gap-0.5 border-r px-1 py-1.5 text-xs font-medium last:border-r-0 transition-opacity {styles.border} {mode === id
-                    ? styles.buttonClass
-                    : 'hover:opacity-90'}"
+                class="flex flex-1 flex-col items-center gap-0.5 border-r border-l-0! border-t-0! px-1 py-1.5 text-xs font-medium last:border-r-0 {styles.border} {mode === id ? styles.header : ''}"
                 onclick={() => (mode = id)}
                 aria-pressed={mode === id}>
                 <Icon {...iconProps} />
@@ -87,46 +80,50 @@
         {#each players as player (player)}
             {@const count = getCount(player)}
             <div class="flex items-center gap-1 py-0.5">
+                <span class="min-w-0 flex-1 truncate text-sm">{player}</span>
                 <Button
-                    size="xs"
+                    size="sm"
+                    outline={true}
                     color="alternative"
-                    class="shrink-0 p-1"
+                    class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, player, mode, -1)}
                     disabled={count === 0}>
-                    <MinusOutline class="h-3 w-3" />
+                    <MinusOutline class="h-4 w-4" />
                 </Button>
                 <span class="w-5 shrink-0 text-center text-sm font-bold">{count}</span>
                 <Button
-                    size="xs"
+                    size="sm"
+                    outline={true}
                     color="alternative"
-                    class="shrink-0 p-1"
+                    class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, player, mode, +1)}>
-                    <PlusOutline class="h-3 w-3" />
+                    <PlusOutline class="h-4 w-4" />
                 </Button>
-                <span class="min-w-0 flex-1 truncate text-sm">{player}</span>
             </div>
         {/each}
         {#if mode === 'goals' && players.length > 0}
             {@const ownGoalCount = getCount(RESERVED_SCORER_KEYS.OWN_GOAL)}
-            <div class="mt-0.5 flex items-center gap-1 border-t border-gray-700 pt-1">
+            <div class="mt-0.5 flex items-center gap-1 border-t border-white/20 pt-1">
+                <span class="min-w-0 flex-1 truncate text-sm">Own Goal</span>
                 <Button
-                    size="xs"
+                    size="sm"
+                    outline={true}
                     color="alternative"
-                    class="shrink-0 p-1"
+                    class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, RESERVED_SCORER_KEYS.OWN_GOAL, 'goals', -1)}
                     disabled={ownGoalCount === 0}>
-                    <MinusOutline class="h-3 w-3" />
+                    <MinusOutline class="h-4 w-4" />
                 </Button>
                 <span class="w-5 shrink-0 text-center text-sm font-bold">{ownGoalCount}</span>
                 <Button
-                    size="xs"
+                    size="sm"
+                    outline={true}
                     color="alternative"
-                    class="shrink-0 p-1"
+                    class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, RESERVED_SCORER_KEYS.OWN_GOAL, 'goals', +1)}
                     disabled={ownGoalCount >= 2}>
-                    <PlusOutline class="h-3 w-3" />
+                    <PlusOutline class="h-4 w-4" />
                 </Button>
-                <span class="min-w-0 flex-1 truncate text-sm text-gray-400">Own Goal</span>
             </div>
         {/if}
     </div>

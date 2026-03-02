@@ -537,6 +537,26 @@ export function validateRound(round, roundIndex = 0) {
             sanitizedMatch.awayScorers = match.awayScorers;
         }
 
+        // Include action data if present
+        if (match.homeOffensiveActions !== undefined) {
+            sanitizedMatch.homeOffensiveActions = match.homeOffensiveActions;
+        }
+        if (match.awayOffensiveActions !== undefined) {
+            sanitizedMatch.awayOffensiveActions = match.awayOffensiveActions;
+        }
+        if (match.homeDefensiveActions !== undefined) {
+            sanitizedMatch.homeDefensiveActions = match.homeDefensiveActions;
+        }
+        if (match.awayDefensiveActions !== undefined) {
+            sanitizedMatch.awayDefensiveActions = match.awayDefensiveActions;
+        }
+        if (match.homeSaveActions !== undefined) {
+            sanitizedMatch.homeSaveActions = match.homeSaveActions;
+        }
+        if (match.awaySaveActions !== undefined) {
+            sanitizedMatch.awaySaveActions = match.awaySaveActions;
+        }
+
         sanitizedRound.push(sanitizedMatch);
     }
 

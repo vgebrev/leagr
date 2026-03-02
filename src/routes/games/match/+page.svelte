@@ -2,9 +2,10 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
-    import { Input } from 'flowbite-svelte';
+    import { Button, Input } from 'flowbite-svelte';
+    import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
+    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
@@ -42,13 +43,13 @@
     let matchLabel = $derived.by(() => {
         if (!roundParam || !matchParam) return '';
         if (competition === 'league') {
-            return `Round ${roundParam} · Match ${matchParam}`;
+            return `League · Round ${roundParam} · Match ${matchParam}`;
         }
         const roundNames = { quarter: 'Quarter Final', semi: 'Semi Final', final: 'Final' };
         const roundName =
             roundNames[roundParam] ||
             roundParam.charAt(0).toUpperCase() + roundParam.slice(1).replace('-', ' ');
-        return `${roundName} · Match ${matchParam}`;
+        return `Cup · ${roundName} · Match ${matchParam}`;
     });
 
     // Players lists from teams data
@@ -135,7 +136,7 @@
     // Action summary: one row per action type, only rows with at least one entry
     const actionTypes = [
         {
-            Icon: SoccerBootIcon,
+            Icon: LeagueIcon,
             homeField: 'homeScorers',
             awayField: 'awayScorers'
         },
@@ -166,8 +167,8 @@
         return Object.entries(actions)
             .filter(([, count]) => count > 0)
             .map(([player, count]) => {
-                const name = player === RESERVED_SCORER_KEYS.OWN_GOAL ? 'OG' : player;
-                return count > 1 ? `${name} ${count}` : name;
+                const name = player === RESERVED_SCORER_KEYS.OWN_GOAL ? 'Own Goal' : player;
+                return count > 1 ? `${name} (${count})` : name;
             })
             .join(', ');
     }
@@ -186,20 +187,162 @@
     onMount(async () => {
         await gamesService.loadForMatchTracker(date, competition);
     });
+
+    // Next match navigation
+    const KNOCKOUT_ROUND_ORDER = ['quarter', 'semi', 'final'];
+
+    const KNOCKOUT_ROUND_NAMES = /** @type {Record<string,string>} */ ({
+        quarter: 'Quarter Final',
+        semi: 'Semi Final',
+        final: 'Final'
+    });
+
+    /** @type {{ home: string, away: string, label: string, url: string } | null} */
+    let nextMatchInfo = $derived.by(() => {
+        if (!roundParam || !matchParam) return null;
+
+        if (competition === 'league') {
+            const schedule = gamesService.schedule;
+            if (!schedule?.length) return null;
+
+            const roundIndex = parseInt(roundParam, 10) - 1;
+            const matchIndex = parseInt(matchParam, 10) - 1;
+
+            // Next in same round
+            for (let mi = matchIndex + 1; mi < (schedule[roundIndex]?.length ?? 0); mi++) {
+                const m = schedule[roundIndex][mi];
+                if (m && !m.bye) {
+                    return {
+                        home: m.home,
+                        away: m.away,
+                        label: `Round ${roundIndex + 1} · Match ${mi + 1}`,
+                        url: `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${mi + 1}`
+                    };
+                }
+            }
+            // Next round(s)
+            for (let ri = roundIndex + 1; ri < schedule.length; ri++) {
+                for (let mi = 0; mi < (schedule[ri]?.length ?? 0); mi++) {
+                    const m = schedule[ri][mi];
+                    if (m && !m.bye) {
+                        return {
+                            home: m.home,
+                            away: m.away,
+                            label: `Round ${ri + 1} · Match ${mi + 1}`,
+                            url: `/games/match?date=${date}&competition=league&round=${ri + 1}&match=${mi + 1}`
+                        };
+                    }
+                }
+            }
+            return null;
+        } else {
+            const bracket = gamesService.knockoutBracket?.bracket;
+            if (!bracket) return null;
+
+            const currentMatchNum = parseInt(matchParam, 10);
+
+            const sortedRounds = [...new Set(bracket.map((m) => m.round))].sort((a, b) => {
+                const ia = KNOCKOUT_ROUND_ORDER.indexOf(a);
+                const ib = KNOCKOUT_ROUND_ORDER.indexOf(b);
+                if (ia === -1 && ib === -1) return a.localeCompare(b);
+                if (ia === -1) return -1;
+                if (ib === -1) return 1;
+                return ia - ib;
+            });
+
+            const currentRoundIndex = sortedRounds.indexOf(roundParam);
+
+            /** @param {string} round @param {number} matchNum @returns {string} */
+            function knockoutLabel(round, matchNum) {
+                const roundName =
+                    KNOCKOUT_ROUND_NAMES[round] ||
+                    round.charAt(0).toUpperCase() + round.slice(1).replace('-', ' ');
+                return `${roundName} · Match ${matchNum}`;
+            }
+
+            // Next in same round (skip byes and unscheduled slots)
+            const sameRoundNext = bracket
+                .filter(
+                    (m) =>
+                        m.round === roundParam &&
+                        m.match > currentMatchNum &&
+                        !m.bye &&
+                        m.home &&
+                        m.away &&
+                        m.home !== 'BYE' &&
+                        m.away !== 'BYE'
+                )
+                .sort((a, b) => a.match - b.match)[0];
+
+            if (sameRoundNext) {
+                return {
+                    home: sameRoundNext.home,
+                    away: sameRoundNext.away,
+                    label: knockoutLabel(sameRoundNext.round, sameRoundNext.match),
+                    url: `/games/match?date=${date}&competition=knockout&round=${sameRoundNext.round}&match=${sameRoundNext.match}`
+                };
+            }
+
+            // Next rounds
+            for (let ri = currentRoundIndex + 1; ri < sortedRounds.length; ri++) {
+                const nextRound = sortedRounds[ri];
+                const nextRoundFirst = bracket
+                    .filter(
+                        (m) =>
+                            m.round === nextRound &&
+                            !m.bye &&
+                            m.home &&
+                            m.away &&
+                            m.home !== 'BYE' &&
+                            m.away !== 'BYE'
+                    )
+                    .sort((a, b) => a.match - b.match)[0];
+
+                if (nextRoundFirst) {
+                    return {
+                        home: nextRoundFirst.home,
+                        away: nextRoundFirst.away,
+                        label: knockoutLabel(nextRoundFirst.round, nextRoundFirst.match),
+                        url: `/games/match?date=${date}&competition=knockout&round=${nextRoundFirst.round}&match=${nextRoundFirst.match}`
+                    };
+                }
+            }
+            return null;
+        }
+    });
+
+    /** @type {{ message: string, url: string } | null} */
+    let completionState = $derived.by(() => {
+        if (nextMatchInfo !== null) return null;
+        if (competition === 'league') {
+            if (!gamesService.schedule?.length) return null;
+            return {
+                message: 'League Completed. Start the Knockout Cup.',
+                url: `/knockout?date=${date}`
+            };
+        } else {
+            if (!gamesService.knockoutBracket?.bracket) return null;
+            return {
+                message: 'Competition Completed. Update Rankings.',
+                url: `/rankings?date=${date}`
+            };
+        }
+    });
 </script>
 
 <div class="flex flex-col gap-3">
     <!-- Header: back + label -->
     <div class="flex items-center gap-2">
-        <a
-            href={resolve(backUrl, {})}
-            class="text-sm text-gray-400 hover:text-gray-200">← Back</a>
-        <span class="text-sm text-gray-400">{matchLabel}</span>
+        <Button outline color="alternative" size="xs" class="ps-1! pe-2!"
+            href={resolve(backUrl, {})}><AngleLeftOutline /> Back</Button>
+        <div><h5 class="flex items-center text-lg font-bold">Match Centre</h5> <p class="text-sm text-gray-600 dark:text-gray-400">{matchLabel}</p></div>
+
     </div>
 
     {#if match}
         <!-- Score row -->
-        <div class="glass flex items-center justify-between rounded-lg p-3">
+        <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+            <div class="flex items-center justify-between">
             <TeamBadge
                 teamName={match.home}
                 className="w-2/5" />
@@ -219,7 +362,7 @@
                         <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
                     {/if}
                 </div>
-                <span class="text-gray-400">–</span>
+                <span class="text-gray-600 dark:text-gray-400">–</span>
                 <div class="flex flex-col items-center">
                     <Input
                         type="number"
@@ -239,6 +382,22 @@
             <TeamBadge
                 teamName={match.away}
                 className="w-2/5" />
+            </div>
+            <!-- Action summary -->
+            {#if actionSummary.length > 0}
+                <div class="p-2">
+                    {#each actionSummary as { Icon, home, away }, i (i)}
+                        <div class="flex items-start gap-2 py-0.5">
+                            <Icon class="mt-0.5 h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />
+                            <span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-400"
+                            >{home || '—'}</span>
+                            <span class="min-w-0 flex-1 truncate text-right text-xs text-gray-600 dark:text-gray-400"
+                            >{away || '—'}</span>
+                            <Icon class="mt-0.5 h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />
+                        </div>
+                    {/each}
+                </div>
+            {/if}
         </div>
 
         <!-- Team action panels -->
@@ -256,23 +415,28 @@
                 side="away"
                 onAction={handleAction} />
         </div>
-
-        <!-- Action summary -->
-        {#if actionSummary.length > 0}
-            <div class="glass rounded-lg p-2">
-                {#each actionSummary as { Icon, home, away }}
-                    <div class="flex items-start gap-2 py-0.5">
-                        <Icon class="mt-0.5 h-3.5 w-3.5 shrink-0 text-gray-400" />
-                        <span class="min-w-0 flex-1 truncate text-xs text-gray-300"
-                            >{home || '—'}</span>
-                        <span class="shrink-0 text-xs text-gray-600">|</span>
-                        <span class="min-w-0 flex-1 truncate text-right text-xs text-gray-300"
-                            >{away || '—'}</span>
-                    </div>
-                {/each}
+        <!-- Next Match / Completion -->
+        {#if nextMatchInfo}
+            <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">Next Match <span class="font-normal">· {nextMatchInfo.label}</span></p>
+                <div class="flex items-center gap-2">
+                    <TeamBadge teamName={nextMatchInfo.home} className="min-w-0 flex-1" />
+                    <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
+                    <TeamBadge teamName={nextMatchInfo.away} className="min-w-0 flex-1" />
+                    <Button size="xs" outline="{true}" color="alternative" href={resolve(nextMatchInfo.url, {})} class="shrink-0">
+                        Next <AngleRightOutline class="ms-1 h-3 w-3" />
+                    </Button>
+                </div>
+            </div>
+        {:else if completionState}
+            <div class="glass flex items-center gap-2 w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <p class="text-sm text-gray-300">{completionState.message}</p>
+                <Button size="xs" outline={true} color="alternative" href={resolve(completionState.url, {})} class="ms-auto">
+                    Next <AngleRightOutline class="ms-1 h-3 w-3" />
+                </Button>
             </div>
         {/if}
     {:else}
-        <p class="text-center text-sm text-gray-400">Loading match…</p>
+        <p class="text-center text-sm text-gray-600 dark:text-gray-400">Loading match…</p>
     {/if}
 </div>
