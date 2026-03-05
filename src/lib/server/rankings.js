@@ -423,7 +423,16 @@ export class RankingsManager {
             if (typeof home !== 'string' || typeof away !== 'string') {
                 continue;
             }
-            const winner = homeScore > awayScore ? home : away;
+            let winner;
+            if (homeScore > awayScore) {
+                winner = home;
+            } else if (awayScore > homeScore) {
+                winner = away;
+            } else if (match.homePenalties != null && match.awayPenalties != null) {
+                winner = match.homePenalties > match.awayPenalties ? home : away;
+            } else {
+                continue; // unresolved draw, skip
+            }
             const roundName = round ?? 'unknown';
 
             // Initialize team tracking
@@ -537,7 +546,9 @@ export class RankingsManager {
                         match.homeScore,
                         match.awayScore,
                         'cup',
-                        eloCarryOver
+                        eloCarryOver,
+                        match.homePenalties ?? null,
+                        match.awayPenalties ?? null
                     );
                 }
             }
@@ -644,7 +655,9 @@ export class RankingsManager {
         homeScore,
         awayScore,
         phase,
-        eloCarryOver = {}
+        eloCarryOver = {},
+        homePenalties = null,
+        awayPenalties = null
     ) {
         // Filter out null players
         const homePlayersValid = homeTeam.filter((p) => p !== null && p !== undefined);
@@ -690,8 +703,19 @@ export class RankingsManager {
         const awayExpected = 1 - homeExpected;
 
         // Calculate actual scores
-        const homeActual = this.calculateActualScore(homeScore, awayScore);
-        const awayActual = 1 - homeActual;
+        let homeActual = this.calculateActualScore(homeScore, awayScore);
+        let awayActual = 1 - homeActual;
+
+        // Penalty winner gets 0.65, loser 0.35 (instead of 0.5/0.5 for a draw)
+        if (homeScore === awayScore && homePenalties != null && awayPenalties != null) {
+            if (homePenalties > awayPenalties) {
+                homeActual = 0.65;
+                awayActual = 0.35;
+            } else if (awayPenalties > homePenalties) {
+                homeActual = 0.35;
+                awayActual = 0.65;
+            }
+        }
 
         // Determine K factor based on phase
         const kFactor = phase === 'league' ? ELO_K_LEAGUE : ELO_K_CUP;
@@ -1523,7 +1547,14 @@ export class RankingsManager {
         }
 
         // Return winner of final match
-        return finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
+        if (finalMatch.homeScore > finalMatch.awayScore) return finalMatch.home;
+        if (finalMatch.awayScore > finalMatch.homeScore) return finalMatch.away;
+        if (finalMatch.homePenalties != null && finalMatch.awayPenalties != null) {
+            return finalMatch.homePenalties > finalMatch.awayPenalties
+                ? finalMatch.home
+                : finalMatch.away;
+        }
+        return null;
     }
 
     /**

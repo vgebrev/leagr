@@ -97,13 +97,17 @@
      */
     function isLoser(match, team) {
         if (match.homeScore === null || match.awayScore === null) return false;
-        if (match.homeScore === match.awayScore) return false; // Draw
-
-        if (team === 'home') {
-            return match.homeScore < match.awayScore;
-        } else {
-            return match.awayScore < match.homeScore;
+        if (match.homeScore !== match.awayScore) {
+            return team === 'home'
+                ? match.homeScore < match.awayScore
+                : match.awayScore < match.homeScore;
         }
+        if (match.homePenalties != null && match.awayPenalties != null) {
+            return team === 'home'
+                ? match.homePenalties < match.awayPenalties
+                : match.awayPenalties < match.homePenalties;
+        }
+        return false;
     }
 
     /**
@@ -147,7 +151,10 @@
                                     </div>
                                     {#if date && match.home && match.home !== 'BYE' && match.away && match.away !== 'BYE'}
                                         <a
-                                            href={resolve(`/games/match?date=${date}&competition=knockout&round=${match.round}&match=${match.match}`, {})}
+                                            href={resolve(
+                                                `/games/match?date=${date}&competition=knockout&round=${match.round}&match=${match.match}`,
+                                                {}
+                                            )}
                                             class="text-gray-400 hover:text-gray-200"
                                             aria-label="Open match tracker"
                                             title="Track this match">
@@ -165,11 +172,21 @@
                                                 match.homeScore !== null &&
                                                 match.awayScore !== null
                                             ) {
-                                                const winner =
-                                                    match.homeScore > match.awayScore
-                                                        ? match.home
-                                                        : match.away;
-                                                handleCelebrate(winner);
+                                                let winner;
+                                                if (match.homeScore > match.awayScore) {
+                                                    winner = match.home;
+                                                } else if (match.awayScore > match.homeScore) {
+                                                    winner = match.away;
+                                                } else if (
+                                                    match.homePenalties != null &&
+                                                    match.awayPenalties != null
+                                                ) {
+                                                    winner =
+                                                        match.homePenalties > match.awayPenalties
+                                                            ? match.home
+                                                            : match.away;
+                                                }
+                                                if (winner) handleCelebrate(winner);
                                             }
                                         }}
                                         onkeydown={(e) => {
@@ -178,11 +195,22 @@
                                                     match.homeScore !== null &&
                                                     match.awayScore !== null
                                                 ) {
-                                                    const winner =
-                                                        match.homeScore > match.awayScore
-                                                            ? match.home
-                                                            : match.away;
-                                                    handleCelebrate(winner);
+                                                    let winner;
+                                                    if (match.homeScore > match.awayScore) {
+                                                        winner = match.home;
+                                                    } else if (match.awayScore > match.homeScore) {
+                                                        winner = match.away;
+                                                    } else if (
+                                                        match.homePenalties != null &&
+                                                        match.awayPenalties != null
+                                                    ) {
+                                                        winner =
+                                                            match.homePenalties >
+                                                            match.awayPenalties
+                                                                ? match.home
+                                                                : match.away;
+                                                    }
+                                                    if (winner) handleCelebrate(winner);
                                                 }
                                             }
                                         }}

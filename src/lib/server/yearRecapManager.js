@@ -885,19 +885,31 @@ export class YearRecapManager {
                     typeof final.home === 'string' &&
                     typeof final.away === 'string'
                 ) {
-                    const cupWinner = final.homeScore > final.awayScore ? final.home : final.away;
-                    const color = cupWinner.split(' ')[0];
-                    if (!colorData[color]) {
-                        colorData[color] = {
-                            leagueWins: 0,
-                            cupWins: 0,
-                            wins: 0,
-                            draws: 0,
-                            losses: 0,
-                            playerCaps: {}
-                        };
+                    let cupWinner;
+                    if (final.homeScore > final.awayScore) {
+                        cupWinner = final.home;
+                    } else if (final.awayScore > final.homeScore) {
+                        cupWinner = final.away;
+                    } else if (final.homePenalties != null && final.awayPenalties != null) {
+                        cupWinner =
+                            final.homePenalties > final.awayPenalties ? final.home : final.away;
+                    } else {
+                        cupWinner = null;
                     }
-                    colorData[color].cupWins++;
+                    if (cupWinner) {
+                        const color = cupWinner.split(' ')[0];
+                        if (!colorData[color]) {
+                            colorData[color] = {
+                                leagueWins: 0,
+                                cupWins: 0,
+                                wins: 0,
+                                draws: 0,
+                                losses: 0,
+                                playerCaps: {}
+                            };
+                        }
+                        colorData[color].cupWins++;
+                    }
                 }
             }
 

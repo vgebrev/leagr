@@ -168,7 +168,9 @@ function isPublicEndpoint(method, pathname) {
 
 function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
     const path = url.pathname + (url.search ? url.search : '');
-    logger.info(`${method} ${path} ${status} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`);
+    logger.info(
+        `${method} ${path} ${status} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`
+    );
     if (body) {
         logger.debug(`${method} ${path} body:`, body);
     }
@@ -289,7 +291,15 @@ export const handle = async ({ event, resolve }) => {
     const response = await resolve(event);
 
     if (url.pathname.startsWith('/api/')) {
-        logApiRequest(request.method, url, leagueId, ip, response.status, Date.now() - start, requestBody);
+        logApiRequest(
+            request.method,
+            url,
+            leagueId,
+            ip,
+            response.status,
+            Date.now() - start,
+            requestBody
+        );
     }
 
     response.headers.set('Access-Control-Allow-Origin', allowed ? origin || '*' : 'null');

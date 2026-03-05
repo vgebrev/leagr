@@ -5,7 +5,7 @@
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import { teamColours, teamStyles, titleCase } from '$lib/shared/helpers.js';
+    import { teamColours, teamStyles } from '$lib/shared/helpers.js';
     import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
 
     let {
@@ -13,6 +13,7 @@
         players = [],
         match = null,
         side = 'home',
+        disabled = false,
         onAction
     } = $props();
 
@@ -26,7 +27,7 @@
     let styles = $derived(teamStyles[teamColour] || teamStyles.blue);
 
     const modes = [
-        { id: 'goals', label: 'Goals', Icon: LeagueIcon, iconProps: { icon: "soccer"} },
+        { id: 'goals', label: 'Goals', Icon: LeagueIcon, iconProps: { icon: 'soccer' } },
         { id: 'offensive', label: 'Attack', Icon: BullseyeIcon },
         { id: 'defensive', label: 'Defence', Icon: ShieldIcon },
         { id: 'saves', label: 'Saves', Icon: GloveIcon }
@@ -42,20 +43,20 @@
             return (side === 'home' ? match.homeScorers : match.awayScorers)?.[playerName] || 0;
         } else if (mode === 'offensive') {
             return (
-                (side === 'home'
-                    ? match.homeOffensiveActions
-                    : match.awayOffensiveActions)?.[playerName] || 0
+                (side === 'home' ? match.homeOffensiveActions : match.awayOffensiveActions)?.[
+                    playerName
+                ] || 0
             );
         } else if (mode === 'defensive') {
             return (
-                (side === 'home'
-                    ? match.homeDefensiveActions
-                    : match.awayDefensiveActions)?.[playerName] || 0
+                (side === 'home' ? match.homeDefensiveActions : match.awayDefensiveActions)?.[
+                    playerName
+                ] || 0
             );
         } else {
-            return (side === 'home' ? match.homeSaveActions : match.awaySaveActions)?.[
-                playerName
-            ] || 0;
+            return (
+                (side === 'home' ? match.homeSaveActions : match.awaySaveActions)?.[playerName] || 0
+            );
         }
     }
 </script>
@@ -66,9 +67,13 @@
         {#each modes as { id, label, Icon, iconProps } (id)}
             <button
                 type="button"
-                class="flex flex-1 flex-col items-center gap-0.5 border-r border-l-0! border-t-0! px-1 py-1.5 text-xs font-medium last:border-r-0 {styles.border} {mode === id ? styles.header : ''}"
+                class="flex flex-1 flex-col items-center gap-0.5 border-t-0! border-r border-l-0! px-1 py-1.5 text-xs font-medium last:border-r-0 {styles.border} {mode ===
+                id
+                    ? styles.header
+                    : ''}"
                 onclick={() => (mode = id)}
-                aria-pressed={mode === id}>
+                aria-pressed={mode === id}
+                {disabled}>
                 <Icon {...iconProps} />
                 {label}
             </button>
@@ -87,7 +92,7 @@
                     color="alternative"
                     class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, player, mode, -1)}
-                    disabled={count === 0}>
+                    disabled={disabled || count === 0}>
                     <MinusOutline class="h-4 w-4" />
                 </Button>
                 <span class="w-5 shrink-0 text-center text-sm font-bold">{count}</span>
@@ -96,7 +101,8 @@
                     outline={true}
                     color="alternative"
                     class="p-0 {styles.buttonClass}"
-                    onclick={() => onAction?.(side, player, mode, +1)}>
+                    onclick={() => onAction?.(side, player, mode, +1)}
+                    {disabled}>
                     <PlusOutline class="h-4 w-4" />
                 </Button>
             </div>
@@ -111,7 +117,7 @@
                     color="alternative"
                     class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, RESERVED_SCORER_KEYS.OWN_GOAL, 'goals', -1)}
-                    disabled={ownGoalCount === 0}>
+                    disabled={disabled || ownGoalCount === 0}>
                     <MinusOutline class="h-4 w-4" />
                 </Button>
                 <span class="w-5 shrink-0 text-center text-sm font-bold">{ownGoalCount}</span>
@@ -121,7 +127,7 @@
                     color="alternative"
                     class="p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, RESERVED_SCORER_KEYS.OWN_GOAL, 'goals', +1)}
-                    disabled={ownGoalCount >= 2}>
+                    disabled={disabled || ownGoalCount >= 2}>
                     <PlusOutline class="h-4 w-4" />
                 </Button>
             </div>

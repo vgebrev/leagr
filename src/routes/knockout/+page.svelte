@@ -17,6 +17,22 @@
     let showTeamModal = $state(false);
     let selectedTeam = $state(null);
 
+    /**
+     * Get the winner of a knockout match, including penalty tiebreaker.
+     * @param {Object} match
+     * @returns {string|null}
+     */
+    function getKnockoutWinner(match) {
+        if (match.homeScore === null || match.awayScore === null) return null;
+        if (match.homeScore > match.awayScore) return match.home;
+        if (match.awayScore > match.homeScore) return match.away;
+        if (match.homePenalties != null && match.awayPenalties != null) {
+            if (match.homePenalties > match.awayPenalties) return match.home;
+            if (match.awayPenalties > match.homePenalties) return match.away;
+        }
+        return null;
+    }
+
     function handleTeamClick(teamName) {
         selectedTeam = teamName;
         showTeamModal = true;
@@ -43,10 +59,8 @@
             (match) => match.round === 'final'
         );
 
-        if (finalMatch && finalMatch.homeScore !== null && finalMatch.awayScore !== null) {
-            const winner =
-                finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
-
+        if (finalMatch) {
+            const winner = getKnockoutWinner(finalMatch);
             if (winner && winner !== winningTeam.name) {
                 winningTeam.name = winner;
                 const firstWord = winner.split(' ')[0].toLowerCase();
@@ -66,10 +80,8 @@
             (match) => match.round === 'final'
         );
 
-        if (finalMatch && finalMatch.homeScore !== null && finalMatch.awayScore !== null) {
-            const winner =
-                finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
-
+        if (finalMatch) {
+            const winner = getKnockoutWinner(finalMatch);
             if (winner && teamName === winner) {
                 winningTeam.name = winner;
                 const firstWord = winner.split(' ')[0].toLowerCase();

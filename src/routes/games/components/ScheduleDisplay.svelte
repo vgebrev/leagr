@@ -39,7 +39,11 @@
                                     className="min-w-0 flex-1" />
                                 {#if date}
                                     <a
-                                        href={resolve(`/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${matchIndex + 1}`, {})}                                        class="shrink-0 ps-0 pe-1 pt-2 text-gray-400 hover:text-gray-200"
+                                        href={resolve(
+                                            `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${matchIndex + 1}`,
+                                            {}
+                                        )}
+                                        class="shrink-0 ps-0 pe-1 pt-2 text-gray-400 hover:text-gray-200"
                                         aria-label="Open match tracker"
                                         title="Track this match">
                                         <ClipboardListOutline class="h-6 w-6" />

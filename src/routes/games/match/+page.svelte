@@ -2,6 +2,8 @@
     import { onMount } from 'svelte';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
+    import { settings } from '$lib/client/stores/settings.js';
+    import { isCompetitionEnded } from '$lib/shared/helpers.js';
     import { Button, Input } from 'flowbite-svelte';
     import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
@@ -24,13 +26,6 @@
     let competition = $derived(page.url.searchParams.get('competition') || 'league');
     let roundParam = $derived(page.url.searchParams.get('round'));
     let matchParam = $derived(page.url.searchParams.get('match'));
-
-    // Back link
-    let backUrl = $derived(
-        competition === 'league'
-            ? `/games?date=${date}`
-            : `/knockout?date=${date}`
-    );
 
     // Current match derived from service state
     let match = $derived(
@@ -62,7 +57,7 @@
      */
     function getPlayerNames(teamPlayers) {
         if (!teamPlayers) return [];
-        return teamPlayers.map((p) => (typeof p === 'string' ? p : p.name));
+        return teamPlayers.filter(Boolean).map((p) => (typeof p === 'string' ? p : p.name));
     }
 
     /**
@@ -86,6 +81,8 @@
     // Manual score inputs
     let homeScoreError = $state('');
     let awayScoreError = $state('');
+    let homePenaltyError = $state('');
+    let awayPenaltyError = $state('');
 
     /**
      * @param {'home'|'away'} team
@@ -122,7 +119,14 @@
             else if (match.homeScore === null || match.homeScore === undefined) homeScore = 0;
         }
 
+        // Clear stale penalty data when the main score is no longer a draw
         const updatedMatch = { ...match, homeScore, awayScore };
+        if (homeScore === null || awayScore === null || homeScore !== awayScore) {
+            updatedMatch.homePenalties = null;
+            updatedMatch.awayPenalties = null;
+            homePenaltyError = '';
+            awayPenaltyError = '';
+        }
 
         if (competition === 'league') {
             const roundIndex = parseInt(roundParam, 10) - 1;
@@ -131,6 +135,45 @@
         } else {
             await gamesService.updateKnockoutMatch(updatedMatch);
         }
+    }
+
+    /**
+     * @param {'home'|'away'} team
+     * @param {Event} event
+     */
+    async function handlePenaltyChange(team, event) {
+        const value = /** @type {HTMLInputElement} */ (event.target)?.value;
+        if (team === 'home') homePenaltyError = '';
+        else awayPenaltyError = '';
+
+        const validation = validateGameScore(
+            value === '' ? null : parseInt(value),
+            team === 'home' ? 'Home penalties' : 'Away penalties'
+        );
+        if (!validation.isValid) {
+            if (team === 'home') homePenaltyError = validation.errors[0] || 'Invalid score';
+            else awayPenaltyError = validation.errors[0] || 'Invalid score';
+            return;
+        }
+
+        if (!match) return;
+
+        const numericValue = value === '' ? null : parseInt(value, 10);
+        let homePenalties = match.homePenalties ?? null;
+        let awayPenalties = match.awayPenalties ?? null;
+
+        if (team === 'home') {
+            homePenalties = numericValue;
+            if (numericValue === null) awayPenalties = null;
+            else if (match.awayPenalties == null) awayPenalties = 0;
+        } else {
+            awayPenalties = numericValue;
+            if (numericValue === null) homePenalties = null;
+            else if (match.homePenalties == null) homePenalties = 0;
+        }
+
+        const updatedMatch = { ...match, homePenalties, awayPenalties };
+        await gamesService.updateKnockoutMatch(updatedMatch);
     }
 
     // Action summary: one row per action type, only rows with at least one entry
@@ -162,15 +205,18 @@
      * @param {Record<string,number>|null|undefined} actions
      * @returns {string}
      */
+    /**
+     * @param {Record<string,number>|null|undefined} actions
+     * @returns {string[]}
+     */
     function formatEntries(actions) {
-        if (!actions) return '';
+        if (!actions) return [];
         return Object.entries(actions)
             .filter(([, count]) => count > 0)
             .map(([player, count]) => {
                 const name = player === RESERVED_SCORER_KEYS.OWN_GOAL ? 'Own Goal' : player;
                 return count > 1 ? `${name} (${count})` : name;
-            })
-            .join(', ');
+            });
     }
 
     let actionSummary = $derived.by(() => {
@@ -181,8 +227,10 @@
                 home: formatEntries(/** @type {any} */ (match)[homeField]),
                 away: formatEntries(/** @type {any} */ (match)[awayField])
             }))
-            .filter(({ home, away }) => home || away);
+            .filter(({ home, away }) => home.length > 0 || away.length > 0);
     });
+
+    let competitionEnded = $derived(isCompetitionEnded(date, $settings));
 
     onMount(async () => {
         await gamesService.loadForMatchTracker(date, competition);
@@ -333,67 +381,126 @@
 <div class="flex flex-col gap-3">
     <!-- Header: back + label -->
     <div class="flex items-center gap-2">
-        <Button outline color="alternative" size="xs" class="ps-1! pe-2!"
-            href={resolve(backUrl, {})}><AngleLeftOutline /> Back</Button>
-        <div><h5 class="flex items-center text-lg font-bold">Match Centre</h5> <p class="text-sm text-gray-600 dark:text-gray-400">{matchLabel}</p></div>
-
+        <Button
+            outline
+            color="alternative"
+            size="xs"
+            class="ps-1! pe-2!"
+            onclick={() => history.back()}><AngleLeftOutline /> Back</Button>
+        <div>
+            <h5 class="flex items-center text-lg font-bold">Match Centre</h5>
+            <p class="text-sm text-gray-600 dark:text-gray-400">{matchLabel}</p>
+        </div>
     </div>
 
     {#if match}
         <!-- Score row -->
         <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-            <div class="flex items-center justify-between">
-            <TeamBadge
-                teamName={match.home}
-                className="w-2/5" />
-            <div class="flex items-center gap-2">
-                <div class="flex flex-col items-center">
-                    <Input
-                        type="number"
-                        size="md"
-                        class="w-16! text-center!"
-                        value={match.homeScore?.toString() ?? ''}
-                        onchange={(e) => handleScoreChange('home', e)}
-                        onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
-                        min="0"
-                        max="99"
-                        aria-label="{match.home} score" />
-                    {#if homeScoreError}
-                        <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
-                    {/if}
+            <div class="flex flex-col gap-2">
+                <div class="flex items-center justify-between gap-2">
+                    <TeamBadge
+                        teamName={match.home}
+                        className="w-100" />
+                    <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
+                    <TeamBadge
+                        teamName={match.away}
+                        className="w-100" />
                 </div>
-                <span class="text-gray-600 dark:text-gray-400">–</span>
-                <div class="flex flex-col items-center">
-                    <Input
-                        type="number"
-                        size="md"
-                        class="w-16! text-center!"
-                        value={match.awayScore?.toString() ?? ''}
-                        onchange={(e) => handleScoreChange('away', e)}
-                        onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
-                        min="0"
-                        max="99"
-                        aria-label="{match.away} score" />
-                    {#if awayScoreError}
-                        <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
-                    {/if}
+                <div class="flex items-start justify-between">
+                    <div class="flex w-2/5 flex-col items-center">
+                        <Input
+                            type="number"
+                            size="md"
+                            class="w-16! text-center! text-2xl! font-bold!"
+                            disabled={competitionEnded}
+                            value={match.homeScore?.toString() ?? ''}
+                            onchange={(e) => handleScoreChange('home', e)}
+                            onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
+                            min="0"
+                            max="99"
+                            aria-label="{match.home} score" />
+                        {#if homeScoreError}
+                            <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
+                        {/if}
+                    </div>
+                    <div class="flex w-2/5 flex-col items-center">
+                        <Input
+                            type="number"
+                            size="md"
+                            class="w-16! text-center! text-2xl! font-bold!"
+                            disabled={competitionEnded}
+                            value={match.awayScore?.toString() ?? ''}
+                            onchange={(e) => handleScoreChange('away', e)}
+                            onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
+                            min="0"
+                            max="99"
+                            aria-label="{match.away} score" />
+                        {#if awayScoreError}
+                            <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
+                        {/if}
+                    </div>
                 </div>
             </div>
-            <TeamBadge
-                teamName={match.away}
-                className="w-2/5" />
-            </div>
+            <!-- Penalty shootout (knockout only, when scores are a draw) -->
+            {#if competition === 'knockout' && match.homeScore !== null && match.awayScore !== null && match.homeScore === match.awayScore}
+                <div class="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
+                    <p class="mb-2 text-center text-sm">Penalty Shootout</p>
+                    <div class="flex items-center justify-center gap-2">
+                        <div class="flex flex-col items-center">
+                            <Input
+                                type="number"
+                                size="sm"
+                                class="text-center!"
+                                disabled={competitionEnded}
+                                value={match.homePenalties?.toString() ?? ''}
+                                onchange={(e) => handlePenaltyChange('home', e)}
+                                onfocus={(e) =>
+                                    /** @type {HTMLInputElement} */ (e.target)?.select()}
+                                min="0"
+                                max="99"
+                                aria-label="{match.home} penalties" />
+                            {#if homePenaltyError}
+                                <span class="mt-1 text-xs text-red-500">{homePenaltyError}</span>
+                            {/if}
+                        </div>
+                        <span class="text-gray-600 dark:text-gray-400">–</span>
+                        <div class="flex flex-col items-center">
+                            <Input
+                                type="number"
+                                size="sm"
+                                class="text-center!"
+                                disabled={competitionEnded}
+                                value={match.awayPenalties?.toString() ?? ''}
+                                onchange={(e) => handlePenaltyChange('away', e)}
+                                onfocus={(e) =>
+                                    /** @type {HTMLInputElement} */ (e.target)?.select()}
+                                min="0"
+                                max="99"
+                                aria-label="{match.away} penalties" />
+                            {#if awayPenaltyError}
+                                <span class="mt-1 text-xs text-red-500">{awayPenaltyError}</span>
+                            {/if}
+                        </div>
+                    </div>
+                </div>
+            {/if}
             <!-- Action summary -->
             {#if actionSummary.length > 0}
                 <div class="p-2">
                     {#each actionSummary as { Icon, home, away }, i (i)}
-                        <div class="flex items-start gap-2 py-0.5">
-                            <Icon class="mt-0.5 h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />
-                            <span class="min-w-0 flex-1 truncate text-xs text-gray-600 dark:text-gray-400"
-                            >{home || '—'}</span>
-                            <span class="min-w-0 flex-1 truncate text-right text-xs text-gray-600 dark:text-gray-400"
-                            >{away || '—'}</span>
-                            <Icon class="mt-0.5 h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />
+                        <div class="flex items-center gap-2 py-0.5 border-t border-gray-200 dark:border-gray-700">
+                            {#if home.length > 0}<Icon class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span class="h-3 w-3 shrink-0"></span>{/if}
+                            <div class="flex min-w-0 flex-1 flex-wrap gap-x-1 text-xs text-gray-600 dark:text-gray-400">
+                                {#each home as entry, i (i)}
+                                    <span class="whitespace-nowrap">{entry}{#if i < home.length - 1},{/if}</span>
+                                {/each}
+                            </div>
+                            <div class="flex min-w-0 flex-1 flex-wrap justify-end gap-x-1 text-right text-xs text-gray-600 dark:text-gray-400">
+                                {#each away as entry, i (i)}
+                                    <span class="whitespace-nowrap">{entry}{#if i < away.length - 1},{/if}</span>
+                                {/each}
+                            </div>
+                            {#if away.length > 0}<Icon class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span class="h-3 w-3 shrink-0"></span>{/if}
                         </div>
                     {/each}
                 </div>
@@ -407,31 +514,50 @@
                 players={homePlayers}
                 {match}
                 side="home"
+                disabled={competitionEnded}
                 onAction={handleAction} />
             <TeamActionPanel
                 teamName={match.away}
                 players={awayPlayers}
                 {match}
                 side="away"
+                disabled={competitionEnded}
                 onAction={handleAction} />
         </div>
         <!-- Next Match / Completion -->
         {#if nextMatchInfo}
             <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
-                <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">Next Match <span class="font-normal">· {nextMatchInfo.label}</span></p>
+                <p class="mb-2 text-sm text-gray-600 dark:text-gray-400">
+                    Next Match <span class="font-normal">· {nextMatchInfo.label}</span>
+                </p>
                 <div class="flex items-center gap-2">
-                    <TeamBadge teamName={nextMatchInfo.home} className="min-w-0 flex-1" />
+                    <TeamBadge
+                        teamName={nextMatchInfo.home}
+                        className="min-w-0 flex-1" />
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
-                    <TeamBadge teamName={nextMatchInfo.away} className="min-w-0 flex-1" />
-                    <Button size="xs" outline="{true}" color="alternative" href={resolve(nextMatchInfo.url, {})} class="shrink-0">
+                    <TeamBadge
+                        teamName={nextMatchInfo.away}
+                        className="min-w-0 flex-1" />
+                    <Button
+                        size="xs"
+                        outline={true}
+                        color="alternative"
+                        href={resolve(nextMatchInfo.url, {})}
+                        class="shrink-0">
                         Next <AngleRightOutline class="ms-1 h-3 w-3" />
                     </Button>
                 </div>
             </div>
         {:else if completionState}
-            <div class="glass flex items-center gap-2 w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+            <div
+                class="glass flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
                 <p class="text-sm text-gray-300">{completionState.message}</p>
-                <Button size="xs" outline={true} color="alternative" href={resolve(completionState.url, {})} class="ms-auto">
+                <Button
+                    size="xs"
+                    outline={true}
+                    color="alternative"
+                    href={resolve(completionState.url, {})}
+                    class="ms-auto">
                     Next <AngleRightOutline class="ms-1 h-3 w-3" />
                 </Button>
             </div>
