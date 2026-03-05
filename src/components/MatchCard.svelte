@@ -151,11 +151,7 @@
                     return count > 1 ? `Own Goal (${count})` : 'Own Goal';
                 }
 
-                // Abbreviate first name to initial
-                const parts = player.trim().split(' ');
-                const abbreviated =
-                    parts.length > 1 ? `${parts[0][0]}. ${parts.slice(1).join(' ')}` : player;
-                return count > 1 ? `${abbreviated} (${count})` : abbreviated;
+                return count > 1 ? `${player} (${count})` : player;
             });
     }
 
@@ -352,32 +348,38 @@
                             onclick={() => onTeamClick?.(match.home)}
                             className="w-full text-sm" />
                     </div>
-                    <div class="relative flex flex-col items-center">
-                        <Input
-                            id={homeScoreId}
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={homeScoreInput}
-                            size="sm"
-                            class={`w-12! text-center! ${homeScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
-                            {disabled}
-                            onchange={handleHomeScoreChange}
-                            onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
-                            aria-label={`${match.home} score`} />
-                        {#if !disabled}
-                            <ScorerPopover
-                                triggerId={homeScoreId}
-                                teamName={match.home}
-                                players={teams[match.home] || []}
-                                scorers={match.homeScorers || {}}
-                                bind:isOpen={homePopoverOpen}
-                                onUpdate={(
-                                    /** @type {{ player: string, delta: number }} */ change
-                                ) => handleScorersUpdate('home', change)} />
-                        {/if}
-                        {#if homeScoreError}
-                            <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
+                    <div class="flex items-center gap-1">
+                        <div class="relative flex flex-col items-center">
+                            <Input
+                                id={homeScoreId}
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={homeScoreInput}
+                                size="sm"
+                                class={`w-12! text-center! ${homeScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
+                                {disabled}
+                                onchange={handleHomeScoreChange}
+                                onfocus={(e) =>
+                                    /** @type {HTMLInputElement} */ (e.target)?.select()}
+                                aria-label={`${match.home} score`} />
+                            {#if !disabled}
+                                <ScorerPopover
+                                    triggerId={homeScoreId}
+                                    teamName={match.home}
+                                    players={teams[match.home] || []}
+                                    scorers={match.homeScorers || {}}
+                                    bind:isOpen={homePopoverOpen}
+                                    onUpdate={(
+                                        /** @type {{ player: string, delta: number }} */ change
+                                    ) => handleScorersUpdate('home', change)} />
+                            {/if}
+                            {#if homeScoreError}
+                                <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
+                            {/if}
+                        </div>
+                        {#if match.homePenalties != null && match.awayPenalties != null}
+                            <span class="text-sm">({match.homePenalties})</span>
                         {/if}
                     </div>
                 </div>
@@ -404,32 +406,38 @@
                             onclick={() => onTeamClick?.(match.away)}
                             className="w-full text-sm" />
                     </div>
-                    <div class="relative flex flex-col items-center">
-                        <Input
-                            id={awayScoreId}
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={awayScoreInput}
-                            size="sm"
-                            class={`w-12! text-center! ${awayScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
-                            {disabled}
-                            onchange={handleAwayScoreChange}
-                            onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
-                            aria-label={`${match.away} score`} />
-                        {#if !disabled}
-                            <ScorerPopover
-                                triggerId={awayScoreId}
-                                teamName={match.away}
-                                players={teams[match.away] || []}
-                                scorers={match.awayScorers || {}}
-                                bind:isOpen={awayPopoverOpen}
-                                onUpdate={(
-                                    /** @type {{ player: string, delta: number }} */ change
-                                ) => handleScorersUpdate('away', change)} />
-                        {/if}
-                        {#if awayScoreError}
-                            <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
+                    <div class="flex items-center gap-1">
+                        <div class="relative flex flex-col items-center">
+                            <Input
+                                id={awayScoreId}
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={awayScoreInput}
+                                size="sm"
+                                class={`w-12! text-center! ${awayScoreError ? 'border-red-500' : ''} ${!disabled ? 'cursor-pointer' : ''}`}
+                                {disabled}
+                                onchange={handleAwayScoreChange}
+                                onfocus={(e) =>
+                                    /** @type {HTMLInputElement} */ (e.target)?.select()}
+                                aria-label={`${match.away} score`} />
+                            {#if !disabled}
+                                <ScorerPopover
+                                    triggerId={awayScoreId}
+                                    teamName={match.away}
+                                    players={teams[match.away] || []}
+                                    scorers={match.awayScorers || {}}
+                                    bind:isOpen={awayPopoverOpen}
+                                    onUpdate={(
+                                        /** @type {{ player: string, delta: number }} */ change
+                                    ) => handleScorersUpdate('away', change)} />
+                            {/if}
+                            {#if awayScoreError}
+                                <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
+                            {/if}
+                        </div>
+                        {#if match.homePenalties != null && match.awayPenalties != null}
+                            <span class="text-sm">({match.awayPenalties})</span>
                         {/if}
                     </div>
                 </div>

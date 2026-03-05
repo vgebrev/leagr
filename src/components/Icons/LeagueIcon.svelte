@@ -1,5 +1,5 @@
 <script>
-    let { icon, class: className = 'h-5 w-5' } = $props();
+    let { icon = 'soccer', class: className = 'h-5 w-5' } = $props();
 </script>
 
 {#if icon === 'skull'}

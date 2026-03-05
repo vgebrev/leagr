@@ -27,11 +27,8 @@ describe('PlayerManager concurrency', () => {
     beforeEach(async () => {
         await fs.mkdir(path.join(testDataDir, testLeagueId), { recursive: true });
 
-        vi.spyOn(
-            await import('$lib/server/league.js'),
-            'getLeagueDataPath'
-        ).mockImplementation((leagueId) =>
-            leagueId ? path.join(testDataDir, leagueId) : testDataDir
+        vi.spyOn(await import('$lib/server/league.js'), 'getLeagueDataPath').mockImplementation(
+            (leagueId) => (leagueId ? path.join(testDataDir, leagueId) : testDataDir)
         );
 
         const { getConsolidatedSettings } = await import('$lib/server/settings.js');

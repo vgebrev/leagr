@@ -219,7 +219,7 @@ describe('KnockoutManager', () => {
             expect(result).toBe('Team B');
         });
 
-        it('should return Draw for tied match', () => {
+        it('should return Draw for tied match with no penalties', () => {
             const match = {
                 home: 'Team A',
                 away: 'Team B',
@@ -241,6 +241,86 @@ describe('KnockoutManager', () => {
 
             const result = knockoutManager.getMatchWinner(match);
             expect(result).toBe(null);
+        });
+
+        it('should return home team when homePenalties > awayPenalties on a draw', () => {
+            const match = {
+                home: 'Team A',
+                away: 'Team B',
+                homeScore: 2,
+                awayScore: 2,
+                homePenalties: 4,
+                awayPenalties: 3
+            };
+
+            const result = knockoutManager.getMatchWinner(match);
+            expect(result).toBe('Team A');
+        });
+
+        it('should return away team when awayPenalties > homePenalties on a draw', () => {
+            const match = {
+                home: 'Team A',
+                away: 'Team B',
+                homeScore: 1,
+                awayScore: 1,
+                homePenalties: 2,
+                awayPenalties: 5
+            };
+
+            const result = knockoutManager.getMatchWinner(match);
+            expect(result).toBe('Team B');
+        });
+
+        it('should return Draw when penalty scores are equal', () => {
+            const match = {
+                home: 'Team A',
+                away: 'Team B',
+                homeScore: 0,
+                awayScore: 0,
+                homePenalties: 3,
+                awayPenalties: 3
+            };
+
+            const result = knockoutManager.getMatchWinner(match);
+            expect(result).toBe('Draw');
+        });
+    });
+
+    describe('advanceWinners with penalties', () => {
+        it('should advance penalty winner to next round', () => {
+            const bracket = [
+                {
+                    round: 'semi',
+                    match: 1,
+                    home: 'Team A',
+                    away: 'Team B',
+                    homeScore: 2,
+                    awayScore: 2,
+                    homePenalties: 4,
+                    awayPenalties: 3
+                },
+                {
+                    round: 'semi',
+                    match: 2,
+                    home: 'Team C',
+                    away: 'Team D',
+                    homeScore: 1,
+                    awayScore: 3
+                },
+                {
+                    round: 'final',
+                    match: 1,
+                    home: null,
+                    away: null,
+                    homeScore: null,
+                    awayScore: null
+                }
+            ];
+
+            const result = knockoutManager.advanceWinners(bracket);
+
+            expect(result[2].home).toBe('Team A'); // Penalty winner of semi 1
+            expect(result[2].away).toBe('Team D'); // Regular winner of semi 2
         });
     });
 });

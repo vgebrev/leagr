@@ -5,7 +5,8 @@ import {
     validateDateParameter,
     parseRequestBody,
     validateCompetitionOperationsAllowed,
-    validateMatchScorers
+    validateMatchScorers,
+    validateGameScore
 } from '$lib/shared/validation.js';
 import { getConsolidatedSettings } from '$lib/server/settings.js';
 import { data } from '$lib/server/data.js';
@@ -94,6 +95,26 @@ export const POST = async ({ request, url, locals }) => {
                             return error(
                                 400,
                                 `Scorer validation failed: ${scorerValidation.errors.join(', ')}`
+                            );
+                        }
+                    }
+                    // Validate penalty scores if present
+                    if (match.homePenalties != null || match.awayPenalties != null) {
+                        if ((match.homePenalties == null) !== (match.awayPenalties == null)) {
+                            return error(
+                                400,
+                                'Both home and away penalty scores must be set together'
+                            );
+                        }
+                        const hv = validateGameScore(match.homePenalties, 'Home penalties');
+                        const av = validateGameScore(match.awayPenalties, 'Away penalties');
+                        if (!hv.isValid || !av.isValid) {
+                            return error(400, [...hv.errors, ...av.errors].join(', '));
+                        }
+                        if (match.homeScore !== match.awayScore) {
+                            return error(
+                                400,
+                                'Penalty scores can only be set when main score is a draw'
                             );
                         }
                     }
