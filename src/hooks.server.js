@@ -75,9 +75,9 @@ function extractLeagueId(host) {
 const getIp = (event) => {
     const { request } = event;
     return (
-        event.getClientAddress?.() ||
-        request.headers.get('x-forwarded-for') ||
+        request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
         request.headers.get('x-real-ip') ||
+        event.getClientAddress?.() ||
         'unknown'
     );
 };
