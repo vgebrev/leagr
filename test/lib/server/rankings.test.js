@@ -266,28 +266,20 @@ describe('RankingsManager - Knockout Points', () => {
     });
 
     describe('Ranking Detail Structure', () => {
-        it('should include rankingDetail in player data structure', () => {
+        it('should include history in player data structure', () => {
             const rawRankings = {
                 players: {
                     Alice: {
                         points: 6,
                         appearances: 2,
-                        rankingDetail: {
+                        history: {
                             '2024-01-01': {
                                 team: 'Red Team',
-                                appearancePoints: 1,
-                                matchPoints: 3,
-                                bonusPoints: 0,
-                                knockoutPoints: 0,
-                                totalPoints: 4
+                                points: { appearance: 1, match: 3, bonus: 0, knockout: 0, total: 4 }
                             },
                             '2024-01-02': {
                                 team: 'Blue Team',
-                                appearancePoints: 1,
-                                matchPoints: 1,
-                                bonusPoints: 0,
-                                knockoutPoints: 0,
-                                totalPoints: 2
+                                points: { appearance: 1, match: 1, bonus: 0, knockout: 0, total: 2 }
                             }
                         }
                     }
@@ -296,14 +288,10 @@ describe('RankingsManager - Knockout Points', () => {
 
             const enhanced = rankingsManager.calculateEnhancedRankings(rawRankings);
 
-            expect(enhanced.players['Alice'].rankingDetail).toBeDefined();
-            expect(enhanced.players['Alice'].rankingDetail['2024-01-01']).toEqual({
+            expect(enhanced.players['Alice'].history).toBeDefined();
+            expect(enhanced.players['Alice'].history['2024-01-01']).toEqual({
                 team: 'Red Team',
-                appearancePoints: 1,
-                matchPoints: 3,
-                bonusPoints: 0,
-                knockoutPoints: 0,
-                totalPoints: 4
+                points: { appearance: 1, match: 3, bonus: 0, knockout: 0, total: 4 }
             });
         });
 
@@ -313,14 +301,16 @@ describe('RankingsManager - Knockout Points', () => {
                     Alice: {
                         points: 13,
                         appearances: 1,
-                        rankingDetail: {
+                        history: {
                             '2024-01-01': {
                                 team: 'Red Team',
-                                appearancePoints: 1,
-                                matchPoints: 6,
-                                bonusPoints: 2,
-                                knockoutPoints: 4,
-                                totalPoints: 13
+                                points: {
+                                    appearance: 1,
+                                    match: 6,
+                                    bonus: 2,
+                                    knockout: 4,
+                                    total: 13
+                                }
                             }
                         }
                     }
@@ -329,7 +319,7 @@ describe('RankingsManager - Knockout Points', () => {
 
             const enhanced = rankingsManager.calculateEnhancedRankings(rawRankings);
 
-            expect(enhanced.players['Alice'].rankingDetail['2024-01-01'].knockoutPoints).toBe(4);
+            expect(enhanced.players['Alice'].history['2024-01-01'].points.knockout).toBe(4);
             expect(enhanced.players['Alice'].points).toBe(13);
             expect(enhanced.players['Alice'].appearances).toBe(1);
         });
@@ -370,23 +360,23 @@ describe('RankingsManager - Knockout Points', () => {
                 players: {
                     Alice: {
                         rank: 1,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 3 },
-                            '2024-01-02': { rank: 1 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 3 } },
+                            '2024-01-02': { ranking: { rank: 1 } }
                         }
                     },
                     Bob: {
                         rank: 2,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 1 },
-                            '2024-01-02': { rank: 2 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 1 } },
+                            '2024-01-02': { ranking: { rank: 2 } }
                         }
                     },
                     Charlie: {
                         rank: 3,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 2 },
-                            '2024-01-02': { rank: 3 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 2 } },
+                            '2024-01-02': { ranking: { rank: 3 } }
                         }
                     }
                 }
@@ -415,22 +405,22 @@ describe('RankingsManager - Knockout Points', () => {
                 players: {
                     Alice: {
                         rank: 1,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 1 },
-                            '2024-01-02': { rank: 1 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 1 } },
+                            '2024-01-02': { ranking: { rank: 1 } }
                         }
                     },
                     Bob: {
                         rank: 2,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 2 },
-                            '2024-01-02': { rank: 2 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 2 } },
+                            '2024-01-02': { ranking: { rank: 2 } }
                         }
                     },
                     NewPlayer: {
                         rank: 3,
-                        rankingDetail: {
-                            '2024-01-02': { rank: 3 } // Only one entry = new player
+                        history: {
+                            '2024-01-02': { ranking: { rank: 3 } } // Only one entry = new player
                         }
                     }
                 }
@@ -448,14 +438,14 @@ describe('RankingsManager - Knockout Points', () => {
                 players: {
                     Alice: {
                         rank: 1,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 1 } // Only one entry
+                        history: {
+                            '2024-01-01': { ranking: { rank: 1 } } // Only one entry
                         }
                     },
                     Bob: {
                         rank: 2,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 2 } // Only one entry
+                        history: {
+                            '2024-01-01': { ranking: { rank: 2 } } // Only one entry
                         }
                     }
                 }
@@ -477,16 +467,16 @@ describe('RankingsManager - Knockout Points', () => {
                 players: {
                     Alice: {
                         rank: 1,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 1 },
-                            '2024-01-02': { rank: 1 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 1 } },
+                            '2024-01-02': { ranking: { rank: 1 } }
                         }
                     },
                     Bob: {
                         rank: 2,
-                        rankingDetail: {
-                            '2024-01-01': { rank: 2 },
-                            '2024-01-02': { rank: 2 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 2 } },
+                            '2024-01-02': { ranking: { rank: 2 } }
                         }
                     }
                 }
@@ -509,12 +499,11 @@ describe('RankingsManager - Knockout Points', () => {
             playerTracker.set('Alice', {
                 points: 10,
                 appearances: 1,
-                rankingDetail: {
+                history: {
                     '2024-01-01': {
                         team: 'Red Team',
-                        totalPoints: 10,
-                        rank: 1,
-                        totalPlayers: 2
+                        points: { total: 10 },
+                        ranking: { rank: 1, totalPlayers: 2 }
                     }
                 }
             });
@@ -522,12 +511,11 @@ describe('RankingsManager - Knockout Points', () => {
             playerTracker.set('Bob', {
                 points: 5,
                 appearances: 1,
-                rankingDetail: {
+                history: {
                     '2024-01-01': {
                         team: 'Blue Team',
-                        totalPoints: 5,
-                        rank: 2,
-                        totalPlayers: 2
+                        points: { total: 5 },
+                        ranking: { rank: 2, totalPlayers: 2 }
                     }
                 }
             });
@@ -537,29 +525,28 @@ describe('RankingsManager - Knockout Points', () => {
             rankingsManager.updateRanksForDate('2024-01-02', playerTracker, playersWhoAppeared);
 
             // Alice should have non-appearance entry for date2
-            const aliceDetail = playerTracker.get('Alice').rankingDetail['2024-01-02'];
-            expect(aliceDetail.team).toBeNull();
-            expect(aliceDetail.totalPoints).toBeNull();
-            expect(aliceDetail.rank).toBeDefined();
-            expect(aliceDetail.totalPlayers).toBeDefined();
+            const aliceDetail = playerTracker.get('Alice').history['2024-01-02'];
+            expect('points' in aliceDetail).toBe(false);
+            expect(aliceDetail.ranking.rank).toBeDefined();
+            expect(aliceDetail.ranking.totalPlayers).toBeDefined();
 
             // Bob should have appearance entry but team data would be set elsewhere
-            const bobDetail = playerTracker.get('Bob').rankingDetail['2024-01-02'];
-            expect(bobDetail.rank).toBeDefined();
+            const bobDetail = playerTracker.get('Bob').history['2024-01-02'];
+            expect(bobDetail.ranking.rank).toBeDefined();
         });
 
         it('should calculate movement from complete history', () => {
             const enhancedRankings = {
                 players: {
                     Alice: {
-                        rankingDetail: {
-                            '2024-01-01': { rank: 3 },
-                            '2024-01-02': { rank: 1 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 3 } },
+                            '2024-01-02': { ranking: { rank: 1 } }
                         }
                     },
                     Bob: {
-                        rankingDetail: {
-                            '2024-01-01': { rank: 1 }
+                        history: {
+                            '2024-01-01': { ranking: { rank: 1 } }
                         }
                     }
                 }
@@ -581,7 +568,7 @@ describe('RankingsManager - Knockout Points', () => {
             const enhancedRankings = {
                 players: {
                     Alice: {
-                        rankingDetail: {}
+                        history: {}
                     }
                 }
             };
@@ -813,9 +800,9 @@ describe('RankingsManager - Knockout Points', () => {
                 playerTracker.set('Alice', {
                     points: 10,
                     appearances: 2,
-                    rankingDetail: {
-                        '2024-01-01': { totalPoints: 5 },
-                        '2024-01-08': { totalPoints: 5 }
+                    history: {
+                        '2024-01-01': { points: { total: 5 } },
+                        '2024-01-08': { points: { total: 5 } }
                     },
                     elo: {
                         rating: 1200,
@@ -843,8 +830,8 @@ describe('RankingsManager - Knockout Points', () => {
                 playerTracker.set('Alice', {
                     points: 10,
                     appearances: 1,
-                    rankingDetail: {
-                        '2024-01-01': { totalPoints: 10 }
+                    history: {
+                        '2024-01-01': { points: { total: 10 } }
                     },
                     elo: {
                         rating: 1200,
@@ -942,7 +929,7 @@ describe('RankingsManager - Knockout Points', () => {
                 playerTracker.set('Alice', {
                     points: 0,
                     appearances: 0,
-                    rankingDetail: {},
+                    history: {},
                     elo: { rating: 1150, gamesPlayed: 5 }
                 });
 
@@ -950,7 +937,7 @@ describe('RankingsManager - Knockout Points', () => {
                 rankingsManager.updateRanksForDate('2024-01-01', playerTracker, playersWhoAppeared);
 
                 const alice = playerTracker.get('Alice');
-                expect(alice.rankingDetail['2024-01-01'].eloRating).toBe(1150);
+                expect(alice.history['2024-01-01'].ratings.elo).toBe(1150);
             });
 
             it('should include ELO rating in ranking detail for non-appearances', () => {
@@ -958,7 +945,7 @@ describe('RankingsManager - Knockout Points', () => {
                 playerTracker.set('Alice', {
                     points: 10,
                     appearances: 1,
-                    rankingDetail: {},
+                    history: {},
                     elo: { rating: 1150, gamesPlayed: 5 }
                 });
 
@@ -966,8 +953,8 @@ describe('RankingsManager - Knockout Points', () => {
                 rankingsManager.updateRanksForDate('2024-01-02', playerTracker, playersWhoAppeared);
 
                 const alice = playerTracker.get('Alice');
-                expect(alice.rankingDetail['2024-01-02'].eloRating).toBe(1150);
-                expect(alice.rankingDetail['2024-01-02'].team).toBeNull();
+                expect(alice.history['2024-01-02'].ratings.elo).toBe(1150);
+                expect('points' in alice.history['2024-01-02']).toBe(false);
             });
 
             it('should use baseline rating when no ELO data exists', () => {
@@ -975,7 +962,7 @@ describe('RankingsManager - Knockout Points', () => {
                 playerTracker.set('Alice', {
                     points: 0,
                     appearances: 0,
-                    rankingDetail: {}
+                    history: {}
                     // No ELO data
                 });
 
@@ -983,7 +970,7 @@ describe('RankingsManager - Knockout Points', () => {
                 rankingsManager.updateRanksForDate('2024-01-01', playerTracker, playersWhoAppeared);
 
                 const alice = playerTracker.get('Alice');
-                expect(alice.rankingDetail['2024-01-01'].eloRating).toBe(1000);
+                expect(alice.history['2024-01-01'].ratings.elo).toBe(1000);
             });
         });
 
@@ -994,7 +981,7 @@ describe('RankingsManager - Knockout Points', () => {
                         Alice: {
                             points: 10,
                             appearances: 1,
-                            rankingDetail: {},
+                            history: {},
                             elo: {
                                 rating: 1150,
                                 lastDecayAt: '2024-01-01',
@@ -1004,7 +991,7 @@ describe('RankingsManager - Knockout Points', () => {
                         Bob: {
                             points: 8,
                             appearances: 1,
-                            rankingDetail: {}
+                            history: {}
                             // No ELO data
                         }
                     }
@@ -1151,10 +1138,10 @@ describe('RankingsManager - Yearly Rankings', () => {
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 10
                         },
-                        rankingDetail: {
-                            '2024-12-07': { team: 'Blue', totalPoints: 5 },
-                            '2024-12-14': { team: 'White', totalPoints: 6 },
-                            '2024-12-21': { team: 'Blue', totalPoints: 7 }
+                        history: {
+                            '2024-12-07': { team: 'Blue', points: { total: 5 } },
+                            '2024-12-14': { team: 'White', points: { total: 6 } },
+                            '2024-12-21': { team: 'Blue', points: { total: 7 } }
                         }
                     },
                     Bob: {
@@ -1163,9 +1150,9 @@ describe('RankingsManager - Yearly Rankings', () => {
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 8
                         },
-                        rankingDetail: {
-                            '2024-12-07': { team: 'White', totalPoints: 4 },
-                            '2024-12-21': { team: 'Blue', totalPoints: 5 }
+                        history: {
+                            '2024-12-07': { team: 'White', points: { total: 4 } },
+                            '2024-12-21': { team: 'Blue', points: { total: 5 } }
                         }
                     },
                     Charlie: {
@@ -1174,9 +1161,9 @@ describe('RankingsManager - Yearly Rankings', () => {
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 15
                         },
-                        rankingDetail: {
-                            '2024-12-14': { team: 'Blue', totalPoints: 8 },
-                            '2024-12-28': { team: 'White', totalPoints: 9 }
+                        history: {
+                            '2024-12-14': { team: 'Blue', points: { total: 8 } },
+                            '2024-12-28': { team: 'White', points: { total: 9 } }
                         }
                     }
                 }
@@ -1213,8 +1200,8 @@ describe('RankingsManager - Yearly Rankings', () => {
                             lastDecayAt: '2024-12-31',
                             gamesPlayed: 10
                         },
-                        rankingDetail: {
-                            '2024-12-21': { team: 'Blue', totalPoints: 7 }
+                        history: {
+                            '2024-12-21': { team: 'Blue', points: { total: 7 } }
                         }
                     },
                     Bob: {

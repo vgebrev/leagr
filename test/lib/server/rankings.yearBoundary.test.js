@@ -162,27 +162,28 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1210, gamesPlayed: 161 },
                         attackingRating: 0.8,
                         controlRating: 0.7,
-                        rankingDetail: {
+                        history: {
                             '2026-01-04': {
-                                eloRating: 1205,
-                                eloGames: 147,
-                                attackingRating: 0.75,
-                                controlRating: 0.68,
-                                team: 'Blue'
+                                team: 'Blue',
+                                ratings: {
+                                    elo: 1205,
+                                    eloGames: 147,
+                                    attacking: 0.75,
+                                    control: 0.68
+                                }
                             },
                             '2026-01-11': {
-                                eloRating: 1207,
-                                eloGames: 154,
-                                attackingRating: 0.77,
-                                controlRating: 0.69,
-                                team: 'White'
+                                team: 'White',
+                                ratings: {
+                                    elo: 1207,
+                                    eloGames: 154,
+                                    attacking: 0.77,
+                                    control: 0.69
+                                }
                             },
                             '2026-01-18': {
-                                eloRating: 1210,
-                                eloGames: 161,
-                                attackingRating: 0.8,
-                                controlRating: 0.7,
-                                team: 'Blue'
+                                team: 'Blue',
+                                ratings: { elo: 1210, eloGames: 161, attacking: 0.8, control: 0.7 }
                             }
                         }
                     },
@@ -193,27 +194,28 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1095, gamesPlayed: 147 },
                         attackingRating: 0.6,
                         controlRating: 0.8,
-                        rankingDetail: {
+                        history: {
                             '2026-01-04': {
-                                eloRating: 1098,
-                                eloGames: 133,
-                                attackingRating: 0.58,
-                                controlRating: 0.78,
-                                team: 'White'
+                                team: 'White',
+                                ratings: {
+                                    elo: 1098,
+                                    eloGames: 133,
+                                    attacking: 0.58,
+                                    control: 0.78
+                                }
                             },
                             '2026-01-11': {
-                                eloRating: 1096,
-                                eloGames: 140,
-                                attackingRating: 0.59,
-                                controlRating: 0.79,
-                                team: 'Blue'
+                                team: 'Blue',
+                                ratings: {
+                                    elo: 1096,
+                                    eloGames: 140,
+                                    attacking: 0.59,
+                                    control: 0.79
+                                }
                             },
                             '2026-01-18': {
-                                eloRating: 1095,
-                                eloGames: 147,
-                                attackingRating: 0.6,
-                                controlRating: 0.8,
-                                team: 'White'
+                                team: 'White',
+                                ratings: { elo: 1095, eloGames: 147, attacking: 0.6, control: 0.8 }
                             }
                         }
                     }
@@ -235,12 +237,14 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1200, gamesPlayed: 140 },
                         attackingRating: 0.75,
                         controlRating: 0.65,
-                        rankingDetail: {
+                        history: {
                             '2025-12-28': {
-                                eloRating: 1200,
-                                eloGames: 140,
-                                attackingRating: 0.75,
-                                controlRating: 0.65
+                                ratings: {
+                                    elo: 1200,
+                                    eloGames: 140,
+                                    attacking: 0.75,
+                                    control: 0.65
+                                }
                             }
                         }
                     },
@@ -250,12 +254,14 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1100, gamesPlayed: 126 },
                         attackingRating: 0.55,
                         controlRating: 0.75,
-                        rankingDetail: {
+                        history: {
                             '2025-12-28': {
-                                eloRating: 1100,
-                                eloGames: 126,
-                                attackingRating: 0.55,
-                                controlRating: 0.75
+                                ratings: {
+                                    elo: 1100,
+                                    eloGames: 126,
+                                    attacking: 0.55,
+                                    control: 0.75
+                                }
                             }
                         }
                     },
@@ -265,12 +271,9 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1300, gamesPlayed: 175 }, // Established veteran
                         attackingRating: 0.9,
                         controlRating: 0.85,
-                        rankingDetail: {
+                        history: {
                             '2025-12-28': {
-                                eloRating: 1300,
-                                eloGames: 175,
-                                attackingRating: 0.9,
-                                controlRating: 0.85
+                                ratings: { elo: 1300, eloGames: 175, attacking: 0.9, control: 0.85 }
                             }
                         }
                     }
@@ -356,12 +359,9 @@ describe('Rankings Year Boundary Scenarios', () => {
                         elo: { rating: 1205, gamesPlayed: 147 },
                         attackingRating: 0.8,
                         controlRating: 0.7,
-                        rankingDetail: {
+                        history: {
                             '2026-01-04': {
-                                eloRating: 1205,
-                                eloGames: 147,
-                                attackingRating: 0.8,
-                                controlRating: 0.7
+                                ratings: { elo: 1205, eloGames: 147, attacking: 0.8, control: 0.7 }
                             }
                         }
                     }
@@ -376,10 +376,9 @@ describe('Rankings Year Boundary Scenarios', () => {
                         points: 150,
                         appearances: 20,
                         elo: { rating: 1200, gamesPlayed: 140 },
-                        rankingDetail: {
+                        history: {
                             '2025-12-28': {
-                                eloRating: 1200,
-                                eloGames: 140
+                                ratings: { elo: 1200, eloGames: 140 }
                             }
                         }
                     }
@@ -431,16 +430,14 @@ describe('Rankings Year Boundary Scenarios', () => {
                         points: 180,
                         appearances: 25,
                         elo: { rating: 1200, gamesPlayed: 175, lastDecayAt: '2025-12-21' },
-                        rankingDetail: {
+                        history: {
                             '2025-12-21': {
                                 team: 'Blue',
-                                totalPoints: 10,
-                                eloRating: 1200,
-                                eloGames: 175
+                                points: { total: 10 },
+                                ratings: { elo: 1200, eloGames: 175 }
                             },
                             '2025-12-28': {
-                                team: null, // Dan missed this session
-                                totalPoints: 0
+                                ratings: {} // Dan missed this session (non-appearance entry)
                             }
                         }
                     }

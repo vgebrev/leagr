@@ -13,6 +13,8 @@
      */
     let { playerName = $bindable(null), open = $bindable(false), date = null } = $props();
 
+    const year = $derived(date ? date.substring(0, 4) : null);
+
     let playerData = $state(null);
     let playerDisplayData = $derived.by(() => {
         if (!playerData) return null;
@@ -54,8 +56,6 @@
 
         await withLoading(
             async () => {
-                // Extract year from date (YYYY-MM-DD format) to load from correct rankings file
-                const year = date ? date.substring(0, 4) : null;
                 const params = new SvelteURLSearchParams({ limit: '0' });
                 if (year) params.set('year', year);
                 if (date) params.set('date', date);
@@ -118,7 +118,7 @@
             <div class="text-gray-500">Loading...</div>
         </div>
     {:else if loadingError}
-        <div class="p-4 text-center text-sm text-gray-400">New player - no stats yet</div>
+        <div class="p-4 text-center text-sm text-gray-400">No stats for {year} yet</div>
     {:else if playerData}
         <PlayerSummaryCard
             playerData={playerDisplayData}

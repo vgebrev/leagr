@@ -6,6 +6,61 @@ import { createStandingsManager } from './standings.js';
 import { createDisciplineManager } from './discipline.js';
 import * as fuzzball from 'fuzzball';
 
+/** @typedef {import('../shared/types.js').Match} Match */
+/** @typedef {import('../shared/types.js').Round} Round */
+/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
+
+/**
+ * @typedef {{home: string, away: string, homeScore: number, awayScore: number}} MatchResult
+ */
+
+/**
+ * @typedef {Match & { round?: string }} KnockoutMatch
+ */
+
+/**
+ * @typedef {{points: number, gf: number, ga: number}} TeamStats
+ */
+
+/**
+ * @typedef {{rating: number, lastDecayAt: string | null, gamesPlayed: number}} PlayerElo
+ */
+
+/**
+ * @typedef {{rating: number, gamesPlayed: number, lastAppearance?: string | null}} EloCarryOver
+ */
+
+/** @typedef {Record<string, any>} RankingDetailEntry */
+
+/** @typedef {Record<string, any>} PlayerRankingData */
+
+/**
+ * @typedef {Object} RankingMetadata
+ * @property {number} globalAverage
+ * @property {number} minAverage
+ * @property {number} maxAppearances
+ * @property {number} confidenceThreshold
+ * @property {number} [confidenceFraction]
+ * @property {number} [pullStrength]
+ * @property {number} [totalPlayers]
+ * @property {string} lastCalculated
+ */
+
+/**
+ * @typedef {Object} RankingsData
+ * @property {string | null} lastUpdated
+ * @property {string[]} calculatedDates
+ * @property {Record<string, PlayerRankingData>} players
+ * @property {RankingMetadata} [rankingMetadata]
+ */
+
+/**
+ * @typedef {Object} SessionData
+ * @property {Record<string, string[]>} [teams]
+ * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: Match[] } }} [games]
+ * @property {{ discipline?: { enabled?: boolean } }} [settings]
+ */
+
 const rankingsMutexes = new Map();
 
 const BONUS_MULTIPLIER = 2;
@@ -118,7 +173,7 @@ export class RankingsManager {
 
     /**
      * Save rankings without mutex protection (internal use)
-     * @param {Object} rankings - Rankings data to save
+     * @param {RankingsData} rankings - Rankings data to save
      * @param {number} [year] - Year to save rankings for (defaults to current year)
      * @returns {Promise<void>}
      */
@@ -128,7 +183,7 @@ export class RankingsManager {
 
     /**
      * Check if session has any completed games (games with scores)
-     * @param {Object} sessionData - Session data containing games
+     * @param {SessionData} sessionData - Session data containing games
      * @returns {boolean} - True if there are completed games
      */
     hasCompletedGames(sessionData) {
@@ -160,15 +215,20 @@ export class RankingsManager {
 
     /**
      * Extract match results from game rounds
-     * @param {Array} rounds - Game rounds data
-     * @returns {Array} - Match results
+     * @param {Round[]} rounds - Game rounds data
+     * @returns {MatchResult[]} - Match results
      */
     getMatchResults(rounds) {
         const results = [];
         for (const round of rounds) {
             for (const game of round) {
                 const { home, away, homeScore, awayScore } = game;
-                if (homeScore !== null && awayScore !== null) {
+                if (
+                    homeScore != null &&
+                    awayScore != null &&
+                    typeof home === 'string' &&
+                    typeof away === 'string'
+                ) {
                     results.push({ home, away, homeScore, awayScore });
                 }
             }
@@ -178,11 +238,12 @@ export class RankingsManager {
 
     /**
      * Calculate team statistics from match results
-     * @param {Array} teamNames - Team names
-     * @param {Array} results - Match results
-     * @returns {Object} - Team statistics
+     * @param {string[]} teamNames - Team names
+     * @param {MatchResult[]} results - Match results
+     * @returns {Record<string, TeamStats>} - Team statistics
      */
     getTeamStats(teamNames, results) {
+        /** @type {Record<string, TeamStats>} */
         const stats = {};
 
         for (const name of teamNames) {
@@ -218,9 +279,9 @@ export class RankingsManager {
 
     /**
      * Calculate team standings from match results
-     * @param {Array} teamNames - Team names
-     * @param {Array} results - Match results
-     * @returns {Object} - Team standings
+     * @param {string[]} teamNames - Team names
+     * @param {MatchResult[]} results - Match results
+     * @returns {Record<string, number>} - Team standings
      */
     getStandings(teamNames, results) {
         const stats = this.getTeamStats(teamNames, results);
@@ -237,6 +298,7 @@ export class RankingsManager {
             return b.gf - a.gf;
         });
 
+        /** @type {Record<string, number>} */
         const standings = {};
         ranked.forEach((entry, index) => {
             standings[entry.name] = index;
@@ -247,8 +309,8 @@ export class RankingsManager {
 
     /**
      * Add knockout game goals to team stats
-     * @param {Object} teamStats - Team statistics object to update
-     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Record<string, TeamStats>} teamStats - Team statistics object to update
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
      */
     addKnockoutGoalsToTeamStats(teamStats, knockoutBracket) {
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -257,7 +319,11 @@ export class RankingsManager {
 
         for (const match of knockoutBracket) {
             // Skip bye matches and incomplete matches
-            if (match.bye || match.homeScore === null || match.awayScore === null) {
+            if (match.bye || match.homeScore == null || match.awayScore == null) {
+                continue;
+            }
+
+            if (typeof match.home !== 'string' || typeof match.away !== 'string') {
                 continue;
             }
 
@@ -276,11 +342,12 @@ export class RankingsManager {
 
     /**
      * Calculate knockout points for players based on knockout game results
-     * @param {Array} knockoutBracket - Knockout tournament bracket
-     * @param {Object} teams - Teams data with player lists
-     * @returns {Object} Player knockout wins count
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @param {Record<string, string[]>} teams - Teams data with player lists
+     * @returns {Record<string, number>} Player knockout wins count
      */
     getKnockoutPoints(knockoutBracket, teams) {
+        /** @type {Record<string, number>} */
         const playerKnockoutWins = {};
 
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -294,7 +361,7 @@ export class RankingsManager {
             if (match.bye) {
                 // Bye match: automatically advance the non-bye team
                 winner = match.home === 'BYE' ? match.away : match.home;
-            } else if (match.homeScore !== null && match.awayScore !== null) {
+            } else if (match.homeScore != null && match.awayScore != null) {
                 // Regular completed match: determine winner by score
                 if (match.homeScore > match.awayScore) {
                     winner = match.home;
@@ -323,10 +390,11 @@ export class RankingsManager {
     /**
      * Determine cup progress for each team based on knockout bracket results
      * Returns the furthest round each team reached (raw round name from bracket)
-     * @param {Array} knockoutBracket - Knockout tournament bracket
-     * @returns {Object} Map of team names to cup progress (raw round names or 'winner')
+     * @param {KnockoutMatch[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @returns {Record<string, string>} Map of team names to cup progress (raw round names or 'winner')
      */
     getTeamCupProgress(knockoutBracket) {
+        /** @type {Record<string, string>} */
         const cupProgress = {};
 
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -335,7 +403,7 @@ export class RankingsManager {
 
         // Check if there are any completed knockout matches
         const hasCompletedMatches = knockoutBracket.some(
-            (match) => match.homeScore !== null && match.awayScore !== null
+            (match) => match.homeScore != null && match.awayScore != null
         );
 
         if (!hasCompletedMatches) {
@@ -343,31 +411,46 @@ export class RankingsManager {
         }
 
         // Track which teams participated in each round and their results
+        /** @type {Record<string, { rounds: Set<string>, wonFinal: boolean }>} */
         const teamRounds = {};
 
         for (const match of knockoutBracket) {
-            if (match.homeScore === null || match.awayScore === null) {
+            if (match.homeScore == null || match.awayScore == null) {
                 continue; // Skip incomplete matches
             }
 
             const { home, away, homeScore, awayScore, round } = match;
-            const winner = homeScore > awayScore ? home : away;
+            if (typeof home !== 'string' || typeof away !== 'string') {
+                continue;
+            }
+            let winner;
+            if (homeScore > awayScore) {
+                winner = home;
+            } else if (awayScore > homeScore) {
+                winner = away;
+            } else if (match.homePenalties != null && match.awayPenalties != null) {
+                winner = match.homePenalties > match.awayPenalties ? home : away;
+            } else {
+                continue; // unresolved draw, skip
+            }
+            const roundName = round ?? 'unknown';
 
             // Initialize team tracking
             if (!teamRounds[home]) teamRounds[home] = { rounds: new Set(), wonFinal: false };
             if (!teamRounds[away]) teamRounds[away] = { rounds: new Set(), wonFinal: false };
 
             // Track participation in this round
-            teamRounds[home].rounds.add(round);
-            teamRounds[away].rounds.add(round);
+            teamRounds[home].rounds.add(roundName);
+            teamRounds[away].rounds.add(roundName);
 
             // Track final winner
-            if (round === 'final') {
+            if (roundName === 'final') {
                 teamRounds[winner].wonFinal = true;
             }
         }
 
         // Helper to get team count from round name for sorting
+        /** @param {string} roundName */
         const getTeamCount = (roundName) => {
             if (roundName === 'final') return 2;
             if (roundName === 'semi') return 4;
@@ -395,10 +478,11 @@ export class RankingsManager {
 
     /**
      * Convert team standings to league positions (1-indexed)
-     * @param {Object} standings - Team standings object (team name -> 0-indexed position)
-     * @returns {Object} Map of team names to league positions (1-indexed)
+     * @param {Record<string, number>} standings - Team standings object (team name -> 0-indexed position)
+     * @returns {Record<string, number>} Map of team names to league positions (1-indexed)
      */
     getLeaguePositions(standings) {
+        /** @type {Record<string, number>} */
         const positions = {};
         for (const [teamName, zeroIndexedPosition] of Object.entries(standings)) {
             positions[teamName] = zeroIndexedPosition + 1;
@@ -408,12 +492,12 @@ export class RankingsManager {
 
     /**
      * Process ELO ratings for all games in a session
-     * @param {Map} playerTracker - Map of all player data
-     * @param {Object} teams - Teams data with player lists
-     * @param {Array} rounds - Game rounds data
-     * @param {Array} knockoutBracket - Knockout tournament bracket
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
+     * @param {Record<string, string[]>} teams - Teams data with player lists
+     * @param {Round[]} rounds - Game rounds data
+     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
      * @param {string} date - Current session date
-     * @param {Object} eloCarryOver - ELO carry-over data from previous year
+     * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
      */
     processEloRatings(playerTracker, teams, rounds, knockoutBracket, date, eloCarryOver = {}) {
         // Apply ELO decay to all players before processing games for this date
@@ -423,7 +507,12 @@ export class RankingsManager {
         for (const round of rounds) {
             for (const game of round) {
                 const { home, away, homeScore, awayScore } = game;
-                if (homeScore !== null && awayScore !== null) {
+                if (
+                    homeScore != null &&
+                    awayScore != null &&
+                    typeof home === 'string' &&
+                    typeof away === 'string'
+                ) {
                     const homeTeam = teams[home] || [];
                     const awayTeam = teams[away] || [];
                     this.updateEloRatingsForGame(
@@ -442,7 +531,12 @@ export class RankingsManager {
         // Process ELO ratings for knockout games
         if (knockoutBracket && Array.isArray(knockoutBracket)) {
             for (const match of knockoutBracket) {
-                if (match.homeScore !== null && match.awayScore !== null) {
+                if (
+                    match.homeScore != null &&
+                    match.awayScore != null &&
+                    typeof match.home === 'string' &&
+                    typeof match.away === 'string'
+                ) {
                     const homeTeam = teams[match.home] || [];
                     const awayTeam = teams[match.away] || [];
                     this.updateEloRatingsForGame(
@@ -452,7 +546,9 @@ export class RankingsManager {
                         match.homeScore,
                         match.awayScore,
                         'cup',
-                        eloCarryOver
+                        eloCarryOver,
+                        match.homePenalties ?? null,
+                        match.awayPenalties ?? null
                     );
                 }
             }
@@ -499,8 +595,8 @@ export class RankingsManager {
 
     /**
      * Calculate team average ELO rating from player ratings
-     * @param {string[]} players - Array of player names (may contain nulls)
-     * @param {Object} playerRatings - Player rankings data
+     * @param {Array<string | null | undefined>} players - Array of player names (may contain nulls)
+     * @param {Record<string, PlayerRankingData>} playerRatings - Player rankings data
      * @returns {number} - Average ELO rating of team (ignoring nulls)
      */
     calculateTeamEloRating(players, playerRatings) {
@@ -544,13 +640,13 @@ export class RankingsManager {
 
     /**
      * Update player ELO ratings based on game result
-     * @param {Object} playerTracker - Map of all player data
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
      * @param {string[]} homeTeam - Home team player names
      * @param {string[]} awayTeam - Away team player names
      * @param {number} homeScore - Home team score
      * @param {number} awayScore - Away team score
      * @param {string} phase - Game phase ('league' or cup-related)
-     * @param {Object} eloCarryOver - ELO carry-over data from previous year
+     * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
      */
     updateEloRatingsForGame(
         playerTracker,
@@ -559,7 +655,9 @@ export class RankingsManager {
         homeScore,
         awayScore,
         phase,
-        eloCarryOver = {}
+        eloCarryOver = {},
+        homePenalties = null,
+        awayPenalties = null
     ) {
         // Filter out null players
         const homePlayersValid = homeTeam.filter((p) => p !== null && p !== undefined);
@@ -590,6 +688,7 @@ export class RankingsManager {
         });
 
         // Convert playerTracker to simple object for rating calculation
+        /** @type {Record<string, PlayerRankingData>} */
         const playerRatings = {};
         playerTracker.forEach((data, name) => {
             playerRatings[name] = data;
@@ -604,8 +703,19 @@ export class RankingsManager {
         const awayExpected = 1 - homeExpected;
 
         // Calculate actual scores
-        const homeActual = this.calculateActualScore(homeScore, awayScore);
-        const awayActual = 1 - homeActual;
+        let homeActual = this.calculateActualScore(homeScore, awayScore);
+        let awayActual = 1 - homeActual;
+
+        // Penalty winner gets 0.65, loser 0.35 (instead of 0.5/0.5 for a draw)
+        if (homeScore === awayScore && homePenalties != null && awayPenalties != null) {
+            if (homePenalties > awayPenalties) {
+                homeActual = 0.65;
+                awayActual = 0.35;
+            } else if (awayPenalties > homePenalties) {
+                homeActual = 0.35;
+                awayActual = 0.65;
+            }
+        }
 
         // Determine K factor based on phase
         const kFactor = phase === 'league' ? ELO_K_LEAGUE : ELO_K_CUP;
@@ -631,7 +741,7 @@ export class RankingsManager {
 
     /**
      * Apply ELO decay to all players since their last decay date
-     * @param {Map} playerTracker - Map of all player data
+     * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
      * @param {string} currentDate - Current session date (YYYY-MM-DD)
      */
     applyEloDecayToAllPlayers(playerTracker, currentDate) {
@@ -649,9 +759,9 @@ export class RankingsManager {
 
             // If never decayed before, use their first session date as the baseline
             if (!lastDecayDate) {
-                const rankingDetailDates = Object.keys(playerData.rankingDetail || {}).sort();
-                if (rankingDetailDates.length > 0) {
-                    lastDecayDate = rankingDetailDates[0]; // First session date
+                const historyDates = Object.keys(playerData.history || {}).sort();
+                if (historyDates.length > 0) {
+                    lastDecayDate = historyDates[0]; // First session date
                 } else {
                     // No ranking detail yet, use current date (no decay)
                     lastDecayDate = currentDate;
@@ -668,21 +778,20 @@ export class RankingsManager {
     }
 
     /**
-     * Find the last appearance date for a player (last ranking detail where they scored points)
-     * @param {Object} rankingDetail - Player's ranking detail object
+     * Find the last appearance date for a player (last history entry where they scored points)
+     * @param {Record<string, RankingDetailEntry>} history - Player's history object
      * @returns {string|null} - Last appearance date (YYYY-MM-DD) or null if no appearances
      */
-    findLastAppearance(rankingDetail) {
-        if (!rankingDetail || Object.keys(rankingDetail).length === 0) {
+    findLastAppearance(history) {
+        if (!history || Object.keys(history).length === 0) {
             return null;
         }
 
-        // Get all dates where player appeared and scored points, sorted chronologically
-        const appearanceDates = Object.keys(rankingDetail)
+        // Appearance entries have a `points` group; non-appearance entries do not
+        const appearanceDates = Object.keys(history)
             .filter((date) => {
-                const detail = rankingDetail[date];
-                // Player appeared if they have a team and scored any points
-                return detail && detail.team && detail.totalPoints > 0;
+                const entry = history[date];
+                return entry && entry.points && entry.points.total > 0;
             })
             .sort();
 
@@ -691,8 +800,8 @@ export class RankingsManager {
 
     /**
      * Apply hybrid ranking algorithm to raw player data
-     * @param {Object} rawRankings - Rankings with basic points/appearances
-     * @returns {Object} Enhanced rankings with calculated fields
+     * @param {RankingsData} rawRankings - Rankings with basic points/appearances
+     * @returns {RankingsData} Enhanced rankings with calculated fields
      */
     calculateEnhancedRankings(rawRankings) {
         if (!rawRankings || !rawRankings.players || Object.keys(rawRankings.players).length === 0) {
@@ -713,6 +822,7 @@ export class RankingsManager {
         let totalPoints = 0;
         let totalAppearances = 0;
         let maxAppearances = 0;
+        /** @type {number[]} */
         const allAverages = [];
 
         Object.values(rawRankings.players).forEach((player) => {
@@ -727,6 +837,7 @@ export class RankingsManager {
         const confidenceThreshold = Math.max(1, Math.round(maxAppearances * CONFIDENCE_FRACTION));
 
         // Step 2: Calculate enhanced player data
+        /** @type {Record<string, PlayerRankingData>} */
         const enhancedPlayers = {};
 
         Object.entries(rawRankings.players).forEach(([name, data]) => {
@@ -755,14 +866,14 @@ export class RankingsManager {
             // Calculate ranking points (weighted average * max appearances)
             const rankingPoints = weightedAverage * maxAppearances;
 
-            // Find last appearance date (last ranking detail with points scored)
-            const lastAppearance = this.findLastAppearance(data.rankingDetail || {});
+            // Find last appearance date (last history entry with points scored)
+            const lastAppearance = this.findLastAppearance(data.history || {});
 
             enhancedPlayers[name] = {
                 // Original data
                 points: data.points,
                 appearances: data.appearances,
-                rankingDetail: data.rankingDetail || {},
+                history: data.history || {},
 
                 // ELO data
                 elo: data.elo || null,
@@ -838,7 +949,7 @@ export class RankingsManager {
         for (const [playerName, playerData] of Object.entries(previousRankings.players)) {
             if (playerData.elo && playerData.elo.rating !== undefined) {
                 // Find last appearance date for decay tracking across year boundary
-                const lastAppearance = this.findLastAppearance(playerData.rankingDetail);
+                const lastAppearance = this.findLastAppearance(playerData.history);
 
                 eloCarryOver[playerName] = {
                     rating: playerData.elo.rating,
@@ -863,7 +974,7 @@ export class RankingsManager {
             appearances: 0,
             goalsFor: 0,
             goalsAgainst: 0,
-            rankingDetail: {},
+            history: {},
             elo: {
                 rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
                 lastDecayAt: carryOverData?.lastAppearance ?? null, // Carry over last appearance for decay
@@ -989,24 +1100,50 @@ export class RankingsManager {
                         const goalsAgainstPerSession =
                             playerData.goalsAgainst / playerData.appearances;
 
-                        // Store appearance data for this date
-                        playerData.rankingDetail[date] = {
+                        // Store appearance data for this date (grouped structure)
+                        playerData.history[date] = {
                             team: teamName,
-                            appearancePoints,
-                            matchPoints,
-                            bonusPoints,
-                            knockoutPoints,
-                            totalPoints: totalDatePoints,
-                            goalsForPerSession: parseFloat(goalsForPerSession.toFixed(2)),
-                            goalsAgainstPerSession: parseFloat(goalsAgainstPerSession.toFixed(2)),
-                            eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
-                            eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
-                            leaguePosition: leaguePositions[teamName] || null,
-                            cupProgress: teamCupProgress[teamName] || null
+                            points: {
+                                appearance: appearancePoints,
+                                match: matchPoints,
+                                bonus: bonusPoints,
+                                knockout: knockoutPoints,
+                                total: totalDatePoints
+                            },
+                            performance: {
+                                leaguePosition: leaguePositions[teamName] || null,
+                                cupProgress: teamCupProgress[teamName] || null,
+                                leagueWinner: false,
+                                cupWinner: false
+                            },
+                            ratings: {
+                                elo: parseFloat(
+                                    (playerData.elo
+                                        ? playerData.elo.rating
+                                        : ELO_BASELINE_RATING
+                                    ).toFixed(4)
+                                ),
+                                eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                                attacking: null,
+                                control: null,
+                                gfRank: null,
+                                gfCount: null,
+                                gaRank: null,
+                                gaCount: null,
+                                goalsForPerSession: parseFloat(goalsForPerSession.toFixed(2)),
+                                goalsAgainstPerSession: parseFloat(
+                                    goalsAgainstPerSession.toFixed(2)
+                                )
+                            },
+                            ranking: {
+                                rank: null,
+                                totalPlayers: null,
+                                rankingPoints: null
+                            }
                         };
 
                         // Add championship flags
-                        this.addChampionshipFlags(playerData.rankingDetail[date], sessionData);
+                        this.addChampionshipFlags(playerData.history[date], sessionData);
                     }
                 }
 
@@ -1031,7 +1168,7 @@ export class RankingsManager {
                 }
 
                 // Calculate and store ranks for all tracked players on this date
-                this.updateRanksForDate(date, playerTracker, playersWhoAppeared);
+                this.updateRanksForDate(date, playerTracker);
             }
 
             // Convert tracker to final rankings format
@@ -1049,7 +1186,7 @@ export class RankingsManager {
 
             // Add championship counts to each player
             Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-                const championships = this.countChampionships(playerData.rankingDetail);
+                const championships = this.countChampionships(playerData.history);
                 playerData.leagueWins = championships.leagueWins;
                 playerData.cupWins = championships.cupWins;
             });
@@ -1066,9 +1203,8 @@ export class RankingsManager {
      * Calculate and store ranks for all tracked players on a specific date
      * @param {string} date - The date to calculate ranks for
      * @param {Map} playerTracker - Map of all player data
-     * @param {Set} playersWhoAppeared - Set of players who appeared this date
      */
-    updateRanksForDate(date, playerTracker, playersWhoAppeared) {
+    updateRanksForDate(date, playerTracker) {
         // Create snapshot of all players' cumulative data up to this date
         const playersForRanking = {};
 
@@ -1076,7 +1212,7 @@ export class RankingsManager {
             playersForRanking[playerName] = {
                 points: playerData.points,
                 appearances: playerData.appearances,
-                rankingDetail: {}, // Not needed for ranking calculation
+                history: {}, // Not needed for ranking calculation
                 elo: playerData.elo // Needed for tiebreaker in rank calculation
             };
         });
@@ -1086,42 +1222,43 @@ export class RankingsManager {
             players: playersForRanking
         });
 
-        // Store rank and total players count for each player
+        // Store rank data for each player
         Object.entries(enhancedSnapshot.players).forEach(([playerName, data]) => {
             const playerData = playerTracker.get(playerName);
 
-            // Ensure an entry exists for this date
-            if (!playerData.rankingDetail[date]) {
-                // If player didn't appear this date, create non-appearance entry
-                if (!playersWhoAppeared.has(playerName)) {
-                    playerData.rankingDetail[date] = {
-                        team: null,
-                        appearancePoints: null,
-                        matchPoints: null,
-                        bonusPoints: null,
-                        knockoutPoints: null,
-                        totalPoints: null,
-                        goalsForPerSession: null,
-                        goalsAgainstPerSession: null,
-                        eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
+            if (!playerData.history[date]) {
+                // Non-appearance entry — only carry forward the fields that change each session
+                playerData.history[date] = {
+                    ratings: {
+                        elo: parseFloat(
+                            (playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING).toFixed(
+                                4
+                            )
+                        ),
                         eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
-                        attackingRating: playerData.attackingRating || null,
-                        controlRating: playerData.controlRating || null
-                    };
-                } else {
-                    // Player appeared but entry wasn't created yet (edge case)
-                    playerData.rankingDetail[date] = {
-                        eloRating: playerData.elo ? playerData.elo.rating : ELO_BASELINE_RATING,
-                        eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0
-                    };
-                }
+                        attacking: playerData.attackingRating ?? null,
+                        control: playerData.controlRating ?? null,
+                        gfRank: playerData.gfRank ?? null,
+                        gfCount: playerData.gfCount ?? null,
+                        gaRank: playerData.gaRank ?? null,
+                        gaCount: playerData.gaCount ?? null,
+                        goalsForPerSession: playerData.goalsForPerSession ?? null,
+                        goalsAgainstPerSession: playerData.goalsAgainstPerSession ?? null
+                    },
+                    ranking: {
+                        rank: data.rank,
+                        totalPlayers: enhancedSnapshot.rankingMetadata.totalPlayers,
+                        rankingPoints: data.rankingPoints
+                    }
+                };
+            } else {
+                // Appearance entry — fill in the ranking group (was set to null placeholders)
+                playerData.history[date].ranking = {
+                    rank: data.rank,
+                    totalPlayers: enhancedSnapshot.rankingMetadata.totalPlayers,
+                    rankingPoints: data.rankingPoints
+                };
             }
-
-            // Add rank data to the entry (whether appearance or non-appearance)
-            playerData.rankingDetail[date].rank = data.rank;
-            playerData.rankingDetail[date].totalPlayers =
-                enhancedSnapshot.rankingMetadata.totalPlayers;
-            playerData.rankingDetail[date].rankingPoints = data.rankingPoints;
         });
     }
 
@@ -1131,7 +1268,7 @@ export class RankingsManager {
      */
     calculateMovementFromHistory(enhancedRankings) {
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-            const dates = Object.keys(playerData.rankingDetail).sort();
+            const dates = Object.keys(playerData.history).sort();
 
             if (dates.length < 2) {
                 // New player or only one date
@@ -1145,8 +1282,8 @@ export class RankingsManager {
             const currentDate = dates[dates.length - 1];
             const previousDate = dates[dates.length - 2];
 
-            const currentRank = playerData.rankingDetail[currentDate].rank;
-            const previousRank = playerData.rankingDetail[previousDate].rank;
+            const currentRank = playerData.history[currentDate].ranking.rank;
+            const previousRank = playerData.history[previousDate].ranking.rank;
 
             playerData.previousRank = previousRank;
             playerData.rankMovement = previousRank - currentRank; // Positive = moved up
@@ -1169,27 +1306,27 @@ export class RankingsManager {
         // Get all unique dates sorted
         const allDates = new Set();
         Object.values(enhancedRankings.players).forEach((playerData) => {
-            Object.keys(playerData.rankingDetail).forEach((date) => allDates.add(date));
+            Object.keys(playerData.history).forEach((date) => allDates.add(date));
         });
         const sortedDates = Array.from(allDates).sort();
 
-        // First pass: calculate goalsForPerSession and goalsAgainstPerSession for all dates
-        // (carrying forward when players don't play)
+        // First pass: carry forward goalsForPerSession / goalsAgainstPerSession into non-appearance entries
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-            const dates = Object.keys(playerData.rankingDetail).sort();
+            const dates = Object.keys(playerData.history).sort();
             let lastGFPerSession = null;
             let lastGAPerSession = null;
 
             dates.forEach((date) => {
-                const detail = playerData.rankingDetail[date];
-                // If player appeared and has goals data, use it
-                if (detail.goalsForPerSession !== null && detail.goalsAgainstPerSession !== null) {
-                    lastGFPerSession = detail.goalsForPerSession;
-                    lastGAPerSession = detail.goalsAgainstPerSession;
+                const entry = playerData.history[date];
+                const gf = entry.ratings.goalsForPerSession;
+                const ga = entry.ratings.goalsAgainstPerSession;
+                if (gf !== null && ga !== null) {
+                    lastGFPerSession = gf;
+                    lastGAPerSession = ga;
                 } else if (lastGFPerSession !== null) {
-                    // Player didn't play - carry forward last values (for all players, not just 35+)
-                    detail.goalsForPerSession = lastGFPerSession;
-                    detail.goalsAgainstPerSession = lastGAPerSession;
+                    // Non-appearance — carry forward last values
+                    entry.ratings.goalsForPerSession = lastGFPerSession;
+                    entry.ratings.goalsAgainstPerSession = lastGAPerSession;
                 }
             });
         });
@@ -1204,35 +1341,30 @@ export class RankingsManager {
             const gaValuesAll = [];
 
             Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-                const detail = playerData.rankingDetail[date];
+                const entry = playerData.history[date];
                 const hasGoalsData =
-                    detail &&
-                    detail.goalsForPerSession !== null &&
-                    detail.goalsAgainstPerSession !== null;
+                    entry &&
+                    entry.ratings.goalsForPerSession !== null &&
+                    entry.ratings.goalsAgainstPerSession !== null;
 
                 if (hasGoalsData) {
-                    // All players with goals data go into ranking lists
-                    gfValuesAll.push(detail.goalsForPerSession);
-                    gaValuesAll.push(detail.goalsAgainstPerSession);
+                    gfValuesAll.push(entry.ratings.goalsForPerSession);
+                    gaValuesAll.push(entry.ratings.goalsAgainstPerSession);
 
-                    // Only established players contribute to normalization bounds
-                    const gamesPlayed = detail.eloGames ?? 0;
+                    const gamesPlayed = entry.ratings.eloGames ?? 0;
                     if (gamesPlayed >= MIN_GAMES_FOR_NORMALIZATION_POOL) {
-                        gfValuesEstablished.push(detail.goalsForPerSession);
-                        gaValuesEstablished.push(detail.goalsAgainstPerSession);
+                        gfValuesEstablished.push(entry.ratings.goalsForPerSession);
+                        gaValuesEstablished.push(entry.ratings.goalsAgainstPerSession);
                     }
                 }
             });
 
-            // Store min/max and ranking lists for this date
             if (gfValuesEstablished.length > 0) {
                 dateMinMax[date] = {
-                    // Min/max from established players only
                     minGF: Math.min(...gfValuesEstablished),
                     maxGF: Math.max(...gfValuesEstablished),
                     minGA: Math.min(...gaValuesEstablished),
                     maxGA: Math.max(...gaValuesEstablished),
-                    // Ranking lists include ALL players
                     gfList: gfValuesAll.slice().sort((a, b) => b - a), // Desc for GF
                     gaList: gaValuesAll.slice().sort((a, b) => a - b) // Asc for GA
                 };
@@ -1241,7 +1373,7 @@ export class RankingsManager {
 
         // Third pass: calculate normalized ratings using date-specific min/max
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-            const dates = Object.keys(playerData.rankingDetail).sort();
+            const dates = Object.keys(playerData.history).sort();
             let latestAttackingRating = null;
             let latestControlRating = null;
             let latestGfRank = null;
@@ -1252,95 +1384,66 @@ export class RankingsManager {
             let latestGoalsAgainstPerSession = null;
 
             dates.forEach((date) => {
-                const detail = playerData.rankingDetail[date];
+                const entry = playerData.history[date];
+                const r = entry.ratings;
 
-                // Calculate rating for ALL players who have goals data, using established players' bounds
-                // Players with <35 games still get ratings, they're just normalized against the established pool
                 if (
                     dateMinMax[date] &&
-                    detail.goalsForPerSession !== null &&
-                    detail.goalsAgainstPerSession !== null
+                    r.goalsForPerSession !== null &&
+                    r.goalsAgainstPerSession !== null
                 ) {
-                    const { minGF, maxGF, minGA, maxGA } = dateMinMax[date];
-                    const gfList = dateMinMax[date].gfList;
-                    const gaList = dateMinMax[date].gaList;
+                    const { minGF, maxGF, minGA, maxGA, gfList, gaList } = dateMinMax[date];
                     const gfRange = maxGF - minGF;
                     const gaRange = maxGA - minGA;
 
-                    // Min-max normalization (0-1 scale)
-                    // New players may fall outside [0,1] range if their stats exceed established bounds
-                    let attackingRating = 0.5; // Default to middle if no range
+                    let attacking = 0.5;
                     if (gfRange > 0) {
-                        attackingRating = (detail.goalsForPerSession - minGF) / gfRange;
-                        // Clamp to [0, 1] - new players with exceptional stats get capped
-                        attackingRating = Math.max(0, Math.min(1, attackingRating));
+                        attacking = (r.goalsForPerSession - minGF) / gfRange;
+                        attacking = Math.max(0, Math.min(1, attacking));
                     }
 
-                    // Control: lower GA/session is better (invert the scale)
-                    let controlRating = 0.5; // Default to middle if no range
+                    let control = 0.5;
                     if (gaRange > 0) {
-                        controlRating = (maxGA - detail.goalsAgainstPerSession) / gaRange;
-                        // Clamp to [0, 1]
-                        controlRating = Math.max(0, Math.min(1, controlRating));
+                        control = (maxGA - r.goalsAgainstPerSession) / gaRange;
+                        control = Math.max(0, Math.min(1, control));
                     }
 
-                    // Store in rankingDetail for this date
-                    detail.attackingRating = parseFloat(attackingRating.toFixed(3));
-                    detail.controlRating = parseFloat(controlRating.toFixed(3));
+                    r.attacking = parseFloat(attacking.toFixed(3));
+                    r.control = parseFloat(control.toFixed(3));
 
-                    // Calculate rank for all players (including new ones) against the established pool
-                    // This gives new players context of where they stand relative to trusted players
                     const gfRank =
                         gfList?.length > 0
-                            ? gfList.findIndex((v) => v === detail.goalsForPerSession) + 1
+                            ? gfList.findIndex((v) => v === r.goalsForPerSession) + 1
                             : null;
                     const gaRank =
                         gaList?.length > 0
-                            ? gaList.findIndex((v) => v === detail.goalsAgainstPerSession) + 1
+                            ? gaList.findIndex((v) => v === r.goalsAgainstPerSession) + 1
                             : null;
-                    // If player's value isn't in the established list, they rank outside (count + 1)
-                    // or we can leave as null - for now, store null if not found in list
-                    detail.gfRank = gfRank > 0 ? gfRank : null;
-                    detail.gfCount = gfList?.length || null;
-                    detail.gaRank = gaRank > 0 ? gaRank : null;
-                    detail.gaCount = gaList?.length || null;
+                    r.gfRank = gfRank > 0 ? gfRank : null;
+                    r.gfCount = gfList?.length || null;
+                    r.gaRank = gaRank > 0 ? gaRank : null;
+                    r.gaCount = gaList?.length || null;
 
-                    // Track latest for player-level data
-                    latestAttackingRating = detail.attackingRating;
-                    latestControlRating = detail.controlRating;
-                    latestGfRank = gfRank > 0 ? gfRank : null;
-                    latestGfCount = gfList?.length || null;
-                    latestGaRank = gaRank > 0 ? gaRank : null;
-                    latestGaCount = gaList?.length || null;
-                    latestGoalsForPerSession =
-                        detail.goalsForPerSession ?? latestGoalsForPerSession;
+                    latestAttackingRating = r.attacking;
+                    latestControlRating = r.control;
+                    latestGfRank = r.gfRank;
+                    latestGfCount = r.gfCount;
+                    latestGaRank = r.gaRank;
+                    latestGaCount = r.gaCount;
+                    latestGoalsForPerSession = r.goalsForPerSession ?? latestGoalsForPerSession;
                     latestGoalsAgainstPerSession =
-                        detail.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
-                } else if (
-                    detail.goalsForPerSession === null ||
-                    detail.goalsAgainstPerSession === null
-                ) {
-                    // Player has no goals data yet (first session not processed yet)
-                    detail.attackingRating = null;
-                    detail.controlRating = null;
-                    detail.gfRank = null;
-                    detail.gfCount = null;
-                    detail.gaRank = null;
-                    detail.gaCount = null;
+                        r.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
+                } else if (r.goalsForPerSession === null || r.goalsAgainstPerSession === null) {
+                    // No goals data yet — leave attacking/control/ranks as null (already set)
                 } else {
-                    // No established players yet to form normalization bounds - use neutral 0.5
-                    detail.attackingRating = 0.5;
-                    detail.controlRating = 0.5;
-                    detail.gfRank = null;
-                    detail.gfCount = null;
-                    detail.gaRank = null;
-                    detail.gaCount = null;
+                    // Goals data present but no established pool yet — use neutral 0.5
+                    r.attacking = 0.5;
+                    r.control = 0.5;
                     latestAttackingRating = 0.5;
                     latestControlRating = 0.5;
-                    latestGoalsForPerSession =
-                        detail.goalsForPerSession ?? latestGoalsForPerSession;
+                    latestGoalsForPerSession = r.goalsForPerSession ?? latestGoalsForPerSession;
                     latestGoalsAgainstPerSession =
-                        detail.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
+                        r.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
                 }
             });
 
@@ -1444,37 +1547,44 @@ export class RankingsManager {
         }
 
         // Return winner of final match
-        return finalMatch.homeScore > finalMatch.awayScore ? finalMatch.home : finalMatch.away;
+        if (finalMatch.homeScore > finalMatch.awayScore) return finalMatch.home;
+        if (finalMatch.awayScore > finalMatch.homeScore) return finalMatch.away;
+        if (finalMatch.homePenalties != null && finalMatch.awayPenalties != null) {
+            return finalMatch.homePenalties > finalMatch.awayPenalties
+                ? finalMatch.home
+                : finalMatch.away;
+        }
+        return null;
     }
 
     /**
      * Add championship flags to a ranking detail entry
-     * @param {Object} rankingDetail - Ranking detail entry to modify
+     * @param {Object} historyEntry - History entry to modify
      * @param {Object} sessionData - Session data for determining winners
-     * @returns {Object} - Modified ranking detail with championship flags
+     * @returns {Object} - Modified history entry with championship flags
      */
-    addChampionshipFlags(rankingDetail, sessionData) {
+    addChampionshipFlags(historyEntry, sessionData) {
         const leagueWinner = this.getLeagueWinner(sessionData);
         const cupWinner = this.getCupWinner(sessionData);
 
-        rankingDetail.leagueWinner = rankingDetail.team === leagueWinner;
-        rankingDetail.cupWinner = rankingDetail.team === cupWinner;
+        historyEntry.performance.leagueWinner = historyEntry.team === leagueWinner;
+        historyEntry.performance.cupWinner = historyEntry.team === cupWinner;
 
-        return rankingDetail;
+        return historyEntry;
     }
 
     /**
      * Count championships from ranking detail entries
-     * @param {Object} rankingDetail - Object containing ranking details by date
+     * @param {Object} history - Player history object keyed by date
      * @returns {Object} - Object with leagueWins and cupWins counts
      */
-    countChampionships(rankingDetail) {
+    countChampionships(history) {
         let leagueWins = 0;
         let cupWins = 0;
 
-        Object.values(rankingDetail).forEach((entry) => {
-            if (entry.leagueWinner === true) leagueWins++;
-            if (entry.cupWinner === true) cupWins++;
+        Object.values(history).forEach((entry) => {
+            if (entry.performance?.leagueWinner === true) leagueWins++;
+            if (entry.performance?.cupWinner === true) cupWins++;
         });
 
         return { leagueWins, cupWins };

@@ -3,12 +3,73 @@ import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
 
+/** @typedef {import('../shared/types.js').Match} Match */
+/** @typedef {import('../shared/types.js').Round} Round */
+/** @typedef {import('../shared/types.js').YearRecapData} YearRecapData */
+/** @typedef {import('../shared/types.js').YearRecapOverview} YearRecapOverview */
+/** @typedef {import('../shared/types.js').YearRecapIronManEntry} YearRecapIronManEntry */
+/** @typedef {import('../shared/types.js').YearRecapMostImprovedEntry} YearRecapMostImprovedEntry */
+/** @typedef {import('../shared/types.js').YearRecapKingOfKingsEntry} YearRecapKingOfKingsEntry */
+/** @typedef {import('../shared/types.js').YearRecapPlayersFavourite} YearRecapPlayersFavourite */
+/** @typedef {import('../shared/types.js').YearRecapPlayerOfYearEntry} YearRecapPlayerOfYearEntry */
+/** @typedef {import('../shared/types.js').YearRecapTeamOfYearEntry} YearRecapTeamOfYearEntry */
+/** @typedef {import('../shared/types.js').YearRecapDreamTeamEntry} YearRecapDreamTeamEntry */
+/** @typedef {import('../shared/types.js').YearRecapTeamHighlight} YearRecapTeamHighlight */
+/** @typedef {import('../shared/types.js').YearRecapTrueColoursEntry} YearRecapTrueColoursEntry */
+/** @typedef {import('../shared/types.js').YearRecapBottle} YearRecapBottle */
+/** @typedef {import('../shared/types.js').YearRecapFunFacts} YearRecapFunFacts */
+/** @typedef {import('../shared/types.js').YearRecapTeamRecord} YearRecapTeamRecord */
+/** @typedef {import('../shared/types.js').YearRecapPlayerAvatar} YearRecapPlayerAvatar */
+
+/**
+ * @typedef {Object} YearRecapSession
+ * @property {string} date
+ * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: Match[] }, knockout?: { bracket?: Match[] } }} [games]
+ * @property {Record<string, string[]>} [teams]
+ */
+
+/**
+ * @typedef {Object} YearRecapTeamStats
+ * @property {string} sessionDate
+ * @property {string} teamName
+ * @property {number} wins
+ * @property {number} draws
+ * @property {number} losses
+ * @property {number} goalsFor
+ * @property {number} goalsAgainst
+ * @property {number} goalDifference
+ * @property {number} totalGames
+ * @property {number} points
+ * @property {number} totalAvailablePoints
+ * @property {number} pointsPercentage
+ * @property {string[]} players
+ * @property {YearRecapTeamRecord} leagueStats
+ * @property {YearRecapTeamRecord} cupStats
+ */
+
+/**
+ * @typedef {Object} RankingsData
+ * @property {string[]} calculatedDates
+ * @property {Record<string, any>} players
+ */
+
+/** @typedef {Record<string, { avatar?: string | null }>} AvatarMap */
+
 /**
  * Year Recap Manager - Handles aggregation and calculation of yearly statistics
  */
 export class YearRecapManager {
     constructor() {
         this.leagueId = null;
+        this.currentYear = null;
+    }
+
+    /** @returns {string} */
+    #requireLeagueId() {
+        if (!this.leagueId) {
+            throw new Error('League ID must be set before accessing data path');
+        }
+        return this.leagueId;
     }
 
     /**
@@ -26,19 +87,17 @@ export class YearRecapManager {
      * @returns {string} - Data path
      */
     getDataPath() {
-        if (!this.leagueId) {
-            throw new Error('League ID must be set before accessing data path');
-        }
-        return getLeagueDataPath(this.leagueId);
+        return getLeagueDataPath(this.#requireLeagueId());
     }
 
     /**
      * Load all session files for a given year
      * @param {number} year - Year to load sessions for
-     * @returns {Promise<Array>} - Array of session objects with date and data
+     * @returns {Promise<YearRecapSession[]>} - Array of session objects with date and data
      */
     async loadYearSessions(year) {
-        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
+        const leagueId = this.#requireLeagueId();
+        const rankingsManager = createRankingsManager().setLeague(leagueId);
         const dataPath = this.getDataPath();
         const allFiles = await fs.readdir(dataPath);
         const sessionFiles = rankingsManager.filterSessionFilesByYear(
@@ -46,6 +105,7 @@ export class YearRecapManager {
             year
         );
 
+        /** @type {YearRecapSession[]} */
         const sessions = [];
         for (const file of sessionFiles) {
             try {
@@ -70,17 +130,20 @@ export class YearRecapManager {
     /**
      * Generate comprehensive year recap statistics
      * @param {number} year - Year to generate statistics for
-     * @returns {Promise<Object>} - Year recap statistics
+     * @returns {Promise<YearRecapData>} - Year recap statistics
      */
     async generateYearRecap(year) {
+        const leagueId = this.#requireLeagueId();
         // Store year for use in other methods
         this.currentYear = year;
 
-        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
-        const rankingsData = await rankingsManager.loadEnhancedRankings(year);
+        const rankingsManager = createRankingsManager().setLeague(leagueId);
+        const rankingsData = /** @type {RankingsData} */ (
+            await rankingsManager.loadEnhancedRankings(year)
+        );
 
         // Check if we have data for this year
-        if (!rankingsData.calculatedDates || rankingsData.calculatedDates.length === 0) {
+        if (!rankingsData?.calculatedDates || rankingsData.calculatedDates.length === 0) {
             throw new Error('No data available for this year');
         }
 
@@ -93,13 +156,15 @@ export class YearRecapManager {
 
     /**
      * Calculate comprehensive year statistics
-     * @param {Object} rankingsData - Current year rankings data
-     * @param {Array} sessions - All session data for the year
-     * @returns {Promise<Object>} - Comprehensive year statistics
+     * @param {RankingsData} rankingsData - Current year rankings data
+     * @param {YearRecapSession[]} sessions - All session data for the year
+     * @returns {Promise<YearRecapData>} - Comprehensive year statistics
      */
     async calculateYearStats(rankingsData, sessions) {
-        const players = rankingsData.players;
-        const sessionDates = rankingsData.calculatedDates;
+        /** @type {Record<string, any>} */
+        const players = rankingsData.players || {};
+        /** @type {string[]} */
+        const sessionDates = rankingsData.calculatedDates || [];
 
         // Year Overview
         const overview = this.calculateOverview(sessionDates, sessions, players);
@@ -142,10 +207,10 @@ export class YearRecapManager {
 
     /**
      * Calculate year overview statistics
-     * @param {Array} sessionDates - Array of session dates
-     * @param {Array} sessions - All session data
-     * @param {Object} players - Player data
-     * @returns {Object} - Overview statistics
+     * @param {string[]} sessionDates - Array of session dates
+     * @param {YearRecapSession[]} sessions - All session data
+     * @param {Record<string, any>} players - Player data
+     * @returns {YearRecapOverview} - Overview statistics
      */
     calculateOverview(sessionDates, sessions, players) {
         return {
@@ -170,13 +235,14 @@ export class YearRecapManager {
 
     /**
      * Calculate Iron Man Award (most appearances, tiebreaker: total games played)
-     * @param {Object} players - Player data
-     * @returns {Promise<Array>} - Top 3 players
+     * @param {Record<string, any>} players - Player data
+     * @returns {Promise<YearRecapIronManEntry[]>} - Top 3 players
      */
     async calculateIronManAward(players) {
+        const leagueId = this.#requireLeagueId();
         // Load avatar data
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         return Object.entries(players)
             .map(([name, p]) => {
@@ -205,27 +271,30 @@ export class YearRecapManager {
 
     /**
      * Calculate Most Improved (lowest rank to current rank, full confidence players only)
-     * @param {Object} players - Current year player data
-     * @returns {Array} - Top 3 most improved players
+     * @param {Record<string, any>} players - Current year player data
+     * @returns {Promise<YearRecapMostImprovedEntry[]>} - Top 3 most improved players
      */
     async calculateMostImproved(players) {
+        const leagueId = this.#requireLeagueId();
         // Load avatar data
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         // Calculate confidence threshold (66% of max appearances)
         const CONFIDENCE_FRACTION = 0.66;
         const maxAppearances = Math.max(...Object.values(players).map((p) => p.appearances || 0));
         const confidenceThreshold = Math.max(1, Math.round(maxAppearances * CONFIDENCE_FRACTION));
 
-        return Object.entries(players)
+        const improvedPlayers = Object.entries(players)
             .map(([name, p]) => {
                 // Only include players with full confidence
                 if (p.appearances < confidenceThreshold) {
                     return null;
                 }
 
-                const sessionDatesForPlayer = Object.keys(p.rankingDetail || {}).sort();
+                /** @type {Record<string, any>} */
+                const history = p.history || {};
+                const sessionDatesForPlayer = Object.keys(history).sort();
 
                 // Need at least 2 sessions to show improvement
                 if (sessionDatesForPlayer.length < 2) {
@@ -233,19 +302,19 @@ export class YearRecapManager {
                 }
 
                 // Get starting rank (first session)
-                const startingRank = p.rankingDetail[sessionDatesForPlayer[0]].rank;
+                const startingRank = history[sessionDatesForPlayer[0]]?.ranking?.rank ?? 0;
 
                 // Find lowest rank (worst position) across all sessions
                 let lowestRank = startingRank;
                 for (const date of sessionDatesForPlayer) {
-                    const sessionRank = p.rankingDetail[date].rank;
+                    const sessionRank = history[date]?.ranking?.rank ?? startingRank;
                     if (sessionRank > lowestRank) {
                         lowestRank = sessionRank;
                     }
                 }
 
                 // Current rank is the final rank
-                const currentRank = p.rank;
+                const currentRank = p.rank ?? startingRank;
 
                 // Calculate improvement: lowest rank - current rank
                 const rankImprovement = lowestRank - currentRank;
@@ -263,23 +332,28 @@ export class YearRecapManager {
                     lowestRank,
                     currentRank,
                     rankImprovement,
-                    rankingPoints: p.rankingPoints,
+                    rankingPoints: p.rankingPoints ?? 0,
                     avatarUrl
                 };
             })
-            .filter((p) => p !== null && p.rankImprovement > 0)
-            .sort((a, b) => b.rankImprovement - a.rankImprovement)
-            .slice(0, 3);
+            .filter((p) => p !== null && p.rankImprovement > 0);
+
+        const filteredPlayers = /** @type {YearRecapMostImprovedEntry[]} */ (
+            improvedPlayers.filter((player) => player && player.rankImprovement > 0)
+        );
+
+        return filteredPlayers.sort((a, b) => b.rankImprovement - a.rankImprovement).slice(0, 3);
     }
 
     /**
      * Calculate King of Kings (most trophies)
-     * @param {Object} players - Player data
-     * @returns {Array} - Top 3 trophy winners
+     * @param {Record<string, any>} players - Player data
+     * @returns {Promise<YearRecapKingOfKingsEntry[]>} - Top 3 trophy winners
      */
     async calculateKingOfKings(players) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         return Object.entries(players)
             .map(([name, p]) => {
@@ -292,7 +366,7 @@ export class YearRecapManager {
                     leagueWins: p.leagueWins || 0,
                     cupWins: p.cupWins || 0,
                     totalTrophies: (p.leagueWins || 0) + (p.cupWins || 0),
-                    rankingPoints: p.rankingPoints,
+                    rankingPoints: p.rankingPoints ?? 0,
                     avatarUrl
                 };
             })
@@ -303,11 +377,12 @@ export class YearRecapManager {
 
     /**
      * Calculate Players' Favourite (manually voted award)
-     * @returns {Promise<Object|null>} - Top 3 players and other nominations, or null if no data
+     * @returns {Promise<YearRecapPlayersFavourite | null>} - Top 3 players and other nominations, or null if no data
      */
     async calculatePlayersFavourite() {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
         const dataPath = this.getDataPath();
 
         // Get the year from the current context (stored during generateYearRecap)
@@ -316,6 +391,7 @@ export class YearRecapManager {
 
         try {
             const fileContent = await fs.readFile(filePath, 'utf-8');
+            /** @type {Array<Record<string, number>>} */
             const votesData = JSON.parse(fileContent);
 
             // Convert the format [{ "player name": vote count }, ...] to a flat array
@@ -324,7 +400,7 @@ export class YearRecapManager {
                 for (const [playerName, voteCount] of Object.entries(voteObj)) {
                     playerVotes.push({
                         name: playerName,
-                        votes: voteCount,
+                        votes: Number(voteCount) || 0,
                         avatarUrl: avatars[playerName]?.avatar
                             ? `/api/rankings/${encodeURIComponent(playerName)}/avatar`
                             : null
@@ -353,12 +429,13 @@ export class YearRecapManager {
 
     /**
      * Calculate Player of the Year (top ranking points)
-     * @param {Object} players - Player data
-     * @returns {Promise<Array>} - Top 3 players by ranking points
+     * @param {Record<string, any>} players - Player data
+     * @returns {Promise<YearRecapPlayerOfYearEntry[]>} - Top 3 players by ranking points
      */
     async calculatePlayerOfYear(players) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         return Object.entries(players)
             .map(([name, p]) => {
@@ -368,9 +445,9 @@ export class YearRecapManager {
 
                 return {
                     name,
-                    rankingPoints: p.rankingPoints,
-                    rank: p.rank,
-                    appearances: p.appearances,
+                    rankingPoints: p.rankingPoints ?? 0,
+                    rank: p.rank ?? 0,
+                    appearances: p.appearances ?? 0,
                     ptsPerAppearance: p.weightedAverage || 0,
                     avatarUrl
                 };
@@ -381,12 +458,13 @@ export class YearRecapManager {
 
     /**
      * Calculate Team of the Year (top 6 by ranking points)
-     * @param {Object} players - Player data
-     * @returns {Promise<Array>} - Top 6 players
+     * @param {Record<string, any>} players - Player data
+     * @returns {Promise<YearRecapTeamOfYearEntry[]>} - Top 6 players
      */
     async calculateTeamOfYear(players) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         return Object.entries(players)
             .map(([name, p]) => {
@@ -396,8 +474,8 @@ export class YearRecapManager {
 
                 return {
                     name,
-                    rankingPoints: p.rankingPoints,
-                    rank: p.rank,
+                    rankingPoints: p.rankingPoints ?? 0,
+                    rank: p.rank ?? 0,
                     avatarUrl
                 };
             })
@@ -407,12 +485,13 @@ export class YearRecapManager {
 
     /**
      * Calculate Dream Team (top 6 by ELO rating)
-     * @param {Object} players - Player data
-     * @returns {Promise<Array>} - Top 6 players by ELO
+     * @param {Record<string, any>} players - Player data
+     * @returns {Promise<YearRecapDreamTeamEntry[]>} - Top 6 players by ELO
      */
     async calculateDreamTeam(players) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         return (
             Object.entries(players)
@@ -438,12 +517,14 @@ export class YearRecapManager {
     /**
      * Calculate team statistics - finds best/worst single team across all sessions
      * Includes both league games and knockout cup games
-     * @param {Array} sessions - All session data
-     * @returns {Promise<Object>} - Team statistics including best and worst teams
+     * @param {YearRecapSession[]} sessions - All session data
+     * @returns {Promise<{ bestTeam: YearRecapTeamHighlight | null, worstTeam: YearRecapTeamHighlight | null }>} - Team statistics including best and worst teams
      */
     async calculateTeamStats(sessions) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
+        /** @type {YearRecapTeamStats[]} */
         const allTeams = [];
 
         // Evaluate each team in each session independently
@@ -452,13 +533,20 @@ export class YearRecapManager {
             if (!teams || !games?.rounds) continue;
 
             const teamNames = Object.keys(teams);
+            /** @type {Array<Match & { homeScore: number, awayScore: number }>} */
             const leagueMatches = [];
+            /** @type {Array<Match & { homeScore: number, awayScore: number }>} */
             const cupMatches = [];
 
             // Extract league match results for this session
             for (const round of games.rounds) {
                 for (const game of round) {
-                    if (game.homeScore !== null && game.awayScore !== null) {
+                    if (
+                        typeof game.homeScore === 'number' &&
+                        typeof game.awayScore === 'number' &&
+                        typeof game.home === 'string' &&
+                        typeof game.away === 'string'
+                    ) {
                         leagueMatches.push({
                             home: game.home,
                             away: game.away,
@@ -473,7 +561,12 @@ export class YearRecapManager {
             const knockoutGames = games['knockout-games'] || games.knockout;
             if (knockoutGames && knockoutGames.bracket) {
                 for (const game of knockoutGames.bracket) {
-                    if (game.homeScore !== null && game.awayScore !== null) {
+                    if (
+                        typeof game.homeScore === 'number' &&
+                        typeof game.awayScore === 'number' &&
+                        typeof game.home === 'string' &&
+                        typeof game.away === 'string'
+                    ) {
                         cupMatches.push({
                             home: game.home,
                             away: game.away,
@@ -485,6 +578,11 @@ export class YearRecapManager {
             }
 
             // Helper function to calculate stats for a set of matches
+            /**
+             * @param {Array<Match & { homeScore: number, awayScore: number }>} matches
+             * @param {string} teamName
+             * @returns {YearRecapTeamRecord}
+             */
             const calculateMatchStats = (matches, teamName) => {
                 let wins = 0;
                 let draws = 0;
@@ -586,6 +684,10 @@ export class YearRecapManager {
             .slice(0, 3);
 
         // Helper to add avatars to players
+        /**
+         * @param {string[]} playerNames
+         * @returns {YearRecapPlayerAvatar[]}
+         */
         const addAvatarsToPlayers = (playerNames) => {
             return playerNames.map((name) => ({
                 name,
@@ -651,14 +753,16 @@ export class YearRecapManager {
 
     /**
      * Calculate True Colours statistics (team color achievements)
-     * @param {Array} sessions - All session data
-     * @returns {Promise<Array>} - Array of color statistics
+     * @param {YearRecapSession[]} sessions - All session data
+     * @returns {Promise<YearRecapTrueColoursEntry[]>} - Array of color statistics
      */
     async calculateTrueColours(sessions) {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         // Track data by color
+        /** @type {Record<string, { leagueWins: number, cupWins: number, wins: number, draws: number, losses: number, playerCaps: Record<string, number> }>} */
         const colorData = {};
 
         // Process each session
@@ -667,6 +771,7 @@ export class YearRecapManager {
             if (!teams || !games?.rounds) continue;
 
             // Calculate league standings for this session
+            /** @type {Record<string, YearRecapTeamRecord & { points: number }>} */
             const standings = {};
             for (const teamName of Object.keys(teams)) {
                 standings[teamName] = {
@@ -682,7 +787,13 @@ export class YearRecapManager {
             // Process league games
             for (const round of games.rounds) {
                 for (const match of round) {
-                    if (match.homeScore === null || match.awayScore === null) continue;
+                    if (
+                        typeof match.homeScore !== 'number' ||
+                        typeof match.awayScore !== 'number'
+                    ) {
+                        continue;
+                    }
+                    if (typeof match.home !== 'string' || typeof match.away !== 'string') continue;
 
                     const homeTeam = standings[match.home];
                     const awayTeam = standings[match.away];
@@ -763,22 +874,42 @@ export class YearRecapManager {
             // Check for cup winner
             const knockoutGames = games['knockout-games'] || games.knockout;
             if (knockoutGames?.bracket) {
+                /** @type {Array<Match & { round?: string }>} */
+                const bracket = knockoutGames.bracket;
                 // Find the final
-                const final = knockoutGames.bracket.find((match) => match.round === 'final');
-                if (final && final.homeScore !== null && final.awayScore !== null) {
-                    const cupWinner = final.homeScore > final.awayScore ? final.home : final.away;
-                    const color = cupWinner.split(' ')[0];
-                    if (!colorData[color]) {
-                        colorData[color] = {
-                            leagueWins: 0,
-                            cupWins: 0,
-                            wins: 0,
-                            draws: 0,
-                            losses: 0,
-                            playerCaps: {}
-                        };
+                const final = bracket.find((match) => match.round === 'final');
+                if (
+                    final &&
+                    typeof final.homeScore === 'number' &&
+                    typeof final.awayScore === 'number' &&
+                    typeof final.home === 'string' &&
+                    typeof final.away === 'string'
+                ) {
+                    let cupWinner;
+                    if (final.homeScore > final.awayScore) {
+                        cupWinner = final.home;
+                    } else if (final.awayScore > final.homeScore) {
+                        cupWinner = final.away;
+                    } else if (final.homePenalties != null && final.awayPenalties != null) {
+                        cupWinner =
+                            final.homePenalties > final.awayPenalties ? final.home : final.away;
+                    } else {
+                        cupWinner = null;
                     }
-                    colorData[color].cupWins++;
+                    if (cupWinner) {
+                        const color = cupWinner.split(' ')[0];
+                        if (!colorData[color]) {
+                            colorData[color] = {
+                                leagueWins: 0,
+                                cupWins: 0,
+                                wins: 0,
+                                draws: 0,
+                                losses: 0,
+                                playerCaps: {}
+                            };
+                        }
+                        colorData[color].cupWins++;
+                    }
                 }
             }
 
@@ -806,6 +937,7 @@ export class YearRecapManager {
         }
 
         // For each team/color, get their top player
+        /** @type {Array<{ color: string, players: Array<[string, number]>, topCaps: number }>} */
         const teamPriorities = [];
         for (const [color, data] of Object.entries(colorData)) {
             const sortedPlayers = Object.entries(data.playerCaps).sort((a, b) => b[1] - a[1]);
@@ -823,6 +955,7 @@ export class YearRecapManager {
         teamPriorities.sort((a, b) => b.topCaps - a.topCaps);
 
         // Build result array - get top 3 players for each team
+        /** @type {YearRecapTrueColoursEntry[]} */
         const result = [];
         for (const team of teamPriorities) {
             const { color, players } = team;
@@ -860,22 +993,31 @@ export class YearRecapManager {
 
     /**
      * Calculate Bottle statistics (2nd place finishes and cup final losses)
-     * @returns {Promise<Object>} - Top bottlers
+     * @returns {Promise<YearRecapBottle>} - Top bottlers
      */
     async calculateBottle() {
-        const avatarManager = createAvatarManager().setLeague(this.leagueId);
-        const avatars = await avatarManager.loadAvatars();
+        const leagueId = this.#requireLeagueId();
+        const avatarManager = createAvatarManager().setLeague(leagueId);
+        const avatars = /** @type {AvatarMap} */ (await avatarManager.loadAvatars());
 
         // Track counts for each player
+        /** @type {Record<string, number>} */
         const leagueSecondPlace = {};
+        /** @type {Record<string, number>} */
         const cupFinalLosses = {};
 
         // Get detailed player data from rankings
-        const rankingsManager = createRankingsManager().setLeague(this.leagueId);
-        const detailedRankings = await rankingsManager.loadEnhancedRankings(this.currentYear);
+        const rankingsManager = createRankingsManager().setLeague(leagueId);
+        const recapYear = this.currentYear;
+        if (!recapYear) {
+            throw new Error('Year not set for recap calculations');
+        }
+        const detailedRankings = /** @type {RankingsData} */ (
+            await rankingsManager.loadEnhancedRankings(recapYear)
+        );
 
         // If no rankings data exists, return empty arrays
-        if (!detailedRankings || !detailedRankings.players) {
+        if (!detailedRankings?.players) {
             return {
                 leagueSecond: [],
                 cupFinalLosses: []
@@ -883,20 +1025,21 @@ export class YearRecapManager {
         }
 
         for (const [playerName, playerData] of Object.entries(detailedRankings.players)) {
-            if (!playerData.rankingDetail) continue;
+            if (!playerData.history) continue;
 
             let secondPlaces = 0;
             let finalLosses = 0;
 
-            // Iterate through each date entry in rankingDetail
-            for (const [, detail] of Object.entries(playerData.rankingDetail)) {
+            // Iterate through each appearance entry in history
+            for (const [, entry] of Object.entries(playerData.history)) {
+                if (!entry.performance) continue; // Skip non-appearance entries
                 // Count league 2nd place finishes
-                if (detail.leaguePosition === 2) {
+                if (entry.performance.leaguePosition === 2) {
                     secondPlaces++;
                 }
 
                 // Count cup final losses (reached final but didn't win)
-                if (detail.cupProgress === 'final' && !detail.cupWinner) {
+                if (entry.performance.cupProgress === 'final' && !entry.performance.cupWinner) {
                     finalLosses++;
                 }
             }
@@ -941,14 +1084,19 @@ export class YearRecapManager {
 
     /**
      * Calculate fun facts from session data
-     * @param {Array} sessions - All session data
-     * @returns {Object} - Fun facts
+     * @param {YearRecapSession[]} sessions - All session data
+     * @returns {YearRecapFunFacts} - Fun facts
      */
     calculateFunFacts(sessions) {
+        /** @type {import('../shared/types.js').YearRecapMatchFact | null} */
         let highestScoringMatch = null;
+        /** @type {import('../shared/types.js').YearRecapMarginFact | null} */
         let biggestMarginWin = null;
-        let mostGoalsSession = { date: null, goals: 0 };
-        let fewestGoalsSession = { date: null, goals: Infinity };
+        /** @type {import('../shared/types.js').YearRecapGoalsSession | null} */
+        let mostGoalsSession = null;
+        /** @type {import('../shared/types.js').YearRecapGoalsSession | null} */
+        let fewestGoalsSession = null;
+        let fewestGoalsCount = Infinity;
 
         for (const session of sessions) {
             const { date, games } = session;
@@ -959,7 +1107,12 @@ export class YearRecapManager {
 
             for (const round of games.rounds) {
                 for (const match of round) {
-                    if (match.homeScore !== null && match.awayScore !== null) {
+                    if (
+                        typeof match.homeScore === 'number' &&
+                        typeof match.awayScore === 'number' &&
+                        typeof match.home === 'string' &&
+                        typeof match.away === 'string'
+                    ) {
                         hasCompletedGames = true;
                         const totalGoals = match.homeScore + match.awayScore;
                         const margin = Math.abs(match.homeScore - match.awayScore);
@@ -995,10 +1148,11 @@ export class YearRecapManager {
 
             // Only count sessions with completed games for most/fewest goals
             if (hasCompletedGames) {
-                if (sessionGoals > mostGoalsSession.goals) {
+                if (!mostGoalsSession || sessionGoals > mostGoalsSession.goals) {
                     mostGoalsSession = { date, goals: sessionGoals };
                 }
-                if (sessionGoals < fewestGoalsSession.goals) {
+                if (sessionGoals < fewestGoalsCount) {
+                    fewestGoalsCount = sessionGoals;
                     fewestGoalsSession = { date, goals: sessionGoals };
                 }
             }
@@ -1008,7 +1162,7 @@ export class YearRecapManager {
             highestScoringMatch,
             biggestMarginWin,
             mostGoalsSession,
-            fewestGoalsSession: fewestGoalsSession.goals !== Infinity ? fewestGoalsSession : null
+            fewestGoalsSession
         };
     }
 }

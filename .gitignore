@@ -24,7 +24,7 @@ vite.config.ts.timestamp-*
 /data/
 /deploy.ps1
 /deploy.sh
-/copy-live-data.sh
+/copy-live-*.sh
 *.tar
 
 #IIS
@@ -36,3 +36,7 @@ vite.config.ts.timestamp-*
 # Ad-hoc scripts
 /scripts/
 
+# Logs
+/logs/
+app.log
+app.*.log

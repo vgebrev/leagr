@@ -43,15 +43,24 @@
 
     /**
      * Check if a player is active (has appeared within last 2 months and has 2+ appearances)
+     * For historical years, uses end of that year as the reference point.
      * @param {string|null} lastAppearance - Last appearance date (YYYY-MM-DD)
      * @param {number} appearances - Total number of appearances
+     * @param {number} year - The selected rankings year
      * @returns {boolean}
      */
-    function isPlayerActive(lastAppearance, appearances) {
+    function isPlayerActive(lastAppearance, appearances, year) {
         if (!lastAppearance || appearances < 2) return false;
 
-        const today = new Date();
-        const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, today.getDate());
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        // For historical years use Dec 31 of that year; for current year use today
+        const referenceDate = year < currentYear ? new Date(year, 11, 31) : now;
+        const twoMonthsAgo = new Date(
+            referenceDate.getFullYear(),
+            referenceDate.getMonth() - 2,
+            referenceDate.getDate()
+        );
         const lastAppearanceDate = new Date(lastAppearance);
 
         return lastAppearanceDate >= twoMonthsAgo;
@@ -84,7 +93,10 @@
         const filtered = Object.entries(rankings.players ?? {})
             .filter(([, data]) => {
                 // Apply active player filter if enabled (exclude inactive and provisional players)
-                return !showActiveOnly || isPlayerActive(data.lastAppearance, data.appearances);
+                return (
+                    !showActiveOnly ||
+                    isPlayerActive(data.lastAppearance, data.appearances, selectedYear)
+                );
             })
             .sort((a, b) => {
                 if (sortBy === 'rankingPoints') {

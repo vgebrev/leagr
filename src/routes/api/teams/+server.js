@@ -5,7 +5,9 @@ import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
 import { createAvatarManager } from '$lib/server/avatarManager.js';
+import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
+import { logger } from '$lib/server/logger.js';
 import { data } from '$lib/server/data.js';
 import {
     validateDateParameter,
@@ -173,6 +175,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Generate teams with history recording enabled
         const teamGenerator = createTeamGenerator()
+            .setLeague(leagueId)
             .setSettings(gameData.settings)
             .setPlayers(eligiblePlayers)
             .setRankings(rankings)
@@ -180,7 +183,7 @@ export const POST = async ({ request, url, locals }) => {
             .setTeammateHistory(teammateHistory)
             .setHistoryRecording(true);
 
-        const result = teamGenerator.generateTeams(method, teamConfig);
+        const result = await teamGenerator.generateTeams(method, teamConfig);
 
         // Store the generated teams and draw history
         await data.set('teams', dateValidation.date, result.teams, {}, true, leagueId);
@@ -195,6 +198,26 @@ export const POST = async ({ request, url, locals }) => {
                 true,
                 leagueId
             );
+        }
+
+        // Trigger logo generation asynchronously (fire-and-forget) if enabled
+        if (gameData.settings.teamLogos?.enabled) {
+            logger.info('[teamLogos] Logo generation enabled, triggering for draw', {
+                date: dateValidation.date,
+                teams: Object.keys(result.teams)
+            });
+            createTeamLogoManager()
+                .setLeague(leagueId)
+                .generateLogosForDraw(dateValidation.date, result.teams)
+                .catch((err) =>
+                    logger.error('[teamLogos] Unhandled error in generateLogosForDraw', {
+                        error: err.message
+                    })
+                );
+        } else {
+            logger.info('[teamLogos] Logo generation disabled, skipping', {
+                teamLogos: gameData.settings.teamLogos
+            });
         }
 
         // Validate and clean-up any inconsistencies

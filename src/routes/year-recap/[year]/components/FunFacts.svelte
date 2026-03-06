@@ -4,6 +4,9 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import { resolve } from '$app/paths';
 
+    /** @typedef {import('$lib/shared/types.js').YearRecapFunFacts} YearRecapFunFacts */
+
+    /** @type {{ data: YearRecapFunFacts | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Calculate delays
@@ -28,7 +31,9 @@
                     type="scale"
                     {duration}>
                     <a
-                        href={resolve(`/table?date=${data.highestScoringMatch.date}`)}
+                        href={resolve(
+                            /** @type {any} */ (`/table?date=${data.highestScoringMatch.date}`)
+                        )}
                         data-sveltekit-preload-data="hover"
                         class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
                         <div
@@ -64,7 +69,9 @@
                     type="scale"
                     {duration}>
                     <a
-                        href={resolve(`/table?date=${data.biggestMarginWin.date}`)}
+                        href={resolve(
+                            /** @type {any} */ (`/table?date=${data.biggestMarginWin.date}`)
+                        )}
                         data-sveltekit-preload-data="hover"
                         class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
                         <div
@@ -101,7 +108,9 @@
                         type="scale"
                         {duration}>
                         <a
-                            href={resolve(`/table?date=${data.mostGoalsSession.date}`)}
+                            href={resolve(
+                                /** @type {any} */ (`/table?date=${data.mostGoalsSession.date}`)
+                            )}
                             data-sveltekit-preload-data="hover"
                             class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">
                             <div
@@ -126,7 +135,9 @@
                         type="scale"
                         {duration}>
                         <a
-                            href={resolve(`/table?date=${data.fewestGoalsSession.date}`)}
+                            href={resolve(
+                                /** @type {any} */ (`/table?date=${data.fewestGoalsSession.date}`)
+                            )}
                             data-sveltekit-preload-data="hover"
                             class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">
                             <div

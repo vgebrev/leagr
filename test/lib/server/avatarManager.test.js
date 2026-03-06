@@ -35,7 +35,7 @@ describe('AvatarManager - Pending Avatar Workflow', () => {
                     TestPlayer: {
                         points: 100,
                         appearances: 5,
-                        rankingDetail: {}
+                        history: {}
                     }
                 },
                 rankingMetadata: {}

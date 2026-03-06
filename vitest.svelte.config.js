@@ -9,6 +9,7 @@ export default defineConfig({
         include: ['test/**/*.svelte.{test,spec}.{js,ts}'],
         exclude: ['node_modules', '.svelte-kit'],
         setupFiles: ['test/setup.svelte.js'],
+        globalTeardown: './test/setup/globalTeardown.js',
         silent: false,
         reporter: 'default'
     },

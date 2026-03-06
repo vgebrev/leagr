@@ -114,6 +114,7 @@
     {#if replayData}
         <DrawReplay
             drawHistory={replayData}
+            {date}
             bind:open={showReplay} />
     {/if}
 </div>

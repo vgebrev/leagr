@@ -22,7 +22,8 @@ export const LEAGUE_ONLY_SETTINGS = [
     'canRegenerateTeams',
     'canResetSchedule',
     'seedTeams',
-    'discipline'
+    'discipline',
+    'teamLogos'
 ];
 
 /**
@@ -51,6 +52,9 @@ export const defaultSettings = {
     discipline: {
         enabled: true,
         noShowThreshold: 2
+    },
+    teamLogos: {
+        enabled: false
     }
 };
 

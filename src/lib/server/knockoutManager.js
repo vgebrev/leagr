@@ -222,7 +222,12 @@ export class KnockoutManager {
         if (match.homeScore === null || match.awayScore === null) return null;
         if (match.homeScore > match.awayScore) return match.home;
         if (match.awayScore > match.homeScore) return match.away;
-        return 'Draw';
+        // Draw — check penalty shootout
+        if (match.homePenalties != null && match.awayPenalties != null) {
+            if (match.homePenalties > match.awayPenalties) return match.home;
+            if (match.awayPenalties > match.homePenalties) return match.away;
+        }
+        return 'Draw'; // still unresolved
     }
 
     /**
