@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+
 /**
  * Quick manual test for team logo generation.
  * Run with:

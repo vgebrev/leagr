@@ -209,7 +209,11 @@ export const POST = async ({ request, url, locals }) => {
             createTeamLogoManager()
                 .setLeague(leagueId)
                 .generateLogosForDraw(dateValidation.date, result.teams)
-                .catch((err) => logger.error('[teamLogos] Unhandled error in generateLogosForDraw', { error: err.message }));
+                .catch((err) =>
+                    logger.error('[teamLogos] Unhandled error in generateLogosForDraw', {
+                        error: err.message
+                    })
+                );
         } else {
             logger.info('[teamLogos] Logo generation disabled, skipping', {
                 teamLogos: gameData.settings.teamLogos

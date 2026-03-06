@@ -52,7 +52,10 @@ export const GET = async ({ params, url, locals }) => {
 
         const sizeParam = url.searchParams.get('size');
         if (sizeParam !== null) {
-            const size = Math.min(MAX_SIZE, Math.max(MIN_SIZE, parseInt(sizeParam, 10) || MAX_SIZE));
+            const size = Math.min(
+                MAX_SIZE,
+                Math.max(MIN_SIZE, parseInt(sizeParam, 10) || MAX_SIZE)
+            );
             if (size !== MAX_SIZE) {
                 imageBuffer = await sharp(imageBuffer)
                     .resize(size, size, { fit: 'inside' })

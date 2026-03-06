@@ -55,11 +55,12 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey) {
     const secondaryOptions = logoPrompt?.secondary ?? ['white'];
     const secondary = secondaryOptions[Math.floor(Math.random() * secondaryOptions.length)];
 
-    const prompt = `Minimalist flat vector sports team logo;` +
-      `badge type: ${badgeShape} (outer boundary must clearly be a ${badgeShape});` +
-      `team name: ${noun};` +
-      `${primary} and ${secondary} colour scheme;` +
-      `modern esports style.`;
+    const prompt =
+        `Minimalist flat vector sports team logo;` +
+        `badge type: ${badgeShape} (outer boundary must clearly be a ${badgeShape});` +
+        `team name: ${noun};` +
+        `${primary} and ${secondary} colour scheme;` +
+        `modern esports style.`;
 
     logger.info('[teamLogos] Calling OpenAI', { teamName, badgeShape, primary, secondary });
 

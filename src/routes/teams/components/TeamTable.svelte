@@ -208,10 +208,14 @@
 
 <div
     class="relative overflow-hidden rounded-md"
-    style={!isPlayerList && logoSrc ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}` : ''}>
+    style={!isPlayerList && logoSrc
+        ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}`
+        : ''}>
     <table
         class={`w-full text-left text-sm ${styles.text} glass border-collapse overflow-hidden rounded-md backdrop-blur-lg`}
-        style={!isPlayerList && logoSrc ? `background-color: transparent; --logo-url: url('${logoSrc}')` : ''}>
+        style={!isPlayerList && logoSrc
+            ? `background-color: transparent; --logo-url: url('${logoSrc}')`
+            : ''}>
         <thead class={`text-xs uppercase ${styles.header} backdrop-blur-lg`}>
             <tr>
                 <th
@@ -241,7 +245,9 @@
         </thead>
         <tbody class={!isPlayerList && logoSrc ? 'logo-tbody' : ''}>
             {#if showTeamRatings && !isPlayerList && (teamAverageAttacking !== null || teamAverageControl !== null)}
-                <tr class={`${styles.row}`} style={logoSrc ? 'background-color: transparent' : ''}>
+                <tr
+                    class={`${styles.row}`}
+                    style={logoSrc ? 'background-color: transparent' : ''}>
                     <td class="p-2">
                         <div class="border-b pb-2 ${styles.border}">
                             {#if teamAverageAttacking !== null}
@@ -287,7 +293,9 @@
                 </tr>
             {/if}
             {#each team as player, i (i)}
-                <tr class={`${styles.row}`} style={logoSrc ? 'background-color: transparent' : ''}>
+                <tr
+                    class={`${styles.row}`}
+                    style={logoSrc ? 'background-color: transparent' : ''}>
                     <td class="m-0 {sizeStyles[size]}"
                         ><div class="flex items-center justify-between">
                             <div class="min-w-0 flex-1">
@@ -303,7 +311,7 @@
                                     <span class="italic opacity-50">Empty</span>
                                 {/if}
                             </div>
-                            <div class="ml-2 flex flex-shrink-0 items-center gap-2">
+                            <div class="ml-2 flex shrink-0 items-center gap-2">
                                 {#if player && showPlayerRankings && typeof player === 'object'}
                                     {@const playerElo = player.elo ?? player.rankingPoints}
                                     {#if playerElo !== null && playerElo !== undefined}
