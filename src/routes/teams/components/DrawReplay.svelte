@@ -23,7 +23,7 @@
     import { SvelteSet } from 'svelte/reactivity';
     import confetti from 'canvas-confetti';
 
-    let { drawHistory, open = $bindable(false) } = $props();
+    let { drawHistory, open = $bindable(false), date = null } = $props();
 
     // Reverse the draw history to show lowest ELO players first for drama
     let reversedDrawHistory = $derived.by(() => {
@@ -664,7 +664,8 @@
                         assignablePlayers={[]}
                         size="sm"
                         {showPlayerRankings}
-                        showTeamRatings={false} />
+                        showTeamRatings={false}
+                        {date} />
                 {/each}
             </div>
         </div>

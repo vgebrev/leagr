@@ -149,7 +149,8 @@ function checkApiKey(request) {
 // Public endpoints that don't require league access code
 const publicEndpoints = [
     { method: '*', pattern: /^\/api\/leagues/ },
-    { method: 'GET', pattern: /^\/api\/rankings\/[^/]+\/avatar$/ }
+    { method: 'GET', pattern: /^\/api\/rankings\/[^/]+\/avatar$/ },
+    { method: 'GET', pattern: /^\/api\/teams\/logos\// }
 ];
 
 /**

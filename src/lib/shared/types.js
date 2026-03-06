@@ -3,6 +3,12 @@
  */
 
 /**
+ * @typedef {Object} TeamLogoPrompt
+ * @property {string} primary
+ * @property {string[]} secondary
+ */
+
+/**
  * @typedef {Object} TeamStyle
  * @property {string} text
  * @property {string} header
@@ -11,6 +17,7 @@
  * @property {string} buttonClass
  * @property {string} border
  * @property {string[]} confetti
+ * @property {TeamLogoPrompt} [logoPrompt]
  */
 
 /**
@@ -46,6 +53,11 @@
  */
 
 /**
+ * @typedef {Object} TeamLogosSettings
+ * @property {boolean} enabled
+ */
+
+/**
  * @typedef {Object} LeagueSettings
  * @property {number[]} competitionDays
  * @property {RegistrationWindow} registrationWindow
@@ -55,6 +67,7 @@
  * @property {boolean} canResetSchedule
  * @property {boolean} seedTeams
  * @property {DisciplineSettings} discipline
+ * @property {TeamLogosSettings} [teamLogos]
  */
 
 /**

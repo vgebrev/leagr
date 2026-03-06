@@ -5,7 +5,9 @@ import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
 import { createAvatarManager } from '$lib/server/avatarManager.js';
+import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
+import { logger } from '$lib/server/logger.js';
 import { data } from '$lib/server/data.js';
 import {
     validateDateParameter,
@@ -196,6 +198,22 @@ export const POST = async ({ request, url, locals }) => {
                 true,
                 leagueId
             );
+        }
+
+        // Trigger logo generation asynchronously (fire-and-forget) if enabled
+        if (gameData.settings.teamLogos?.enabled) {
+            logger.info('[teamLogos] Logo generation enabled, triggering for draw', {
+                date: dateValidation.date,
+                teams: Object.keys(result.teams)
+            });
+            createTeamLogoManager()
+                .setLeague(leagueId)
+                .generateLogosForDraw(dateValidation.date, result.teams)
+                .catch((err) => logger.error('[teamLogos] Unhandled error in generateLogosForDraw', { error: err.message }));
+        } else {
+            logger.info('[teamLogos] Logo generation disabled, skipping', {
+                teamLogos: gameData.settings.teamLogos
+            });
         }
 
         // Validate and clean-up any inconsistencies

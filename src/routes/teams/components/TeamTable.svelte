@@ -18,7 +18,8 @@
         allTeams = {},
         size = 'md',
         showPlayerRankings = false,
-        showTeamRatings = true
+        showTeamRatings = true,
+        date = null
     } = $props();
 
     const styles = $derived(teamStyles[color] || teamStyles.default);
@@ -41,6 +42,16 @@
 
     // Check if this is an unassigned/waiting list table
     const isPlayerList = $derived(teamName === 'Unassigned Players' || teamName === 'Waiting List');
+
+    // API endpoint handles fallback to /logos/{colour}.webp when no generated logo exists.
+    // Fall back to static asset directly when no date is available.
+    const logoSrc = $derived(
+        !isPlayerList
+            ? date
+                ? `/api/teams/logos/${encodeURIComponent(teamName)}?date=${date}&size=128`
+                : `/logos/${color}.webp`
+            : null
+    );
 
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
@@ -412,6 +423,12 @@
             {/each}
         </tbody>
     </table>
+    {#if !isPlayerList && logoSrc}
+        <div
+            class="pointer-events-none absolute inset-0"
+            style="background-image: url('{logoSrc}'); background-position: center; background-repeat: no-repeat; opacity: 0.33;">
+        </div>
+    {/if}
 </div>
 
 <RenamePlayerModal

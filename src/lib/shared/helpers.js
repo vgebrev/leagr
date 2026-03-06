@@ -135,7 +135,8 @@ export const teamStyles = {
         buttonClass:
             '!text-blue-100 !border-blue-100 hover:!bg-blue-600 hover:!text-white focus:!ring-blue-600 active:!ring-blue-600',
         border: 'border !border-blue-600',
-        confetti: ['#2b7fff', '#bedbff']
+        confetti: ['#2b7fff', '#bedbff'],
+        logoPrompt: { primary: 'royal blue', secondary: ['white', 'gold', 'silver', 'sky blue'] }
     },
     orange: {
         text: '!text-orange-100 bg-orange-500 dark:bg-orange-500',
@@ -145,7 +146,8 @@ export const teamStyles = {
         buttonClass:
             '!text-orange-100 !border-orange-100 hover:!bg-orange-600 hover:!text-white focus:!ring-orange-600 active:!ring-orange-600',
         border: 'border !border-orange-600',
-        confetti: ['#ff6900', '#ffd6a8']
+        confetti: ['#ff6900', '#ffd6a8'],
+        logoPrompt: { primary: 'vibrant orange', secondary: ['black', 'white', 'gold', 'dark red'] }
     },
     green: {
         text: '!text-green-100 bg-green-500 dark:bg-green-500',
@@ -155,7 +157,11 @@ export const teamStyles = {
         buttonClass:
             '!text-green-100 !border-green-100 hover:!bg-green-600 hover:!text-white focus:!ring-green-600 active:!ring-green-600',
         border: 'border !border-green-600',
-        confetti: ['#00c951', '#b9f8cf']
+        confetti: ['#00c951', '#b9f8cf'],
+        logoPrompt: {
+            primary: 'emerald green',
+            secondary: ['white', 'gold', 'lime green', 'dark green']
+        }
     },
     white: {
         text: '!text-gray-800 bg-gray-100 dark:bg-gray-100',
@@ -165,7 +171,8 @@ export const teamStyles = {
         buttonClass:
             '!text-gray-800 !border-gray-800 hover:!bg-gray-200 hover:!text-gray-800 focus:!ring-gray-200 active:!ring-gray-200',
         border: 'border !border-gray-200',
-        confetti: ['#6a7282', '#e5e7eb']
+        confetti: ['#6a7282', '#e5e7eb'],
+        logoPrompt: { primary: 'white', secondary: ['silver', 'light grey', 'gold', 'platinum'] }
     },
     black: {
         text: '!text-gray-100 bg-gray-800 dark:bg-gray-800',
@@ -175,7 +182,8 @@ export const teamStyles = {
         buttonClass:
             '!text-gray-100 !border-gray-100 hover:!bg-gray-900 hover:!text-white focus:!ring-gray-900 active:!ring-gray-900',
         border: 'border !border-gray-900',
-        confetti: ['#1c1917', '#79716b']
+        confetti: ['#1c1917', '#79716b'],
+        logoPrompt: { primary: 'black', secondary: ['gold', 'silver', 'crimson red', 'white'] }
     },
     red: {
         text: '!text-red-100 bg-red-500 dark:bg-red-500',
