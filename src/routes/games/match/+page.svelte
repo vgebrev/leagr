@@ -24,8 +24,8 @@
 
     // URL params
     let competition = $derived(page.url.searchParams.get('competition') || 'league');
-    let roundParam = $derived(page.url.searchParams.get('round'));
-    let matchParam = $derived(page.url.searchParams.get('match'));
+    let roundParam = $derived(page.url.searchParams.get('round') || '1');
+    let matchParam = $derived(page.url.searchParams.get('match') || '1');
 
     // Current match derived from service state
     let match = $derived(
@@ -232,8 +232,11 @@
 
     let competitionEnded = $derived(isCompetitionEnded(date, $settings));
 
+    let loaded = $state(false);
+
     onMount(async () => {
         await gamesService.loadForMatchTracker(date, competition);
+        loaded = true;
     });
 
     // Next match navigation
@@ -300,7 +303,9 @@
 
             const currentRoundIndex = sortedRounds.indexOf(roundParam);
 
-            /** @param {string} round @param {number} matchNum @returns {string} */
+            /** @param {string} round
+             * @param {number} matchNum
+             * @returns {string} */
             function knockoutLabel(round, matchNum) {
                 const roundName =
                     KNOCKOUT_ROUND_NAMES[round] ||
@@ -379,14 +384,8 @@
 </script>
 
 <div class="flex flex-col gap-3">
-    <!-- Header: back + label -->
+    <!-- Header -->
     <div class="flex items-center gap-2">
-        <Button
-            outline
-            color="alternative"
-            size="xs"
-            class="ps-1! pe-2!"
-            onclick={() => history.back()}><AngleLeftOutline /> Back</Button>
         <div>
             <h5 class="flex items-center text-lg font-bold">Match Centre</h5>
             <p class="text-sm text-gray-600 dark:text-gray-400">{matchLabel}</p>
@@ -488,19 +487,30 @@
             {#if actionSummary.length > 0}
                 <div class="p-2">
                     {#each actionSummary as { Icon, home, away }, i (i)}
-                        <div class="flex items-center gap-2 py-0.5 border-t border-gray-200 dark:border-gray-700">
-                            {#if home.length > 0}<Icon class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span class="h-3 w-3 shrink-0"></span>{/if}
-                            <div class="flex min-w-0 flex-1 flex-wrap gap-x-1 text-xs text-gray-600 dark:text-gray-400">
+                        <div
+                            class="flex items-center gap-2 border-t border-gray-200 py-0.5 dark:border-gray-700">
+                            {#if home.length > 0}<Icon
+                                    class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span
+                                    class="h-3 w-3 shrink-0"></span
+                                >{/if}
+                            <div
+                                class="flex min-w-0 flex-1 flex-wrap gap-x-1 text-xs text-gray-600 dark:text-gray-400">
                                 {#each home as entry, i (i)}
-                                    <span class="whitespace-nowrap">{entry}{#if i < home.length - 1},{/if}</span>
+                                    <span class="whitespace-nowrap"
+                                        >{entry}{#if i < home.length - 1},{/if}</span>
                                 {/each}
                             </div>
-                            <div class="flex min-w-0 flex-1 flex-wrap justify-end gap-x-1 text-right text-xs text-gray-600 dark:text-gray-400">
+                            <div
+                                class="flex min-w-0 flex-1 flex-wrap justify-end gap-x-1 text-right text-xs text-gray-600 dark:text-gray-400">
                                 {#each away as entry, i (i)}
-                                    <span class="whitespace-nowrap">{entry}{#if i < away.length - 1},{/if}</span>
+                                    <span class="whitespace-nowrap"
+                                        >{entry}{#if i < away.length - 1},{/if}</span>
                                 {/each}
                             </div>
-                            {#if away.length > 0}<Icon class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span class="h-3 w-3 shrink-0"></span>{/if}
+                            {#if away.length > 0}<Icon
+                                    class="h-3 w-3 shrink-0 text-gray-600 dark:text-gray-400" />{:else}<span
+                                    class="h-3 w-3 shrink-0"></span
+                                >{/if}
                         </div>
                     {/each}
                 </div>
@@ -531,6 +541,12 @@
                     Next Match <span class="font-normal">· {nextMatchInfo.label}</span>
                 </p>
                 <div class="flex items-center gap-2">
+                    <Button
+                        outline
+                        color="alternative"
+                        size="xs"
+                        class="me-auto p-1"
+                        onclick={() => history.back()}><AngleLeftOutline class="h-3 w-3" /></Button>
                     <TeamBadge
                         teamName={nextMatchInfo.home}
                         className="min-w-0 flex-1" />
@@ -543,26 +559,38 @@
                         outline={true}
                         color="alternative"
                         href={resolve(nextMatchInfo.url, {})}
-                        class="shrink-0">
-                        Next <AngleRightOutline class="ms-1 h-3 w-3" />
+                        class="ms-auto p-1"
+                        ><AngleRightOutline class="h-3 w-3" />
                     </Button>
                 </div>
             </div>
         {:else if completionState}
             <div
                 class="glass flex w-full items-center gap-2 rounded-lg border border-gray-200 p-3 dark:border-gray-700">
+                <Button
+                    outline
+                    color="alternative"
+                    size="xs"
+                    class="me-auto p-1"
+                    onclick={() => history.back()}><AngleLeftOutline class="h-3 w-3" /></Button>
                 <p class="text-sm text-gray-300">{completionState.message}</p>
                 <Button
                     size="xs"
                     outline={true}
                     color="alternative"
                     href={resolve(completionState.url, {})}
-                    class="ms-auto">
-                    Next <AngleRightOutline class="ms-1 h-3 w-3" />
+                    class="ms-auto p-1">
+                    <AngleRightOutline class="h-3 w-3" />
                 </Button>
             </div>
         {/if}
     {:else}
-        <p class="text-center text-sm text-gray-600 dark:text-gray-400">Loading match…</p>
+        <p class="text-center text-sm text-gray-600 dark:text-gray-400">
+            {#if loaded}
+                No {competition}, round {roundParam}, match {matchParam} found.
+            {:else}
+                Loading match…
+            {/if}
+        </p>
     {/if}
 </div>

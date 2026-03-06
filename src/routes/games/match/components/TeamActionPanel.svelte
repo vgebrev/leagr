@@ -72,8 +72,7 @@
                     ? styles.header
                     : ''}"
                 onclick={() => (mode = id)}
-                aria-pressed={mode === id}
-                {disabled}>
+                aria-pressed={mode === id}>
                 <Icon {...iconProps} />
                 {label}
             </button>

@@ -68,7 +68,15 @@
     });
 
     // Pages that need the date selector
-    const datePages = ['/players', '/teams', '/games', '/knockout', '/table', '/settings'];
+    const datePages = [
+        '/players',
+        '/teams',
+        '/games',
+        '/games/match',
+        '/knockout',
+        '/table',
+        '/settings'
+    ];
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
 
     // Pages that should be accessible without authentication
@@ -146,7 +154,7 @@
         href={faviconUrl}
         type="image/svg+xml" />
 </svelte:head>
-<main class="relative flex h-[100dvh] flex-col overflow-hidden">
+<main class="relative flex h-dvh flex-col overflow-hidden">
     <!-- Background layers (order matters) -->
     <div class="bg-aurora z-0"></div>
     <div class="bg-grain z-0"></div>
@@ -154,7 +162,7 @@
         {date}
         leagueInfo={data.leagueInfo} />
 
-    <div class="flex-1 overflow-y-auto pb-[4rem]">
+    <div class="flex-1 overflow-y-auto pb-16">
         <div
             class="container mx-auto flex flex-col justify-between gap-2 p-2 md:w-2/3 lg:w-1/2 xl:w-1/3">
             {#if showDateSelector}
