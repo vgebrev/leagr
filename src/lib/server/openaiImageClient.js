@@ -60,7 +60,9 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey) {
         `badge type: ${badgeShape} (outer boundary must clearly be a ${badgeShape});` +
         `team name: ${noun};` +
         `${primary} and ${secondary} colour scheme;` +
-        `modern esports style.`;
+        `modern esports style.` +
+        `the badge must be fully solid with no transparent areas inside the badge;` +
+        `only the area outside the badge shape should be transparent.`;
 
     logger.info('[teamLogos] Calling OpenAI', { teamName, badgeShape, primary, secondary });
 
