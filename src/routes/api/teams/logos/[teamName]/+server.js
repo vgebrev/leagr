@@ -15,7 +15,7 @@ const MIN_SIZE = 16;
  * Falls back to the static colour logo (/logos/{colour}.webp) if none generated yet.
  * Optional `size` query param resizes the image (16–1024, preserving aspect ratio).
  */
-export const GET = async ({ params, url, locals }) => {
+export const GET = async ({ params, url, locals, fetch }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
     if (!isValid) {
         return error(404, 'League not found');
@@ -38,42 +38,58 @@ export const GET = async ({ params, url, locals }) => {
     const logoManager = createTeamLogoManager().setLeague(leagueId);
     const filename = await logoManager.getLogo(dateValidation.date, teamName);
 
-    if (!filename) {
-        return new Response(null, {
-            status: 302,
-            headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
+    const sizeParam = url.searchParams.get('size');
+    const size =
+        sizeParam !== null
+            ? Math.min(MAX_SIZE, Math.max(MIN_SIZE, parseInt(sizeParam, 10) || MAX_SIZE))
+            : null;
+
+    /**
+     * Optionally resize an image buffer and return a Response.
+     * @param {Buffer} buffer
+     * @param {string} cacheControl
+     */
+    async function serveImage(buffer, cacheControl) {
+        let imageBuffer = buffer;
+        if (size !== null && size !== MAX_SIZE) {
+            imageBuffer = await sharp(buffer)
+                .resize(size, size, { fit: 'inside' })
+                .webp()
+                .toBuffer();
+        }
+        return new Response(imageBuffer, {
+            headers: { 'Content-Type': 'image/webp', 'Cache-Control': cacheControl }
         });
+    }
+
+    if (!filename) {
+        try {
+            const fallbackRes = await fetch(fallbackUrl);
+            const buffer = Buffer.from(await fallbackRes.arrayBuffer());
+            return serveImage(buffer, 'no-store');
+        } catch {
+            return new Response(null, {
+                status: 302,
+                headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
+            });
+        }
     }
 
     const filePath = logoManager.getLogoFilePath(filename);
 
     try {
-        let imageBuffer = await fs.readFile(filePath);
-
-        const sizeParam = url.searchParams.get('size');
-        if (sizeParam !== null) {
-            const size = Math.min(
-                MAX_SIZE,
-                Math.max(MIN_SIZE, parseInt(sizeParam, 10) || MAX_SIZE)
-            );
-            if (size !== MAX_SIZE) {
-                imageBuffer = await sharp(imageBuffer)
-                    .resize(size, size, { fit: 'inside' })
-                    .webp()
-                    .toBuffer();
-            }
-        }
-
-        return new Response(imageBuffer, {
-            headers: {
-                'Content-Type': 'image/webp',
-                'Cache-Control': 'public, max-age=2592000' // 30 days
-            }
-        });
+        const buffer = await fs.readFile(filePath);
+        return serveImage(buffer, 'public, max-age=2592000'); // 30 days
     } catch {
-        return new Response(null, {
-            status: 302,
-            headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
-        });
+        try {
+            const fallbackRes = await fetch(fallbackUrl);
+            const buffer = Buffer.from(await fallbackRes.arrayBuffer());
+            return serveImage(buffer, 'no-store');
+        } catch {
+            return new Response(null, {
+                status: 302,
+                headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
+            });
+        }
     }
 };

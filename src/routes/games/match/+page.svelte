@@ -401,7 +401,7 @@
                         <img
                             src="/api/teams/logos/{encodeURIComponent(
                                 match.home
-                            )}?date={date}&size=128"
+                            )}?date={date}&size=192"
                             alt="{match.home} logo"
                             class="object-contain drop-shadow-lg drop-shadow-gray-950" />
                         <TeamBadge
@@ -413,7 +413,7 @@
                         <img
                             src="/api/teams/logos/{encodeURIComponent(
                                 match.away
-                            )}?date={date}&size=128"
+                            )}?date={date}&size=192"
                             alt="{match.away} logo"
                             class="object-contain drop-shadow-lg drop-shadow-gray-950" />
                         <TeamBadge

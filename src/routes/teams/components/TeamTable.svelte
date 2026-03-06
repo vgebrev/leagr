@@ -48,7 +48,7 @@
     const logoSrc = $derived(
         !isPlayerList
             ? date
-                ? `/api/teams/logos/${encodeURIComponent(teamName)}?date=${date}&size=128`
+                ? `/api/teams/logos/${encodeURIComponent(teamName)}?date=${date}&size=512`
                 : `/logos/${color}.webp`
             : null
     );
@@ -452,7 +452,7 @@
         position: absolute;
         inset: 0;
         background-image: var(--logo-url);
-        background-size: 85%;
+        background-size: min(85%, 420px);
         background-position: center;
         background-repeat: no-repeat;
         opacity: 0.25;
