@@ -206,9 +206,12 @@
     }
 </script>
 
-<div class="relative overflow-hidden rounded-md">
+<div
+    class="relative overflow-hidden rounded-md"
+    style={!isPlayerList && logoSrc ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}` : ''}>
     <table
-        class={`w-full text-left text-sm ${styles.text} glass border-collapse overflow-hidden rounded-md backdrop-blur-lg`}>
+        class={`w-full text-left text-sm ${styles.text} glass border-collapse overflow-hidden rounded-md backdrop-blur-lg`}
+        style={!isPlayerList && logoSrc ? `background-color: transparent; --logo-url: url('${logoSrc}')` : ''}>
         <thead class={`text-xs uppercase ${styles.header} backdrop-blur-lg`}>
             <tr>
                 <th
@@ -236,9 +239,9 @@
                 </th>
             </tr>
         </thead>
-        <tbody>
+        <tbody class={!isPlayerList && logoSrc ? 'logo-tbody' : ''}>
             {#if showTeamRatings && !isPlayerList && (teamAverageAttacking !== null || teamAverageControl !== null)}
-                <tr class={`${styles.row}`}>
+                <tr class={`${styles.row}`} style={logoSrc ? 'background-color: transparent' : ''}>
                     <td class="p-2">
                         <div class="border-b pb-2 ${styles.border}">
                             {#if teamAverageAttacking !== null}
@@ -284,7 +287,7 @@
                 </tr>
             {/if}
             {#each team as player, i (i)}
-                <tr class={`${styles.row}`}>
+                <tr class={`${styles.row}`} style={logoSrc ? 'background-color: transparent' : ''}>
                     <td class="m-0 {sizeStyles[size]}"
                         ><div class="flex items-center justify-between">
                             <div class="min-w-0 flex-1">
@@ -423,12 +426,6 @@
             {/each}
         </tbody>
     </table>
-    {#if !isPlayerList && logoSrc}
-        <div
-            class="pointer-events-none absolute inset-0"
-            style="background-image: url('{logoSrc}'); background-position: center; background-repeat: no-repeat; opacity: 0.33;">
-        </div>
-    {/if}
 </div>
 
 <RenamePlayerModal
@@ -436,3 +433,22 @@
     {allPlayers}
     bind:open={showRenameModal}
     onrename={handleRename} />
+
+<style>
+    tbody.logo-tbody {
+        position: relative;
+        z-index: 0;
+    }
+    tbody.logo-tbody::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: var(--logo-url);
+        background-size: 85%;
+        background-position: center;
+        background-repeat: no-repeat;
+        opacity: 0.25;
+        pointer-events: none;
+        z-index: -1;
+    }
+</style>

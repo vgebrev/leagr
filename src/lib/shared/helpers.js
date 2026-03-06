@@ -136,6 +136,7 @@ export const teamStyles = {
             '!text-blue-100 !border-blue-100 hover:!bg-blue-600 hover:!text-white focus:!ring-blue-600 active:!ring-blue-600',
         border: 'border !border-blue-600',
         confetti: ['#2b7fff', '#bedbff'],
+        bgHex: '#3b82f6',
         logoPrompt: { primary: 'royal blue', secondary: ['white', 'gold', 'silver', 'sky blue'] }
     },
     orange: {
@@ -147,6 +148,7 @@ export const teamStyles = {
             '!text-orange-100 !border-orange-100 hover:!bg-orange-600 hover:!text-white focus:!ring-orange-600 active:!ring-orange-600',
         border: 'border !border-orange-600',
         confetti: ['#ff6900', '#ffd6a8'],
+        bgHex: '#f97316',
         logoPrompt: { primary: 'vibrant orange', secondary: ['black', 'white', 'gold', 'dark red'] }
     },
     green: {
@@ -158,6 +160,7 @@ export const teamStyles = {
             '!text-green-100 !border-green-100 hover:!bg-green-600 hover:!text-white focus:!ring-green-600 active:!ring-green-600',
         border: 'border !border-green-600',
         confetti: ['#00c951', '#b9f8cf'],
+        bgHex: '#22c55e',
         logoPrompt: {
             primary: 'emerald green',
             secondary: ['white', 'gold', 'lime green', 'dark green']
@@ -172,6 +175,7 @@ export const teamStyles = {
             '!text-gray-800 !border-gray-800 hover:!bg-gray-200 hover:!text-gray-800 focus:!ring-gray-200 active:!ring-gray-200',
         border: 'border !border-gray-200',
         confetti: ['#6a7282', '#e5e7eb'],
+        bgHex: '#f3f4f6',
         logoPrompt: { primary: 'white', secondary: ['silver', 'light grey', 'gold', 'platinum'] }
     },
     black: {
@@ -183,6 +187,7 @@ export const teamStyles = {
             '!text-gray-100 !border-gray-100 hover:!bg-gray-900 hover:!text-white focus:!ring-gray-900 active:!ring-gray-900',
         border: 'border !border-gray-900',
         confetti: ['#1c1917', '#79716b'],
+        bgHex: '#374151',
         logoPrompt: { primary: 'black', secondary: ['gold', 'silver', 'crimson red', 'white'] }
     },
     red: {

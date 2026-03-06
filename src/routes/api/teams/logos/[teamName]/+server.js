@@ -1,4 +1,4 @@
-import { error, redirect } from '@sveltejs/kit';
+import { error } from '@sveltejs/kit';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
@@ -39,7 +39,10 @@ export const GET = async ({ params, url, locals }) => {
     const filename = await logoManager.getLogo(dateValidation.date, teamName);
 
     if (!filename) {
-        return redirect(302, fallbackUrl);
+        return new Response(null, {
+            status: 302,
+            headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
+        });
     }
 
     const filePath = logoManager.getLogoFilePath(filename);
@@ -65,6 +68,9 @@ export const GET = async ({ params, url, locals }) => {
             }
         });
     } catch {
-        return redirect(302, fallbackUrl);
+        return new Response(null, {
+            status: 302,
+            headers: { Location: fallbackUrl, 'Cache-Control': 'no-store' }
+        });
     }
 };

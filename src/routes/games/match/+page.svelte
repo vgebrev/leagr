@@ -397,13 +397,25 @@
         <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
             <div class="flex flex-col gap-2">
                 <div class="flex items-center justify-between gap-2">
-                    <TeamBadge
-                        teamName={match.home}
-                        className="w-100" />
+                    <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
+                        <img
+                            src="/api/teams/logos/{encodeURIComponent(match.home)}?date={date}&size=128"
+                            alt="{match.home} logo"
+                            class="object-contain drop-shadow-lg drop-shadow-gray-950" />
+                        <TeamBadge
+                            teamName={match.home}
+                            className="w-full" />
+                    </div>
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
-                    <TeamBadge
-                        teamName={match.away}
-                        className="w-100" />
+                    <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
+                        <img
+                            src="/api/teams/logos/{encodeURIComponent(match.away)}?date={date}&size=128"
+                            alt="{match.away} logo"
+                            class="object-contain drop-shadow-lg drop-shadow-gray-950" />
+                        <TeamBadge
+                            teamName={match.away}
+                            className="w-full" />
+                    </div>
                 </div>
                 <div class="flex items-start justify-between">
                     <div class="flex w-2/5 flex-col items-center">
