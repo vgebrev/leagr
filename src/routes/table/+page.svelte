@@ -7,7 +7,7 @@
     import StandingsTable from './components/StandingsTable.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
-    import GoalscorerList from '$components/GoalscorerList.svelte';
+    import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
 
     let { data } = $props();
@@ -103,7 +103,7 @@
             onTeamClick={handleTeamClick} />
     </div>
 
-    <GoalscorerList
+    <StarsOfTheDay
         {leagueGames}
         {knockoutGames}
         {teams} />

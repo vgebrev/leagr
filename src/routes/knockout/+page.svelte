@@ -7,7 +7,7 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
-    import GoalscorerList from '$components/GoalscorerList.svelte';
+    import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
 
@@ -163,7 +163,7 @@
         {/if}
 
         <div class="mt-4">
-            <GoalscorerList
+            <StarsOfTheDay
                 leagueGames={gamesService.leagueGames}
                 knockoutGames={gamesService.knockoutBracket?.bracket || []}
                 teams={gamesService.teams} />
