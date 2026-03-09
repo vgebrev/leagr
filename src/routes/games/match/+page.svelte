@@ -7,6 +7,7 @@
     import { Button, Input } from 'flowbite-svelte';
     import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
+    import TeamLogo from '$components/TeamLogo.svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
@@ -398,24 +399,18 @@
             <div class="flex flex-col gap-2">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
-                        <img
-                            src="/api/teams/logos/{encodeURIComponent(
-                                match.home
-                            )}?date={date}&size=192"
-                            alt="{match.home} logo"
-                            class="object-contain drop-shadow-lg drop-shadow-gray-950" />
+                        <TeamLogo
+                            teamName={match.home}
+                            {date} />
                         <TeamBadge
                             teamName={match.home}
                             className="w-full" />
                     </div>
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
                     <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
-                        <img
-                            src="/api/teams/logos/{encodeURIComponent(
-                                match.away
-                            )}?date={date}&size=192"
-                            alt="{match.away} logo"
-                            class="object-contain drop-shadow-lg drop-shadow-gray-950" />
+                        <TeamLogo
+                            teamName={match.away}
+                            {date} />
                         <TeamBadge
                             teamName={match.away}
                             className="w-full" />
