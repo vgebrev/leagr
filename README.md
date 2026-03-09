@@ -16,28 +16,32 @@ Features include:
     - Quick-access player information modals.
 - **Team Management**
     - Generate random teams, either completely random or using player ELO as seeds.
+    - AI-generated team logos using OpenAI's Images API (Requires an OpenAI API Key, disabled by default).
     - Provisional rating system ensures balanced teams even with new players.
     - Multi-iteration team generation algorithm that maximises team variance and balance using attack/defense ratings.
     - Visual indicators for provisional vs. established players.
     - Team attack/defense rating displays.
     - Replay team draws for dramatic effect.
-    - Players can be moved from a team to the waiting list (and vice versa), removed, or marked as a no-show.
+    - Players can be moved from a team to the waiting list (and vice versa), removed, renamed, or marked as a no-show.
     - Quick-access team information modals.
 - **Discipline**
     - Automatic suspension of players after no-shows.
 - **Game Scheduling and Score Tracking**
     - Generate a round-robin home-away match schedule and track results.
+    - Match Centre page for live stats tracking (goals, attack/defence contributions, and saves).
     - Individual goal-scorer tracking with interactive popover UI (league + knockout matches).
     - Standings table based on match results.
     - Knockout tournament generation with teams seeded by standings.
+    - Stars of the Day awards players with the most contributions across a session's league and knockout cup phases.
 - **Player Rankings**
     - Cumulative player rankings based on team performances and consistency.
     - Player ELO with provisional ratings system for new players (<5 sessions).
     - Attack/defense ratings displayed on player profiles and teams.
-    - Teams-based Individual goal statistics tracking.
+    - Individual attack/defence ratings derived from team goals for/against across sessions.
     - Performance tracking: league positions, cup progress, win streaks, and achievements.
     - Player profile modals - ranking details, history, profile photos (Admin-approved), and performance stats accessible throughout the app.
     - Champions hall: tracks league and cup winners (yearly and all-time views).
+    - Golden boot: tracks league and cup goal scorers (yearly and all-time views).
     - Annually reset rankings to keep competition fresh and motivating.
 - **Year Recap**
     - An annual highlight reel of the league
@@ -111,7 +115,7 @@ The application includes rudimentary security features to prevent abuse:
 
 The application includes comprehensive automated testing:
 
-- **500+ tests** covering backend logic and frontend components
+- **1000+ tests** covering backend logic and frontend components
 - **Backend tests** use Node environment (unit and integration tests)
 - **Frontend tests** use jsdom environment (component and store tests)
 - **Automated test execution** runs before every deployment
@@ -143,6 +147,8 @@ docker run -d \
   -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
   -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
   -e BODY_SIZE_LIMIT=6291456 \
+  -e LOG_LEVEL="info" \
+  -e OPENAI_API_KEY="sk-..." \
   leagr:latest
 ```
 
@@ -157,6 +163,8 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 - `MAILGUN_DOMAIN`: Mailgun domain for sending emails
 - `BODY_SIZE_LIMIT`: Maximum request body size in bytes (default: 524288 / 512KB). Set to 6291456 (6MB) for avatar uploads
 - `LOGS_DIR`: Directory path for application logs (default: /app/logs). Mount as volume for persistent logs
+- `LOG_LEVEL`: The level of logging messages to keep in the application log. Possible values: debug, info, warn, or error (default: info)
+- `OPENAI_API_KEY`: An active OpenAI API Key for team logo generation
 
 **Notes:**
 
