@@ -639,7 +639,7 @@
                 ? `/api/rankings/${encodeURIComponent(animatingPlayer)}/avatar`
                 : null}
             <div
-                class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-1400 ease-in-out {flyingPlayerClasses}"
+                class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-1400 ease-in-out {flyingPlayerClasses} drop-shadow-xl drop-shadow-gray-950"
                 style="left: {flyingPlayerPosition.x}px; top: {flyingPlayerPosition.y}px;"
                 transition:fade>
                 <div class="flex items-center gap-2 p-2">
