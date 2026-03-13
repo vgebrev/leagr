@@ -835,9 +835,8 @@
             <div class="teams-container grid grid-cols-2 gap-2">
                 {#each Object.entries(currentTeamsWithRankings) as [teamName, teamData], i (i)}
                     <div
-                        class="origin-center transition-all duration-500"
-                        class:opacity-0={!revealedTeams.has(teamName)}
-                        class:scale-90={!revealedTeams.has(teamName)}>
+                        class:table-reveal={revealedTeams.has(teamName)}
+                        class:opacity-0={!revealedTeams.has(teamName)}>
                         <TeamTable
                             team={teamData.players}
                             {teamName}
@@ -869,6 +868,21 @@
 
     .pot {
         min-width: 0; /* Allow flex items to shrink below content size */
+    }
+
+    @keyframes table-slide-in {
+        from {
+            opacity: 0;
+            transform: translateX(-100vw);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .table-reveal {
+        animation: table-slide-in 500ms ease-out both;
     }
 
     @keyframes pot-slide-in {
