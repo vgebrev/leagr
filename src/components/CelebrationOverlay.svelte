@@ -1,5 +1,6 @@
 <script>
     import ConfettiEffect from '$components/ConfettiEffect.svelte';
+    import TeamLogo from '$components/TeamLogo.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
@@ -10,6 +11,7 @@
      * @property {boolean} [celebrating]
      * @property {string} [icon]
      * @property {string[] | null} confettiColours]
+     * @property {string | null} [date]
      */
 
     /** @type {Props} */
@@ -18,7 +20,8 @@
         teamColour,
         celebrating = $bindable(),
         icon = '🏆',
-        confettiColours = null
+        confettiColours = null,
+        date = null
     } = $props();
 
     /** @type {ConfettiEffect | null} */
@@ -59,7 +62,16 @@
             class="rounded-xl px-8 py-6 text-center text-4xl font-bold shadow-lg {teamStyles[
                 teamColour
             ]?.text ?? teamStyles.default.text} pulse-and-shake">
-            {icon}
+            {#if date}
+                <TeamLogo
+                    {teamName}
+                    {date}
+                    size={128}
+                    shadow={false}
+                    className="mx-auto mb-3 size-32" />
+            {:else}
+                {icon}
+            {/if}
             <div class="mt-2 text-xl uppercase">{teamName}</div>
         </div>
     </div>

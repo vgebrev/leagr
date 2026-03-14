@@ -175,7 +175,8 @@
     bind:celebrating
     teamName={winningTeam.name}
     teamColour={winningTeam.colour}
-    icon="🏆" />
+    icon="🏆"
+    {date} />
 
 <TeamModal
     bind:teamName={selectedTeam}

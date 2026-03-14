@@ -112,7 +112,8 @@
 <CelebrationOverlay
     bind:celebrating
     teamName={winningTeam.name}
-    teamColour={winningTeam.colour} />
+    teamColour={winningTeam.colour}
+    {date} />
 
 <TeamModal
     bind:teamName={selectedTeam}

@@ -5,6 +5,8 @@
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
+    import TeamLogo from './TeamLogo.svelte';
+    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
     import { scale } from 'svelte/transition';
 
     /**
@@ -15,11 +17,80 @@
     let teamPlayers = $state([]);
     let loadingError = $state(false);
 
+    /** @type {{ rounds: any[], knockoutBracket: any[] }} */
+    let gamesData = $state({ rounds: [], knockoutBracket: [] });
+
     // Extract team color from team name for avatar colors
     let teamColor = $derived(teamName?.split(' ')[0].toLowerCase() || 'default');
 
     /**
-     * Load team players with their avatars and ELO
+     * Accumulate per-player action counts from a match side into a stats map.
+     * @param {Record<string, {goals: number, attack: number, defence: number, saves: number}>} stats
+     * @param {Record<string, any>} match
+     * @param {'home' | 'away'} side
+     */
+    function processSide(stats, match, side) {
+        const scorers = match[`${side}Scorers`];
+        if (scorers) {
+            for (const [player, count] of Object.entries(scorers)) {
+                if (player === RESERVED_SCORER_KEYS?.OWN_GOAL) continue;
+                if (player === RESERVED_SCORER_KEYS?.UNASSIGNED) continue;
+                if (typeof count !== 'number' || count <= 0) continue;
+                if (!stats[player]) stats[player] = { goals: 0, attack: 0, defence: 0, saves: 0 };
+                stats[player].goals += count;
+            }
+        }
+        const offActions = match[`${side}OffensiveActions`];
+        if (offActions) {
+            for (const [player, count] of Object.entries(offActions)) {
+                if (typeof count !== 'number' || count <= 0) continue;
+                if (!stats[player]) stats[player] = { goals: 0, attack: 0, defence: 0, saves: 0 };
+                stats[player].attack += count;
+            }
+        }
+        const defActions = match[`${side}DefensiveActions`];
+        if (defActions) {
+            for (const [player, count] of Object.entries(defActions)) {
+                if (typeof count !== 'number' || count <= 0) continue;
+                if (!stats[player]) stats[player] = { goals: 0, attack: 0, defence: 0, saves: 0 };
+                stats[player].defence += count;
+            }
+        }
+        const saveActs = match[`${side}SaveActions`];
+        if (saveActs) {
+            for (const [player, count] of Object.entries(saveActs)) {
+                if (typeof count !== 'number' || count <= 0) continue;
+                if (!stats[player]) stats[player] = { goals: 0, attack: 0, defence: 0, saves: 0 };
+                stats[player].saves += count;
+            }
+        }
+    }
+
+    /** Per-player session contribution stats derived from games data */
+    let playerStats = $derived.by(() => {
+        /** @type {Record<string, {goals: number, attack: number, defence: number, saves: number}>} */
+        const stats = {};
+
+        for (const round of gamesData.rounds) {
+            if (!Array.isArray(round)) continue;
+            for (const match of round) {
+                if (!match || match.bye) continue;
+                processSide(stats, match, 'home');
+                processSide(stats, match, 'away');
+            }
+        }
+
+        for (const match of gamesData.knockoutBracket) {
+            if (!match || match.bye) continue;
+            processSide(stats, match, 'home');
+            processSide(stats, match, 'away');
+        }
+
+        return stats;
+    });
+
+    /**
+     * Load team players with their avatars and ELO, and session game data.
      */
     async function loadTeamData() {
         if (!teamName || !date) {
@@ -29,19 +100,17 @@
 
         loadingError = false;
         teamPlayers = [];
+        gamesData = { rounds: [], knockoutBracket: [] };
 
         await withLoading(
             async () => {
-                // Fetch only the specific team's data using teamName parameter
-                const response = await api.get(
-                    `teams?date=${date}&teamName=${encodeURIComponent(teamName)}`
-                );
-                const teams = response.teams || {};
+                const [teamResponse, gamesResponse] = await Promise.all([
+                    api.get(`teams?date=${date}&teamName=${encodeURIComponent(teamName)}`),
+                    api.get(`games?date=${date}`)
+                ]);
 
-                // Get players for the specified team - already enhanced with ELO and avatar
+                const teams = teamResponse.teams || {};
                 const players = teams[teamName] || [];
-
-                // Filter out null/empty slots and extract player data
                 teamPlayers = players
                     .filter((player) => player !== null)
                     .map((player) => ({
@@ -49,6 +118,11 @@
                         avatar: player.avatar || null,
                         elo: player.elo || null
                     }));
+
+                gamesData = {
+                    rounds: gamesResponse.rounds || [],
+                    knockoutBracket: gamesResponse['knockout-games']?.bracket || []
+                };
             },
             (err) => {
                 console.error('Error loading team data:', err);
@@ -69,9 +143,9 @@
         if (open && teamName && date) {
             loadTeamData();
         } else if (!open) {
-            // Reset state when modal closes
             teamPlayers = [];
             loadingError = false;
+            gamesData = { rounds: [], knockoutBracket: [] };
         }
     });
 </script>
@@ -83,7 +157,18 @@
     class="glass-strong max-w-md border backdrop:backdrop-blur-xs"
     classes={{ body: 'p-2', close: 'p-0' }}>
     {#snippet header()}
-        {#if teamName}
+        {#if teamName && date}
+            <div class="flex w-full items-center justify-center gap-3">
+                <TeamLogo
+                    {teamName}
+                    {date}
+                    size={64}
+                    className="size-16 shrink-0" />
+                <TeamBadge
+                    {teamName}
+                    className="text-lg px-3 py-1" />
+            </div>
+        {:else if teamName}
             <div class="flex w-full items-center justify-center">
                 <TeamBadge
                     {teamName}
@@ -104,7 +189,8 @@
     {:else if teamPlayers.length}
         <TeamFormation
             players={teamPlayers}
-            {teamColor} />
+            {teamColor}
+            {playerStats} />
     {:else}
         <div class="p-4 text-center text-gray-500">No players in this team</div>
     {/if}
