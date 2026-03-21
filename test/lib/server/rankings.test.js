@@ -1571,3 +1571,456 @@ describe('RankingsManager - Yearly Rankings', () => {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// Individual stats collection & composite attack/control ratings
+// ---------------------------------------------------------------------------
+
+describe('RankingsManager - Individual stats & composite ratings', () => {
+    let rankingsManager;
+
+    beforeEach(() => {
+        rankingsManager = createRankingsManager();
+    });
+
+    // -------------------------------------------------------------------------
+    // collectIndividualStatsForSession
+    // -------------------------------------------------------------------------
+    describe('collectIndividualStatsForSession', () => {
+        const teams = {
+            'Red Team': ['Alice', 'Bob'],
+            'Blue Team': ['Charlie', 'David']
+        };
+
+        it('extracts goals from homeScorers and awayScorers', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 2,
+                        awayScore: 1,
+                        homeScorers: { Alice: 2 },
+                        awayScorers: { Charlie: 1 }
+                    }
+                ]
+            ];
+            const { stats, tracked } = rankingsManager.collectIndividualStatsForSession(
+                rounds,
+                null,
+                teams
+            );
+            expect(stats.Alice.goals).toBe(2);
+            expect(stats.Charlie.goals).toBe(1);
+            expect(stats.Bob.goals).toBe(0);
+            expect(stats.David.goals).toBe(0);
+            expect(tracked.goals).toBe(true);
+            expect(tracked.offActions).toBe(false);
+        });
+
+        it('extracts offensive, defensive and save actions', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 1,
+                        awayScore: 1,
+                        homeOffensiveActions: { Alice: 3 },
+                        homeDefensiveActions: { Bob: 2 },
+                        awaySaveActions: { David: 4 },
+                        awayDefensiveActions: { Charlie: 1 }
+                    }
+                ]
+            ];
+            const { stats, tracked } = rankingsManager.collectIndividualStatsForSession(
+                rounds,
+                null,
+                teams
+            );
+            expect(stats.Alice.offensiveActions).toBe(3);
+            expect(stats.Bob.defensiveActions).toBe(2);
+            expect(stats.David.saveActions).toBe(4);
+            expect(stats.Charlie.defensiveActions).toBe(1);
+            expect(tracked.offActions).toBe(true);
+            expect(tracked.defActions).toBe(true);
+            expect(tracked.saveActions).toBe(true);
+        });
+
+        it('accumulates stats across multiple matches and rounds', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 1,
+                        awayScore: 0,
+                        homeScorers: { Alice: 1 },
+                        homeOffensiveActions: { Alice: 1 }
+                    }
+                ],
+                [
+                    {
+                        home: 'Blue Team',
+                        away: 'Red Team',
+                        homeScore: 0,
+                        awayScore: 2,
+                        awayScorers: { Alice: 2 }
+                    }
+                ]
+            ];
+            const { stats } = rankingsManager.collectIndividualStatsForSession(rounds, null, teams);
+            expect(stats.Alice.goals).toBe(3);
+            expect(stats.Alice.offensiveActions).toBe(1);
+        });
+
+        it('accumulates stats from knockout bracket', () => {
+            const rounds = [];
+            const knockoutBracket = [
+                {
+                    home: 'Red Team',
+                    away: 'Blue Team',
+                    homeScore: 2,
+                    awayScore: 0,
+                    homeScorers: { Bob: 2 },
+                    homeSaveActions: { Bob: 1 }
+                }
+            ];
+            const { stats } = rankingsManager.collectIndividualStatsForSession(
+                rounds,
+                knockoutBracket,
+                teams
+            );
+            expect(stats.Bob.goals).toBe(2);
+            expect(stats.Bob.saveActions).toBe(1);
+        });
+
+        it('skips reserved scorer keys (__ownGoal__, __unassigned__)', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 2,
+                        awayScore: 0,
+                        homeScorers: { Alice: 1, __ownGoal__: 1, __unassigned__: 1 }
+                    }
+                ]
+            ];
+            const { stats } = rankingsManager.collectIndividualStatsForSession(rounds, null, teams);
+            expect(stats.Alice.goals).toBe(1);
+            expect(stats['__ownGoal__']).toBeUndefined();
+            expect(stats['__unassigned__']).toBeUndefined();
+        });
+
+        it('handles missing action maps gracefully (null / undefined)', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 1,
+                        awayScore: 0
+                        // no scorers or action fields at all
+                    }
+                ]
+            ];
+            expect(() =>
+                rankingsManager.collectIndividualStatsForSession(rounds, null, teams)
+            ).not.toThrow();
+            const { stats, tracked } = rankingsManager.collectIndividualStatsForSession(
+                rounds,
+                null,
+                teams
+            );
+            expect(stats.Alice.goals).toBe(0);
+            expect(tracked.goals).toBe(false);
+            expect(tracked.offActions).toBe(false);
+        });
+
+        it('initialises zero stats for every player in teams regardless of contributions', () => {
+            const rounds = [
+                [
+                    {
+                        home: 'Red Team',
+                        away: 'Blue Team',
+                        homeScore: 1,
+                        awayScore: 0,
+                        homeScorers: { Alice: 1 }
+                    }
+                ]
+            ];
+            const { stats } = rankingsManager.collectIndividualStatsForSession(rounds, null, teams);
+            // Bob scored nothing — should still be present with 0s
+            expect(stats.Bob).toBeDefined();
+            expect(stats.Bob.goals).toBe(0);
+            expect(stats.Bob.offensiveActions).toBe(0);
+            expect(stats.Bob.defensiveActions).toBe(0);
+            expect(stats.Bob.saveActions).toBe(0);
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // calculateAttackControlRatings — composite formula
+    // -------------------------------------------------------------------------
+    describe('calculateAttackControlRatings — composite with individual stats', () => {
+        /**
+         * Build a minimal enhancedRankings object with two players for a single date.
+         * Alice is high-goals/high-offActions; Bob is high-saves/high-defActions.
+         */
+        function buildRankings({ aliceStats, bobStats }) {
+            const mkEntry = (stats, seasonEloGames = 40) => ({
+                team: 'Red Team',
+                points: { total: 5 },
+                ratings: {
+                    elo: 1000,
+                    eloGames: { allTime: seasonEloGames, season: seasonEloGames },
+                    attacking: null,
+                    control: null,
+                    teamGF: { perSession: stats.gf },
+                    teamGA: { perSession: stats.ga },
+                    goals: { perSession: stats.goals },
+                    offActions: { perSession: stats.off },
+                    defActions: { perSession: stats.def },
+                    saveActions: { perSession: stats.save }
+                },
+                ranking: { rank: 1, totalPlayers: 2, rankingPoints: 10 }
+            });
+
+            return {
+                players: {
+                    Alice: {
+                        history: { '2026-01-10': mkEntry(aliceStats) },
+                        elo: { gamesPlayed: 40 }
+                    },
+                    Bob: { history: { '2026-01-10': mkEntry(bobStats) }, elo: { gamesPlayed: 40 } }
+                }
+            };
+        }
+
+        it('attackingRating is higher for the player with more individual goals on same team', () => {
+            const rankings = buildRankings({
+                aliceStats: { gf: 10, ga: 8, goals: 3, off: 2, def: 0, save: 0 },
+                bobStats: { gf: 10, ga: 8, goals: 0, off: 0, def: 2, save: 3 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+            expect(rankings.players.Alice.attackingRating).toBeGreaterThan(
+                rankings.players.Bob.attackingRating
+            );
+        });
+
+        it('controlRating is higher for the player with more saves/defActions', () => {
+            const rankings = buildRankings({
+                aliceStats: { gf: 10, ga: 8, goals: 3, off: 2, def: 0, save: 0 },
+                bobStats: { gf: 10, ga: 8, goals: 0, off: 0, def: 3, save: 2 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+            expect(rankings.players.Bob.controlRating).toBeGreaterThan(
+                rankings.players.Alice.controlRating
+            );
+        });
+
+        it('falls back to team-GF/GA only when all individual stats are zero', () => {
+            // Two players on different teams: Alice on high-GF team, Bob on low-GF team
+            // Both have zero individual stats — result should mirror the old team-only formula
+            const mkEntry = (gf, ga, eloGames = 40) => ({
+                team: 'X',
+                points: { total: 5 },
+                ratings: {
+                    elo: 1000,
+                    eloGames: { allTime: eloGames, season: eloGames },
+                    attacking: null,
+                    control: null,
+                    teamGF: { perSession: gf },
+                    teamGA: { perSession: ga },
+                    goals: { perSession: 0 },
+                    offActions: { perSession: 0 },
+                    defActions: { perSession: 0 },
+                    saveActions: { perSession: 0 }
+                },
+                ranking: { rank: 1, totalPlayers: 2, rankingPoints: 10 }
+            });
+            const rankings = {
+                players: {
+                    Alice: { history: { '2026-01-10': mkEntry(10, 5) }, elo: { gamesPlayed: 40 } },
+                    Bob: { history: { '2026-01-10': mkEntry(5, 10) }, elo: { gamesPlayed: 40 } }
+                }
+            };
+            rankingsManager.calculateAttackControlRatings(rankings);
+            // Alice (high GF) should have higher attacking than Bob
+            expect(rankings.players.Alice.attackingRating).toBeGreaterThan(
+                rankings.players.Bob.attackingRating
+            );
+            // Bob (high GA) should have lower control than Alice
+            expect(rankings.players.Alice.controlRating).toBeGreaterThan(
+                rankings.players.Bob.controlRating
+            );
+        });
+
+        it('stores individual normalised values on history entry', () => {
+            const rankings = buildRankings({
+                aliceStats: { gf: 10, ga: 5, goals: 3, off: 2, def: 0, save: 0 },
+                bobStats: { gf: 8, ga: 8, goals: 0, off: 1, def: 2, save: 3 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+            const entry = rankings.players.Alice.history['2026-01-10'].ratings;
+            expect(entry.goals).toHaveProperty('norm');
+            expect(entry.offActions).toHaveProperty('norm');
+            expect(entry.defActions).toHaveProperty('norm');
+            expect(entry.saveActions).toHaveProperty('norm');
+            expect(entry.goals.norm).toBeGreaterThanOrEqual(0);
+            expect(entry.goals.norm).toBeLessThanOrEqual(1);
+        });
+
+        it('produces ratings in [0, 1] range', () => {
+            const rankings = buildRankings({
+                aliceStats: { gf: 12, ga: 4, goals: 4, off: 3, def: 0, save: 0 },
+                bobStats: { gf: 6, ga: 9, goals: 0, off: 0, def: 3, save: 4 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+            for (const p of Object.values(rankings.players)) {
+                if (p.attackingRating !== null) {
+                    expect(p.attackingRating).toBeGreaterThanOrEqual(0);
+                    expect(p.attackingRating).toBeLessThanOrEqual(1);
+                }
+                if (p.controlRating !== null) {
+                    expect(p.controlRating).toBeGreaterThanOrEqual(0);
+                    expect(p.controlRating).toBeLessThanOrEqual(1);
+                }
+            }
+        });
+    });
+
+    // -------------------------------------------------------------------------
+    // calculatePlayerProfiles — trait assignment
+    // -------------------------------------------------------------------------
+    describe('calculatePlayerProfiles', () => {
+        /**
+         * Build minimal enhancedRankings where each player has pre-computed
+         * latest normalised stats on their top-level data.
+         */
+        // seasonEloGames defaults to 35 (full confidence) so pull factor = 1 (no pull) by default.
+        // Pass seasonEloGames explicitly to test pull-factor behaviour.
+        function buildWithNorms(players, seasonEloGames = 35) {
+            const result = { players: {} };
+            for (const [name, norms] of Object.entries(players)) {
+                result.players[name] = {
+                    goalsNorm: norms.g ?? 0,
+                    offActionsNorm: norms.o ?? 0,
+                    defActionsNorm: norms.d ?? 0,
+                    saveActionsNorm: norms.s ?? 0,
+                    seasonEloGames,
+                    history: {}
+                };
+            }
+            return result;
+        }
+
+        it('assigns isFinisher when goalsNorm > threshold', () => {
+            const r = buildWithNorms({ Alice: { g: 0.7 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(true);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('assigns isAttacker when offActionsNorm > threshold', () => {
+            const r = buildWithNorms({ Alice: { o: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isAttacker).toBe(true);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('assigns isDefender when defActionsNorm > threshold', () => {
+            const r = buildWithNorms({ Alice: { d: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isDefender).toBe(true);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('assigns isShotStopper when saveActionsNorm > threshold', () => {
+            const r = buildWithNorms({ Alice: { s: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isShotStopper).toBe(true);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('Finisher + Attacker = Danger Man', () => {
+            const r = buildWithNorms({ Alice: { g: 0.7, o: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('Danger Man');
+        });
+
+        it('Defender + Attacker = Engine', () => {
+            const r = buildWithNorms({ Alice: { d: 0.6, o: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('Engine');
+        });
+
+        it('Defender + Shot Stopper = Sentinel', () => {
+            const r = buildWithNorms({ Alice: { d: 0.6, s: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('Sentinel');
+        });
+
+        it('Attacker + Finisher + Defender = Complete Player (plus sub-badges)', () => {
+            const r = buildWithNorms({ Alice: { g: 0.7, o: 0.6, d: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('Complete Player');
+            expect(r.players.Alice.playerProfile).toContain('Danger Man');
+            expect(r.players.Alice.playerProfile).toContain('Engine');
+            expect(r.players.Alice.playerProfile).not.toContain('Goal-Scoring Defender');
+        });
+
+        it('all 4 traits = G.O.A.T. plus all sub-badges', () => {
+            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.7, d: 0.6, s: 0.6 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(true);
+            expect(r.players.Alice.traits.isAttacker).toBe(true);
+            expect(r.players.Alice.traits.isDefender).toBe(true);
+            expect(r.players.Alice.traits.isShotStopper).toBe(true);
+            expect(r.players.Alice.playerProfile).toContain('G.O.A.T.');
+            expect(r.players.Alice.playerProfile).toContain('Complete Player');
+            expect(r.players.Alice.playerProfile).toContain('Sentinel');
+        });
+
+        it('no traits = empty badge array', () => {
+            const r = buildWithNorms({ Alice: { g: 0.3, o: 0.2, d: 0.1, s: 0.0 } });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traits.isAttacker).toBe(false);
+            expect(r.players.Alice.traits.isDefender).toBe(false);
+            expect(r.players.Alice.traits.isShotStopper).toBe(false);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('no individual stats = empty badge array', () => {
+            const r = buildWithNorms({ Alice: {} });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        // Pull-factor tests (quadratic, season-ELO-games-based, threshold=35)
+        it('pull factor: 0 season ELO games pulls all norms to 0 — no trait even with norm=1', () => {
+            const r = buildWithNorms({ Alice: { g: 1.0, o: 1.0, d: 1.0, s: 1.0 } }, 0);
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traits.isAttacker).toBe(false);
+            expect(r.players.Alice.traits.isDefender).toBe(false);
+            expect(r.players.Alice.traits.isShotStopper).toBe(false);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('pull factor: 7 season ELO games with norm=1.0 is pulled toward 0 — below threshold', () => {
+            // confidence = (7/35)^2 = 0.04 → pulled = 1.0 * 0.04 = 0.04, not > 0.5
+            const r = buildWithNorms({ Alice: { g: 1.0 } }, 7);
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+        });
+
+        it('pull factor: 35 season ELO games (full confidence) applies no pull', () => {
+            const r = buildWithNorms({ Alice: { g: 0.6 } }, 35);
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(true);
+        });
+    });
+});

@@ -19,6 +19,8 @@ import { getNextNouns } from './nounPool.js';
  * @property {number} controlRating
  * @property {string | null} avatar
  * @property {number} appearances
+ * @property {{ isFinisher: boolean, isAttacker: boolean, isDefender: boolean, isShotStopper: boolean }} traits
+ * @property {string} playerProfile
  */
 
 /** @typedef {{ name: string, players: ProvisionalPlayerData[] }} Pot */
@@ -220,6 +222,13 @@ class TeamGenerator {
         const actualAttack = playerData?.attackingRating ?? DEFAULT_RATING;
         const actualControl = playerData?.controlRating ?? DEFAULT_RATING;
 
+        const noTraits = {
+            isFinisher: false,
+            isAttacker: false,
+            isDefender: false,
+            isShotStopper: false
+        };
+
         return {
             name: playerName,
             elo: Math.round(this.calculateProvisionalRating(actualElo, gamesPlayed, anchors.elo)),
@@ -236,7 +245,10 @@ class TeamGenerator {
                 anchors.control
             ),
             avatar: playerData?.avatar || null,
-            appearances
+            appearances,
+            // Provisional players have no reliable individual stats yet — traits default to false
+            traits: isProvisional ? noTraits : (playerData?.traits ?? noTraits),
+            playerProfile: isProvisional ? [] : (playerData?.playerProfile ?? [])
         };
     }
 
@@ -670,6 +682,7 @@ class TeamGenerator {
      *  pairNorm: number,
      *  attackNorm: number,
      *  controlNorm: number,
+     *  traitsNorm: number,
      *  eloDelta: number,
      *  spreadBalance: number,
      *  attackDelta: number,
@@ -682,6 +695,7 @@ class TeamGenerator {
         const W_PAIR = 1.3;
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
+        const W_TRAITS = 0.8;
         const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
         /** @param {number} value */
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -717,13 +731,17 @@ class TeamGenerator {
                 ? 0
                 : clamp01((spreadBalance - spreadIdeal) / (spreadWorst - spreadIdeal));
 
+        // Trait / profile balance
+        const traitsNorm = this.calculateTraitBalance(teams);
+
         const totalNorm =
             (eloNorm * W_ELO +
                 spreadNorm * W_SPREAD +
                 pairNorm * W_PAIR +
                 attackNorm * W_ATTACK +
-                controlNorm * W_CONTROL) /
-            (W_ELO + W_SPREAD + W_PAIR + W_ATTACK + W_CONTROL);
+                controlNorm * W_CONTROL +
+                traitsNorm * W_TRAITS) /
+            (W_ELO + W_SPREAD + W_PAIR + W_ATTACK + W_CONTROL + W_TRAITS);
 
         return {
             totalNorm,
@@ -732,11 +750,76 @@ class TeamGenerator {
             pairNorm,
             attackNorm,
             controlNorm,
+            traitsNorm,
             eloDelta,
             spreadBalance,
             attackDelta,
             controlDelta
         };
+    }
+
+    /**
+     * Calculate trait distribution balance across teams.
+     * Measures how evenly attack traits (isFinisher, isAttacker) and defence traits
+     * (isDefender, isShotStopper) are distributed. An "engine" player who holds
+     * multiple traits contributes to each relevant pool simultaneously.
+     *
+     * Returns 0 when all teams have the same trait counts (perfect balance),
+     * up to 1 for maximum imbalance. Returns 0 when no players have traits.
+     *
+     * @param {TeamsMap} teams - Generated teams object
+     * @returns {number} Trait balance score [0, 1] where lower is better
+     */
+    calculateTraitBalance(teams) {
+        const teamNames = Object.keys(teams);
+        if (teamNames.length < 2) return 0;
+
+        const attackCounts = [];
+        const defenceCounts = [];
+        let totalTraitPlayers = 0;
+
+        for (const teamName of teamNames) {
+            const players = teams[teamName];
+            let attackCount = 0;
+            let defenceCount = 0;
+
+            for (const playerName of players) {
+                let playerData = this.rankings?.players?.[playerName];
+                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                    playerData = this.previousYearRankings.players[playerName];
+                }
+                const traits = playerData?.traits;
+                if (!traits) continue;
+
+                if (traits.isFinisher || traits.isAttacker) {
+                    attackCount++;
+                    totalTraitPlayers++;
+                }
+                if (traits.isDefender || traits.isShotStopper) {
+                    defenceCount++;
+                    totalTraitPlayers++;
+                }
+            }
+
+            attackCounts.push(attackCount);
+            defenceCounts.push(defenceCount);
+        }
+
+        // No players have any traits — neutral score
+        if (totalTraitPlayers === 0) return 0;
+
+        const avgTeamSize =
+            Object.values(teams).reduce((s, p) => s + p.length, 0) / teamNames.length;
+        const normDivisor = Math.max(1, avgTeamSize);
+        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+
+        const attackRange = Math.max(...attackCounts) - Math.min(...attackCounts);
+        const defenceRange = Math.max(...defenceCounts) - Math.min(...defenceCounts);
+
+        const attackScore = clamp01(attackRange / normDivisor);
+        const defenceScore = clamp01(defenceRange / normDivisor);
+
+        return (attackScore + defenceScore) / 2;
     }
 
     /**

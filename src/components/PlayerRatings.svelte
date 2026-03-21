@@ -7,15 +7,17 @@
     let {
         attackingRating = null,
         controlRating = null,
-        goalsForPerSession = null,
-        goalsAgainstPerSession = null,
-        gfRank = null,
-        gfCount = null,
-        gaRank = null,
-        gaCount = null,
+        goalsNorm = null,
+        offActionsNorm = null,
+        teamGFNorm = null,
+        saveActionsNorm = null,
+        defActionsNorm = null,
+        teamGANorm = null,
         gamma = 0.45,
         tooltipIdPrefix = 'player-rating'
     } = $props();
+
+    const pct = (v) => (v !== null && v !== undefined ? Math.round(v * 100) : null);
 
     function applyGammaSpread(value, spread = gamma, minClamp = 0.1) {
         if (value === null || value === undefined) return null;
@@ -64,12 +66,14 @@
                     <span class="w-9 text-right text-sm text-gray-500 dark:text-gray-300">
                         {formatDisplayPercent(attackingRating) ?? ''}
                     </span>
-                    {#if gfRank !== null && gfCount !== null && goalsForPerSession !== null}
+                    {#if goalsNorm !== null || offActionsNorm !== null || teamGFNorm !== null}
                         <Tooltip
                             class="shadow-lg"
                             triggeredBy={`#${attId}`}
                             transition={scale}>
-                            #{gfRank} Team Goals For/Session ({goalsForPerSession.toFixed(2)})
+                            Goals {pct(goalsNorm)}% · Offensive {pct(offActionsNorm)}% · Team GF {pct(
+                                teamGFNorm
+                            )}%
                         </Tooltip>
                     {/if}
                 </div>
@@ -80,7 +84,7 @@
                     class="flex items-center gap-2"
                     id={defId}>
                     <span class="w-14 shrink-0 tracking-wide text-gray-500 dark:text-gray-300"
-                        >Defense</span>
+                        >Defence</span>
                     <div
                         class="relative h-[0.75rem] w-full overflow-hidden rounded-full bg-gray-200/70 dark:bg-gray-700">
                         <div
@@ -91,14 +95,13 @@
                     <span class="w-9 text-right text-sm text-gray-500 dark:text-gray-300">
                         {formatDisplayPercent(controlRating) ?? ''}
                     </span>
-                    {#if gaRank !== null && gaCount !== null && goalsAgainstPerSession !== null}
+                    {#if saveActionsNorm !== null || defActionsNorm !== null || teamGANorm !== null}
                         <Tooltip
                             class="shadow-lg"
                             triggeredBy={`#${defId}`}
                             transition={scale}>
-                            #{gaRank} Team Goals Against/Session ({goalsAgainstPerSession.toFixed(
-                                2
-                            )})
+                            Saves {pct(saveActionsNorm)}% · Defensive {pct(defActionsNorm)}% · Team
+                            GA {pct(teamGANorm)}%
                         </Tooltip>
                     {/if}
                 </div>

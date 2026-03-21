@@ -591,3 +591,154 @@ describe('TeamGenerator', () => {
         });
     });
 });
+
+// ---------------------------------------------------------------------------
+// Trait balance scoring
+// ---------------------------------------------------------------------------
+
+describe('TeamGenerator - calculateTraitBalance', () => {
+    let tg;
+
+    /** Build a mock rankings object with trait data for each player */
+    function buildRankingsWithTraits(playerTraits) {
+        const players = {};
+        for (const [name, traits] of Object.entries(playerTraits)) {
+            players[name] = {
+                elo: { rating: 1000, gamesPlayed: 40 },
+                attackingRating: 0.5,
+                controlRating: 0.5,
+                traits: {
+                    isFinisher: traits.isFinisher ?? false,
+                    isAttacker: traits.isAttacker ?? false,
+                    isDefender: traits.isDefender ?? false,
+                    isShotStopper: traits.isShotStopper ?? false
+                }
+            };
+        }
+        return { players };
+    }
+
+    beforeEach(() => {
+        tg = createTeamGenerator().setLeague('test-league');
+    });
+
+    it('returns 0 when all teams have identical trait distributions', () => {
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: { isFinisher: true },
+                Bob: { isDefender: true },
+                Charlie: { isFinisher: true },
+                David: { isDefender: true }
+            })
+        );
+        const teams = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        expect(tg.calculateTraitBalance(teams)).toBe(0);
+    });
+
+    it('returns high score when all finishers are on one team', () => {
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: { isFinisher: true },
+                Bob: { isFinisher: true },
+                Charlie: {},
+                David: {}
+            })
+        );
+        const balanced = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        const imbalanced = tg.calculateTraitBalance(balanced);
+        expect(imbalanced).toBeGreaterThan(0);
+    });
+
+    it('returns lower score when finishers are spread evenly', () => {
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: { isFinisher: true },
+                Bob: { isFinisher: true },
+                Charlie: {},
+                David: {}
+            })
+        );
+        const spread = {
+            'Team A': ['Alice', 'Charlie'],
+            'Team B': ['Bob', 'David']
+        };
+        const bunched = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        expect(tg.calculateTraitBalance(spread)).toBeLessThan(tg.calculateTraitBalance(bunched));
+    });
+
+    it('engine player (isAttacker + isDefender) counts in both attack and defence pools', () => {
+        // Alice is an engine (attack + defence). Bob is a pure finisher.
+        // Team A has Alice (engine). Team B has Bob (finisher only).
+        // For attack pool: Team A = 1 (Alice counts), Team B = 1 (Bob counts) → balanced
+        // For defence pool: Team A = 1 (Alice counts), Team B = 0 → imbalanced
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: { isAttacker: true, isDefender: true }, // engine
+                Bob: { isFinisher: true }, // pure finisher
+                Charlie: {},
+                David: {}
+            })
+        );
+        const teams = {
+            'Team A': ['Alice', 'Charlie'],
+            'Team B': ['Bob', 'David']
+        };
+        const score = tg.calculateTraitBalance(teams);
+        // Attack pools are balanced (1 each), defence is unbalanced — score should be non-zero
+        // but not maximally bad (engine's attack presence balances the attack pool)
+        expect(score).toBeGreaterThan(0);
+        expect(score).toBeLessThanOrEqual(1);
+    });
+
+    it('returns 0 when no players have any traits', () => {
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: {},
+                Bob: {},
+                Charlie: {},
+                David: {}
+            })
+        );
+        const teams = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        expect(tg.calculateTraitBalance(teams)).toBe(0);
+    });
+
+    it('returns 0 when rankings are not set', () => {
+        const teams = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        expect(tg.calculateTraitBalance(teams)).toBe(0);
+    });
+
+    it('profileNorm is included in calculateNormalizedScore result', () => {
+        tg.setRankings(
+            buildRankingsWithTraits({
+                Alice: { isFinisher: true },
+                Bob: {},
+                Charlie: { isFinisher: true },
+                David: {}
+            })
+        );
+        tg._provisionalAnchors = { elo: 1000, attack: 0.5, control: 0.5 };
+        const teams = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+        const metrics = tg.calculateNormalizedScore(teams, 200, 60);
+        expect(metrics).toHaveProperty('traitsNorm');
+        expect(typeof metrics.traitsNorm).toBe('number');
+    });
+});

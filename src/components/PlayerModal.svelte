@@ -32,10 +32,12 @@
                 detail.goalsAgainstPerSession ?? playerData.goalsAgainstPerSession,
             attackingRating: detail.attackingRating ?? playerData.attackingRating,
             controlRating: detail.controlRating ?? playerData.controlRating,
-            gfRank: detail.gfRank ?? playerData.gfRank,
-            gfCount: detail.gfCount ?? playerData.gfCount,
-            gaRank: detail.gaRank ?? playerData.gaRank,
-            gaCount: detail.gaCount ?? playerData.gaCount,
+            teamGFNorm: detail.teamGFNorm ?? playerData.teamGFNorm,
+            teamGANorm: detail.teamGANorm ?? playerData.teamGANorm,
+            goalsNorm: detail.goalsNorm ?? playerData.goalsNorm,
+            offActionsNorm: detail.offActionsNorm ?? playerData.offActionsNorm,
+            defActionsNorm: detail.defActionsNorm ?? playerData.defActionsNorm,
+            saveActionsNorm: detail.saveActionsNorm ?? playerData.saveActionsNorm,
             elo: detail.elo ?? playerData.elo,
             asOfDate: detail.date ?? null
         };

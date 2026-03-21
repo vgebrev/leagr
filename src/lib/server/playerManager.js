@@ -888,7 +888,8 @@ export class PlayerManager {
             if (lastDetailBeforeSession) {
                 // Use values from the last history entry before this session
                 actualElo = lastDetailBeforeSession.ratings?.elo ?? DEFAULT_ELO;
-                gamesPlayed = lastDetailBeforeSession.ratings?.eloGames ?? 0;
+                const eloGames = lastDetailBeforeSession.ratings?.eloGames;
+                gamesPlayed = (typeof eloGames === 'object' ? eloGames?.allTime : eloGames) ?? 0;
                 attackingRating = lastDetailBeforeSession.ratings?.attacking ?? DEFAULT_RATING;
                 controlRating = lastDetailBeforeSession.ratings?.control ?? DEFAULT_RATING;
             } else if (previousYearRankings?.players?.[playerName]) {
