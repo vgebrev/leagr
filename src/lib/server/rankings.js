@@ -881,6 +881,12 @@ export class RankingsManager {
                 elo: data.elo || null,
                 seasonEloGames: data.seasonEloGames ?? 0,
 
+                // Season stat totals
+                indGoals: data.indGoals ?? 0,
+                offActions: data.offActions ?? 0,
+                defActions: data.defActions ?? 0,
+                saveActions: data.saveActions ?? 0,
+
                 // Per-stat session counters (for accurate total calculations)
                 sessionsWithGoals: data.sessionsWithGoals ?? 0,
                 sessionsWithOffActions: data.sessionsWithOffActions ?? 0,

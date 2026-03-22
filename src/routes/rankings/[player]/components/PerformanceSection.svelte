@@ -2,6 +2,10 @@
     import { Toggle } from 'flowbite-svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
+    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '$components/Icons/GloveIcon.svelte';
 
     let { playerData } = $props();
 
@@ -225,8 +229,64 @@
             No performance data available for this player.
         </div>
     {:else}
+        <!-- Season Stats Panel -->
+        <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+            <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+                <div class="text-center">
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Goals
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                        <LeagueIcon
+                            icon="soccer"
+                            class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <div class="text-2xl font-bold dark:text-gray-200">
+                            {playerData.indGoals ?? 0}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Attack Contributions
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                        <BullseyeIcon class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <div class="text-2xl font-bold dark:text-gray-200">
+                            {playerData.offActions ?? 0}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Defence Contributions
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                        <ShieldIcon class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <div class="text-2xl font-bold dark:text-gray-200">
+                            {playerData.defActions ?? 0}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <div
+                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                        Saves
+                    </div>
+                    <div class="flex items-center justify-center gap-1">
+                        <GloveIcon class="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                        <div class="text-2xl font-bold dark:text-gray-200">
+                            {playerData.saveActions ?? 0}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Distribution Charts -->
-        <div class="grid gap-2 sm:grid-cols-2">
+        <div class="mt-2 grid gap-2 sm:grid-cols-2">
             <!-- League Position Chart -->
             {#if hasLeagueData}
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
