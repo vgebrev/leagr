@@ -7,6 +7,7 @@
     import DangerManIcon from '$components/Icons/DangerManIcon.svelte';
     import EngineIcon from '$components/Icons/EngineIcon.svelte';
     import TowerIcon from '$components/Icons/TowerIcon.svelte';
+    import UtilityHeroIcon from '$components/Icons/UtilityHeroIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
 
@@ -26,6 +27,7 @@
         'Danger Man': { Icon: DangerManIcon, tier: 'silver' },
         Engine: { Icon: EngineIcon, tier: 'silver' },
         Sentinel: { Icon: TowerIcon, tier: 'silver' },
+        'Utility Hero': { Icon: UtilityHeroIcon, tier: 'silver' },
         'Complete Player': { Icon: CrownIcon, tier: 'gold' },
         'G.O.A.T.': { Icon: TrophyIcon, tier: 'gold' }
     };

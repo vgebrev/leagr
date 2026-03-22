@@ -1898,10 +1898,12 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
         /**
          * Build minimal enhancedRankings where each player has pre-computed
          * latest normalised stats on their top-level data.
+         * Each player entry: { g, o, d, s, sg } — sg defaults to 35 (established, full confidence).
+         * Dynamic threshold = mean of established players' pulled norms + 0.1 per stat.
+         * Tests use a High/Low pair so the threshold is predictable:
+         *   mean = (high + low) / 2, threshold = mean + 0.1
          */
-        // seasonEloGames defaults to 35 (full confidence) so pull factor = 1 (no pull) by default.
-        // Pass seasonEloGames explicitly to test pull-factor behaviour.
-        function buildWithNorms(players, seasonEloGames = 35) {
+        function buildWithNorms(players) {
             const result = { players: {} };
             for (const [name, norms] of Object.entries(players)) {
                 result.players[name] = {
@@ -1909,61 +1911,63 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
                     offActionsNorm: norms.o ?? 0,
                     defActionsNorm: norms.d ?? 0,
                     saveActionsNorm: norms.s ?? 0,
-                    seasonEloGames,
+                    seasonEloGames: norms.sg ?? 35,
                     history: {}
                 };
             }
             return result;
         }
 
-        it('assigns isFinisher when goalsNorm > threshold', () => {
-            const r = buildWithNorms({ Alice: { g: 0.7 } });
+        // Alice=0.8, Bob=0.2 → mean=0.5, threshold=0.6 → Alice passes, Bob doesn't
+        it('assigns isFinisher when pulled goals norm is above dynamic threshold', () => {
+            const r = buildWithNorms({ Alice: { g: 0.8 }, Bob: { g: 0.2 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(true);
-            expect(r.players.Alice.playerProfile).toEqual([]);
+            expect(r.players.Bob.traits.isFinisher).toBe(false);
         });
 
-        it('assigns isAttacker when offActionsNorm > threshold', () => {
-            const r = buildWithNorms({ Alice: { o: 0.6 } });
+        it('assigns isAttacker when pulled off norm is above dynamic threshold', () => {
+            const r = buildWithNorms({ Alice: { o: 0.8 }, Bob: { o: 0.2 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isAttacker).toBe(true);
-            expect(r.players.Alice.playerProfile).toEqual([]);
+            expect(r.players.Bob.traits.isAttacker).toBe(false);
         });
 
-        it('assigns isDefender when defActionsNorm > threshold', () => {
-            const r = buildWithNorms({ Alice: { d: 0.6 } });
+        it('assigns isDefender when pulled def norm is above dynamic threshold', () => {
+            const r = buildWithNorms({ Alice: { d: 0.8 }, Bob: { d: 0.2 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isDefender).toBe(true);
-            expect(r.players.Alice.playerProfile).toEqual([]);
+            expect(r.players.Bob.traits.isDefender).toBe(false);
         });
 
-        it('assigns isShotStopper when saveActionsNorm > threshold', () => {
-            const r = buildWithNorms({ Alice: { s: 0.6 } });
+        it('assigns isShotStopper when pulled save norm is above dynamic threshold', () => {
+            const r = buildWithNorms({ Alice: { s: 0.8 }, Bob: { s: 0.2 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isShotStopper).toBe(true);
-            expect(r.players.Alice.playerProfile).toEqual([]);
+            expect(r.players.Bob.traits.isShotStopper).toBe(false);
         });
 
+        // Badge tests: Alice high, Low zeroed → threshold = Alice/2 + 0.1 < Alice → Alice passes
         it('Finisher + Attacker = Danger Man', () => {
-            const r = buildWithNorms({ Alice: { g: 0.7, o: 0.6 } });
+            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8 }, Low: {} });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Danger Man');
         });
 
         it('Defender + Attacker = Engine', () => {
-            const r = buildWithNorms({ Alice: { d: 0.6, o: 0.6 } });
+            const r = buildWithNorms({ Alice: { d: 0.8, o: 0.8 }, Low: {} });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Engine');
         });
 
         it('Defender + Shot Stopper = Sentinel', () => {
-            const r = buildWithNorms({ Alice: { d: 0.6, s: 0.6 } });
+            const r = buildWithNorms({ Alice: { d: 0.8, s: 0.8 }, Low: {} });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Sentinel');
         });
 
         it('Attacker + Finisher + Defender = Complete Player (plus sub-badges)', () => {
-            const r = buildWithNorms({ Alice: { g: 0.7, o: 0.6, d: 0.6 } });
+            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8, d: 0.8 }, Low: {} });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Complete Player');
             expect(r.players.Alice.playerProfile).toContain('Danger Man');
@@ -1972,7 +1976,7 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
         });
 
         it('all 4 traits = G.O.A.T. plus all sub-badges', () => {
-            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.7, d: 0.6, s: 0.6 } });
+            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8, d: 0.8, s: 0.8 }, Low: {} });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(true);
             expect(r.players.Alice.traits.isAttacker).toBe(true);
@@ -1983,8 +1987,13 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             expect(r.players.Alice.playerProfile).toContain('Sentinel');
         });
 
-        it('no traits = empty badge array', () => {
-            const r = buildWithNorms({ Alice: { g: 0.3, o: 0.2, d: 0.1, s: 0.0 } });
+        it('no traits when all norms clearly below dynamic threshold', () => {
+            // Alice low, Bob high → threshold well above Alice
+            // g: mean=(0.1+0.9)/2=0.5, thresh=0.6 → Alice(0.1) fails
+            const r = buildWithNorms({
+                Alice: { g: 0.1, o: 0.05, d: 0.02, s: 0.0 },
+                Bob: { g: 0.9, o: 0.8, d: 0.7, s: 0.6 }
+            });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(false);
             expect(r.players.Alice.traits.isAttacker).toBe(false);
@@ -1994,14 +2003,17 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
         });
 
         it('no individual stats = empty badge array', () => {
-            const r = buildWithNorms({ Alice: {} });
+            const r = buildWithNorms({ Alice: {}, Bob: { g: 0.8, o: 0.8, d: 0.8, s: 0.8 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toEqual([]);
         });
 
-        // Pull-factor tests (quadratic, season-ELO-games-based, threshold=35)
-        it('pull factor: 0 season ELO games pulls all norms to 0 — no trait even with norm=1', () => {
-            const r = buildWithNorms({ Alice: { g: 1.0, o: 1.0, d: 1.0, s: 1.0 } }, 0);
+        // Pull-factor tests — provisional players excluded from threshold calculation
+        it('pull factor: 0 season ELO games → pull=0, excluded from threshold pool, no trait', () => {
+            // Alice is provisional (sg=0): pull=0, not in threshold pool
+            // Bob is established (sg=35): pull=0.8, mean=0.8, threshold=0.9
+            // Alice pull (0) < 0.9 → no trait
+            const r = buildWithNorms({ Alice: { g: 1.0, sg: 0 }, Bob: { g: 0.8, sg: 35 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(false);
             expect(r.players.Alice.traits.isAttacker).toBe(false);
@@ -2010,15 +2022,19 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             expect(r.players.Alice.playerProfile).toEqual([]);
         });
 
-        it('pull factor: 7 season ELO games with norm=1.0 is pulled toward 0 — below threshold', () => {
-            // confidence = (7/35)^2 = 0.04 → pulled = 1.0 * 0.04 = 0.04, not > 0.5
-            const r = buildWithNorms({ Alice: { g: 1.0 } }, 7);
+        it('pull factor: 7 season ELO games → aggressively suppressed by quadratic pull', () => {
+            // Alice sg=7: pull = 1.0 * (7/35)^2 = 0.04
+            // Bob sg=35: pull = 0.8 → only Bob in threshold pool → mean=0.8, threshold=0.9
+            // Alice pull (0.04) < 0.9 → no trait
+            const r = buildWithNorms({ Alice: { g: 1.0, sg: 7 }, Bob: { g: 0.8, sg: 35 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(false);
         });
 
-        it('pull factor: 35 season ELO games (full confidence) applies no pull', () => {
-            const r = buildWithNorms({ Alice: { g: 0.6 } }, 35);
+        it('pull factor: 35 season ELO games → full confidence, uses dynamic threshold', () => {
+            // Alice: g=0.8, sg=35 → pull=0.8; Bob: g=0.2, sg=35 → pull=0.2
+            // mean=0.5, threshold=0.6 → Alice (0.8) passes
+            const r = buildWithNorms({ Alice: { g: 0.8, sg: 35 }, Bob: { g: 0.2, sg: 35 } });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(true);
         });

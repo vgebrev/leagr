@@ -1091,12 +1091,14 @@ export class RankingsManager {
      * @param {Object} enhancedRankings - Rankings with normalised individual stats
      */
     calculatePlayerProfiles(enhancedRankings) {
-        const PROFILE_THRESHOLD = 0.5;
         // Season ELO games needed for full confidence in trait assignment.
         // Uses current-season count so returning players don't carry over
         // previous years' confidence. Quadratic curve suppresses aggressively
         // at low counts (e.g. 7-8 season games → confidence ≈ 0.04).
         const TRAIT_SEASON_GAMES_THRESHOLD = 35;
+        // Dynamic threshold bump above the established-player mean.
+        // Keeps the gate meaningful without being overly stingy.
+        const THRESHOLD_BUMP = 0;
 
         const pull = (rawNorm, seasonGames) => {
             const linear = Math.min(1, seasonGames / TRAIT_SEASON_GAMES_THRESHOLD);
@@ -1104,18 +1106,41 @@ export class RankingsManager {
             return rawNorm * confidence;
         };
 
-        Object.values(enhancedRankings.players).forEach((playerData) => {
-            const seasonGames = playerData.seasonEloGames ?? 0;
-            const g = pull(playerData.goalsNorm ?? 0, seasonGames);
-            const o = pull(playerData.offActionsNorm ?? 0, seasonGames);
-            const d = pull(playerData.defActionsNorm ?? 0, seasonGames);
-            const s = pull(playerData.saveActionsNorm ?? 0, seasonGames);
+        // First pass: compute pulled norms for all players
+        const allPlayers = Object.values(enhancedRankings.players);
+        const pullMap = allPlayers.map((p) => {
+            const sg = p.seasonEloGames ?? 0;
+            return {
+                g: p.goalsNorm != null ? pull(p.goalsNorm, sg) : null,
+                o: p.offActionsNorm != null ? pull(p.offActionsNorm, sg) : null,
+                d: p.defActionsNorm != null ? pull(p.defActionsNorm, sg) : null,
+                s: p.saveActionsNorm != null ? pull(p.saveActionsNorm, sg) : null,
+                established: sg >= TRAIT_SEASON_GAMES_THRESHOLD
+            };
+        });
+
+        // Dynamic threshold: mean pulled norm of established players + bump, per stat
+        const estPulls = pullMap.filter((p) => p.established);
+        const meanOf = (arr) => {
+            const valid = arr.filter((v) => v !== null);
+            return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+        };
+        const thresholds = {
+            g: (meanOf(estPulls.map((p) => p.g)) ?? 0) + THRESHOLD_BUMP,
+            o: (meanOf(estPulls.map((p) => p.o)) ?? 0) + THRESHOLD_BUMP,
+            d: (meanOf(estPulls.map((p) => p.d)) ?? 0) + THRESHOLD_BUMP,
+            s: (meanOf(estPulls.map((p) => p.s)) ?? 0) + THRESHOLD_BUMP
+        };
+
+        // Second pass: assign traits using dynamic thresholds
+        allPlayers.forEach((playerData, i) => {
+            const { g, o, d, s } = pullMap[i];
 
             const traits = {
-                isFinisher: g > PROFILE_THRESHOLD,
-                isAttacker: o > PROFILE_THRESHOLD,
-                isDefender: d > PROFILE_THRESHOLD,
-                isShotStopper: s > PROFILE_THRESHOLD
+                isFinisher: g !== null && g > thresholds.g,
+                isAttacker: o !== null && o > thresholds.o,
+                isDefender: d !== null && d > thresholds.d,
+                isShotStopper: s !== null && s > thresholds.s
             };
 
             playerData.traits = traits;
@@ -1132,6 +1157,7 @@ export class RankingsManager {
             if (fin && att) badges.push('Danger Man');
             if (def && att) badges.push('Engine');
             if (def && sht) badges.push('Sentinel');
+            if (fin && sht) badges.push('Utility Hero');
             playerData.playerProfile = badges;
         });
     }
