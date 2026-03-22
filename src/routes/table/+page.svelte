@@ -9,6 +9,7 @@
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -91,6 +92,11 @@
                 );
             }
         );
+    });
+
+    $effect(() => {
+        titleParts.set(['Table']);
+        return () => titleParts.set([]);
     });
 </script>
 

@@ -19,6 +19,7 @@
     import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
     import PlayerRatings from '$components/PlayerRatings.svelte';
     import PlayerBadges from '$components/PlayerBadges.svelte';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let player = $derived(page.params.player);
     let playerData = $state(null);
@@ -186,11 +187,12 @@
     let hasPendingAvatar = $derived(!!playerData?.pendingAvatar);
 
     onMount(loadPlayerData);
-</script>
 
-<svelte:head>
-    <title>{player} - Player Rankings Detail | Leagr</title>
-</svelte:head>
+    $effect(() => {
+        titleParts.set([player, 'Rankings']);
+        return () => titleParts.set([]);
+    });
+</script>
 
 <div class="container mx-auto">
     <!-- Header -->

@@ -24,6 +24,7 @@
     import { setAdminCode } from '$lib/client/services/api-client.svelte.js';
     import { Button, Badge } from 'flowbite-svelte';
     import AdminAccess from './components/AdminAccess.svelte';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = data.date;
@@ -171,6 +172,11 @@
         return () => {
             document.body.style.overflow = '';
         };
+    });
+
+    $effect(() => {
+        titleParts.set(['Settings']);
+        return () => titleParts.set([]);
     });
 </script>
 

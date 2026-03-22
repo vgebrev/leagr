@@ -10,6 +10,7 @@
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = data.date;
@@ -115,6 +116,11 @@
     onMount(async () => {
         await gamesService.loadKnockout(date);
         checkForWinner();
+    });
+
+    $effect(() => {
+        titleParts.set(['Cup']);
+        return () => titleParts.set([]);
     });
 </script>
 

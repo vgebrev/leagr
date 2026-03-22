@@ -9,6 +9,7 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { leaguesService } from '$lib/client/services/leagues.svelte.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     let newAccessCode = $state('');
@@ -91,6 +92,11 @@
     function generateNewCode() {
         newAccessCode = generateAccessCode();
     }
+
+    $effect(() => {
+        titleParts.set(['Reset Code']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <div class="flex min-h-full w-full flex-col items-center justify-center gap-2">

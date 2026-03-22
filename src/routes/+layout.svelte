@@ -17,6 +17,7 @@
     import DateSelector from './components/DateSelector.svelte';
     import Notification from '$components/Notification.svelte';
     import { isAuthenticated } from '$lib/client/services/auth.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data, children } = $props();
     setApiKey(data.apiKey);
@@ -26,10 +27,11 @@
 
     $settings = data.settings;
 
-    // Construct page title with league name
+    // Construct page title from parts and league name
     let pageTitle = $derived.by(() => {
         const leagueName = data.leagueInfo?.name || 'Social League Organiser';
-        return `Leagr - ${leagueName}`;
+        const parts = [...$titleParts, leagueName, 'Leagr'];
+        return parts.join(' > ');
     });
 
     // Track system theme changes

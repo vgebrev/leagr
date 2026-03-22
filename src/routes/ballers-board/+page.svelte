@@ -25,6 +25,7 @@
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     /** @type {Array<{playerName: string, appearances: number, saves: number, defence: number, attack: number, goals: number, total: number}>} */
     let ballers = $state([]);
@@ -107,6 +108,11 @@
         if (selectedYear) {
             loadBallers();
         }
+    });
+
+    $effect(() => {
+        titleParts.set(['Ballers Board']);
+        return () => titleParts.set([]);
     });
 </script>
 
