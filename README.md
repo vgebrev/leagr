@@ -18,10 +18,10 @@ Features include:
     - Generate random teams, either completely random or using player ELO as seeds.
     - AI-generated team logos using OpenAI's Images API (Requires an OpenAI API Key, disabled by default).
     - Provisional rating system ensures balanced teams even with new players.
-    - Multi-iteration team generation algorithm that maximises team variance and balance using attack/defense ratings.
+    - Multi-iteration team generation algorithm that maximises team variance and balance using attack/defense and individual trait ratings (finishing, playmaking, defending, shot-stopping).
     - Visual indicators for provisional vs. established players.
     - Team attack/defense rating displays.
-    - Replay team draws for dramatic effect.
+    - Animated draw replay with team logo reveal, player fly-in effects, and roster table slide-in.
     - Players can be moved from a team to the waiting list (and vice versa), removed, renamed, or marked as a no-show.
     - Quick-access team information modals.
 - **Discipline**
@@ -38,10 +38,11 @@ Features include:
     - Player ELO with provisional ratings system for new players (<5 sessions).
     - Attack/defense ratings displayed on player profiles and teams.
     - Individual attack/defence ratings derived from team goals for/against across sessions.
+    - Trait badges on player profiles awarded for individual and combined stat strengths.
     - Performance tracking: league positions, cup progress, win streaks, and achievements.
     - Player profile modals - ranking details, history, profile photos (Admin-approved), and performance stats accessible throughout the app.
     - Champions hall: tracks league and cup winners (yearly and all-time views).
-    - Golden boot: tracks league and cup goal scorers (yearly and all-time views).
+    - Ballers Board: leaderboard ranking players across all tracked individual stats (yearly and all-time views).
     - Annually reset rankings to keep competition fresh and motivating.
 - **Year Recap**
     - An annual highlight reel of the league

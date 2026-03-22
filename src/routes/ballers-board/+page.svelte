@@ -241,7 +241,8 @@
                         class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.goals}
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
+                    <TableBodyCell
+                        class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
                         {baller.total}
                     </TableBodyCell>
                 </TableBodyRow>
