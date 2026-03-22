@@ -167,7 +167,7 @@
     </div>
 {:else}
     {@const cols = [
-        { key: 'appearances', label: 'Apps', width: 'w-10' },
+        { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-20' },
         { key: 'saves', label: 'Saves', width: 'w-10 lg:w-20' },
         { key: 'defence', label: 'DEF', width: 'w-10 lg:w-20' },
         { key: 'attack', label: 'ATT', width: 'w-10 lg:w-20' },
@@ -216,26 +216,26 @@
                         </span>
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'appearances' ? 'font-bold' : 'text-gray-500 dark:text-gray-300'}`}>
+                        class={`px-1 py-1.5 text-center ${sortCol === 'appearances' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.appearances}
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'saves' ? 'font-bold' : 'text-gray-500 dark:text-gray-300'}`}>
+                        class={`px-1 py-1.5 text-center ${sortCol === 'saves' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.saves}
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'defence' ? 'font-bold' : 'text-gray-500 dark:text-gray-300'}`}>
+                        class={`px-1 py-1.5 text-center ${sortCol === 'defence' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.defence}
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'attack' ? 'font-bold' : 'text-gray-500 dark:text-gray-300'}`}>
+                        class={`px-1 py-1.5 text-center ${sortCol === 'attack' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.attack}
                     </TableBodyCell>
                     <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold' : 'text-gray-500 dark:text-gray-300'}`}>
+                        class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
                         {baller.goals}
                     </TableBodyCell>
-                    <TableBodyCell class="px-1 py-1.5 text-center font-bold">
+                    <TableBodyCell class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
                         {baller.total}
                     </TableBodyCell>
                 </TableBodyRow>
