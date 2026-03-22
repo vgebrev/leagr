@@ -18,6 +18,8 @@
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
     import PlayerRatings from '$components/PlayerRatings.svelte';
+    import PlayerBadges from '$components/PlayerBadges.svelte';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let player = $derived(page.params.player);
     let playerData = $state(null);
@@ -185,11 +187,12 @@
     let hasPendingAvatar = $derived(!!playerData?.pendingAvatar);
 
     onMount(loadPlayerData);
-</script>
 
-<svelte:head>
-    <title>{player} - Player Rankings Detail | Leagr</title>
-</svelte:head>
+    $effect(() => {
+        titleParts.set([player, 'Rankings']);
+        return () => titleParts.set([]);
+    });
+</script>
 
 <div class="container mx-auto">
     <!-- Header -->
@@ -209,14 +212,17 @@
                         <PlayerRatings
                             attackingRating={playerData.attackingRating}
                             controlRating={playerData.controlRating}
-                            goalsForPerSession={playerData.goalsForPerSession ?? null}
-                            goalsAgainstPerSession={playerData.goalsAgainstPerSession ?? null}
-                            gfRank={playerData.gfRank ?? null}
-                            gfCount={playerData.gfCount ?? null}
-                            gaRank={playerData.gaRank ?? null}
-                            gaCount={playerData.gaCount ?? null}
+                            goalsNorm={playerData.goalsNorm ?? null}
+                            offActionsNorm={playerData.offActionsNorm ?? null}
+                            teamGFNorm={playerData.teamGFNorm ?? null}
+                            saveActionsNorm={playerData.saveActionsNorm ?? null}
+                            defActionsNorm={playerData.defActionsNorm ?? null}
+                            teamGANorm={playerData.teamGANorm ?? null}
                             gamma={0.45}
                             tooltipIdPrefix={`player-profile-${player ?? 'unknown'}`} />
+                        <PlayerBadges
+                            traits={playerData.traits}
+                            playerProfile={playerData.playerProfile} />
                     </div>
                 {/if}
             </div>

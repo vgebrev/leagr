@@ -271,7 +271,7 @@
                             {/if}
                             {#if teamAverageControl !== null}
                                 <div class="flex items-center gap-2">
-                                    <span class={`w-11 text-xs ${headerTextClass}`}>Defense</span>
+                                    <span class={`w-11 text-xs ${headerTextClass}`}>Defence</span>
                                     <div
                                         class="h-2 w-full flex-1 rounded-full bg-gray-200/60 dark:bg-gray-700/60">
                                         <div
@@ -455,7 +455,7 @@
         background-size: min(85%, 420px);
         background-position: center;
         background-repeat: no-repeat;
-        opacity: 0.25;
+        opacity: 0.15;
         pointer-events: none;
         z-index: -1;
     }

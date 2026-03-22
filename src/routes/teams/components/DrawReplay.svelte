@@ -1,13 +1,5 @@
 <script>
-    import {
-        Button,
-        Modal,
-        Listgroup,
-        ListgroupItem,
-        ButtonGroup,
-        Tooltip,
-        Toggle
-    } from 'flowbite-svelte';
+    import { Button, Modal, Listgroup, ListgroupItem, ButtonGroup, Toggle } from 'flowbite-svelte';
     import {
         PlaySolid,
         PauseSolid,
@@ -49,6 +41,19 @@
 
     // Track active timeouts for cleanup
     let activeTimeouts = $state([]);
+
+    // Logo reveal animation state
+    let logoRevealPhase = $state('idle'); // 'idle' | 'revealing' | 'done'
+    /** @type {{ teamName: string, color: string, src: string } | null} */
+    let flyingLogo = $state(null);
+    let flyingLogoPosition = $state({ x: 0, y: 0 });
+    let flyingLogoSize = $state(80);
+    let flyingLogoScale = $state('scale-0');
+    let flyingLogoOpacity = $state('opacity-0');
+    let flyingLogoPulsing = $state(false);
+    let revealedTeams = new SvelteSet();
+    let logoRevealIndex = $state(0);
+    let potsVisible = $state(false);
 
     // Get team color classes for the animating player
     const animatingPlayerClasses = $derived.by(() => {
@@ -190,13 +195,37 @@
         return teamsWithRankings;
     });
 
+    function scrollToBottom() {
+        const container = document.querySelector('.draw-replay-container');
+        if (!container) return;
+        // Walk up to find the first scrollable ancestor (the Flowbite modal body)
+        let el = container.parentElement;
+        while (el) {
+            const { overflowY } = getComputedStyle(el);
+            if (overflowY === 'auto' || overflowY === 'scroll') {
+                el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+                return;
+            }
+            el = el.parentElement;
+        }
+        // Fallback to window
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    }
+
     function play() {
         if (currentStep >= reversedDrawHistory.length) {
             reset();
         }
 
         isPlaying = true;
-        nextStep();
+        scrollToBottom();
+
+        if (logoRevealPhase === 'idle') {
+            startLogoReveal();
+        } else if (logoRevealPhase === 'done') {
+            nextStep();
+        }
+        // If 'revealing': logo reveal is in progress, will call nextStep when done
     }
 
     function pause() {
@@ -209,6 +238,13 @@
 
     function nextStep() {
         if (currentStep >= reversedDrawHistory.length) return;
+
+        // Skip logo reveal if user steps manually
+        if (logoRevealPhase !== 'done') {
+            logoRevealPhase = 'done';
+            revealedTeams = new SvelteSet(Object.keys(currentTeams));
+            potsVisible = true;
+        }
 
         const step = reversedDrawHistory[currentStep];
 
@@ -340,6 +376,15 @@
         isFlying = false;
         animatingPlayer = null;
         animatingPlayerTeam = null;
+        // Reset logo reveal
+        logoRevealPhase = 'idle';
+        flyingLogo = null;
+        flyingLogoSize = 80;
+        flyingLogoOpacity = 'opacity-0';
+        flyingLogoPulsing = false;
+        revealedTeams = new SvelteSet();
+        logoRevealIndex = 0;
+        potsVisible = false;
     }
 
     // Helper function to track timeouts for cleanup
@@ -423,6 +468,120 @@
         }, 1000);
     }
 
+    function startLogoReveal() {
+        logoRevealPhase = 'revealing';
+        logoRevealIndex = 0;
+        revealNextLogo();
+    }
+
+    function revealNextLogo() {
+        const teamNames = Object.keys(currentTeams);
+
+        if (logoRevealIndex >= teamNames.length) {
+            logoRevealPhase = 'done';
+            potsVisible = true;
+            if (isPlaying) {
+                createTimeout(nextStep, 1100);
+            }
+            return;
+        }
+
+        const teamName = teamNames[logoRevealIndex];
+        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const logoSrc = date
+            ? `/api/teams/logos/${encodeURIComponent(teamName)}?date=${date}&size=256`
+            : `/logos/${teamColor}.webp`;
+
+        const container = document.querySelector('.draw-replay-container');
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+
+        const logoSize = Math.min(Math.round(containerRect.width * 0.55), 260);
+        flyingLogoSize = logoSize;
+        const centerX = containerRect.width / 2 - logoSize / 2;
+        const centerY = containerRect.height / 2 - logoSize / 2;
+
+        // Spawn off the right edge: invisible + collapsed
+        flyingLogo = { teamName, color: teamColor, src: logoSrc };
+        flyingLogoPosition = { x: containerRect.width + 20, y: centerY };
+        flyingLogoScale = 'scale-0';
+        flyingLogoOpacity = 'opacity-0';
+        flyingLogoPulsing = false;
+
+        // Fly in from right: move to center, fade in, pop open
+        createTimeout(() => {
+            flyingLogoPosition = { x: centerX, y: centerY };
+            flyingLogoScale = 'scale-100';
+            flyingLogoOpacity = 'opacity-100';
+        }, 50);
+
+        // Start pulse + fire confetti bursts as logo arrives
+        createTimeout(() => {
+            flyingLogoPulsing = true;
+            fireConfettiAt(teamName, containerRect.width / 2, containerRect.height / 2, container);
+        }, 500);
+        createTimeout(() => {
+            fireConfettiAt(teamName, containerRect.width / 2, containerRect.height / 2, container);
+        }, 700);
+
+        // Stop pulse, fly out to left edge, fade out, reveal this team's table
+        createTimeout(() => {
+            flyingLogoPulsing = false;
+            flyingLogoPosition = { x: -(logoSize + 20), y: centerY };
+            flyingLogoOpacity = 'opacity-0';
+            revealedTeams.add(teamName);
+            revealedTeams = revealedTeams;
+        }, 1050);
+
+        // Clean up and move to next logo
+        createTimeout(() => {
+            flyingLogo = null;
+            logoRevealIndex++;
+            createTimeout(revealNextLogo, 200);
+        }, 1500);
+    }
+
+    function fireConfettiAt(teamName, x, y, container) {
+        if (!container) return;
+        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const teamStyle = teamStyles[teamColor] || teamStyles.blue;
+        const colors = teamStyle.confetti || ['#999999', '#ffffff'];
+
+        const canvas = document.createElement('canvas');
+        Object.assign(canvas.style, {
+            position: 'absolute',
+            top: '0',
+            left: '0',
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none',
+            zIndex: '10'
+        });
+        container.appendChild(canvas);
+
+        const myConfetti = confetti.create(canvas, { resize: true, useWorker: true });
+        const originX = x / container.offsetWidth;
+        const originY = y / container.offsetHeight;
+        const defaults = {
+            spread: 360,
+            ticks: 60,
+            gravity: 0.9,
+            decay: 0.94,
+            startVelocity: 35,
+            colors,
+            origin: { x: originX, y: originY }
+        };
+
+        myConfetti({ ...defaults, particleCount: 40, scalar: 1.4, shapes: ['star'] });
+        setTimeout(() => {
+            myConfetti({ ...defaults, particleCount: 60, scalar: 0.9, shapes: ['circle'] });
+        }, 100);
+
+        setTimeout(() => {
+            if (container.contains(canvas)) container.removeChild(canvas);
+        }, 1500);
+    }
+
     onMount(() => {
         return () => {
             if (intervalId) clearInterval(intervalId);
@@ -448,6 +607,31 @@
         reset();
     }}>
     <div class="draw-replay-container relative overflow-hidden p-2">
+        <!-- Flying Logo Animation -->
+        {#if flyingLogo}
+            {@const logoStyle = teamStyles[flyingLogo.color] || teamStyles.blue}
+            <div
+                class="pointer-events-none absolute z-50 origin-center transform transition-all duration-400 ease-in-out {flyingLogoScale} {flyingLogoOpacity} drop-shadow-2xl drop-shadow-gray-950"
+                style="left: {flyingLogoPosition.x}px; top: {flyingLogoPosition.y}px; width: {flyingLogoSize}px;">
+                <div
+                    class="w-full overflow-hidden rounded-xl shadow-xl"
+                    class:logo-pulse={flyingLogoPulsing}>
+                    <div
+                        class="px-2 py-1 text-center text-sm font-bold uppercase {logoStyle.header}">
+                        {flyingLogo.teamName}
+                    </div>
+                    <div
+                        class="w-full {logoStyle.row} flex items-center justify-center overflow-hidden p-1"
+                        style="height: {flyingLogoSize}px;">
+                        <img
+                            src={flyingLogo.src}
+                            alt="{flyingLogo.teamName} logo"
+                            class="h-full w-full object-contain drop-shadow-[1px_1px_2px_#030712]" />
+                    </div>
+                </div>
+            </div>
+        {/if}
+
         <!-- Flying Player Animation -->
         {#if isFlying && animatingPlayer}
             {@const playerAvatar = getPlayerAvatar(animatingPlayer)}
@@ -455,7 +639,7 @@
                 ? `/api/rankings/${encodeURIComponent(animatingPlayer)}/avatar`
                 : null}
             <div
-                class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-[1400ms] ease-in-out {flyingPlayerClasses}"
+                class="pointer-events-none absolute z-50 origin-center transform rounded-lg transition-all duration-1400 ease-in-out {flyingPlayerClasses} drop-shadow-xl drop-shadow-gray-950"
                 style="left: {flyingPlayerPosition.x}px; top: {flyingPlayerPosition.y}px;"
                 transition:fade>
                 <div class="flex items-center gap-2 p-2">
@@ -508,7 +692,7 @@
                     size="xs"
                     onclick={reset}
                     id="reset-button">
-                    <ArrowRotateIcon class="!h-3 !w-3" />
+                    <ArrowRotateIcon class="h-3! w-3!" />
                 </Button>
             </ButtonGroup>
 
@@ -519,22 +703,6 @@
                     Show ELO
                 </Toggle>
             </div>
-            <Tooltip
-                triggeredBy="#play-button"
-                transition={scale}
-                class="shadow-lg">{isPlaying ? 'Pause' : 'Play'}</Tooltip>
-            <Tooltip
-                triggeredBy="#previous-button"
-                transition={scale}
-                class="shadow-lg">Previous</Tooltip>
-            <Tooltip
-                triggeredBy="#next-button"
-                transition={scale}
-                class="shadow-lg">Next</Tooltip>
-            <Tooltip
-                triggeredBy="#reset-button"
-                transition={scale}
-                class="shadow-lg">Reset</Tooltip>
         </div>
 
         {#snippet potDisplay(potName, players)}
@@ -572,7 +740,9 @@
         {/snippet}
 
         <!-- Pots Section -->
-        <div class="pots-section mb-2">
+        <div
+            class="pots-section mb-2"
+            class:invisible={!potsVisible}>
             {#if currentPots.length === 1}
                 <!-- Random draw: split single pot into grid layout -->
                 {@const teamCount = Object.keys(currentTeams).length}
@@ -605,7 +775,12 @@
                         class="grid gap-x-2"
                         style="grid-template-columns: repeat({totalColumns}, 1fr);">
                         {#each columns as column (column.index)}
-                            <div class="pot min-w-0 flex-1">
+                            <div
+                                class="pot min-w-0 flex-1"
+                                class:pot-reveal={potsVisible}
+                                style={potsVisible
+                                    ? `animation-delay: ${column.index * 80}ms`
+                                    : ''}>
                                 <Listgroup class="rounded-t-none shadow-lg">
                                     {#each column.players as player (player.name)}
                                         <ListgroupItem
@@ -644,7 +819,12 @@
                     class="pots-container flex gap-2"
                     style="width: 100%;">
                     {#each currentPots as pot, potIndex (potIndex)}
-                        {@render potDisplay(pot.name, pot.players)}
+                        <div
+                            class="min-w-0 flex-1"
+                            class:pot-reveal={potsVisible}
+                            style={potsVisible ? `animation-delay: ${potIndex * 80}ms` : ''}>
+                            {@render potDisplay(pot.name, pot.players)}
+                        </div>
                     {/each}
                 </div>
             {/if}
@@ -654,18 +834,22 @@
         <div class="teams-section">
             <div class="teams-container grid grid-cols-2 gap-2">
                 {#each Object.entries(currentTeamsWithRankings) as [teamName, teamData], i (i)}
-                    <TeamTable
-                        team={teamData.players}
-                        {teamName}
-                        color={teamName.split(' ')[0].toLowerCase()}
-                        canModifyList={false}
-                        onremove={null}
-                        onassign={null}
-                        assignablePlayers={[]}
-                        size="sm"
-                        {showPlayerRankings}
-                        showTeamRatings={false}
-                        {date} />
+                    <div
+                        class:table-reveal={revealedTeams.has(teamName)}
+                        class:opacity-0={!revealedTeams.has(teamName)}>
+                        <TeamTable
+                            team={teamData.players}
+                            {teamName}
+                            color={teamName.split(' ')[0].toLowerCase()}
+                            canModifyList={false}
+                            onremove={null}
+                            onassign={null}
+                            assignablePlayers={[]}
+                            size="sm"
+                            {showPlayerRankings}
+                            showTeamRatings={false}
+                            {date} />
+                    </div>
                 {/each}
             </div>
         </div>
@@ -684,6 +868,81 @@
 
     .pot {
         min-width: 0; /* Allow flex items to shrink below content size */
+    }
+
+    @keyframes table-slide-in {
+        from {
+            opacity: 0;
+            transform: translateX(-100vw);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    .table-reveal {
+        animation: table-slide-in 500ms ease-out both;
+    }
+
+    @keyframes pot-slide-in {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .pot-reveal {
+        animation: pot-slide-in 350ms ease-out both;
+    }
+
+    @keyframes logo-pulse {
+        0% {
+            transform: scale(1);
+        }
+        40% {
+            transform: scale(1.07);
+        }
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    @keyframes logo-shake {
+        0% {
+            transform: rotate(0deg);
+        }
+        15% {
+            transform: rotate(-8deg);
+        }
+        30% {
+            transform: rotate(8deg);
+        }
+        45% {
+            transform: rotate(-4deg);
+        }
+        60% {
+            transform: rotate(4deg);
+        }
+        75% {
+            transform: rotate(-2deg);
+        }
+        90% {
+            transform: rotate(2deg);
+        }
+        100% {
+            transform: rotate(0deg);
+        }
+    }
+
+    .logo-pulse {
+        animation:
+            logo-pulse 400ms ease-in-out 2,
+            logo-shake 0.6s ease-in-out;
     }
 
     @keyframes bounce {

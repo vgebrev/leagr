@@ -120,14 +120,16 @@ export async function GET({ params, locals, url }) {
             const r = entry.ratings;
             return {
                 ...d,
-                goalsForPerSession: r.goalsForPerSession ?? null,
-                goalsAgainstPerSession: r.goalsAgainstPerSession ?? null,
+                goalsForPerSession: r.teamGF?.perSession ?? null,
+                goalsAgainstPerSession: r.teamGA?.perSession ?? null,
                 attackingRating: r.attacking ?? null,
                 controlRating: r.control ?? null,
-                gfRank: r.gfRank ?? null,
-                gfCount: r.gfCount ?? null,
-                gaRank: r.gaRank ?? null,
-                gaCount: r.gaCount ?? null,
+                teamGFNorm: r.teamGF?.norm ?? null,
+                teamGANorm: r.teamGA?.norm ?? null,
+                goalsNorm: r.goals?.norm ?? null,
+                offActionsNorm: r.offActions?.norm ?? null,
+                defActionsNorm: r.defActions?.norm ?? null,
+                saveActionsNorm: r.saveActions?.norm ?? null,
                 eloGames: r.eloGames ?? null
             };
         });
@@ -149,15 +151,17 @@ export async function GET({ params, locals, url }) {
                 totalPlayers: entry.ranking.totalPlayers ?? null,
                 rankingPoints: entry.ranking.rankingPoints ?? null,
                 points: entry.points?.total ?? null,
-                goalsForPerSession: r.goalsForPerSession ?? null,
-                goalsAgainstPerSession: r.goalsAgainstPerSession ?? null,
+                goalsForPerSession: r.teamGF?.perSession ?? null,
+                goalsAgainstPerSession: r.teamGA?.perSession ?? null,
                 attackingRating: r.attacking ?? null,
                 controlRating: r.control ?? null,
-                gfRank: r.gfRank ?? null,
-                gfCount: r.gfCount ?? null,
-                gaRank: r.gaRank ?? null,
-                gaCount: r.gaCount ?? null,
-                eloGames: r.eloGames ?? null,
+                teamGFNorm: r.teamGF?.norm ?? null,
+                teamGANorm: r.teamGA?.norm ?? null,
+                goalsNorm: r.goals?.norm ?? null,
+                offActionsNorm: r.offActions?.norm ?? null,
+                defActionsNorm: r.defActions?.norm ?? null,
+                saveActionsNorm: r.saveActions?.norm ?? null,
+                eloGames: r.eloGames ?? null, // { allTime, season } object
                 elo: r.elo ? { rating: r.elo } : null
             };
         }

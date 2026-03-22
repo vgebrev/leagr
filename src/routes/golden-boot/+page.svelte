@@ -23,6 +23,7 @@
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let scorers = $state([]);
     let error = $state(false);
@@ -92,6 +93,11 @@
             celebrating = true;
         }
     }
+
+    $effect(() => {
+        titleParts.set(['Golden Boot']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <!-- Header -->

@@ -729,6 +729,7 @@ export class RankingsManager {
             const playerData = playerTracker.get(playerName);
             playerData.elo.rating += effectiveKFactor * (homeActual - homeExpected);
             playerData.elo.gamesPlayed++;
+            playerData.seasonEloGames++;
         });
 
         // Update away team players
@@ -736,6 +737,7 @@ export class RankingsManager {
             const playerData = playerTracker.get(playerName);
             playerData.elo.rating += effectiveKFactor * (awayActual - awayExpected);
             playerData.elo.gamesPlayed++;
+            playerData.seasonEloGames++;
         });
     }
 
@@ -877,6 +879,19 @@ export class RankingsManager {
 
                 // ELO data
                 elo: data.elo || null,
+                seasonEloGames: data.seasonEloGames ?? 0,
+
+                // Season stat totals
+                indGoals: data.indGoals ?? 0,
+                offActions: data.offActions ?? 0,
+                defActions: data.defActions ?? 0,
+                saveActions: data.saveActions ?? 0,
+
+                // Per-stat session counters (for accurate total calculations)
+                sessionsWithGoals: data.sessionsWithGoals ?? 0,
+                sessionsWithOffActions: data.sessionsWithOffActions ?? 0,
+                sessionsWithDefActions: data.sessionsWithDefActions ?? 0,
+                sessionsWithSaveActions: data.sessionsWithSaveActions ?? 0,
 
                 // Activity tracking
                 lastAppearance: lastAppearance,
@@ -974,13 +989,183 @@ export class RankingsManager {
             appearances: 0,
             goalsFor: 0,
             goalsAgainst: 0,
+            indGoals: 0,
+            offActions: 0,
+            defActions: 0,
+            saveActions: 0,
+            seasonEloGames: 0, // current-season ELO games — resets each year
             history: {},
             elo: {
                 rating: carryOverData?.rating ?? ELO_BASELINE_RATING,
-                lastDecayAt: carryOverData?.lastAppearance ?? null, // Carry over last appearance for decay
-                gamesPlayed: carryOverData?.gamesPlayed ?? 0
+                lastDecayAt: carryOverData?.lastAppearance ?? null,
+                gamesPlayed: carryOverData?.gamesPlayed ?? 0 // all-time cumulative — used only for ELO maths
             }
         };
+    }
+
+    /**
+     * Collect individual stats (goals, offensive/defensive/save actions) for each player
+     * across all matches in a session.
+     *
+     * Returns a map of playerName → { goals, offensiveActions, defensiveActions, saveActions }.
+     * Every player present in the teams object is guaranteed an entry (with zeros as defaults).
+     * Reserved scorer keys (__ownGoal__, __unassigned__) are excluded.
+     *
+     * @param {Round[]} rounds - League game rounds
+     * @param {Array|null|undefined} knockoutBracket - Knockout bracket matches
+     * @param {Record<string, string[]>} teams - Teams map
+     * @returns {Record<string, {goals: number, offensiveActions: number, defensiveActions: number, saveActions: number}>}
+     */
+    collectIndividualStatsForSession(rounds, knockoutBracket, teams) {
+        const RESERVED = ['__ownGoal__', '__unassigned__'];
+
+        /** @type {Record<string, {goals: number, offensiveActions: number, defensiveActions: number, saveActions: number}>} */
+        const stats = {};
+
+        // Initialise every player in teams with zeros
+        for (const players of Object.values(teams)) {
+            for (const player of players) {
+                if (player && !stats[player]) {
+                    stats[player] = {
+                        goals: 0,
+                        offensiveActions: 0,
+                        defensiveActions: 0,
+                        saveActions: 0
+                    };
+                }
+            }
+        }
+
+        // Track which stat types are actually present in this session's data.
+        // A type is only "tracked" if at least one match has a non-null map for it.
+        const tracked = { goals: false, offActions: false, defActions: false, saveActions: false };
+
+        /**
+         * @param {Record<string, number>|null|undefined} map
+         * @param {'goals'|'offensiveActions'|'defensiveActions'|'saveActions'} field
+         * @param {keyof tracked} trackedKey
+         */
+        const absorb = (map, field, trackedKey) => {
+            if (!map || typeof map !== 'object') return;
+            tracked[trackedKey] = true;
+            for (const [player, count] of Object.entries(map)) {
+                if (RESERVED.includes(player)) continue;
+                if (typeof count !== 'number' || count <= 0) continue;
+                if (!stats[player]) {
+                    stats[player] = {
+                        goals: 0,
+                        offensiveActions: 0,
+                        defensiveActions: 0,
+                        saveActions: 0
+                    };
+                }
+                stats[player][field] += count;
+            }
+        };
+
+        const processMatch = (match) => {
+            absorb(match.homeScorers, 'goals', 'goals');
+            absorb(match.awayScorers, 'goals', 'goals');
+            absorb(match.homeOffensiveActions, 'offensiveActions', 'offActions');
+            absorb(match.awayOffensiveActions, 'offensiveActions', 'offActions');
+            absorb(match.homeDefensiveActions, 'defensiveActions', 'defActions');
+            absorb(match.awayDefensiveActions, 'defensiveActions', 'defActions');
+            absorb(match.homeSaveActions, 'saveActions', 'saveActions');
+            absorb(match.awaySaveActions, 'saveActions', 'saveActions');
+        };
+
+        for (const round of rounds) {
+            for (const match of round) {
+                processMatch(match);
+            }
+        }
+
+        if (Array.isArray(knockoutBracket)) {
+            for (const match of knockoutBracket) {
+                processMatch(match);
+            }
+        }
+
+        return { stats, tracked };
+    }
+
+    /**
+     * Assign player traits and a derived display profile label to each player.
+     * Traits are independent boolean flags derived from normalised individual stats.
+     * Called after calculateAttackControlRatings() so goalsNorm etc. are available.
+     *
+     * @param {Object} enhancedRankings - Rankings with normalised individual stats
+     */
+    calculatePlayerProfiles(enhancedRankings) {
+        // Season ELO games needed for full confidence in trait assignment.
+        // Uses current-season count so returning players don't carry over
+        // previous years' confidence. Quadratic curve suppresses aggressively
+        // at low counts (e.g. 7-8 season games → confidence ≈ 0.04).
+        const TRAIT_SEASON_GAMES_THRESHOLD = 35;
+        // Dynamic threshold bump above the established-player mean.
+        // Keeps the gate meaningful without being overly stingy.
+        const THRESHOLD_BUMP = 0;
+
+        const pull = (rawNorm, seasonGames) => {
+            const linear = Math.min(1, seasonGames / TRAIT_SEASON_GAMES_THRESHOLD);
+            const confidence = linear * linear;
+            return rawNorm * confidence;
+        };
+
+        // First pass: compute pulled norms for all players
+        const allPlayers = Object.values(enhancedRankings.players);
+        const pullMap = allPlayers.map((p) => {
+            const sg = p.seasonEloGames ?? 0;
+            return {
+                g: p.goalsNorm != null ? pull(p.goalsNorm, sg) : null,
+                o: p.offActionsNorm != null ? pull(p.offActionsNorm, sg) : null,
+                d: p.defActionsNorm != null ? pull(p.defActionsNorm, sg) : null,
+                s: p.saveActionsNorm != null ? pull(p.saveActionsNorm, sg) : null,
+                established: sg >= TRAIT_SEASON_GAMES_THRESHOLD
+            };
+        });
+
+        // Dynamic threshold: mean pulled norm of established players + bump, per stat
+        const estPulls = pullMap.filter((p) => p.established);
+        const meanOf = (arr) => {
+            const valid = arr.filter((v) => v !== null);
+            return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
+        };
+        const thresholds = {
+            g: (meanOf(estPulls.map((p) => p.g)) ?? 0) + THRESHOLD_BUMP,
+            o: (meanOf(estPulls.map((p) => p.o)) ?? 0) + THRESHOLD_BUMP,
+            d: (meanOf(estPulls.map((p) => p.d)) ?? 0) + THRESHOLD_BUMP,
+            s: (meanOf(estPulls.map((p) => p.s)) ?? 0) + THRESHOLD_BUMP
+        };
+
+        // Second pass: assign traits using dynamic thresholds
+        allPlayers.forEach((playerData, i) => {
+            const { g, o, d, s } = pullMap[i];
+
+            const traits = {
+                isFinisher: g !== null && g > thresholds.g,
+                isAttacker: o !== null && o > thresholds.o,
+                isDefender: d !== null && d > thresholds.d,
+                isShotStopper: s !== null && s > thresholds.s
+            };
+
+            playerData.traits = traits;
+
+            const {
+                isFinisher: fin,
+                isAttacker: att,
+                isDefender: def,
+                isShotStopper: sht
+            } = traits;
+            const badges = [];
+            if (sht && def && att && fin) badges.push('G.O.A.T.');
+            if (att && fin && def) badges.push('Complete Player');
+            if (fin && att) badges.push('Danger Man');
+            if (def && att) badges.push('Engine');
+            if (def && sht) badges.push('Sentinel');
+            if (fin && sht) badges.push('Utility Hero');
+            playerData.playerProfile = badges;
+        });
     }
 
     /**
@@ -1060,6 +1245,10 @@ export class RankingsManager {
                     eloCarryOver
                 );
 
+                // Collect individual stats (goals, actions) for this session
+                const { stats: sessionIndStats, tracked: sessionTracked } =
+                    this.collectIndividualStatsForSession(rounds, knockoutBracket, teams);
+
                 // Track players who appeared this date
                 const playersWhoAppeared = new Set();
 
@@ -1095,10 +1284,64 @@ export class RankingsManager {
                         playerData.points += totalDatePoints;
                         playerData.appearances += 1;
 
-                        // Calculate running averages
+                        // Accumulate individual stats — only for session types that were actually tracked.
+                        // Each stat type has its own session counter so averages aren't diluted
+                        // by sessions that predate tracking for that stat type.
+                        const ind = sessionIndStats[player] ?? {
+                            goals: 0,
+                            offensiveActions: 0,
+                            defensiveActions: 0,
+                            saveActions: 0
+                        };
+                        if (!playerData.indGoals) playerData.indGoals = 0;
+                        if (!playerData.sessionsWithGoals) playerData.sessionsWithGoals = 0;
+                        if (!playerData.offActions) playerData.offActions = 0;
+                        if (!playerData.sessionsWithOffActions)
+                            playerData.sessionsWithOffActions = 0;
+                        if (!playerData.defActions) playerData.defActions = 0;
+                        if (!playerData.sessionsWithDefActions)
+                            playerData.sessionsWithDefActions = 0;
+                        if (!playerData.saveActions) playerData.saveActions = 0;
+                        if (!playerData.sessionsWithSaveActions)
+                            playerData.sessionsWithSaveActions = 0;
+
+                        if (sessionTracked.goals) {
+                            playerData.indGoals += ind.goals;
+                            playerData.sessionsWithGoals += 1;
+                        }
+                        if (sessionTracked.offActions) {
+                            playerData.offActions += ind.offensiveActions;
+                            playerData.sessionsWithOffActions += 1;
+                        }
+                        if (sessionTracked.defActions) {
+                            playerData.defActions += ind.defensiveActions;
+                            playerData.sessionsWithDefActions += 1;
+                        }
+                        if (sessionTracked.saveActions) {
+                            playerData.saveActions += ind.saveActions;
+                            playerData.sessionsWithSaveActions += 1;
+                        }
+
+                        // Calculate running averages — null when no tracked sessions yet for that type
                         const goalsForPerSession = playerData.goalsFor / playerData.appearances;
                         const goalsAgainstPerSession =
                             playerData.goalsAgainst / playerData.appearances;
+                        const goalsPerSession =
+                            playerData.sessionsWithGoals > 0
+                                ? playerData.indGoals / playerData.sessionsWithGoals
+                                : null;
+                        const offActionsPerSession =
+                            playerData.sessionsWithOffActions > 0
+                                ? playerData.offActions / playerData.sessionsWithOffActions
+                                : null;
+                        const defActionsPerSession =
+                            playerData.sessionsWithDefActions > 0
+                                ? playerData.defActions / playerData.sessionsWithDefActions
+                                : null;
+                        const saveActionsPerSession =
+                            playerData.sessionsWithSaveActions > 0
+                                ? playerData.saveActions / playerData.sessionsWithSaveActions
+                                : null;
 
                         // Store appearance data for this date (grouped structure)
                         playerData.history[date] = {
@@ -1123,17 +1366,40 @@ export class RankingsManager {
                                         : ELO_BASELINE_RATING
                                     ).toFixed(4)
                                 ),
-                                eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                                eloGames: {
+                                    allTime: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                                    season: playerData.seasonEloGames
+                                },
                                 attacking: null,
                                 control: null,
-                                gfRank: null,
-                                gfCount: null,
-                                gaRank: null,
-                                gaCount: null,
-                                goalsForPerSession: parseFloat(goalsForPerSession.toFixed(2)),
-                                goalsAgainstPerSession: parseFloat(
-                                    goalsAgainstPerSession.toFixed(2)
-                                )
+                                teamGF: { perSession: parseFloat(goalsForPerSession.toFixed(2)) },
+                                teamGA: {
+                                    perSession: parseFloat(goalsAgainstPerSession.toFixed(2))
+                                },
+                                goals: {
+                                    perSession:
+                                        goalsPerSession !== null
+                                            ? parseFloat(goalsPerSession.toFixed(3))
+                                            : null
+                                },
+                                offActions: {
+                                    perSession:
+                                        offActionsPerSession !== null
+                                            ? parseFloat(offActionsPerSession.toFixed(3))
+                                            : null
+                                },
+                                defActions: {
+                                    perSession:
+                                        defActionsPerSession !== null
+                                            ? parseFloat(defActionsPerSession.toFixed(3))
+                                            : null
+                                },
+                                saveActions: {
+                                    perSession:
+                                        saveActionsPerSession !== null
+                                            ? parseFloat(saveActionsPerSession.toFixed(3))
+                                            : null
+                                }
                             },
                             ranking: {
                                 rank: null,
@@ -1194,6 +1460,9 @@ export class RankingsManager {
             // Calculate normalized attack/control ratings for team balancing
             this.calculateAttackControlRatings(enhancedRankings);
 
+            // Derive player traits and profile labels from normalised individual stats
+            this.calculatePlayerProfiles(enhancedRankings);
+
             await this.saveRankingsUnsafe(enhancedRankings, targetYear);
             return enhancedRankings;
         });
@@ -1235,15 +1504,18 @@ export class RankingsManager {
                                 4
                             )
                         ),
-                        eloGames: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                        eloGames: {
+                            allTime: playerData.elo ? playerData.elo.gamesPlayed : 0,
+                            season: playerData.seasonEloGames ?? 0
+                        },
                         attacking: playerData.attackingRating ?? null,
                         control: playerData.controlRating ?? null,
-                        gfRank: playerData.gfRank ?? null,
-                        gfCount: playerData.gfCount ?? null,
-                        gaRank: playerData.gaRank ?? null,
-                        gaCount: playerData.gaCount ?? null,
-                        goalsForPerSession: playerData.goalsForPerSession ?? null,
-                        goalsAgainstPerSession: playerData.goalsAgainstPerSession ?? null
+                        teamGF: null,
+                        teamGA: null,
+                        goals: null,
+                        offActions: null,
+                        defActions: null,
+                        saveActions: null
                     },
                     ranking: {
                         rank: data.rank,
@@ -1292,16 +1564,27 @@ export class RankingsManager {
     }
 
     /**
-     * Calculate normalized attack/control ratings using min-max normalization
-     * Adds attackingRating and controlRating (0-1 scale) to each player and each date
+     * Calculate normalized attack/control ratings using min-max normalization.
+     * Composite formula blends individual stats (goals, offensive/defensive/save actions)
+     * with team-level goals for/against. All six metrics are normalised per date using
+     * established players (35+ ELO games) as bounds.
+     *
+     * attacking = (3×goalsNorm + 2×offActionsNorm + 1×teamGFNorm) / 6
+     * control   = (0.5×saveActionsNorm + 3.5×defActionsNorm + 1.5×teamGAInvNorm) / 5.5
+     *
+     * Falls back to team-GF/GA only when individual stats are all zero (legacy data).
+     *
      * @param {Object} enhancedRankings - Enhanced rankings with complete history
      */
     calculateAttackControlRatings(enhancedRankings) {
-        // Minimum games played required to be included in the min/max normalization pool
-        // This prevents outliers from players with few games skewing the scale
-        // Note: All players now get ratings calculated, but only established players (35+ games)
-        // contribute to the min/max bounds used for normalization
         const MIN_GAMES_FOR_NORMALIZATION_POOL = 35;
+
+        // Helper: min-max normalise a value within a range, clamped to [0,1]
+        const norm = (value, min, max) => {
+            if (max === min) return 0.5;
+            return Math.max(0, Math.min(1, (value - min) / (max - min)));
+        };
+        const invNorm = (value, min, max) => 1 - norm(value, min, max);
 
         // Get all unique dates sorted
         const allDates = new Set();
@@ -1310,152 +1593,226 @@ export class RankingsManager {
         });
         const sortedDates = Array.from(allDates).sort();
 
-        // First pass: carry forward goalsForPerSession / goalsAgainstPerSession into non-appearance entries
+        // First pass: carry forward all per-session averages into non-appearance entries
+        const IND_FIELDS = ['goals', 'offActions', 'defActions', 'saveActions'];
         Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
             const dates = Object.keys(playerData.history).sort();
             let lastGFPerSession = null;
             let lastGAPerSession = null;
-
-            dates.forEach((date) => {
-                const entry = playerData.history[date];
-                const gf = entry.ratings.goalsForPerSession;
-                const ga = entry.ratings.goalsAgainstPerSession;
-                if (gf !== null && ga !== null) {
-                    lastGFPerSession = gf;
-                    lastGAPerSession = ga;
-                } else if (lastGFPerSession !== null) {
-                    // Non-appearance — carry forward last values
-                    entry.ratings.goalsForPerSession = lastGFPerSession;
-                    entry.ratings.goalsAgainstPerSession = lastGAPerSession;
-                }
-            });
-        });
-
-        // Second pass: for each date, calculate min/max from established players AND ranking lists from all players
-        const dateMinMax = {};
-
-        sortedDates.forEach((date) => {
-            const gfValuesEstablished = []; // For min/max bounds
-            const gaValuesEstablished = [];
-            const gfValuesAll = []; // For ranking all players
-            const gaValuesAll = [];
-
-            Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-                const entry = playerData.history[date];
-                const hasGoalsData =
-                    entry &&
-                    entry.ratings.goalsForPerSession !== null &&
-                    entry.ratings.goalsAgainstPerSession !== null;
-
-                if (hasGoalsData) {
-                    gfValuesAll.push(entry.ratings.goalsForPerSession);
-                    gaValuesAll.push(entry.ratings.goalsAgainstPerSession);
-
-                    const gamesPlayed = entry.ratings.eloGames ?? 0;
-                    if (gamesPlayed >= MIN_GAMES_FOR_NORMALIZATION_POOL) {
-                        gfValuesEstablished.push(entry.ratings.goalsForPerSession);
-                        gaValuesEstablished.push(entry.ratings.goalsAgainstPerSession);
-                    }
-                }
-            });
-
-            if (gfValuesEstablished.length > 0) {
-                dateMinMax[date] = {
-                    minGF: Math.min(...gfValuesEstablished),
-                    maxGF: Math.max(...gfValuesEstablished),
-                    minGA: Math.min(...gaValuesEstablished),
-                    maxGA: Math.max(...gaValuesEstablished),
-                    gfList: gfValuesAll.slice().sort((a, b) => b - a), // Desc for GF
-                    gaList: gaValuesAll.slice().sort((a, b) => a - b) // Asc for GA
-                };
-            }
-        });
-
-        // Third pass: calculate normalized ratings using date-specific min/max
-        Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
-            const dates = Object.keys(playerData.history).sort();
-            let latestAttackingRating = null;
-            let latestControlRating = null;
-            let latestGfRank = null;
-            let latestGfCount = null;
-            let latestGaRank = null;
-            let latestGaCount = null;
-            let latestGoalsForPerSession = null;
-            let latestGoalsAgainstPerSession = null;
+            const lastInd = { goals: null, offActions: null, defActions: null, saveActions: null };
 
             dates.forEach((date) => {
                 const entry = playerData.history[date];
                 const r = entry.ratings;
-
-                if (
-                    dateMinMax[date] &&
-                    r.goalsForPerSession !== null &&
-                    r.goalsAgainstPerSession !== null
-                ) {
-                    const { minGF, maxGF, minGA, maxGA, gfList, gaList } = dateMinMax[date];
-                    const gfRange = maxGF - minGF;
-                    const gaRange = maxGA - minGA;
-
-                    let attacking = 0.5;
-                    if (gfRange > 0) {
-                        attacking = (r.goalsForPerSession - minGF) / gfRange;
-                        attacking = Math.max(0, Math.min(1, attacking));
+                const gf = r.teamGF?.perSession;
+                const ga = r.teamGA?.perSession;
+                if (gf != null && ga != null) {
+                    lastGFPerSession = gf;
+                    lastGAPerSession = ga;
+                } else if (lastGFPerSession !== null) {
+                    r.teamGF = { perSession: lastGFPerSession };
+                    r.teamGA = { perSession: lastGAPerSession };
+                }
+                for (const field of IND_FIELDS) {
+                    const v = r[field]?.perSession;
+                    if (v != null) {
+                        lastInd[field] = v;
+                    } else if (lastInd[field] !== null) {
+                        r[field] = { perSession: lastInd[field] };
                     }
+                }
+            });
+        });
 
-                    let control = 0.5;
-                    if (gaRange > 0) {
-                        control = (maxGA - r.goalsAgainstPerSession) / gaRange;
-                        control = Math.max(0, Math.min(1, control));
-                    }
+        // Second pass: per date, build min/max bounds from established players
+        const dateMinMax = {};
 
-                    r.attacking = parseFloat(attacking.toFixed(3));
-                    r.control = parseFloat(control.toFixed(3));
+        sortedDates.forEach((date) => {
+            const established = { gf: [], ga: [], goals: [], off: [], def: [], save: [] };
 
-                    const gfRank =
-                        gfList?.length > 0
-                            ? gfList.findIndex((v) => v === r.goalsForPerSession) + 1
-                            : null;
-                    const gaRank =
-                        gaList?.length > 0
-                            ? gaList.findIndex((v) => v === r.goalsAgainstPerSession) + 1
-                            : null;
-                    r.gfRank = gfRank > 0 ? gfRank : null;
-                    r.gfCount = gfList?.length || null;
-                    r.gaRank = gaRank > 0 ? gaRank : null;
-                    r.gaCount = gaList?.length || null;
+            Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+                const entry = playerData.history[date];
+                if (!entry) return;
+                const r = entry.ratings;
+                const hasTeamData = r.teamGF?.perSession != null && r.teamGA?.perSession != null;
+                if (!hasTeamData) return;
 
-                    latestAttackingRating = r.attacking;
-                    latestControlRating = r.control;
-                    latestGfRank = r.gfRank;
-                    latestGfCount = r.gfCount;
-                    latestGaRank = r.gaRank;
-                    latestGaCount = r.gaCount;
-                    latestGoalsForPerSession = r.goalsForPerSession ?? latestGoalsForPerSession;
-                    latestGoalsAgainstPerSession =
-                        r.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
-                } else if (r.goalsForPerSession === null || r.goalsAgainstPerSession === null) {
-                    // No goals data yet — leave attacking/control/ranks as null (already set)
-                } else {
-                    // Goals data present but no established pool yet — use neutral 0.5
-                    r.attacking = 0.5;
-                    r.control = 0.5;
-                    latestAttackingRating = 0.5;
-                    latestControlRating = 0.5;
-                    latestGoalsForPerSession = r.goalsForPerSession ?? latestGoalsForPerSession;
-                    latestGoalsAgainstPerSession =
-                        r.goalsAgainstPerSession ?? latestGoalsAgainstPerSession;
+                const gamesPlayed = r.eloGames?.season ?? r.eloGames ?? 0;
+                if (gamesPlayed >= MIN_GAMES_FOR_NORMALIZATION_POOL) {
+                    established.gf.push(r.teamGF.perSession);
+                    established.ga.push(r.teamGA.perSession);
+                    if (r.goals?.perSession != null) established.goals.push(r.goals.perSession);
+                    if (r.offActions?.perSession != null)
+                        established.off.push(r.offActions.perSession);
+                    if (r.defActions?.perSession != null)
+                        established.def.push(r.defActions.perSession);
+                    if (r.saveActions?.perSession != null)
+                        established.save.push(r.saveActions.perSession);
                 }
             });
 
-            // Store latest ratings at player level (for convenience)
+            if (established.gf.length > 0) {
+                const safeMinMax = (arr) =>
+                    arr.length > 0 ? { min: Math.min(...arr), max: Math.max(...arr) } : null;
+                const goalsMM = safeMinMax(established.goals);
+                const offMM = safeMinMax(established.off);
+                const defMM = safeMinMax(established.def);
+                const saveMM = safeMinMax(established.save);
+                dateMinMax[date] = {
+                    minGF: Math.min(...established.gf),
+                    maxGF: Math.max(...established.gf),
+                    minGA: Math.min(...established.ga),
+                    maxGA: Math.max(...established.ga),
+                    minGoals: goalsMM?.min ?? null,
+                    maxGoals: goalsMM?.max ?? null,
+                    minOff: offMM?.min ?? null,
+                    maxOff: offMM?.max ?? null,
+                    minDef: defMM?.min ?? null,
+                    maxDef: defMM?.max ?? null,
+                    minSave: saveMM?.min ?? null,
+                    maxSave: saveMM?.max ?? null
+                };
+            }
+        });
+
+        // Third pass: compute composite ratings per player per date
+        Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
+            const dates = Object.keys(playerData.history).sort();
+            let latestAttackingRating = null;
+            let latestControlRating = null;
+            let latestGoalsForPerSession = null;
+            let latestGoalsAgainstPerSession = null;
+            let latestTeamGFNorm = null;
+            let latestTeamGANorm = null;
+            let latestGoalsNorm = null;
+            let latestOffActionsNorm = null;
+            let latestDefActionsNorm = null;
+            let latestSaveActionsNorm = null;
+
+            dates.forEach((date) => {
+                const entry = playerData.history[date];
+                const r = entry.ratings;
+                const mm = dateMinMax[date];
+
+                const hasTeamData = r.teamGF?.perSession != null && r.teamGA?.perSession != null;
+
+                if (!hasTeamData) {
+                    // No goals data yet — leave attacking/control as null
+                    return;
+                }
+
+                if (!mm) {
+                    // No established pool yet — use neutral 0.5
+                    r.attacking = 0.5;
+                    r.control = 0.5;
+                    r.teamGF = { perSession: r.teamGF.perSession, norm: null };
+                    r.teamGA = { perSession: r.teamGA.perSession, norm: null };
+                    if (r.goals) r.goals = { perSession: r.goals.perSession, norm: null };
+                    if (r.offActions)
+                        r.offActions = { perSession: r.offActions.perSession, norm: null };
+                    if (r.defActions)
+                        r.defActions = { perSession: r.defActions.perSession, norm: null };
+                    if (r.saveActions)
+                        r.saveActions = { perSession: r.saveActions.perSession, norm: null };
+                    latestAttackingRating = 0.5;
+                    latestControlRating = 0.5;
+                    latestGoalsForPerSession = r.teamGF.perSession ?? latestGoalsForPerSession;
+                    latestGoalsAgainstPerSession =
+                        r.teamGA.perSession ?? latestGoalsAgainstPerSession;
+                    return;
+                }
+
+                // Normalise team-level GF/GA
+                const teamGFNorm = norm(r.teamGF.perSession, mm.minGF, mm.maxGF);
+                const teamGAInvNorm = invNorm(r.teamGA.perSession, mm.minGA, mm.maxGA);
+
+                // Normalise individual stats — null when bounds aren't available for that type yet
+                const goalsN =
+                    mm.minGoals != null
+                        ? norm(r.goals?.perSession ?? 0, mm.minGoals, mm.maxGoals)
+                        : null;
+                const offN =
+                    mm.minOff != null
+                        ? norm(r.offActions?.perSession ?? 0, mm.minOff, mm.maxOff)
+                        : null;
+                const defN =
+                    mm.minDef != null
+                        ? norm(r.defActions?.perSession ?? 0, mm.minDef, mm.maxDef)
+                        : null;
+                const saveN =
+                    mm.minSave != null
+                        ? norm(r.saveActions?.perSession ?? 0, mm.minSave, mm.maxSave)
+                        : null;
+
+                // Determine whether meaningful individual data exists
+                const hasIndividualData =
+                    r.goals?.perSession != null ||
+                    r.offActions?.perSession != null ||
+                    r.defActions?.perSession != null ||
+                    r.saveActions?.perSession != null;
+
+                let attacking, control;
+                if (hasIndividualData) {
+                    // Composite weighted formula — use available norms, fall back to 0 for missing ones
+                    // so the weight is effectively redistributed toward what we do have
+                    attacking = (3 * (goalsN ?? 0) + 2 * (offN ?? 0) + 1 * teamGFNorm) / 6;
+                    control = (0.5 * (saveN ?? 0) + 3.5 * (defN ?? 0) + 1.5 * teamGAInvNorm) / 5.5;
+                } else {
+                    // Fallback: team-level only (preserves legacy behaviour)
+                    attacking = teamGFNorm;
+                    control = teamGAInvNorm;
+                }
+
+                r.attacking = parseFloat(attacking.toFixed(3));
+                r.control = parseFloat(control.toFixed(3));
+                r.teamGF = {
+                    perSession: r.teamGF.perSession,
+                    norm: parseFloat(teamGFNorm.toFixed(3))
+                };
+                r.teamGA = {
+                    perSession: r.teamGA.perSession,
+                    norm: parseFloat(teamGAInvNorm.toFixed(3))
+                };
+                r.goals = {
+                    perSession: r.goals?.perSession ?? null,
+                    norm: goalsN !== null ? parseFloat(goalsN.toFixed(3)) : null
+                };
+                r.offActions = {
+                    perSession: r.offActions?.perSession ?? null,
+                    norm: offN !== null ? parseFloat(offN.toFixed(3)) : null
+                };
+                r.defActions = {
+                    perSession: r.defActions?.perSession ?? null,
+                    norm: defN !== null ? parseFloat(defN.toFixed(3)) : null
+                };
+                r.saveActions = {
+                    perSession: r.saveActions?.perSession ?? null,
+                    norm: saveN !== null ? parseFloat(saveN.toFixed(3)) : null
+                };
+
+                latestAttackingRating = r.attacking;
+                latestControlRating = r.control;
+                latestGoalsForPerSession = r.teamGF.perSession ?? latestGoalsForPerSession;
+                latestGoalsAgainstPerSession = r.teamGA.perSession ?? latestGoalsAgainstPerSession;
+                latestTeamGFNorm = r.teamGF.norm;
+                latestTeamGANorm = r.teamGA.norm;
+                latestGoalsNorm = r.goals.norm;
+                latestOffActionsNorm = r.offActions.norm;
+                latestDefActionsNorm = r.defActions.norm;
+                latestSaveActionsNorm = r.saveActions.norm;
+            });
+
+            // Store latest values at player level for convenience / team generator access
             playerData.attackingRating = latestAttackingRating;
             playerData.controlRating = latestControlRating;
-            playerData.gfRank = latestGfRank;
-            playerData.gfCount = latestGfCount;
-            playerData.gaRank = latestGaRank;
-            playerData.gaCount = latestGaCount;
             playerData.goalsForPerSession = latestGoalsForPerSession;
             playerData.goalsAgainstPerSession = latestGoalsAgainstPerSession;
+            playerData.teamGFNorm = latestTeamGFNorm;
+            playerData.teamGANorm = latestTeamGANorm;
+            playerData.goalsNorm = latestGoalsNorm;
+            playerData.offActionsNorm = latestOffActionsNorm;
+            playerData.defActionsNorm = latestDefActionsNorm;
+            playerData.saveActionsNorm = latestSaveActionsNorm;
         });
     }
 

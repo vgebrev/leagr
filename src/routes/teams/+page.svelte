@@ -9,6 +9,7 @@
     import DrawReplay from './components/DrawReplay.svelte';
     import PlayerModal from '$components/PlayerModal.svelte';
     import TeamModal from '$components/TeamModal.svelte';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -73,6 +74,11 @@
 
     onMount(async () => {
         await teamsService.loadTeams(date);
+    });
+
+    $effect(() => {
+        titleParts.set(['Teams']);
+        return () => titleParts.set([]);
     });
 </script>
 

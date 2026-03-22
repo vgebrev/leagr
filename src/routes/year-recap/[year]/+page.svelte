@@ -32,6 +32,7 @@
     import FunFacts from './components/FunFacts.svelte';
     import ThankYou from './components/ThankYou.svelte';
     import ConfettiEffect from '$components/ConfettiEffect.svelte';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     /** @typedef {import('$lib/shared/types.js').YearRecapData} YearRecapData */
 
@@ -303,6 +304,11 @@
                 confettiEffect?.trigger(['#efb100', '#fff085']);
             }, 600);
         }
+    });
+
+    $effect(() => {
+        titleParts.set([String(selectedYear), 'Year Recap']);
+        return () => titleParts.set([]);
     });
 </script>
 

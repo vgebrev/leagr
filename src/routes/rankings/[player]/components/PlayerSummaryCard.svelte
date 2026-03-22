@@ -121,7 +121,9 @@
             <div class="text-center">
                 <div class="text-sm text-gray-600 dark:text-gray-300">ELO Games</div>
                 <div class="text-lg font-semibold dark:text-gray-200">
-                    {playerData.elo?.gamesPlayed ?? playerData.detailForDate?.eloGames ?? 0}
+                    {playerData.elo?.gamesPlayed ??
+                        playerData.detailForDate?.eloGames?.allTime ??
+                        0}
                 </div>
             </div>
         </div>

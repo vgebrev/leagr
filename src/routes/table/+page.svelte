@@ -9,6 +9,7 @@
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
     import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -92,6 +93,11 @@
             }
         );
     });
+
+    $effect(() => {
+        titleParts.set(['Table']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <div class="flex flex-col gap-4">
@@ -112,7 +118,8 @@
 <CelebrationOverlay
     bind:celebrating
     teamName={winningTeam.name}
-    teamColour={winningTeam.colour} />
+    teamColour={winningTeam.colour}
+    {date} />
 
 <TeamModal
     bind:teamName={selectedTeam}

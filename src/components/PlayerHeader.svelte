@@ -3,6 +3,7 @@
     import { Badge } from 'flowbite-svelte';
     import { ExclamationCircleOutline, HourglassOutline } from 'flowbite-svelte-icons';
     import PlayerRatings from '$components/PlayerRatings.svelte';
+    import PlayerBadges from '$components/PlayerBadges.svelte';
 
     /**
      * @type {{ playerData: any, playerName: string, showStatus?: boolean, asOfDate?: string | null }}
@@ -61,14 +62,17 @@
                     <PlayerRatings
                         attackingRating={playerData.attackingRating}
                         controlRating={playerData.controlRating}
-                        goalsForPerSession={playerData.goalsForPerSession ?? null}
-                        goalsAgainstPerSession={playerData.goalsAgainstPerSession ?? null}
-                        gfRank={playerData.gfRank ?? null}
-                        gfCount={playerData.gfCount ?? null}
-                        gaRank={playerData.gaRank ?? null}
-                        gaCount={playerData.gaCount ?? null}
+                        goalsNorm={playerData.goalsNorm ?? null}
+                        offActionsNorm={playerData.offActionsNorm ?? null}
+                        teamGFNorm={playerData.teamGFNorm ?? null}
+                        saveActionsNorm={playerData.saveActionsNorm ?? null}
+                        defActionsNorm={playerData.defActionsNorm ?? null}
+                        teamGANorm={playerData.teamGANorm ?? null}
                         gamma={0.45}
                         tooltipIdPrefix={`player-header-${playerName ?? 'unknown'}`} />
+                    <PlayerBadges
+                        traits={playerData.traits}
+                        playerProfile={playerData.playerProfile} />
                 </div>
             {:else}
                 <h6 class="text-gray-400">Player Profile</h6>

@@ -8,6 +8,7 @@
     import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
     import TeamLogo from '$components/TeamLogo.svelte';
+    import TeamModal from '$components/TeamModal.svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
@@ -19,6 +20,7 @@
         findKnockoutMatch
     } from '$lib/client/services/games.svelte.js';
     import { RESERVED_SCORER_KEYS, validateGameScore } from '$lib/shared/validation.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = data.date;
@@ -233,6 +235,15 @@
 
     let competitionEnded = $derived(isCompetitionEnded(date, $settings));
 
+    let selectedTeam = $state(/** @type {string | null} */ (null));
+    let showTeamModal = $state(false);
+
+    /** @param {string} teamName */
+    function openTeamModal(teamName) {
+        selectedTeam = teamName;
+        showTeamModal = true;
+    }
+
     let loaded = $state(false);
 
     onMount(async () => {
@@ -382,6 +393,11 @@
             };
         }
     });
+
+    $effect(() => {
+        titleParts.set(['Match Centre', 'Games']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <div class="flex flex-col gap-3">
@@ -399,21 +415,33 @@
             <div class="flex flex-col gap-2">
                 <div class="flex items-center justify-between gap-2">
                     <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
-                        <TeamLogo
-                            teamName={match.home}
-                            {date} />
+                        <button
+                            type="button"
+                            class="cursor-pointer transition-opacity hover:opacity-80"
+                            onclick={() => openTeamModal(match.home)}>
+                            <TeamLogo
+                                teamName={match.home}
+                                {date} />
+                        </button>
                         <TeamBadge
                             teamName={match.home}
-                            className="w-full" />
+                            className="w-full"
+                            onclick={() => openTeamModal(match.home)} />
                     </div>
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
                     <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
-                        <TeamLogo
-                            teamName={match.away}
-                            {date} />
+                        <button
+                            type="button"
+                            class="cursor-pointer transition-opacity hover:opacity-80"
+                            onclick={() => openTeamModal(match.away)}>
+                            <TeamLogo
+                                teamName={match.away}
+                                {date} />
+                        </button>
                         <TeamBadge
                             teamName={match.away}
-                            className="w-full" />
+                            className="w-full"
+                            onclick={() => openTeamModal(match.away)} />
                     </div>
                 </div>
                 <div class="flex items-start justify-between">
@@ -560,11 +588,13 @@
                         onclick={() => history.back()}><AngleLeftOutline class="h-3 w-3" /></Button>
                     <TeamBadge
                         teamName={nextMatchInfo.home}
-                        className="min-w-0 flex-1" />
+                        className="min-w-0 flex-1"
+                        onclick={() => openTeamModal(nextMatchInfo.home)} />
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
                     <TeamBadge
                         teamName={nextMatchInfo.away}
-                        className="min-w-0 flex-1" />
+                        className="min-w-0 flex-1"
+                        onclick={() => openTeamModal(nextMatchInfo.away)} />
                     <Button
                         size="xs"
                         outline={true}
@@ -605,3 +635,8 @@
         </p>
     {/if}
 </div>
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    {date}
+    bind:open={showTeamModal} />

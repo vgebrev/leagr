@@ -1,11 +1,20 @@
 <script>
     import Avatar from '$components/avatars/Avatar.svelte';
+    import SoccerBallIcon from '$components/Icons/SoccerBallIcon.svelte';
+    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
 
     /**
-     * @type {{ players: Array<{name: string, avatar?: string | null, elo?: number}>, teamColor?: string }}
+     * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
+     * @type {{
+     *   players: Array<{name: string, avatar?: string | null, elo?: number}>,
+     *   teamColor?: string,
+     *   playerStats?: Record<string, PlayerStat>
+     * }}
      */
-    let { players = [], teamColor = 'default' } = $props();
+    let { players = [], teamColor = 'default', playerStats = {} } = $props();
 
     // Get team color styles
     const colorStyles = $derived(teamStyles[teamColor] || teamStyles.default);
@@ -49,6 +58,13 @@
             [sortedPlayers[5], sortedPlayers[6]]
         ];
     });
+
+    const statDefs = [
+        { key: 'goals', label: 'goals', Icon: SoccerBallIcon },
+        { key: 'attack', label: 'attack', Icon: BullseyeIcon },
+        { key: 'defence', label: 'defence', Icon: ShieldIcon },
+        { key: 'saves', label: 'saves', Icon: GloveIcon }
+    ];
 </script>
 
 <div class="relative mx-auto aspect-[2/3] w-full overflow-hidden rounded-xl shadow-lg">
@@ -145,25 +161,49 @@
                     {@const avatarUrl = player?.avatar
                         ? `/api/rankings/${encodeURIComponent(player.name)}/avatar`
                         : null}
-                    <div class="flex flex-col items-center gap-1">
-                        <div class="block sm:hidden">
-                            <Avatar
-                                {avatarUrl}
-                                size="md"
-                                color={teamColor}
-                                shadow="lg" />
+                    {@const stats = player?.name ? playerStats[player.name] : null}
+                    <div class="flex items-start gap-1.5">
+                        <!-- Avatar + name -->
+                        <div class="flex flex-col items-center gap-1">
+                            <div class="block sm:hidden">
+                                <Avatar
+                                    {avatarUrl}
+                                    size="md"
+                                    color={teamColor}
+                                    shadow="lg" />
+                            </div>
+                            <div class="hidden sm:block">
+                                <Avatar
+                                    {avatarUrl}
+                                    size="lg"
+                                    color={teamColor}
+                                    shadow="lg" />
+                            </div>
+                            <div
+                                class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>
+                                <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
+                            </div>
                         </div>
-                        <div class="hidden sm:block">
-                            <Avatar
-                                {avatarUrl}
-                                size="lg"
-                                color={teamColor}
-                                shadow="lg" />
-                        </div>
-                        <div
-                            class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>
-                            <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
-                        </div>
+
+                        <!-- Stats panel -->
+                        {#if stats}
+                            <div
+                                class="flex flex-col gap-0.5 rounded bg-black/50 px-1.5 py-1 text-white backdrop-blur-sm">
+                                {#each statDefs as { key, label, Icon } (key)}
+                                    {@const val = stats[key] ?? 0}
+                                    <div class="flex items-center gap-1">
+                                        <Icon class="h-3 w-3 shrink-0 text-gray-300" />
+                                        <span class="text-[10px] text-gray-300">{label}</span>
+                                        <span
+                                            class="ms-auto text-[10px] font-bold {val === 0
+                                                ? 'text-gray-500'
+                                                : 'text-white'}">
+                                            {val}
+                                        </span>
+                                    </div>
+                                {/each}
+                            </div>
+                        {/if}
                     </div>
                 {/each}
             </div>

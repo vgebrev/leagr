@@ -8,12 +8,13 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
+    import { StarSolid } from 'flowbite-svelte-icons';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
     import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let rankings = $state({ players: {}, rankingMetadata: {} });
     let sortBy = $state('rankingPoints'); // Default to ranking points
@@ -35,10 +36,10 @@
         return dateParam ? `/champions?date=${dateParam}` : '/champions';
     });
 
-    // Preserve date parameter when navigating to golden boot
-    let goldenBootUrl = $derived.by(() => {
+    // Preserve date parameter when navigating to ballers board
+    let ballersBoardUrl = $derived.by(() => {
         const dateParam = page.url.searchParams.get('date');
-        return dateParam ? `/golden-boot?date=${dateParam}` : '/golden-boot';
+        return dateParam ? `/ballers-board?date=${dateParam}` : '/ballers-board';
     });
 
     /**
@@ -208,6 +209,11 @@
             showActiveOnly = dates.length >= 5;
         }
     });
+
+    $effect(() => {
+        titleParts.set(['Rankings']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <div class="flex flex-col gap-2">
@@ -223,12 +229,12 @@
             Champions Hall
         </Button>
         <Button
-            href={goldenBootUrl}
+            href={ballersBoardUrl}
             color="primary"
             size="sm"
             class="flex flex-1 items-center justify-center gap-2">
-            <SoccerBootIcon class="h-4 w-4" />
-            Golden Boot
+            <StarSolid class="h-4 w-4" />
+            Ballers Board
         </Button>
     </div>
 

@@ -9,6 +9,7 @@
     import { Button } from 'flowbite-svelte';
     import { BanOutline } from 'flowbite-svelte-icons';
     import { settings } from '$lib/client/stores/settings.js';
+    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     let playerName = $state('');
@@ -69,6 +70,11 @@
     async function renamePlayer(oldName, newName) {
         await playersService.renamePlayer(oldName, newName);
     }
+
+    $effect(() => {
+        titleParts.set(['Players']);
+        return () => titleParts.set([]);
+    });
 </script>
 
 <div class="flex flex-col gap-2">
