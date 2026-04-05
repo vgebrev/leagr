@@ -103,8 +103,101 @@ describe('RankingsManager - Knockout Points', () => {
 
             const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
 
-            // No points for draws
+            // No points for draws without penalties
             expect(Object.keys(result)).toHaveLength(0);
+        });
+
+        it('should award knockout points to home team when they win on penalties', () => {
+            const teams = {
+                'Red Team': ['Alice', 'Bob'],
+                'Blue Team': ['Charlie', 'David']
+            };
+
+            const knockoutBracket = [
+                {
+                    round: 'semi',
+                    match: 1,
+                    home: 'Red Team',
+                    away: 'Blue Team',
+                    homeScore: 1,
+                    awayScore: 1,
+                    homePenalties: 4,
+                    awayPenalties: 3
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            expect(result['Alice']).toBe(1);
+            expect(result['Bob']).toBe(1);
+            expect(result['Charlie']).toBeUndefined();
+            expect(result['David']).toBeUndefined();
+        });
+
+        it('should award knockout points to away team when they win on penalties', () => {
+            const teams = {
+                'Red Team': ['Alice', 'Bob'],
+                'Blue Team': ['Charlie', 'David']
+            };
+
+            const knockoutBracket = [
+                {
+                    round: 'semi',
+                    match: 1,
+                    home: 'Red Team',
+                    away: 'Blue Team',
+                    homeScore: 2,
+                    awayScore: 2,
+                    homePenalties: 2,
+                    awayPenalties: 5
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            expect(result['Charlie']).toBe(1);
+            expect(result['David']).toBe(1);
+            expect(result['Alice']).toBeUndefined();
+            expect(result['Bob']).toBeUndefined();
+        });
+
+        it('should award knockout points across multiple rounds including a penalty win', () => {
+            const teams = {
+                'Red Team': ['Alice', 'Bob'],
+                'Blue Team': ['Charlie', 'David'],
+                'Green Team': ['Eve', 'Frank']
+            };
+
+            const knockoutBracket = [
+                {
+                    round: 'semi',
+                    match: 1,
+                    home: 'Red Team',
+                    away: 'Blue Team',
+                    homeScore: 1,
+                    awayScore: 1,
+                    homePenalties: 4,
+                    awayPenalties: 3
+                },
+                {
+                    round: 'final',
+                    match: 1,
+                    home: 'Red Team',
+                    away: 'Green Team',
+                    homeScore: 2,
+                    awayScore: 1
+                }
+            ];
+
+            const result = rankingsManager.getKnockoutPoints(knockoutBracket, teams);
+
+            // Red Team won both (semi on penalties + final outright)
+            expect(result['Alice']).toBe(2);
+            expect(result['Bob']).toBe(2);
+            // Blue Team lost the semi
+            expect(result['Charlie']).toBeUndefined();
+            // Green Team lost the final
+            expect(result['Eve']).toBeUndefined();
         });
 
         it('should handle empty or null knockout bracket', () => {
