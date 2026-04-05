@@ -692,7 +692,7 @@ class TeamGenerator {
      */
     calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit) {
         const W_ELO = 1.0;
-        const W_SPREAD = 0.7;
+        const W_SPREAD = 0.0; // Pot-seeding structurally prevents spread imbalance; norm never activates
         const W_PAIR = 1.3;
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
@@ -761,12 +761,15 @@ class TeamGenerator {
 
     /**
      * Calculate trait distribution balance across teams.
-     * Measures how evenly attack traits (isFinisher, isAttacker) and defence traits
-     * (isDefender, isShotStopper) are distributed. An "engine" player who holds
-     * multiple traits contributes to each relevant pool simultaneously.
+     * Scores each of the four traits independently (isFinisher, isAttacker, isDefender,
+     * isShotStopper) and returns their average. Traits with zero holders in the pool
+     * are skipped entirely so they don't dilute the score.
      *
-     * Returns 0 when all teams have the same trait counts (perfect balance),
-     * up to 1 for maximum imbalance. Returns 0 when no players have traits.
+     * Normalisation is pool-relative: the worst-case range for a trait with N holders
+     * across T teams is ~2× the ideal (N/T), so we divide range by max(1, idealPerTeam × 2).
+     * This gives a properly scaled 0–1 score regardless of how few players hold the trait.
+     *
+     * Returns 0 when no players have any traits (perfect balance by default).
      *
      * @param {TeamsMap} teams - Generated teams object
      * @returns {number} Trait balance score [0, 1] where lower is better
@@ -775,52 +778,38 @@ class TeamGenerator {
         const teamNames = Object.keys(teams);
         if (teamNames.length < 2) return 0;
 
-        const attackCounts = [];
-        const defenceCounts = [];
-        let totalTraitPlayers = 0;
+        const traitKeys = ['isFinisher', 'isAttacker', 'isDefender', 'isShotStopper'];
+        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+        const traitScores = [];
 
-        for (const teamName of teamNames) {
-            const players = teams[teamName];
-            let attackCount = 0;
-            let defenceCount = 0;
+        for (const traitKey of traitKeys) {
+            const teamCounts = [];
+            let totalWithTrait = 0;
 
-            for (const playerName of players) {
-                let playerData = this.rankings?.players?.[playerName];
-                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                    playerData = this.previousYearRankings.players[playerName];
+            for (const teamName of teamNames) {
+                let count = 0;
+                for (const playerName of teams[teamName]) {
+                    let playerData = this.rankings?.players?.[playerName];
+                    if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                        playerData = this.previousYearRankings.players[playerName];
+                    }
+                    if (playerData?.traits?.[traitKey]) count++;
                 }
-                const traits = playerData?.traits;
-                if (!traits) continue;
-
-                if (traits.isFinisher || traits.isAttacker) {
-                    attackCount++;
-                    totalTraitPlayers++;
-                }
-                if (traits.isDefender || traits.isShotStopper) {
-                    defenceCount++;
-                    totalTraitPlayers++;
-                }
+                teamCounts.push(count);
+                totalWithTrait += count;
             }
 
-            attackCounts.push(attackCount);
-            defenceCounts.push(defenceCount);
+            // Skip traits that no player in the pool has
+            if (totalWithTrait === 0) continue;
+
+            const range = Math.max(...teamCounts) - Math.min(...teamCounts);
+            const idealPerTeam = totalWithTrait / teamNames.length;
+            // Worst case: all holders on one team → range ≈ 2× ideal
+            traitScores.push(clamp01(range / Math.max(1, idealPerTeam * 2)));
         }
 
-        // No players have any traits — neutral score
-        if (totalTraitPlayers === 0) return 0;
-
-        const avgTeamSize =
-            Object.values(teams).reduce((s, p) => s + p.length, 0) / teamNames.length;
-        const normDivisor = Math.max(1, avgTeamSize);
-        const clamp01 = (v) => Math.min(1, Math.max(0, v));
-
-        const attackRange = Math.max(...attackCounts) - Math.min(...attackCounts);
-        const defenceRange = Math.max(...defenceCounts) - Math.min(...defenceCounts);
-
-        const attackScore = clamp01(attackRange / normDivisor);
-        const defenceScore = clamp01(defenceRange / normDivisor);
-
-        return (attackScore + defenceScore) / 2;
+        if (traitScores.length === 0) return 0;
+        return traitScores.reduce((s, v) => s + v, 0) / traitScores.length;
     }
 
     /**
@@ -1237,7 +1226,10 @@ class TeamGenerator {
 
             // Stop early after warmup if: score is excellent, or best hasn't improved for 1000 iterations
             // (1000 iters ≈ 300 valid candidates at typical rejection rates — a reasonable convergence signal)
-            if (iteration > 2000 && (bestScore <= 0.25 || iteration - lastImprovementIteration > 1000)) {
+            if (
+                iteration > 2000 &&
+                (bestScore <= 0.25 || iteration - lastImprovementIteration > 1000)
+            ) {
                 break;
             }
         }
