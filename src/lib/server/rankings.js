@@ -653,6 +653,8 @@ export class RankingsManager {
      * @param {number} awayScore - Away team score
      * @param {string} phase - Game phase ('league' or cup-related)
      * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
+     * @param homePenalties
+     * @param awayPenalties
      */
     updateEloRatingsForGame(
         playerTracker,

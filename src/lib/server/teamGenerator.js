@@ -911,7 +911,12 @@ class TeamGenerator {
      * @returns {TeamsMap} Optimized teams object
      */
     optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
-        const { maxSwaps = 200, eloRange = null, hardEloDeltaLimit = null } = options;
+        const {
+            maxSwaps = 200,
+            eloRange = null,
+            hardEloDeltaLimit = null,
+            hardConstraintLimit = 4
+        } = options;
         if (!this.teammateHistory || !this.initialPots || this.initialPots.length === 0) {
             return teams; // Need history and pot structure for optimization
         }
@@ -985,6 +990,7 @@ class TeamGenerator {
 
                                 if (
                                     testMetrics.eloDelta <= effectiveHardEloDeltaLimit &&
+                                    !this.violatesHardConstraints(testTeams, hardConstraintLimit) &&
                                     (testMetrics.totalNorm < currentMetrics.totalNorm ||
                                         (testMetrics.totalNorm === currentMetrics.totalNorm &&
                                             testMetrics.eloDelta < currentMetrics.eloDelta))
@@ -1191,7 +1197,7 @@ class TeamGenerator {
         const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
 
         const maxIterations = 5000;
-        const hardConstraintLimit = 3; // Completely reject teams with pairs having 4+ previous pairings
+        const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
 
         let bestTeams = null;
         let bestScore = Infinity; // Now tracking combined score instead of just ELO delta
@@ -1266,7 +1272,8 @@ class TeamGenerator {
         if (this.teammateHistory && Object.keys(bestTeams).length >= 2) {
             bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers, {
                 eloRange,
-                hardEloDeltaLimit
+                hardEloDeltaLimit,
+                hardConstraintLimit
             });
         }
 
