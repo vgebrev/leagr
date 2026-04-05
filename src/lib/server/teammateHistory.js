@@ -13,21 +13,26 @@ export class TeammateHistoryTracker {
     }
 
     /**
-     * Get all session files for a league (limited to recent sessions)
+     * Get all session files for a league, sorted by date descending
      * @param {string} leagueId - League identifier
-     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 12)
+     * @param {number | null} fileLimit - Max files to return. Default 70 covers the worst case for a
+     *   10-session window (10 weeks × 7 days). Pass null for no limit.
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
+     *   Pass the current session date to prevent redraws from contaminating their own history.
      * @returns {Promise<string[]>} Array of session file paths
      */
-    async getSessionFiles(leagueId, sessionLimit = 12) {
+    async getSessionFiles(leagueId, fileLimit = 70, beforeDate = null) {
         const leaguePath = join(this.leagueDataPath, leagueId);
         const files = await readdir(leaguePath);
 
-        // Filter for date files (YYYY-MM-DD.json format) and sort by date descending
-        return files
+        const sorted = files
             .filter((file) => file.match(/^\d{4}-\d{2}-\d{2}\.json$/))
-            .sort((a, b) => b.localeCompare(a)) // Sort by date descending (newest first)
-            .slice(0, sessionLimit) // Take only the most recent sessions
-            .map((file) => join(leaguePath, file));
+            .filter((file) => !beforeDate || file < `${beforeDate}.json`)
+            .sort((a, b) => b.localeCompare(a)); // Sort by date descending (newest first)
+
+        return (fileLimit != null ? sorted.slice(0, fileLimit) : sorted).map((file) =>
+            join(leaguePath, file)
+        );
     }
 
     /**
@@ -82,20 +87,27 @@ export class TeammateHistoryTracker {
     /**
      * Build teammate history matrix from recent sessions
      * @param {string} leagueId - League identifier
-     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 12)
+     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
      * @returns {Promise<Object>} Teammate history data
      */
-    async buildTeammateHistory(leagueId, sessionLimit = 12) {
-        const sessionFiles = await this.getSessionFiles(leagueId, sessionLimit);
+    async buildTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
+        const sessionFiles = await this.getSessionFiles(leagueId, 70, beforeDate);
         const allPlayers = new Set();
         const pairCounts = new Map();
 
-        // Process each session
+        // Process sessions, counting only those with actual teams toward the limit
+        let sessionsWithTeams = 0;
         for (const filePath of sessionFiles) {
+            if (sessionsWithTeams >= sessionLimit) break;
+
             const sessionData = await this.loadSessionData(filePath);
             if (!sessionData) continue;
 
             const pairs = this.extractTeammatePairs(sessionData);
+            if (pairs.length === 0) continue; // skip sessions with no teams
+
+            sessionsWithTeams++;
 
             // Track all unique players
             pairs.forEach(([player1, player2]) => {
@@ -135,7 +147,7 @@ export class TeammateHistoryTracker {
             leagueId,
             players: playerList,
             matrix,
-            totalSessions: sessionFiles.length,
+            totalSessions: sessionsWithTeams,
             lastUpdated: new Date().toISOString(),
             metadata: {
                 totalPlayers: playerCount,
@@ -158,11 +170,12 @@ export class TeammateHistoryTracker {
     /**
      * Update teammate history for a league (main function)
      * @param {string} leagueId - League identifier
-     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 12)
+     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
      * @returns {Promise<{historyData: Object}>} Updated history data
      */
-    async updateTeammateHistory(leagueId, sessionLimit = 12) {
-        const historyData = await this.buildTeammateHistory(leagueId, sessionLimit);
+    async updateTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
+        const historyData = await this.buildTeammateHistory(leagueId, sessionLimit, beforeDate);
         await this.saveTeammateHistory(leagueId, historyData);
         return { historyData };
     }

@@ -1,5 +1,6 @@
 import { teamColours } from '$lib/shared/helpers.js';
 import { getNextNouns } from './nounPool.js';
+import { logger } from '$lib/server/logger.js';
 
 /** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('../shared/types.js').TeamGenerationSettings} TeamGenerationSettings */
@@ -691,7 +692,7 @@ class TeamGenerator {
      */
     calculateNormalizedScore(teams, eloRange, hardEloDeltaLimit) {
         const W_ELO = 1.0;
-        const W_SPREAD = 0.7;
+        const W_SPREAD = 0.0; // Pot-seeding structurally prevents spread imbalance; norm never activates
         const W_PAIR = 1.3;
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
@@ -760,12 +761,15 @@ class TeamGenerator {
 
     /**
      * Calculate trait distribution balance across teams.
-     * Measures how evenly attack traits (isFinisher, isAttacker) and defence traits
-     * (isDefender, isShotStopper) are distributed. An "engine" player who holds
-     * multiple traits contributes to each relevant pool simultaneously.
+     * Scores each of the four traits independently (isFinisher, isAttacker, isDefender,
+     * isShotStopper) and returns their average. Traits with zero holders in the pool
+     * are skipped entirely so they don't dilute the score.
      *
-     * Returns 0 when all teams have the same trait counts (perfect balance),
-     * up to 1 for maximum imbalance. Returns 0 when no players have traits.
+     * Normalisation is pool-relative: the worst-case range for a trait with N holders
+     * across T teams is ~2× the ideal (N/T), so we divide range by max(1, idealPerTeam × 2).
+     * This gives a properly scaled 0–1 score regardless of how few players hold the trait.
+     *
+     * Returns 0 when no players have any traits (perfect balance by default).
      *
      * @param {TeamsMap} teams - Generated teams object
      * @returns {number} Trait balance score [0, 1] where lower is better
@@ -774,52 +778,38 @@ class TeamGenerator {
         const teamNames = Object.keys(teams);
         if (teamNames.length < 2) return 0;
 
-        const attackCounts = [];
-        const defenceCounts = [];
-        let totalTraitPlayers = 0;
+        const traitKeys = ['isFinisher', 'isAttacker', 'isDefender', 'isShotStopper'];
+        const clamp01 = (v) => Math.min(1, Math.max(0, v));
+        const traitScores = [];
 
-        for (const teamName of teamNames) {
-            const players = teams[teamName];
-            let attackCount = 0;
-            let defenceCount = 0;
+        for (const traitKey of traitKeys) {
+            const teamCounts = [];
+            let totalWithTrait = 0;
 
-            for (const playerName of players) {
-                let playerData = this.rankings?.players?.[playerName];
-                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                    playerData = this.previousYearRankings.players[playerName];
+            for (const teamName of teamNames) {
+                let count = 0;
+                for (const playerName of teams[teamName]) {
+                    let playerData = this.rankings?.players?.[playerName];
+                    if (!playerData && this.previousYearRankings?.players?.[playerName]) {
+                        playerData = this.previousYearRankings.players[playerName];
+                    }
+                    if (playerData?.traits?.[traitKey]) count++;
                 }
-                const traits = playerData?.traits;
-                if (!traits) continue;
-
-                if (traits.isFinisher || traits.isAttacker) {
-                    attackCount++;
-                    totalTraitPlayers++;
-                }
-                if (traits.isDefender || traits.isShotStopper) {
-                    defenceCount++;
-                    totalTraitPlayers++;
-                }
+                teamCounts.push(count);
+                totalWithTrait += count;
             }
 
-            attackCounts.push(attackCount);
-            defenceCounts.push(defenceCount);
+            // Skip traits that no player in the pool has
+            if (totalWithTrait === 0) continue;
+
+            const range = Math.max(...teamCounts) - Math.min(...teamCounts);
+            const idealPerTeam = totalWithTrait / teamNames.length;
+            // Worst case: all holders on one team → range ≈ 2× ideal
+            traitScores.push(clamp01(range / Math.max(1, idealPerTeam * 2)));
         }
 
-        // No players have any traits — neutral score
-        if (totalTraitPlayers === 0) return 0;
-
-        const avgTeamSize =
-            Object.values(teams).reduce((s, p) => s + p.length, 0) / teamNames.length;
-        const normDivisor = Math.max(1, avgTeamSize);
-        const clamp01 = (v) => Math.min(1, Math.max(0, v));
-
-        const attackRange = Math.max(...attackCounts) - Math.min(...attackCounts);
-        const defenceRange = Math.max(...defenceCounts) - Math.min(...defenceCounts);
-
-        const attackScore = clamp01(attackRange / normDivisor);
-        const defenceScore = clamp01(defenceRange / normDivisor);
-
-        return (attackScore + defenceScore) / 2;
+        if (traitScores.length === 0) return 0;
+        return traitScores.reduce((s, v) => s + v, 0) / traitScores.length;
     }
 
     /**
@@ -911,7 +901,12 @@ class TeamGenerator {
      * @returns {TeamsMap} Optimized teams object
      */
     optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
-        const { maxSwaps = 200, eloRange = null, hardEloDeltaLimit = null } = options;
+        const {
+            maxSwaps = 200,
+            eloRange = null,
+            hardEloDeltaLimit = null,
+            hardConstraintLimit = 4
+        } = options;
         if (!this.teammateHistory || !this.initialPots || this.initialPots.length === 0) {
             return teams; // Need history and pot structure for optimization
         }
@@ -985,6 +980,7 @@ class TeamGenerator {
 
                                 if (
                                     testMetrics.eloDelta <= effectiveHardEloDeltaLimit &&
+                                    !this.violatesHardConstraints(testTeams, hardConstraintLimit) &&
                                     (testMetrics.totalNorm < currentMetrics.totalNorm ||
                                         (testMetrics.totalNorm === currentMetrics.totalNorm &&
                                             testMetrics.eloDelta < currentMetrics.eloDelta))
@@ -1191,10 +1187,15 @@ class TeamGenerator {
         const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
 
         const maxIterations = 5000;
-        const hardConstraintLimit = 3; // Completely reject teams with pairs having 4+ previous pairings
+        const hardConstraintLimit = 4; // Completely reject teams with pairs having 4+ previous pairings
 
         let bestTeams = null;
         let bestScore = Infinity; // Now tracking combined score instead of just ELO delta
+        /** @type {ReturnType<typeof this.calculateNormalizedScore> | null} */
+        let bestMetrics = null;
+        let pairingRejects = 0;
+        let eloRejects = 0;
+        let lastImprovementIteration = 0;
 
         let iteration;
         // Iterate to find the best balance of ELO balance and pairing variety
@@ -1204,6 +1205,11 @@ class TeamGenerator {
 
             // Check hard constraints first - reject if violated
             if (this.violatesHardConstraints(teams, hardConstraintLimit, hardEloDeltaLimit)) {
+                if (this.violatesHardConstraints(teams, hardConstraintLimit, null)) {
+                    pairingRejects++;
+                } else {
+                    eloRejects++;
+                }
                 continue; // Skip this iteration - hard constraints violated
             }
 
@@ -1214,10 +1220,16 @@ class TeamGenerator {
             if (totalNorm < bestScore) {
                 bestScore = totalNorm;
                 bestTeams = structuredClone(teams);
+                bestMetrics = metrics;
+                lastImprovementIteration = iteration;
             }
 
-            // Stop early if we achieve excellent balance across all metrics
-            if (iteration > 2000 && totalNorm <= 0.25) {
+            // Stop early after warmup if: score is excellent, or best hasn't improved for 1000 iterations
+            // (1000 iters ≈ 300 valid candidates at typical rejection rates — a reasonable convergence signal)
+            if (
+                iteration > 2000 &&
+                (bestScore <= 0.25 || iteration - lastImprovementIteration > 1000)
+            ) {
                 break;
             }
         }
@@ -1242,7 +1254,9 @@ class TeamGenerator {
         }
 
         // If no valid teams found, fall back to generation without hard constraints
+        let fallbackUsed = false;
         if (!bestTeams) {
+            fallbackUsed = true;
             // Try one more time without hard constraints
             for (let fallbackIteration = 0; fallbackIteration < 5; fallbackIteration++) {
                 const teams = this.generateSeededTeamsIteration(config, teamNames, sortedPlayers);
@@ -1253,6 +1267,7 @@ class TeamGenerator {
                 if (totalNorm < bestScore) {
                     bestScore = totalNorm;
                     bestTeams = structuredClone(teams);
+                    bestMetrics = metrics;
                     break; // Take first reasonable solution
                 }
             }
@@ -1266,9 +1281,24 @@ class TeamGenerator {
         if (this.teammateHistory && Object.keys(bestTeams).length >= 2) {
             bestTeams = this.optimizeTeamsWithSwaps(bestTeams, sortedPlayers, {
                 eloRange,
-                hardEloDeltaLimit
+                hardEloDeltaLimit,
+                hardConstraintLimit
             });
         }
+
+        this.logDrawInfo({
+            sortedPlayers,
+            numTeams,
+            config,
+            maxIterations,
+            iterationsUsed: iteration,
+            pairingRejects,
+            eloRejects,
+            bestMetrics,
+            fallbackUsed,
+            hardConstraintLimit,
+            hardEloDeltaLimit
+        });
 
         // Reconstruct draw history from final teams using the pot structure and snake draft
         if (this.recordHistory) {
@@ -1281,6 +1311,93 @@ class TeamGenerator {
         }
 
         return bestTeams;
+    }
+
+    /**
+     * Log a summary of a completed seeded draw — health signals, iteration stats, best norms.
+     * Emits warn if fallback fired or blocked-pair density is high, info for the standard summary,
+     * and debug for the per-player blocked breakdown.
+     */
+    logDrawInfo({
+        sortedPlayers,
+        numTeams,
+        config,
+        maxIterations,
+        iterationsUsed,
+        pairingRejects,
+        eloRejects,
+        bestMetrics,
+        fallbackUsed,
+        hardConstraintLimit,
+        hardEloDeltaLimit
+    }) {
+        const totalPairs = (sortedPlayers.length * (sortedPlayers.length - 1)) / 2;
+
+        // Count hard-blocked pairs in the current pool
+        let blockedCount = 0;
+        /** @type {Record<string, number>} */
+        const blockedPerPlayer = {};
+        if (this.teammateHistory) {
+            for (let i = 0; i < sortedPlayers.length; i++) {
+                for (let j = i + 1; j < sortedPlayers.length; j++) {
+                    const p1 = sortedPlayers[i];
+                    const p2 = sortedPlayers[j];
+                    const idx1 = this.teammateHistory.players.indexOf(p1);
+                    const idx2 = this.teammateHistory.players.indexOf(p2);
+                    if (
+                        idx1 >= 0 &&
+                        idx2 >= 0 &&
+                        this.teammateHistory.matrix[idx1][idx2] >= hardConstraintLimit
+                    ) {
+                        blockedCount++;
+                        blockedPerPlayer[p1] = (blockedPerPlayer[p1] || 0) + 1;
+                        blockedPerPlayer[p2] = (blockedPerPlayer[p2] || 0) + 1;
+                    }
+                }
+            }
+        }
+
+        const blockedPct = totalPairs > 0 ? (blockedCount / totalPairs) * 100 : 0;
+        const rejectTotal = pairingRejects + eloRejects;
+        const teamSize = config.teamSizes[0];
+
+        if (fallbackUsed) {
+            logger.warn(
+                `[teams] Fallback draw — pairing constraint unsatisfiable: ` +
+                    `${pairingRejects}/${maxIterations} iter rejected by pairing, ${eloRejects} by elo` +
+                    (this.teammateHistory
+                        ? ` | blocked pairs in pool: ${blockedCount}/${totalPairs} (${blockedPct.toFixed(1)}%)`
+                        : '')
+            );
+        } else if (blockedPct >= 8) {
+            logger.warn(
+                `[teams] High blocked-pair density: ${blockedCount}/${totalPairs} pairs in pool ` +
+                    `hard-blocked (${blockedPct.toFixed(1)}%). Constraint space is tightening.`
+            );
+        }
+
+        const m = bestMetrics;
+        logger.info(
+            `[teams] seeded ${sortedPlayers.length}p → ${numTeams}×${teamSize} | ` +
+                `${iterationsUsed}/${maxIterations} iter | ` +
+                `rejects: ${pairingRejects} pairing + ${eloRejects} elo (${rejectTotal} total) | ` +
+                (m
+                    ? `best: score=${m.totalNorm.toFixed(3)} elo=${Math.round(m.eloDelta)}pts(limit ${hardEloDeltaLimit}) pair=${m.pairNorm.toFixed(2)} spread=${m.spreadNorm.toFixed(2)} | `
+                    : '') +
+                `fallback=${fallbackUsed}`
+        );
+
+        if (this.teammateHistory) {
+            const topBlocked = Object.entries(blockedPerPlayer)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5)
+                .map(([name, count]) => `${name}×${count}`)
+                .join(' ');
+            logger.debug(
+                `[teams] blocked pairs: ${blockedCount}/${totalPairs} (${blockedPct.toFixed(1)}%)` +
+                    (topBlocked ? ` | most-blocked: ${topBlocked}` : '')
+            );
+        }
     }
 
     /**
