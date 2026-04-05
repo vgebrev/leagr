@@ -11,7 +11,7 @@ export default defineConfig({
     server: {
         host: '0.0.0.0',
         port: 5173,
-        allowedHosts: ['localhost', '.leagr.local', '.leagr.dev.local'],
+        allowedHosts: ['localhost', '.leagr.local', '.leagr.dev.local', '.leagr.test'],
         hmr: {
             // Helpful in WSL to ensure the browser connects back on the right port
             clientPort: 5173

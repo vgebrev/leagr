@@ -367,8 +367,14 @@ export class RankingsManager {
                     winner = match.home;
                 } else if (match.awayScore > match.homeScore) {
                     winner = match.away;
+                } else if (match.homePenalties != null && match.awayPenalties != null) {
+                    // Draw resolved on penalties: penalty winner still progresses and earns knockout points
+                    if (match.homePenalties > match.awayPenalties) {
+                        winner = match.home;
+                    } else if (match.awayPenalties > match.homePenalties) {
+                        winner = match.away;
+                    }
                 }
-                // No points for draws in knockout (shouldn't happen)
             }
 
             if (winner && teams[winner]) {
