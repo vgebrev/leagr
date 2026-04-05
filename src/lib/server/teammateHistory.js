@@ -17,14 +17,17 @@ export class TeammateHistoryTracker {
      * @param {string} leagueId - League identifier
      * @param {number | null} fileLimit - Max files to return. Default 70 covers the worst case for a
      *   10-session window (10 weeks × 7 days). Pass null for no limit.
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
+     *   Pass the current session date to prevent redraws from contaminating their own history.
      * @returns {Promise<string[]>} Array of session file paths
      */
-    async getSessionFiles(leagueId, fileLimit = 70) {
+    async getSessionFiles(leagueId, fileLimit = 70, beforeDate = null) {
         const leaguePath = join(this.leagueDataPath, leagueId);
         const files = await readdir(leaguePath);
 
         const sorted = files
             .filter((file) => file.match(/^\d{4}-\d{2}-\d{2}\.json$/))
+            .filter((file) => !beforeDate || file < `${beforeDate}.json`)
             .sort((a, b) => b.localeCompare(a)); // Sort by date descending (newest first)
 
         return (fileLimit != null ? sorted.slice(0, fileLimit) : sorted).map((file) =>
@@ -84,11 +87,12 @@ export class TeammateHistoryTracker {
     /**
      * Build teammate history matrix from recent sessions
      * @param {string} leagueId - League identifier
-     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 12)
+     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
      * @returns {Promise<Object>} Teammate history data
      */
-    async buildTeammateHistory(leagueId, sessionLimit = 10) {
-        const sessionFiles = await this.getSessionFiles(leagueId);
+    async buildTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
+        const sessionFiles = await this.getSessionFiles(leagueId, 70, beforeDate);
         const allPlayers = new Set();
         const pairCounts = new Map();
 
@@ -166,11 +170,12 @@ export class TeammateHistoryTracker {
     /**
      * Update teammate history for a league (main function)
      * @param {string} leagueId - League identifier
-     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 12)
+     * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
+     * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
      * @returns {Promise<{historyData: Object}>} Updated history data
      */
-    async updateTeammateHistory(leagueId, sessionLimit = 10) {
-        const historyData = await this.buildTeammateHistory(leagueId, sessionLimit);
+    async updateTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
+        const historyData = await this.buildTeammateHistory(leagueId, sessionLimit, beforeDate);
         await this.saveTeammateHistory(leagueId, historyData);
         return { historyData };
     }

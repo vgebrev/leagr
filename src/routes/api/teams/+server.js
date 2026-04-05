@@ -155,7 +155,7 @@ export const POST = async ({ request, url, locals }) => {
         if (method === 'seeded') {
             try {
                 const historyTracker = createTeammateHistoryTracker();
-                const { historyData } = await historyTracker.updateTeammateHistory(leagueId, 10);
+                const { historyData } = await historyTracker.updateTeammateHistory(leagueId, 10, dateValidation.date);
                 teammateHistory = historyData;
             } catch (error) {
                 console.warn(
