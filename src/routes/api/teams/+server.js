@@ -1,4 +1,4 @@
-import { error, json } from '@sveltejs/kit';
+import { error, isHttpError, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
@@ -13,7 +13,8 @@ import {
     validateDateParameter,
     parseRequestBody,
     validateRequestBody,
-    validateCompetitionOperationsAllowed
+    validateCompetitionOperationsAllowed,
+    validateTeamDrawAllowed
 } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
@@ -116,6 +117,15 @@ export const POST = async ({ request, url, locals }) => {
         );
         if (!operationValidation.isValid) {
             return error(400, operationValidation.error);
+        }
+
+        const drawValidation = validateTeamDrawAllowed(
+            dateValidation.date,
+            gameData.settings,
+            locals.isAdmin
+        );
+        if (!drawValidation.isValid) {
+            return error(401, drawValidation.error);
         }
 
         // Get rankings for both seeded and random teams (needed for draw history ELO display)
@@ -238,6 +248,11 @@ export const POST = async ({ request, url, locals }) => {
         });
     } catch (err) {
         console.error('Error generating teams:', err);
+
+        // Re-throw SvelteKit HTTP errors (validation, auth) so the framework returns them correctly
+        if (isHttpError(err)) {
+            throw err;
+        }
 
         // Handle known error types with their specific status codes
         if (err instanceof TeamError || err instanceof PlayerError) {

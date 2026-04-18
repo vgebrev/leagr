@@ -29,6 +29,8 @@
  * @property {boolean} enabled
  * @property {number} startDayOffset
  * @property {string} startTime
+ * @property {number} [teamDrawDayOffset]
+ * @property {string} [teamDrawTime]
  * @property {number} endDayOffset
  * @property {string} endTime
  */
@@ -66,6 +68,7 @@
  * @property {boolean} canRegenerateTeams
  * @property {boolean} canResetSchedule
  * @property {boolean} seedTeams
+ * @property {boolean} [teamDrawRequiresAdmin]
  * @property {DisciplineSettings} discipline
  * @property {TeamLogosSettings} [teamLogos]
  */

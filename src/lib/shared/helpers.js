@@ -88,6 +88,25 @@ export function isCompetitionEnded(dateString, settings) {
 }
 
 /**
+ * @param {string | null | undefined} dateString
+ * @param {LeagueSettings | null | undefined} settings
+ */
+export function isTeamDrawOpen(dateString, settings) {
+    if (!dateString) return true;
+    if (!settings?.registrationWindow?.enabled) return true;
+
+    const dayOffset = settings.registrationWindow.teamDrawDayOffset ?? -1;
+    const time = settings.registrationWindow.teamDrawTime ?? '16:00';
+    const [hours, minutes] = time.split(':').map(Number);
+
+    const drawOpenDate = new Date(dateString);
+    drawOpenDate.setDate(drawOpenDate.getDate() + dayOffset);
+    drawOpenDate.setHours(hours, minutes, 0, 0);
+
+    return new Date() >= drawOpenDate;
+}
+
+/**
  * @param {unknown} val
  * @returns {val is Record<string, unknown>}
  */

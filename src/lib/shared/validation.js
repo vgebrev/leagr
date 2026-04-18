@@ -1,6 +1,6 @@
 import { reservedLeagueNames } from './reservedLeagueNames.js';
 import { disallowedLeagueNames } from './disallowedLeagueNames.js';
-import { isCompetitionEnded } from './helpers.js';
+import { isCompetitionEnded, isTeamDrawOpen } from './helpers.js';
 
 /**
  * Validate if a string is a valid subdomain
@@ -844,5 +844,22 @@ export function validateCompetitionOperationsAllowed(dateString, settings) {
         };
     }
 
+    return { isValid: true };
+}
+
+/**
+ * Validate if a team draw is allowed based on the draw window and admin requirement
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @param {Object} settings - Settings object
+ * @param {boolean} isAdmin - Whether the requester has admin privileges
+ * @returns {{isValid: boolean, error?: string}}
+ */
+export function validateTeamDrawAllowed(dateString, settings, isAdmin) {
+    if (settings?.teamDrawRequiresAdmin && !isAdmin) {
+        return { isValid: false, error: 'Team draw requires admin privileges.' };
+    }
+    if (!isAdmin && !isTeamDrawOpen(dateString, settings)) {
+        return { isValid: false, error: 'Team draw has not opened yet.' };
+    }
     return { isValid: true };
 }

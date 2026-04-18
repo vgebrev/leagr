@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
+    validateTeamDrawAllowed,
     validateAndSanitizePlayerName,
     validatePlayerNameForUI,
     isValidSubdomain,
@@ -1006,6 +1007,105 @@ describe('Scorer Validation', () => {
                 expect(result.isValid).toBe(false);
                 expect(result.errors[0]).toMatch(/Away team \(green wasps\):/);
             });
+        });
+    });
+});
+
+describe('validateTeamDrawAllowed', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    const makeSettings = (overrides = {}) => ({
+        registrationWindow: {
+            enabled: true,
+            startDayOffset: -2,
+            startTime: '07:30',
+            teamDrawDayOffset: -1,
+            teamDrawTime: '16:00',
+            endDayOffset: 0,
+            endTime: '12:00'
+        },
+        teamDrawRequiresAdmin: false,
+        ...overrides
+    });
+
+    describe('admin requirement', () => {
+        it('blocks a non-admin when teamDrawRequiresAdmin is true', () => {
+            vi.setSystemTime(new Date('2025-04-18T17:00:00'));
+            const result = validateTeamDrawAllowed(
+                '2025-04-19',
+                makeSettings({ teamDrawRequiresAdmin: true }),
+                false
+            );
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Team draw requires admin privileges.');
+        });
+
+        it('allows an admin when teamDrawRequiresAdmin is true', () => {
+            vi.setSystemTime(new Date('2025-04-18T17:00:00'));
+            const result = validateTeamDrawAllowed(
+                '2025-04-19',
+                makeSettings({ teamDrawRequiresAdmin: true }),
+                true
+            );
+            expect(result.isValid).toBe(true);
+        });
+
+        it('allows a non-admin when teamDrawRequiresAdmin is false', () => {
+            vi.setSystemTime(new Date('2025-04-18T17:00:00'));
+            const result = validateTeamDrawAllowed(
+                '2025-04-19',
+                makeSettings({ teamDrawRequiresAdmin: false }),
+                false
+            );
+            expect(result.isValid).toBe(true);
+        });
+
+        it('admin check takes precedence over draw window not yet open', () => {
+            // Window not yet open, but also not admin — admin message should be returned
+            vi.setSystemTime(new Date('2025-04-18T15:00:00'));
+            const result = validateTeamDrawAllowed(
+                '2025-04-19',
+                makeSettings({ teamDrawRequiresAdmin: true }),
+                false
+            );
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Team draw requires admin privileges.');
+        });
+    });
+
+    describe('draw window', () => {
+        it('blocks when draw window has not yet opened', () => {
+            vi.setSystemTime(new Date('2025-04-18T15:59:00'));
+            const result = validateTeamDrawAllowed('2025-04-19', makeSettings(), false);
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Team draw has not opened yet.');
+        });
+
+        it('allows when draw window is open', () => {
+            vi.setSystemTime(new Date('2025-04-18T16:00:00'));
+            const result = validateTeamDrawAllowed('2025-04-19', makeSettings(), false);
+            expect(result.isValid).toBe(true);
+        });
+
+        it('allows when time controls are disabled regardless of current time', () => {
+            vi.setSystemTime(new Date('2025-04-17T08:00:00'));
+            const settings = makeSettings();
+            settings.registrationWindow.enabled = false;
+            const result = validateTeamDrawAllowed('2025-04-19', settings, false);
+            expect(result.isValid).toBe(true);
+        });
+
+        it('allows an admin even when draw window has not yet opened', () => {
+            vi.setSystemTime(new Date('2025-04-18T15:59:00'));
+            const settings = makeSettings({ teamDrawRequiresAdmin: true });
+            const result = validateTeamDrawAllowed('2025-04-19', settings, true);
+            expect(result.isValid).toBe(true);
         });
     });
 });

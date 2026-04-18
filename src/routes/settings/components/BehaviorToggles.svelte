@@ -7,6 +7,7 @@
      * @property {boolean} leagueSettings.canRegenerateTeams - Whether teams can be regenerated after initial creation
      * @property {boolean} leagueSettings.canResetSchedule - Whether the schedule can be reset after creation
      * @property {boolean} leagueSettings.seedTeams - Whether to balance teams using player rankings
+     * @property {boolean} [leagueSettings.teamDrawRequiresAdmin] - Whether only admins can draw teams
      * @property {{ enabled: boolean }} [leagueSettings.teamLogos] - Whether to generate AI team logos after draw
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
@@ -39,6 +40,12 @@
         bind:checked={leagueSettings.teamLogos.enabled}
         onchange={onSave}>
         Generate AI team logos after draw
+    </Toggle>
+    <Toggle
+        classes={{ input: 'leagr-toggle-input' }}
+        bind:checked={leagueSettings.teamDrawRequiresAdmin}
+        onchange={onSave}>
+        Require admin to draw teams
     </Toggle>
 </div>
 

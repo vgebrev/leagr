@@ -46,6 +46,18 @@
     }
 
     /**
+     * Updates the team draw day offset for the registration window.
+     * Converts the input value to a negative number to match the stored offset.
+     * If the input is not a valid number, defaults to 1.
+     * @param {string} value
+     */
+    function updateTeamDrawDayOffset(value) {
+        const numValue = parseInt(value) || 1;
+        leagueSettings.registrationWindow.teamDrawDayOffset = -Math.abs(numValue);
+        saveLeagueSettings(new Event('change'));
+    }
+
+    /**
      * Updates the end day offset for the registration window.
      * Converts the input value to a negative number to match the stored offset.
      * If the input is not a valid number, defaults to 0.
@@ -212,6 +224,7 @@
                     bind:leagueSettings
                     onSave={saveLeagueSettings}
                     onUpdateStartDayOffset={updateStartDayOffset}
+                    onUpdateTeamDrawDayOffset={updateTeamDrawDayOffset}
                     onUpdateEndDayOffset={updateEndDayOffset} />
                 <TeamLimitsSettings
                     bind:leagueSettings
