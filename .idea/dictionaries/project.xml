@@ -2,7 +2,9 @@
   <dictionary name="project">
     <words>
       <w>abcdefghijklmnopqrstuvwxyz</w>
+      <w>flowbite</w>
       <w>leagr</w>
+      <w>openai</w>
     </words>
   </dictionary>
 </component>

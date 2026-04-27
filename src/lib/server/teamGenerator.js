@@ -1273,7 +1273,6 @@ class TeamGenerator {
                 const { totalNorm } = metrics;
 
                 if (totalNorm < bestScore) {
-                    bestScore = totalNorm;
                     bestTeams = structuredClone(teams);
                     bestMetrics = metrics;
                     break; // Take first reasonable solution
