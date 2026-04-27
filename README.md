@@ -94,10 +94,10 @@ The application includes rudimentary security features to prevent abuse:
 - Only specified origins can access the API endpoints
 - Example: `https://your-production-url.com,http://localhost:3000`
 
-#### Semi-public API Key Authentication
+#### Session Cookie Authentication
 
-- **API_KEY**: Required for all API endpoint access
-- Must be provided via `X-API-KEY` header
+- **SESSION_SECRET**: Used to sign HttpOnly session cookies issued on first page load
+- The browser sends the cookie automatically on all same-origin API requests — it is never exposed in client-side code or page source
 - Example: `a1b2c3d4-e5f6-7890-abcd-ef1234567890`
 
 #### Access Code Authorisation
@@ -143,7 +143,7 @@ docker run -d \
   -v /path/to/data/on/host:/app/data \
   -v /path/to/logs/on/host:/app/logs \
   -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
-  -e API_KEY="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
+  -e SESSION_SECRET="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -e APP_URL="https://your-production-url.com" \
   -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
   -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
@@ -158,7 +158,7 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 **Environment Variables:**
 
 - `ALLOWED_ORIGIN`: Comma-separated allowed origins (required for CORS protection)
-- `API_KEY`: Secure API key for endpoint access (required for API authentication)
+- `SESSION_SECRET`: Secret used to sign session cookies (required for API authentication)
 - `APP_URL`: The base URL of your application (used for generating links in emails)
 - `MAILGUN_SENDING_KEY`: Mailgun API key for sending emails
 - `MAILGUN_DOMAIN`: Mailgun domain for sending emails
@@ -171,7 +171,7 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 
 - Replace `/path/to/data/on/host` with the actual path to the data directory on your host machine
 - Replace `/path/to/logs/on/host` with the actual path to the logs directory on your host machine
-- Replace `a1b2c3d4-e5f6-7890-abcd-ef1234567890` with a secure, randomly generated API key
+- Replace `a1b2c3d4-e5f6-7890-abcd-ef1234567890` with a secure, randomly generated secret
 - Replace the allowed origins, app URL with your actual domain(s)
 - Replace Mailgun credentials with your actual Mailgun account details
 - The `BODY_SIZE_LIMIT` is set to 6MB (6291456 bytes) to support avatar uploads up to 5MB

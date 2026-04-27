@@ -412,6 +412,28 @@ describe('API Validation Functions', () => {
             expect(result.date).toBe(null);
             expect(result.error).toBe('Date parameter is required');
         });
+
+        it('should reject date with path traversal suffix', () => {
+            const searchParams = new URLSearchParams('date=2024-01-15/../info');
+            const result = validateDateParameter(searchParams);
+            expect(result.isValid).toBe(false);
+            expect(result.date).toBe(null);
+        });
+
+        it('should reject date with URL-encoded path traversal', () => {
+            const searchParams = new URLSearchParams('date=2024-01-15%2F..%2Finfo');
+            const result = validateDateParameter(searchParams);
+            expect(result.isValid).toBe(false);
+            expect(result.date).toBe(null);
+        });
+
+        it('should reject dates with non-YYYY-MM-DD format', () => {
+            for (const bad of ['01-15-2024', '2024/01/15', '2024-1-1', 'not-a-date']) {
+                const searchParams = new URLSearchParams(`date=${bad}`);
+                const result = validateDateParameter(searchParams);
+                expect(result.isValid).toBe(false);
+            }
+        });
     });
 
     describe('parseRequestBody', () => {

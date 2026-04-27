@@ -48,7 +48,7 @@ Required environment variables for production:
 
 ```bash
 ALLOWED_ORIGIN      # CORS whitelist (supports wildcards, e.g., "*.leagr.co.za")
-API_KEY             # API endpoint authentication key
+SESSION_SECRET      # Signs HttpOnly session cookies issued to first-party clients
 APP_URL             # Base application URL
 MAILGUN_API_KEY     # Email service API key
 MAILGUN_DOMAIN      # Email service domain
@@ -133,8 +133,9 @@ Multi-layer authentication system:
     - Supports wildcard patterns (e.g., `*.leagr.co.za`)
 
 2. **API Key Authentication**
-    - Requires `X-API-KEY` header matching `API_KEY` env var
-    - Applied to all API endpoints
+    - Requires a valid `_ls` HttpOnly session cookie (signed with `SESSION_SECRET`)
+    - Cookie is issued automatically on first page load; browser sends it on all same-origin API calls
+    - Applied to all non-public API endpoints
 
 3. **Client ID Tracking**
     - Auto-generated UUID stored in localStorage
