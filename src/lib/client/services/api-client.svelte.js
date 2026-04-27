@@ -12,16 +12,11 @@ class HttpError extends Error {
 }
 
 const baseUrl = '/api';
-let apiKey = $state('');
 let leagueId = $state('');
 let clientId = $state('');
 let adminCode = $state('');
 let isRedirectingToAuth = false;
 let fetchFn = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
-
-export function setApiKey(key) {
-    apiKey = key;
-}
 
 export function setFetch(fn) {
     fetchFn = fn;
@@ -78,8 +73,7 @@ function getAuthHeaders() {
     ensureClientIdInitialized();
 
     const headers = {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey
+        'Content-Type': 'application/json'
     };
 
     if (clientId) {

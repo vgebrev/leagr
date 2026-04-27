@@ -6,6 +6,8 @@
      * @property {boolean} enabled - Whether the registration window is enabled
      * @property {number} startDayOffset - The number of days before competition start (negative value)
      * @property {string} startTime - The time when registration opens (HH:MM format)
+     * @property {number} [teamDrawDayOffset] - The number of days before the team draw (negative value)
+     * @property {string} [teamDrawTime] - The time when the team draw opens (HH:MM format)
      * @property {number} endDayOffset - The number of days before the competition end (negative value)
      * @property {string} endTime - The time when competition ends (HH:MM format)
      */
@@ -16,6 +18,7 @@
      * @property {RegistrationWindow} leagueSettings.registrationWindow - The registration window configuration
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      * @property {function(string): void} onUpdateStartDayOffset - The callback to update the start day offset
+     * @property {function(string): void} onUpdateTeamDrawDayOffset - The callback to update the team draw day offset
      * @property {function(string): void} onUpdateEndDayOffset - The callback to update the end day offset
      */
 
@@ -24,6 +27,7 @@
         leagueSettings = $bindable(),
         onSave,
         onUpdateStartDayOffset,
+        onUpdateTeamDrawDayOffset,
         onUpdateEndDayOffset
     } = $props();
 
@@ -33,6 +37,14 @@
      */
     let startDaysBeforeUI = $derived.by(() =>
         Math.abs(leagueSettings.registrationWindow.startDayOffset || 0)
+    );
+
+    /**
+     * The UI representation of the team draw day offset (positive number for display).
+     * @type {number}
+     */
+    let teamDrawDaysBeforeUI = $derived.by(() =>
+        Math.abs(leagueSettings.registrationWindow.teamDrawDayOffset ?? 1)
     );
 
     /**
@@ -72,6 +84,28 @@
                     onchange={onSave}
                     class="!w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
                     placeholder="07:30" />
+            </div>
+
+            <div class="flex items-center gap-1">
+                <span class="text-right">Team draw opens</span>
+                <Input
+                    value={teamDrawDaysBeforeUI}
+                    onchange={(e) =>
+                        onUpdateTeamDrawDayOffset(
+                            /** @type {HTMLInputElement} */ (e.target)?.value
+                        )}
+                    type="number"
+                    step={1}
+                    min={0}
+                    class="!w-16 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    placeholder="1" />
+                <span>days before, at</span>
+                <Input
+                    bind:value={leagueSettings.registrationWindow.teamDrawTime}
+                    type="time"
+                    onchange={onSave}
+                    class="!w-22 shrink-0 !bg-gray-50 dark:!bg-gray-800"
+                    placeholder="16:00" />
             </div>
 
             <div class="flex items-center gap-1">

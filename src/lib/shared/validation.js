@@ -1,6 +1,6 @@
 import { reservedLeagueNames } from './reservedLeagueNames.js';
 import { disallowedLeagueNames } from './disallowedLeagueNames.js';
-import { isCompetitionEnded } from './helpers.js';
+import { isCompetitionEnded, isTeamDrawOpen } from './helpers.js';
 
 /**
  * Validate if a string is a valid subdomain
@@ -43,7 +43,16 @@ export function generateAccessCode() {
     for (let group = 0; group < 3; group++) {
         let groupCode = '';
         for (let i = 0; i < 4; i++) {
-            groupCode += chars.charAt(Math.floor(Math.random() * chars.length));
+            // Use crypto.getRandomValues if available (browser + modern Node), else fall back
+            let idx;
+            if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+                const buf = new Uint32Array(1);
+                crypto.getRandomValues(buf);
+                idx = buf[0] % chars.length;
+            } else {
+                idx = Math.floor(Math.random() * chars.length);
+            }
+            groupCode += chars.charAt(idx);
         }
         groups.push(groupCode);
     }
@@ -222,6 +231,14 @@ export function validateDateParameter(searchParams) {
             isValid: false,
             date: null,
             error: 'Date parameter is required'
+        };
+    }
+
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return {
+            isValid: false,
+            date: null,
+            error: 'Invalid date format. Expected YYYY-MM-DD'
         };
     }
 
@@ -844,5 +861,22 @@ export function validateCompetitionOperationsAllowed(dateString, settings) {
         };
     }
 
+    return { isValid: true };
+}
+
+/**
+ * Validate if a team draw is allowed based on the draw window and admin requirement
+ * @param {string} dateString - Date in YYYY-MM-DD format
+ * @param {Object} settings - Settings object
+ * @param {boolean} isAdmin - Whether the requester has admin privileges
+ * @returns {{isValid: boolean, error?: string}}
+ */
+export function validateTeamDrawAllowed(dateString, settings, isAdmin) {
+    if (settings?.teamDrawRequiresAdmin && !isAdmin) {
+        return { isValid: false, error: 'Team draw requires admin privileges.' };
+    }
+    if (!isAdmin && !isTeamDrawOpen(dateString, settings)) {
+        return { isValid: false, error: 'Team draw has not opened yet.' };
+    }
     return { isValid: true };
 }

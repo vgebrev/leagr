@@ -1,6 +1,12 @@
 import { getLeagueInfo } from '$lib/server/league.js';
 import { initializeEmailService } from '$lib/server/email.js';
 import { logger, initializeLogger } from '$lib/server/logger.js';
+import {
+    SESSION_COOKIE,
+    SESSION_MAX_AGE,
+    createSessionToken,
+    isValidSessionToken
+} from '$lib/server/session.js';
 
 const rateLimitMap = new Map();
 // Rule-based rate limiting configuration (first match wins)
@@ -13,19 +19,23 @@ const RATE_RULES = [
         message:
             "You've already added a player recently. Please use the share link to invite other players.",
         keyExtractor: (url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
+        // Uses ip+clientId key so different people on the same network get separate quotas
     },
     {
         verb: '*',
         routePattern: /^\/api\//,
         maxRequests: 60,
         duration: 60 * 1000, // 1 minute
-        message: 'Too many requests.'
+        message: 'Too many requests.',
+        ipOnly: true // Keyed on IP alone so UUID rotation cannot bypass this limit
     }
 ];
 
 const allowedOrigin = process.env.ALLOWED_ORIGIN || import.meta.env.VITE_ALLOWED_ORIGIN;
-const API_KEY = process.env.API_KEY || import.meta.env.VITE_API_KEY;
+// SESSION_SECRET signs HttpOnly session cookies issued to first-party clients.
+const SESSION_SECRET = process.env.SESSION_SECRET || import.meta.env.VITE_SESSION_SECRET;
 const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
+const IS_HTTPS = APP_URL?.startsWith('https://') ?? true;
 const MAILGUN_API_KEY = process.env.MAILGUN_API_KEY || import.meta.env.VITE_MAILGUN_SENDING_KEY;
 const MAILGUN_DOMAIN = process.env.MAILGUN_DOMAIN || import.meta.env.VITE_MAILGUN_DOMAIN;
 const LOG_LEVEL = process.env.LOG_LEVEL || import.meta.env.VITE_LOG_LEVEL;
@@ -140,12 +150,6 @@ function isOriginAllowed(request) {
     return { allowed: false, origin: null };
 }
 
-function checkApiKey(request) {
-    if (!API_KEY) return true;
-    const apiKey = request.headers.get('x-api-key') || request.headers.get('authorization');
-    return apiKey && apiKey === API_KEY;
-}
-
 // Public endpoints that don't require league access code
 const publicEndpoints = [
     { method: '*', pattern: /^\/api\/leagues/ },
@@ -190,10 +194,25 @@ export const handle = async ({ event, resolve }) => {
                 'Access-Control-Allow-Origin': allowed ? origin || '*' : 'null',
                 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
                 'Access-Control-Allow-Headers':
-                    'Content-Type,X-API-KEY,X-CLIENT-ID,X-ADMIN-CODE,Authorization',
+                    'Content-Type,X-CLIENT-ID,X-ADMIN-CODE,Authorization',
                 'Access-Control-Max-Age': '86400'
             }
         });
+    }
+
+    // Issue a signed HttpOnly session cookie on page loads so the API can verify it.
+    // Cookies are scoped to the current host (per-league subdomain) automatically.
+    if (!url.pathname.startsWith('/api/')) {
+        const existing = event.cookies.get(SESSION_COOKIE);
+        if (SESSION_SECRET && !isValidSessionToken(existing, SESSION_SECRET)) {
+            event.cookies.set(SESSION_COOKIE, createSessionToken(SESSION_SECRET), {
+                httpOnly: true,
+                secure: IS_HTTPS,
+                sameSite: 'strict',
+                path: '/',
+                maxAge: SESSION_MAX_AGE
+            });
+        }
     }
 
     // Extract league ID from host and load league info
@@ -214,7 +233,7 @@ export const handle = async ({ event, resolve }) => {
             return new Response(JSON.stringify({ message: 'Origin not allowed' }), { status: 401 });
         }
 
-        if (!isPublic && !checkApiKey(request)) {
+        if (!isPublic && !isValidSessionToken(event.cookies.get(SESSION_COOKIE), SESSION_SECRET)) {
             logApiRequest(request.method, url, leagueId, ip, 401, Date.now() - start);
             return new Response(JSON.stringify({ message: 'Unauthorized' }), { status: 401 });
         }
@@ -231,9 +250,9 @@ export const handle = async ({ event, resolve }) => {
         // Apply rule-based rate-limiting (first matching rule)
         const rule = pickRateRule(request.method, url.pathname);
         if (rule) {
-            const composite = `${ip}|${clientId || 'public'}`;
+            const rateLimitKey = rule.ipOnly ? ip : `${ip}|${clientId || 'public'}`;
             const extraKey = rule.keyExtractor ? rule.keyExtractor(url) : '';
-            if (isRateLimitedFor(rule, composite, extraKey)) {
+            if (isRateLimitedFor(rule, rateLimitKey, extraKey)) {
                 logApiRequest(request.method, url, leagueId, ip, 429, Date.now() - start);
                 return new Response(JSON.stringify({ message: rule.message }), { status: 429 });
             }

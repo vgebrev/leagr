@@ -3,7 +3,6 @@
     import { settings } from '$lib/client/stores/settings.js';
     import { dateString } from '$lib/shared/helpers.js';
     import {
-        setApiKey,
         setLeagueId,
         setAdminCode as setAdminHeader
     } from '$lib/client/services/api-client.svelte.js';
@@ -20,7 +19,6 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data, children } = $props();
-    setApiKey(data.apiKey);
     setLeagueId(data.leagueId);
     let selectedDate = $derived(new Date(data.date));
     let date = $derived(dateString(selectedDate));

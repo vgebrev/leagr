@@ -2,6 +2,15 @@ import { teamColours } from '$lib/shared/helpers.js';
 import { getNextNouns } from './nounPool.js';
 import { logger } from '$lib/server/logger.js';
 
+/** @param {any[]} arr */
+function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
 /** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('../shared/types.js').TeamGenerationSettings} TeamGenerationSettings */
 
@@ -305,8 +314,7 @@ class TeamGenerator {
         }
 
         const selectedNouns = await getNextNouns(count, this.leagueId);
-        const colorSlice = teamColours.slice(0, count);
-        const shuffledColours = colorSlice.sort(() => Math.random() - 0.5);
+        const shuffledColours = shuffle(teamColours.slice(0, count));
 
         return selectedNouns.map((noun, i) => `${shuffledColours[i]} ${noun}`);
     }
@@ -324,7 +332,7 @@ class TeamGenerator {
         /** @type {TeamsMap} */
         const teams = {};
         const teamSizes = config.teamSizes;
-        const shuffledPlayers = [...this.players].sort(() => Math.random() - 0.5);
+        const shuffledPlayers = shuffle([...this.players]);
         const teamNames = await this.generateTeamNames(teamSizes.length);
 
         // Initialize empty teams
@@ -1032,7 +1040,7 @@ class TeamGenerator {
             const currentPot = sortedPlayers.slice(playerIndex, playerIndex + potSize);
 
             // Randomise within the pot
-            currentPot.sort(() => Math.random() - 0.5);
+            shuffle(currentPot);
 
             // Use consistent team order across all pots for accurate history reconstruction
             // Randomization is preserved through: shuffled players in pots, multiple iterations, and optimization
@@ -1265,7 +1273,6 @@ class TeamGenerator {
                 const { totalNorm } = metrics;
 
                 if (totalNorm < bestScore) {
-                    bestScore = totalNorm;
                     bestTeams = structuredClone(teams);
                     bestMetrics = metrics;
                     break; // Take first reasonable solution

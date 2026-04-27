@@ -22,6 +22,7 @@ export const LEAGUE_ONLY_SETTINGS = [
     'canRegenerateTeams',
     'canResetSchedule',
     'seedTeams',
+    'teamDrawRequiresAdmin',
     'discipline',
     'teamLogos'
 ];
@@ -36,6 +37,8 @@ export const defaultSettings = {
         enabled: true,
         startDayOffset: -2, // Days before competition day
         startTime: '07:30', // Time on start day
+        teamDrawDayOffset: -1, // Days before competition day
+        teamDrawTime: '16:00', // Time on team draw day
         endDayOffset: 0, // Days relative to competition day
         endTime: '12:00' // Time on end day
     },
@@ -49,6 +52,7 @@ export const defaultSettings = {
     canRegenerateTeams: false,
     canResetSchedule: false,
     seedTeams: true,
+    teamDrawRequiresAdmin: false,
     discipline: {
         enabled: true,
         noShowThreshold: 2

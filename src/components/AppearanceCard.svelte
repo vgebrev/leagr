@@ -27,7 +27,7 @@
      * @param {string} date - Date in YYYY-MM-DD format
      */
     function goToTableDate(date) {
-        goto(resolve(`/table?date=${date}`));
+        goto(resolve(`/table?date=${date}`, {}));
     }
 </script>
 
@@ -110,15 +110,17 @@
     </div>
 
     <!-- Total -->
-    <div
-        class="mt-2 flex justify-between border-t border-t-gray-200 pt-2 font-semibold dark:border-t-gray-700">
-        <span class="dark:text-gray-200">Total:</span>
-        <Badge
-            color="gray"
-            class="font-bold">
-            {detail.totalPoints}
-        </Badge>
-    </div>
+    {#if detail.totalPoints}
+        <div
+            class="mt-2 flex justify-between border-t border-t-gray-200 pt-2 font-semibold dark:border-t-gray-700">
+            <span class="dark:text-gray-200">Total:</span>
+            <Badge
+                color="gray"
+                class="font-bold">
+                {detail.totalPoints}
+            </Badge>
+        </div>
+    {/if}
 
     <!-- ELO Rating (if available) -->
     {#if detail.eloRating}

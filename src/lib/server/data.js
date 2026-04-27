@@ -46,7 +46,7 @@ function resolvePath(obj, path, defaultValue = {}) {
  * @returns {Promise<*|null>}
  */
 async function get(key, date, leagueId = null) {
-    const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
+    const filename = date?.match(/^\d{4}-\d{2}-\d{2}$/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
@@ -92,7 +92,7 @@ async function set(key, date, value, defaultValue = [], overwrite = false, leagu
  * @returns {Promise<Object>} - Object with keys as operation keys and values as the final values
  */
 async function setMany(operations, date, leagueId = null) {
-    const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
+    const filename = date?.match(/^\d{4}-\d{2}-\d{2}$/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
@@ -159,7 +159,7 @@ async function setMany(operations, date, leagueId = null) {
  * @returns {Promise<*|null>}
  */
 async function remove(key, date, value, leagueId = null) {
-    const filename = date?.match(/^\d{4}-\d{2}-\d{2}/) ? date : null;
+    const filename = date?.match(/^\d{4}-\d{2}-\d{2}$/) ? date : null;
     if (!filename) {
         console.warn(`${date} is not a valid date`);
         return null;
