@@ -173,12 +173,12 @@
     </div>
 {:else}
     {@const cols = [
-        { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-20' },
-        { key: 'saves', label: 'Saves', width: 'w-10 lg:w-20' },
-        { key: 'defence', label: 'DEF', width: 'w-10 lg:w-20' },
-        { key: 'attack', label: 'ATT', width: 'w-10 lg:w-20' },
-        { key: 'goals', label: 'Goals', width: 'w-12 lg:w-20' },
-        { key: 'total', label: 'Total', width: 'w-12 lg:w-20' }
+        { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-14 2xl:w-20' },
+        { key: 'saves', label: 'Saves', width: 'w-10 lg:w-14 2xl:w-20' },
+        { key: 'defence', label: 'DEF', width: 'w-10 lg:w-14 2xl:w-20' },
+        { key: 'attack', label: 'ATT', width: 'w-10 lg:w-14 2xl:w-20' },
+        { key: 'goals', label: 'Goals', width: 'w-12 lg:w-14 2xl:w-20' },
+        { key: 'total', label: 'Total', width: 'w-12 lg:w-14 2xl:w-20' }
     ]}
     <Table
         classes={{ div: 'w-full overflow-hidden text-xs' }}
