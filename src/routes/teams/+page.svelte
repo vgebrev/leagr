@@ -26,9 +26,18 @@
         if (state?.teamName) selectedTeam = state.teamName;
     });
 
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
     function handlePlayerClick(player) {
-        selectedPlayer = player;
-        showPlayerModal = true;
+        pushState('', { playerModal: { playerName: player } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
     }
 
     function handleTeamClick(teamName) {
@@ -139,7 +148,8 @@
 <PlayerModal
     bind:playerName={selectedPlayer}
     bind:open={showPlayerModal}
-    {date} />
+    {date}
+    onclose={handlePlayerModalClose} />
 
 <TeamModal
     bind:teamName={selectedTeam}

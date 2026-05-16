@@ -9,9 +9,9 @@
     import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     /**
-     * @type {{ playerName: string | null, open: boolean, date?: string | null }}
+     * @type {{ playerName: string | null, open: boolean, date?: string | null, onclose?: () => void }}
      */
-    let { playerName = $bindable(null), open = $bindable(false), date = null } = $props();
+    let { playerName = $bindable(null), open = $bindable(false), date = null, onclose = undefined } = $props();
 
     const year = $derived(date ? date.substring(0, 4) : null);
 
@@ -95,6 +95,7 @@
 <Modal
     transition={scale}
     bind:open
+    oncancel={() => onclose?.()}
     size="md"
     class="glass-strong mx-auto w-[95vw] border backdrop:backdrop-blur-xs md:w-2/3 lg:w-1/2 xl:w-1/3"
     classes={{ body: 'p-4', close: 'p-0', header: '!min-w-0 !w-full' }}>
