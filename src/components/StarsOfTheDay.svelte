@@ -16,10 +16,15 @@
      * @typedef {Object} PlayerStats
      * @property {string} playerName
      * @property {number} goals
+     * @property {number} goalsLastAt
      * @property {number} offensiveActions
+     * @property {number} offensiveActionsLastAt
      * @property {number} defensiveActions
+     * @property {number} defensiveActionsLastAt
      * @property {number} saveActions
+     * @property {number} saveActionsLastAt
      * @property {number} mvpScore
+     * @property {number} mvpScoreLastAt
      * @property {string | null} teamName
      */
 
@@ -33,10 +38,15 @@
             map.set(name, {
                 playerName: name,
                 goals: 0,
+                goalsLastAt: -1,
                 offensiveActions: 0,
+                offensiveActionsLastAt: -1,
                 defensiveActions: 0,
+                defensiveActionsLastAt: -1,
                 saveActions: 0,
+                saveActionsLastAt: -1,
                 mvpScore: 0,
+                mvpScoreLastAt: -1,
                 teamName
             });
         } else {
@@ -48,8 +58,9 @@
      * @param {Map<string, PlayerStats>} map
      * @param {Record<string, any>} match
      * @param {'home' | 'away'} side
+     * @param {number} gameIndex
      */
-    function processSide(map, match, side) {
+    function processSide(map, match, side, gameIndex) {
         const teamName = match[side] ?? null;
 
         const scorers = match[`${side}Scorers`];
@@ -60,7 +71,9 @@
                 ensurePlayer(map, player, teamName);
                 const s = /** @type {PlayerStats} */ (map.get(player));
                 s.goals += count;
+                s.goalsLastAt = gameIndex;
                 s.mvpScore += count;
+                s.mvpScoreLastAt = gameIndex;
             }
         }
 
@@ -71,7 +84,9 @@
                 ensurePlayer(map, player, teamName);
                 const s = /** @type {PlayerStats} */ (map.get(player));
                 s.offensiveActions += count;
+                s.offensiveActionsLastAt = gameIndex;
                 s.mvpScore += count;
+                s.mvpScoreLastAt = gameIndex;
             }
         }
 
@@ -82,7 +97,9 @@
                 ensurePlayer(map, player, teamName);
                 const s = /** @type {PlayerStats} */ (map.get(player));
                 s.defensiveActions += count;
+                s.defensiveActionsLastAt = gameIndex;
                 s.mvpScore += count;
+                s.mvpScoreLastAt = gameIndex;
             }
         }
 
@@ -93,7 +110,9 @@
                 ensurePlayer(map, player, teamName);
                 const s = /** @type {PlayerStats} */ (map.get(player));
                 s.saveActions += count;
+                s.saveActionsLastAt = gameIndex;
                 s.mvpScore += count;
+                s.mvpScoreLastAt = gameIndex;
             }
         }
     }
@@ -101,23 +120,32 @@
     let allStats = $derived.by(() => {
         /** @type {Map<string, PlayerStats>} */
         const map = new Map();
+        let gameIndex = 0;
 
         if (Array.isArray(leagueGames)) {
             for (const round of leagueGames) {
                 if (!Array.isArray(round)) continue;
                 for (const match of round) {
-                    if (!match || match.bye) continue;
-                    processSide(map, match, 'home');
-                    processSide(map, match, 'away');
+                    if (!match || match.bye) {
+                        gameIndex++;
+                        continue;
+                    }
+                    processSide(map, match, 'home', gameIndex);
+                    processSide(map, match, 'away', gameIndex);
+                    gameIndex++;
                 }
             }
         }
 
         if (Array.isArray(knockoutGames)) {
             for (const match of knockoutGames) {
-                if (!match || match.bye) continue;
-                processSide(map, match, 'home');
-                processSide(map, match, 'away');
+                if (!match || match.bye) {
+                    gameIndex++;
+                    continue;
+                }
+                processSide(map, match, 'home', gameIndex);
+                processSide(map, match, 'away', gameIndex);
+                gameIndex++;
             }
         }
 
@@ -126,12 +154,17 @@
 
     /**
      * @param {(s: PlayerStats) => number} getter
+     * @param {(s: PlayerStats) => number} reachedAtGetter
      * @returns {PlayerStats[]}
      */
-    function topPlayers(getter) {
+    function topPlayers(getter, reachedAtGetter) {
         return Array.from(allStats.values())
             .filter((s) => getter(s) > 0)
-            .sort((a, b) => getter(b) - getter(a))
+            .sort((a, b) => {
+                const diff = getter(b) - getter(a);
+                if (diff !== 0) return diff;
+                return reachedAtGetter(a) - reachedAtGetter(b);
+            })
             .slice(0, 3);
     }
 
@@ -143,35 +176,50 @@
     let awards = $derived([
         {
             label: 'MVP',
-            players: topPlayers((s) => s.mvpScore),
+            players: topPlayers(
+                (s) => s.mvpScore,
+                (s) => s.mvpScoreLastAt
+            ),
             icon: StarSolid,
             stat: (/** @type {PlayerStats} */ s) => s.mvpScore,
             statLabel: 'total contributions'
         },
         {
             label: 'Golden Boot',
-            players: topPlayers((s) => s.goals),
+            players: topPlayers(
+                (s) => s.goals,
+                (s) => s.goalsLastAt
+            ),
             icon: SoccerBootIcon,
             stat: (/** @type {PlayerStats} */ s) => s.goals,
             statLabel: 'goals'
         },
         {
             label: 'Playmaker',
-            players: topPlayers((s) => s.offensiveActions),
+            players: topPlayers(
+                (s) => s.offensiveActions,
+                (s) => s.offensiveActionsLastAt
+            ),
             icon: BullseyeIcon,
             stat: (/** @type {PlayerStats} */ s) => s.offensiveActions,
             statLabel: 'attack contributions'
         },
         {
             label: 'Brick Wall',
-            players: topPlayers((s) => s.defensiveActions),
+            players: topPlayers(
+                (s) => s.defensiveActions,
+                (s) => s.defensiveActionsLastAt
+            ),
             icon: ShieldIcon,
             stat: (/** @type {PlayerStats} */ s) => s.defensiveActions,
             statLabel: 'defence contributions'
         },
         {
             label: 'Golden Glove',
-            players: topPlayers((s) => s.saveActions),
+            players: topPlayers(
+                (s) => s.saveActions,
+                (s) => s.saveActionsLastAt
+            ),
             icon: GloveIcon,
             stat: (/** @type {PlayerStats} */ s) => s.saveActions,
             statLabel: 'saves'
