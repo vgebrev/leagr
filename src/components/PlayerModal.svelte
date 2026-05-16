@@ -11,7 +11,12 @@
     /**
      * @type {{ playerName: string | null, open: boolean, date?: string | null, onclose?: () => void }}
      */
-    let { playerName = $bindable(null), open = $bindable(false), date = null, onclose = undefined } = $props();
+    let {
+        playerName = $bindable(null),
+        open = $bindable(false),
+        date = null,
+        onclose = undefined
+    } = $props();
 
     const year = $derived(date ? date.substring(0, 4) : null);
 

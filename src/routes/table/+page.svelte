@@ -123,7 +123,8 @@
     <StarsOfTheDay
         {leagueGames}
         {knockoutGames}
-        {teams} />
+        {teams}
+        {date} />
 </div>
 
 <CelebrationOverlay

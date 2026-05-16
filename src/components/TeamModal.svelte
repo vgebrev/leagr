@@ -12,7 +12,12 @@
     /**
      * @type {{ teamName: string | null, date: string | null, open: boolean, onclose?: () => void }}
      */
-    let { teamName = $bindable(null), date = null, open = $bindable(false), onclose = undefined } = $props();
+    let {
+        teamName = $bindable(null),
+        date = null,
+        open = $bindable(false),
+        onclose = undefined
+    } = $props();
 
     let teamPlayers = $state([]);
     let loadingError = $state(false);

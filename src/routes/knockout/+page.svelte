@@ -183,7 +183,8 @@
             <StarsOfTheDay
                 leagueGames={gamesService.leagueGames}
                 knockoutGames={gamesService.knockoutBracket?.bracket || []}
-                teams={gamesService.teams} />
+                teams={gamesService.teams}
+                {date} />
         </div>
     {/if}
 </div>

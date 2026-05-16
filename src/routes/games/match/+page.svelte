@@ -10,6 +10,7 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import TeamLogo from '$components/TeamLogo.svelte';
     import TeamModal from '$components/TeamModal.svelte';
+    import PlayerModal from '$components/PlayerModal.svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
@@ -252,6 +253,24 @@
 
     function handleTeamModalClose() {
         if (page.state.teamModal) history.back();
+    }
+
+    let selectedPlayer = $state(/** @type {string | null} */ (null));
+    let showPlayerModal = $state(false);
+
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
+    /** @param {string} playerName */
+    function openPlayerModal(playerName) {
+        pushState('', { playerModal: { playerName } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
     }
 
     let loaded = $state(false);
@@ -665,14 +684,16 @@
                 {match}
                 side="home"
                 disabled={competitionEnded}
-                onAction={handleAction} />
+                onAction={handleAction}
+                onPlayerClick={openPlayerModal} />
             <TeamActionPanel
                 teamName={match.away}
                 players={awayPlayers}
                 {match}
                 side="away"
                 disabled={competitionEnded}
-                onAction={handleAction} />
+                onAction={handleAction}
+                onPlayerClick={openPlayerModal} />
         </div>
         <!-- Next Match / Completion -->
         {#if nextMatchInfo}
@@ -742,3 +763,9 @@
     {date}
     bind:open={showTeamModal}
     onclose={handleTeamModalClose} />
+
+<PlayerModal
+    bind:playerName={selectedPlayer}
+    bind:open={showPlayerModal}
+    {date}
+    onclose={handlePlayerModalClose} />
