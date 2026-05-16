@@ -1,4 +1,5 @@
 <script>
+    import { Toggle } from 'flowbite-svelte';
     import { StarSolid, ChevronRightOutline } from 'flowbite-svelte-icons';
     import { slide } from 'svelte/transition';
     import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
@@ -122,7 +123,7 @@
         const map = new Map();
         let gameIndex = 0;
 
-        if (Array.isArray(leagueGames)) {
+        if (includeLeague && Array.isArray(leagueGames)) {
             for (const round of leagueGames) {
                 if (!Array.isArray(round)) continue;
                 for (const match of round) {
@@ -137,7 +138,7 @@
             }
         }
 
-        if (Array.isArray(knockoutGames)) {
+        if (includeCup && Array.isArray(knockoutGames)) {
             for (const match of knockoutGames) {
                 if (!match || match.bye) {
                     gameIndex++;
@@ -168,7 +169,45 @@
             .slice(0, 3);
     }
 
-    let hasAnyStats = $derived(allStats.size > 0);
+    let includeLeague = $state(true);
+    let includeCup = $state(true);
+
+    let hasLeagueGames = $derived(
+        Array.isArray(leagueGames) &&
+            leagueGames.some((r) => Array.isArray(r) && r.some((m) => m && !m.bye))
+    );
+    let hasKnockoutGames = $derived(
+        Array.isArray(knockoutGames) && knockoutGames.some((m) => m && !m.bye)
+    );
+
+    let hasRawStats = $derived.by(() => {
+        const statKeys = [
+            'homeScorers',
+            'awayScorers',
+            'homeOffensiveActions',
+            'awayOffensiveActions',
+            'homeDefensiveActions',
+            'awayDefensiveActions',
+            'homeSaveActions',
+            'awaySaveActions'
+        ];
+        if (Array.isArray(leagueGames)) {
+            for (const round of leagueGames) {
+                if (!Array.isArray(round)) continue;
+                for (const match of round) {
+                    if (!match || match.bye) continue;
+                    if (statKeys.some((k) => match[k])) return true;
+                }
+            }
+        }
+        if (Array.isArray(knockoutGames)) {
+            for (const match of knockoutGames) {
+                if (!match || match.bye) continue;
+                if (statKeys.some((k) => match[k])) return true;
+            }
+        }
+        return false;
+    });
 
     /** @type {Record<string, boolean>} */
     let expanded = $state({});
@@ -261,9 +300,30 @@
     }
 </script>
 
-{#if hasAnyStats}
+{#if hasRawStats}
     <div class="glass mb-2 w-full rounded-lg border border-gray-200 p-2 pt-1 dark:border-gray-700">
         <h3 class="mb-1 text-center text-base font-medium">Stars of the Day</h3>
+        {#if hasLeagueGames || hasKnockoutGames}
+            <div
+                class="mb-2 flex justify-around gap-4 border-t border-t-gray-200 pt-2 dark:border-t-gray-700">
+                {#if hasLeagueGames}
+                    <Toggle
+                        size="small"
+                        class="text-xs font-normal"
+                        bind:checked={includeLeague}>
+                        League
+                    </Toggle>
+                {/if}
+                {#if hasKnockoutGames}
+                    <Toggle
+                        size="small"
+                        class="text-xs font-normal"
+                        bind:checked={includeCup}>
+                        Cup
+                    </Toggle>
+                {/if}
+            </div>
+        {/if}
         <!-- One shared grid across all awards so every player row uses the same column widths -->
         <div
             class="grid grid-cols-[auto_1fr_auto] items-center gap-x-2 border-t border-t-gray-200 dark:border-t-gray-700">
