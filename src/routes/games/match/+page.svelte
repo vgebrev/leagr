@@ -376,6 +376,97 @@
         }
     });
 
+    let prevUrl = $derived.by(() => {
+        if (!roundParam || !matchParam) return `/games?date=${date}`;
+
+        if (competition === 'league') {
+            const schedule = gamesService.schedule;
+            if (!schedule?.length) return `/games?date=${date}`;
+
+            const roundIndex = parseInt(roundParam, 10) - 1;
+            const matchIndex = parseInt(matchParam, 10) - 1;
+
+            for (let mi = matchIndex - 1; mi >= 0; mi--) {
+                const m = schedule[roundIndex]?.[mi];
+                if (m && !m.bye) {
+                    return `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${mi + 1}`;
+                }
+            }
+            for (let ri = roundIndex - 1; ri >= 0; ri--) {
+                for (let mi = (schedule[ri]?.length ?? 0) - 1; mi >= 0; mi--) {
+                    const m = schedule[ri][mi];
+                    if (m && !m.bye) {
+                        return `/games/match?date=${date}&competition=league&round=${ri + 1}&match=${mi + 1}`;
+                    }
+                }
+            }
+            return `/games?date=${date}`;
+        } else {
+            const bracket = gamesService.knockoutBracket?.bracket;
+            if (!bracket) return `/games?date=${date}`;
+
+            const currentMatchNum = parseInt(matchParam, 10);
+            const sortedRounds = [...new Set(bracket.map((m) => m.round))].sort((a, b) => {
+                const ia = KNOCKOUT_ROUND_ORDER.indexOf(a);
+                const ib = KNOCKOUT_ROUND_ORDER.indexOf(b);
+                if (ia === -1 && ib === -1) return a.localeCompare(b);
+                if (ia === -1) return -1;
+                if (ib === -1) return 1;
+                return ia - ib;
+            });
+            const currentRoundIndex = sortedRounds.indexOf(roundParam);
+
+            const sameRoundPrev = bracket
+                .filter(
+                    (m) =>
+                        m.round === roundParam &&
+                        m.match < currentMatchNum &&
+                        !m.bye &&
+                        m.home &&
+                        m.away &&
+                        m.home !== 'BYE' &&
+                        m.away !== 'BYE'
+                )
+                .sort((a, b) => b.match - a.match)[0];
+
+            if (sameRoundPrev) {
+                return `/games/match?date=${date}&competition=knockout&round=${sameRoundPrev.round}&match=${sameRoundPrev.match}`;
+            }
+
+            for (let ri = currentRoundIndex - 1; ri >= 0; ri--) {
+                const prevRound = sortedRounds[ri];
+                const prevRoundLast = bracket
+                    .filter(
+                        (m) =>
+                            m.round === prevRound &&
+                            !m.bye &&
+                            m.home &&
+                            m.away &&
+                            m.home !== 'BYE' &&
+                            m.away !== 'BYE'
+                    )
+                    .sort((a, b) => b.match - a.match)[0];
+                if (prevRoundLast) {
+                    return `/games/match?date=${date}&competition=knockout&round=${prevRoundLast.round}&match=${prevRoundLast.match}`;
+                }
+            }
+
+            // Before the knockout → navigate back into league
+            const schedule = gamesService.schedule;
+            if (schedule?.length) {
+                for (let ri = schedule.length - 1; ri >= 0; ri--) {
+                    for (let mi = (schedule[ri]?.length ?? 0) - 1; mi >= 0; mi--) {
+                        const m = schedule[ri][mi];
+                        if (m && !m.bye) {
+                            return `/games/match?date=${date}&competition=league&round=${ri + 1}&match=${mi + 1}`;
+                        }
+                    }
+                }
+            }
+            return `/games?date=${date}`;
+        }
+    });
+
     /** @type {{ message: string, url: string } | null} */
     let completionState = $derived.by(() => {
         if (nextMatchInfo !== null) return null;
@@ -585,7 +676,7 @@
                         color="alternative"
                         size="xs"
                         class="me-auto p-1"
-                        onclick={() => history.back()}><AngleLeftOutline class="h-3 w-3" /></Button>
+                        href={resolve(prevUrl, {})}><AngleLeftOutline class="h-3 w-3" /></Button>
                     <TeamBadge
                         teamName={nextMatchInfo.home}
                         className="min-w-0 flex-1"
@@ -613,7 +704,7 @@
                     color="alternative"
                     size="xs"
                     class="me-auto p-1"
-                    onclick={() => history.back()}><AngleLeftOutline class="h-3 w-3" /></Button>
+                    href={resolve(prevUrl, {})}><AngleLeftOutline class="h-3 w-3" /></Button>
                 <p class="text-sm text-gray-300">{completionState.message}</p>
                 <Button
                     size="xs"
