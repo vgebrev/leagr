@@ -1,17 +1,24 @@
 <script>
-    import { Modal, Spinner } from 'flowbite-svelte';
+    import { Modal, Spinner, Button } from 'flowbite-svelte';
+    import { ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
     import PlayerHeader from './PlayerHeader.svelte';
     import PlayerSummaryCard from '../routes/rankings/[player]/components/PlayerSummaryCard.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
+    import { resolve } from '$app/paths';
     import { scale } from 'svelte/transition';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
 
     /**
-     * @type {{ playerName: string | null, open: boolean, date?: string | null }}
+     * @type {{ playerName: string | null, open: boolean, date?: string | null, onclose?: () => void }}
      */
-    let { playerName = $bindable(null), open = $bindable(false), date = null } = $props();
+    let {
+        playerName = $bindable(null),
+        open = $bindable(false),
+        date = null,
+        onclose = undefined
+    } = $props();
 
     const year = $derived(date ? date.substring(0, 4) : null);
 
@@ -95,6 +102,7 @@
 <Modal
     transition={scale}
     bind:open
+    oncancel={() => onclose?.()}
     size="md"
     class="glass-strong mx-auto w-[95vw] border backdrop:backdrop-blur-xs md:w-2/3 lg:w-1/2 xl:w-1/3"
     classes={{ body: 'p-4', close: 'p-0', header: '!min-w-0 !w-full' }}>
@@ -126,4 +134,16 @@
             playerData={playerDisplayData}
             showAverages={false} />
     {/if}
+
+    {#snippet footer()}
+        <Button
+            href={resolve(`/rankings/${encodeURIComponent(playerName ?? '')}`)}
+            outline
+            color="alternative"
+            size="xs"
+            class="ml-auto">
+            <ArrowUpRightFromSquareOutline class="me-2 h-4 w-4" />
+            Full Profile
+        </Button>
+    {/snippet}
 </Modal>

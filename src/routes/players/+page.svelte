@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
+    import { page } from '$app/state';
     import { playersService } from '$lib/client/services/players.svelte.js';
     import PlayerRegistrationForm from './components/PlayerRegistrationForm.svelte';
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
@@ -20,9 +22,18 @@
     // Check if discipline system is enabled
     const isDisciplineEnabled = $derived($settings.discipline?.enabled !== false);
 
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
     function handlePlayerClick(player) {
-        selectedPlayer = player;
-        showPlayerModal = true;
+        pushState('', { playerModal: { playerName: player } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
     }
 
     onMount(async () => {
@@ -121,4 +132,5 @@
 <PlayerModal
     bind:playerName={selectedPlayer}
     bind:open={showPlayerModal}
-    date={data.date} />
+    date={data.date}
+    onclose={handlePlayerModalClose} />

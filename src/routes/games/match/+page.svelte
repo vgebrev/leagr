@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
     import { settings } from '$lib/client/stores/settings.js';
@@ -9,6 +10,7 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import TeamLogo from '$components/TeamLogo.svelte';
     import TeamModal from '$components/TeamModal.svelte';
+    import PlayerModal from '$components/PlayerModal.svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
@@ -238,10 +240,37 @@
     let selectedTeam = $state(/** @type {string | null} */ (null));
     let showTeamModal = $state(false);
 
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) selectedTeam = state.teamName;
+    });
+
     /** @param {string} teamName */
     function openTeamModal(teamName) {
-        selectedTeam = teamName;
-        showTeamModal = true;
+        pushState('', { teamModal: { teamName } });
+    }
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
+    }
+
+    let selectedPlayer = $state(/** @type {string | null} */ (null));
+    let showPlayerModal = $state(false);
+
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
+    /** @param {string} playerName */
+    function openPlayerModal(playerName) {
+        pushState('', { playerModal: { playerName } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
     }
 
     let loaded = $state(false);
@@ -655,14 +684,16 @@
                 {match}
                 side="home"
                 disabled={competitionEnded}
-                onAction={handleAction} />
+                onAction={handleAction}
+                onPlayerClick={openPlayerModal} />
             <TeamActionPanel
                 teamName={match.away}
                 players={awayPlayers}
                 {match}
                 side="away"
                 disabled={competitionEnded}
-                onAction={handleAction} />
+                onAction={handleAction}
+                onPlayerClick={openPlayerModal} />
         </div>
         <!-- Next Match / Completion -->
         {#if nextMatchInfo}
@@ -730,4 +761,11 @@
 <TeamModal
     bind:teamName={selectedTeam}
     {date}
-    bind:open={showTeamModal} />
+    bind:open={showTeamModal}
+    onclose={handleTeamModalClose} />
+
+<PlayerModal
+    bind:playerName={selectedPlayer}
+    bind:open={showPlayerModal}
+    {date}
+    onclose={handlePlayerModalClose} />

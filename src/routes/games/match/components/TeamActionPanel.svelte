@@ -14,7 +14,8 @@
         match = null,
         side = 'home',
         disabled = false,
-        onAction
+        onAction,
+        onPlayerClick = undefined
     } = $props();
 
     /** @type {'goals'|'offensive'|'defensive'|'saves'} */
@@ -84,12 +85,19 @@
         {#each players as player (player)}
             {@const count = getCount(player)}
             <div class="flex items-center gap-1 py-0.5">
-                <span class="min-w-0 flex-1 truncate text-sm">{player}</span>
+                <button
+                    type="button"
+                    class="min-w-0 truncate text-left text-sm {onPlayerClick
+                        ? 'cursor-pointer hover:underline'
+                        : 'cursor-default'}"
+                    onclick={() => onPlayerClick?.(player)}>
+                    {player}
+                </button>
                 <Button
                     size="sm"
                     outline={true}
                     color="alternative"
-                    class="p-0 {styles.buttonClass}"
+                    class="ml-auto p-0 {styles.buttonClass}"
                     onclick={() => onAction?.(side, player, mode, -1)}
                     disabled={disabled || count === 0}>
                     <MinusOutline class="h-4 w-4" />

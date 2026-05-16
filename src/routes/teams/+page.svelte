@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
+    import { page } from '$app/state';
     import { Toggle } from 'flowbite-svelte';
     import { teamsService } from '$lib/client/services/teams.svelte.js';
     import { playersService } from '$lib/client/services/players.svelte.js';
@@ -18,14 +20,32 @@
     let showTeamModal = $state(false);
     let selectedTeam = $state(null);
 
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) selectedTeam = state.teamName;
+    });
+
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
     function handlePlayerClick(player) {
-        selectedPlayer = player;
-        showPlayerModal = true;
+        pushState('', { playerModal: { playerName: player } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
     }
 
     function handleTeamClick(teamName) {
-        selectedTeam = teamName;
-        showTeamModal = true;
+        pushState('', { teamModal: { teamName } });
+    }
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
     }
 
     async function handleRename(oldName, newName) {
@@ -128,9 +148,11 @@
 <PlayerModal
     bind:playerName={selectedPlayer}
     bind:open={showPlayerModal}
-    {date} />
+    {date}
+    onclose={handlePlayerModalClose} />
 
 <TeamModal
     bind:teamName={selectedTeam}
     {date}
-    bind:open={showTeamModal} />
+    bind:open={showTeamModal}
+    onclose={handleTeamModalClose} />

@@ -2,16 +2,36 @@
     import { Toggle } from 'flowbite-svelte';
     import { StarSolid, ChevronRightOutline } from 'flowbite-svelte-icons';
     import { slide } from 'svelte/transition';
+    import { pushState } from '$app/navigation';
+    import { page } from '$app/state';
     import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import Avatar from '$components/avatars/Avatar.svelte';
+    import PlayerModal from '$components/PlayerModal.svelte';
     import { teamColours, teamStyles } from '$lib/shared/helpers.js';
     import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
 
-    /** @type {{ leagueGames: any[], knockoutGames: any[], teams: Record<string, any> }} */
-    let { leagueGames = [], knockoutGames = [], teams = {} } = $props();
+    /** @type {{ leagueGames: any[], knockoutGames: any[], teams: Record<string, any>, date?: string | null }} */
+    let { leagueGames = [], knockoutGames = [], teams = {}, date = null } = $props();
+
+    let showPlayerModal = $state(false);
+    let selectedPlayer = $state(/** @type {string | null} */ (null));
+
+    $effect(() => {
+        const state = page.state.playerModal;
+        showPlayerModal = !!state;
+        if (state?.playerName) selectedPlayer = state.playerName;
+    });
+
+    function openPlayerModal(playerName) {
+        pushState('', { playerModal: { playerName } });
+    }
+
+    function handlePlayerModalClose() {
+        if (page.state.playerModal) history.back();
+    }
 
     /**
      * @typedef {Object} PlayerStats
@@ -300,6 +320,12 @@
     }
 </script>
 
+<PlayerModal
+    bind:playerName={selectedPlayer}
+    bind:open={showPlayerModal}
+    {date}
+    onclose={handlePlayerModalClose} />
+
 {#if hasRawStats}
     <div class="glass mb-2 w-full rounded-lg border border-gray-200 p-2 pt-1 dark:border-gray-700">
         <h3 class="mb-1 text-center text-base font-medium">Stars of the Day</h3>
@@ -364,12 +390,14 @@
                             color={getTeamColor(winner.teamName)}
                             size="sm" />
                     </div>
-                    <span
+                    <button
+                        type="button"
+                        onclick={() => openPlayerModal(winner.playerName)}
                         class="{getTeamColorClass(
                             winner.teamName
-                        )} mb-2 self-center overflow-hidden rounded-sm px-2 py-0.5 text-sm font-medium text-nowrap text-ellipsis shadow transition-opacity hover:opacity-80">
+                        )} mb-2 w-full cursor-pointer self-center overflow-hidden rounded-sm px-2 py-0.5 text-left text-sm font-medium text-nowrap text-ellipsis shadow transition-opacity hover:opacity-80">
                         {winner.playerName}
-                    </span>
+                    </button>
                     <span class="mb-2 self-center text-sm text-nowrap dark:text-white">
                         <span class="font-bold">{award.stat(winner)}</span>
                         <span class="font-normal text-gray-500 dark:text-gray-400">
@@ -388,12 +416,14 @@
                                         color={getTeamColor(player.teamName)}
                                         size="sm" />
                                 </div>
-                                <span
+                                <button
+                                    type="button"
+                                    onclick={() => openPlayerModal(player.playerName)}
                                     class="{getTeamColorClass(
                                         player.teamName
-                                    )} mb-1 self-center overflow-hidden rounded-sm px-2 py-0.5 text-sm font-medium text-nowrap text-ellipsis shadow transition-opacity hover:opacity-80">
+                                    )} mb-1 w-full cursor-pointer self-center overflow-hidden rounded-sm px-2 py-0.5 text-left text-sm font-medium text-nowrap text-ellipsis shadow transition-opacity hover:opacity-80">
                                     {player.playerName}
-                                </span>
+                                </button>
                                 <span class="mb-1 self-center text-sm text-nowrap dark:text-white">
                                     <span class="font-bold">{award.stat(player)}</span>
                                     <span class="font-normal text-gray-500 dark:text-gray-400">

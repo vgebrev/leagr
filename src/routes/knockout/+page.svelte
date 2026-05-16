@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
+    import { page } from '$app/state';
     import { Alert, Button } from 'flowbite-svelte';
     import { settings } from '$lib/client/stores/settings.js';
     import { gamesService } from '$lib/client/services/games.svelte.js';
@@ -18,6 +20,16 @@
     let showTeamModal = $state(false);
     let selectedTeam = $state(null);
 
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) selectedTeam = state.teamName;
+    });
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
+    }
+
     /**
      * Get the winner of a knockout match, including penalty tiebreaker.
      * @param {Object} match
@@ -35,8 +47,7 @@
     }
 
     function handleTeamClick(teamName) {
-        selectedTeam = teamName;
-        showTeamModal = true;
+        pushState('', { teamModal: { teamName } });
     }
 
     /**
@@ -172,7 +183,8 @@
             <StarsOfTheDay
                 leagueGames={gamesService.leagueGames}
                 knockoutGames={gamesService.knockoutBracket?.bracket || []}
-                teams={gamesService.teams} />
+                teams={gamesService.teams}
+                {date} />
         </div>
     {/if}
 </div>
@@ -187,4 +199,5 @@
 <TeamModal
     bind:teamName={selectedTeam}
     {date}
-    bind:open={showTeamModal} />
+    bind:open={showTeamModal}
+    onclose={handleTeamModalClose} />

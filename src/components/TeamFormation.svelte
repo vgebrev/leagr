@@ -5,6 +5,7 @@
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import { teamStyles } from '$lib/shared/helpers.js';
+    import { resolve } from '$app/paths';
 
     /**
      * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
@@ -164,7 +165,9 @@
                     {@const stats = player?.name ? playerStats[player.name] : null}
                     <div class="flex items-start gap-1.5">
                         <!-- Avatar + name -->
-                        <div class="flex flex-col items-center gap-1">
+                        <a
+                            href={resolve(`/rankings/${encodeURIComponent(player?.name)}`)}
+                            class="flex flex-col items-center gap-1">
                             <div class="block sm:hidden">
                                 <Avatar
                                     {avatarUrl}
@@ -183,7 +186,7 @@
                                 class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>
                                 <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
                             </div>
-                        </div>
+                        </a>
 
                         <!-- Stats panel -->
                         {#if stats}

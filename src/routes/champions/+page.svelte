@@ -16,7 +16,6 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyPopover from '$components/TrophyPopover.svelte';
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -29,9 +28,7 @@
 
     let champions = $state([]);
     let error = $state(false);
-    let celebrating = $state(false);
     let yearDropdownOpen = $state(false);
-    let topChampion = $derived(champions.length > 0 ? champions[0].playerName : '');
 
     // Get selected year from URL, default to "all"
     let selectedYear = $derived.by(() => {
@@ -87,13 +84,9 @@
         }
     });
 
-    /**
-     * Handle click on top champion's name
-     */
-    function handleTopChampionClick() {
-        if (champions.length > 0) {
-            celebrating = true;
-        }
+    /** @param {string} playerName */
+    function handlePlayerClick(playerName) {
+        goto(resolve(`/rankings/${playerName}`));
     }
 
     $effect(() => {
@@ -176,13 +169,14 @@
                     <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
                     <TableBodyCell
                         class="px-1 py-1.5 font-semibold text-gray-900 dark:text-gray-100">
-                        {#if index === 0}
-                            <button onclick={handleTopChampionClick}>
-                                {champion.playerName}
-                            </button>
-                        {:else}
+                        <span
+                            class="cursor-pointer hover:underline"
+                            role="button"
+                            tabindex="0"
+                            onclick={() => handlePlayerClick(champion.playerName)}
+                            onkeydown={() => handlePlayerClick(champion.playerName)}>
                             {champion.playerName}
-                        {/if}
+                        </span>
                     </TableBodyCell>
                     <TableBodyCell class="px-1 py-1.5 text-center">
                         {#if champion.leagueWins > 0}
@@ -223,10 +217,3 @@
         </TableBody>
     </Table>
 {/if}
-
-<CelebrationOverlay
-    bind:celebrating
-    teamName={topChampion}
-    teamColour="default"
-    icon="👑"
-    confettiColours={['#fbbf24', '#fde047', '#facc15']} />
