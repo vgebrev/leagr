@@ -1,5 +1,6 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
     import { settings } from '$lib/client/stores/settings.js';
@@ -238,10 +239,19 @@
     let selectedTeam = $state(/** @type {string | null} */ (null));
     let showTeamModal = $state(false);
 
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) selectedTeam = state.teamName;
+    });
+
     /** @param {string} teamName */
     function openTeamModal(teamName) {
-        selectedTeam = teamName;
-        showTeamModal = true;
+        pushState('', { teamModal: { teamName } });
+    }
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
     }
 
     let loaded = $state(false);
@@ -730,4 +740,5 @@
 <TeamModal
     bind:teamName={selectedTeam}
     {date}
-    bind:open={showTeamModal} />
+    bind:open={showTeamModal}
+    onclose={handleTeamModalClose} />

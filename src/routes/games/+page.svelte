@@ -1,5 +1,7 @@
 <script>
     import { onMount } from 'svelte';
+    import { pushState } from '$app/navigation';
+    import { page } from '$app/state';
     import { settings } from '$lib/client/stores/settings.js';
     import { isCompetitionEnded } from '$lib/shared/helpers.js';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -18,12 +20,21 @@
     /** @type {string | null} */
     let selectedTeam = $state(null);
 
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) selectedTeam = state.teamName;
+    });
+
     /**
      * @param {string} teamName
      */
     function handleTeamClick(teamName) {
-        selectedTeam = teamName;
-        showTeamModal = true;
+        pushState('', { teamModal: { teamName } });
+    }
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
     }
 
     /** @type {boolean} */
@@ -76,4 +87,5 @@
 <TeamModal
     bind:teamName={selectedTeam}
     {date}
-    bind:open={showTeamModal} />
+    bind:open={showTeamModal}
+    onclose={handleTeamModalClose} />

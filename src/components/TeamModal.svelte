@@ -10,9 +10,9 @@
     import { scale } from 'svelte/transition';
 
     /**
-     * @type {{ teamName: string | null, date: string | null, open: boolean }}
+     * @type {{ teamName: string | null, date: string | null, open: boolean, onclose?: () => void }}
      */
-    let { teamName = $bindable(null), date = null, open = $bindable(false) } = $props();
+    let { teamName = $bindable(null), date = null, open = $bindable(false), onclose = undefined } = $props();
 
     let teamPlayers = $state([]);
     let loadingError = $state(false);
@@ -153,6 +153,7 @@
 <Modal
     transition={scale}
     bind:open
+    oncancel={() => onclose?.()}
     size="md"
     class="glass-strong max-w-md border backdrop:backdrop-blur-xs"
     classes={{ body: 'p-2', close: 'p-0' }}>

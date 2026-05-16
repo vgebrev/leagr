@@ -12,7 +12,9 @@ declare global {
             clientId?: string | null;
         }
         // interface PageData {}
-        // interface PageState {}
+        interface PageState {
+            teamModal?: { teamName: string };
+        }
         // interface Platform {}
     }
 }
