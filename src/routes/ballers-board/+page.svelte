@@ -92,6 +92,11 @@
         await goto(href, { replaceState: true });
     }
 
+    /** @param {string} playerName */
+    function handlePlayerClick(playerName) {
+        goto(resolve(`/rankings/${playerName}`));
+    }
+
     /**
      * @param {'appearances'|'saves'|'defence'|'attack'|'goals'|'total'} col
      */
@@ -207,8 +212,13 @@
                     <TableBodyCell
                         class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-white">
                         <span class="flex min-w-0 items-center gap-1">
-                            <span class="overflow-hidden text-ellipsis whitespace-nowrap"
-                                >{baller.playerName}</span>
+                            <span
+                                class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap hover:underline"
+                                role="button"
+                                tabindex="0"
+                                onclick={() => handlePlayerClick(baller.playerName)}
+                                onkeydown={() => handlePlayerClick(baller.playerName)}>
+                                {baller.playerName}</span>
                             {#if leaders.total === baller.playerName}<StarSolid
                                     class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
                             {#if leaders.goals === baller.playerName}<LeagueIcon
