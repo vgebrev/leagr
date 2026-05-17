@@ -8,7 +8,7 @@
  * Outputs a PNG to /tmp/test-logo.png
  */
 
-import { generateTeamLogo, pickBadgeShapes } from './src/lib/server/openaiImageClient.js';
+import { generateTeamLogo, pickBadgeShapes } from '$lib/server/openaiImageClient.js';
 import fs from 'fs/promises';
 
 const teamName = process.argv[2] || 'blue wolves';
