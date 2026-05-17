@@ -254,7 +254,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class={`w-11 text-xs ${headerTextClass}`}>Attack</span>
                                     <div
-                                        class="h-2 flex-1 rounded-full bg-gray-200/60 dark:bg-gray-700/60">
+                                        class="h-2 flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 w-full rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
@@ -273,7 +273,7 @@
                                 <div class="flex items-center gap-2">
                                     <span class={`w-11 text-xs ${headerTextClass}`}>Defence</span>
                                     <div
-                                        class="h-2 w-full flex-1 rounded-full bg-gray-200/60 dark:bg-gray-700/60">
+                                        class="h-2 w-full flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
                                             style="width: {(
@@ -456,6 +456,7 @@
         background-position: center;
         background-repeat: no-repeat;
         opacity: 0.15;
+        filter: drop-shadow(2px 2px 2px #030712);
         pointer-events: none;
         z-index: -1;
     }

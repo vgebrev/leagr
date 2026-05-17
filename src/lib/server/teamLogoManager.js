@@ -182,7 +182,12 @@ export class TeamLogoManager {
                         logger.info('[teamLogos] Skipping, logo already exists', { teamName });
                         return;
                     }
-                    const buffer = await generateTeamLogo(teamName, shapes[i], env.OPENAI_API_KEY);
+                    const buffer = await generateTeamLogo(
+                        teamName,
+                        shapes[i],
+                        env.OPENAI_API_KEY,
+                        env.OPENAI_MODEL
+                    );
                     const filename = await this.saveLogo(date, teamName, buffer);
                     logger.info('[teamLogos] Saved logo', { teamName, filename });
                 } catch (err) {

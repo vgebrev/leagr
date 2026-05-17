@@ -57,7 +57,7 @@
                     <span class="w-14 shrink-0 tracking-wide text-gray-500 dark:text-gray-300"
                         >Attack</span>
                     <div
-                        class="relative h-[0.75rem] w-full overflow-hidden rounded-full bg-gray-200/70 dark:bg-gray-700">
+                        class="relative h-3 w-full overflow-hidden rounded-full bg-gray-200/70 shadow-sm shadow-gray-800 dark:bg-gray-700 dark:shadow-gray-950">
                         <div
                             class="bg-primary-500 absolute inset-0 rounded-full transition-all"
                             style={`width: ${(applyGammaSpread(attackingRating) * 100).toFixed(1)}%`}>
@@ -86,7 +86,7 @@
                     <span class="w-14 shrink-0 tracking-wide text-gray-500 dark:text-gray-300"
                         >Defence</span>
                     <div
-                        class="relative h-[0.75rem] w-full overflow-hidden rounded-full bg-gray-200/70 dark:bg-gray-700">
+                        class="relative h-3 w-full overflow-hidden rounded-full bg-gray-200/70 shadow-sm shadow-gray-800 dark:bg-gray-700 dark:shadow-gray-950">
                         <div
                             class="bg-primary-500 absolute inset-0 rounded-full transition-all"
                             style={`width: ${(applyGammaSpread(controlRating) * 100).toFixed(1)}%`}>
