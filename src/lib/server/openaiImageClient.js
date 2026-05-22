@@ -66,8 +66,8 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gp
         `team name: ${noun};` +
         `${primary} and ${secondary} colour scheme;` +
         `modern esports style.` +
-        `the badge must be fully solid with no transparent areas inside the badge;` +
-        `only the area outside the badge shape should be transparent.`;
+        `badge fill: fully opaque solid colour (every pixel inside the ${badgeShape} boundary must be 100% opaque inside the badge);` +
+        `the area outside the badge should be a solid magenta color (#FD3DB5).`;
 
     logger.info('[teamLogos] Calling OpenAI', { teamName, badgeShape, primary, secondary });
 
@@ -77,7 +77,7 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gp
         n: 1,
         size: '1024x1024',
         quality: 'auto',
-        background: 'transparent',
+        background: 'opaque',
         output_format: 'webp'
     });
 
