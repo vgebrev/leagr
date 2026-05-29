@@ -16,6 +16,7 @@
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import TeamActionPanel from './components/TeamActionPanel.svelte';
+    import StatsGuide from './components/StatsGuide.svelte';
     import {
         gamesService,
         findLeagueMatch,
@@ -695,6 +696,9 @@
                 onAction={handleAction}
                 onPlayerClick={openPlayerModal} />
         </div>
+        <!-- Stats Guide -->
+        <StatsGuide />
+
         <!-- Next Match / Completion -->
         {#if nextMatchInfo}
             <div class="glass w-full rounded-lg border border-gray-200 p-3 dark:border-gray-700">
