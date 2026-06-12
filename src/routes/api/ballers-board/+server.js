@@ -1,7 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { validateLeagueForAPI, getLeagueInfo } from '$lib/server/league.js';
+import { getEffectiveLeagueSettings } from '$lib/shared/defaults.js';
+import { buildBallersMomentum, resolveMomentumConfig } from '$lib/server/momentum.js';
 
 /**
  * GET /api/ballers-board - Get individual stats leaderboard
@@ -54,12 +56,28 @@ export async function GET({ locals, url }) {
                     // Year file doesn't exist, skip
                 }
             }
-        } else {
+        }
+
+        /** @type {Array<object>|null} */
+        let momentum = null;
+
+        if (yearParam !== 'all') {
             const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
             const rankings = await rankingsManager.loadEnhancedRankings(year);
             Object.entries(rankings.players).forEach(([playerName, playerData]) => {
                 mergePlayer(playerName, playerData);
             });
+
+            // Momentum ("Form") is a who's-hot-now signal - only meaningful for
+            // the current year
+            if (year === new Date().getFullYear()) {
+                const config = resolveMomentumConfig(
+                    getEffectiveLeagueSettings(getLeagueInfo(leagueId))
+                );
+                if (config.enabled) {
+                    momentum = buildBallersMomentum(rankings.players, config.ballers, new Date());
+                }
+            }
         }
 
         const ballers = Object.entries(totals)
@@ -75,7 +93,7 @@ export async function GET({ locals, url }) {
             .filter((p) => p.appearances > 0)
             .sort((a, b) => b.total - a.total || b.goals - a.goals || b.attack - a.attack);
 
-        return json({ ballers });
+        return json({ ballers, momentum });
     } catch (error) {
         console.error('Error loading ballers board data:', error);
         return json(

@@ -1367,6 +1367,14 @@ export class RankingsManager {
                                 leagueWinner: false,
                                 cupWinner: false
                             },
+                            // Raw per-session individual stats (null = not tracked
+                            // that session). Consumed by the momentum/form boards.
+                            stats: {
+                                goals: sessionTracked.goals ? ind.goals : null,
+                                offActions: sessionTracked.offActions ? ind.offensiveActions : null,
+                                defActions: sessionTracked.defActions ? ind.defensiveActions : null,
+                                saveActions: sessionTracked.saveActions ? ind.saveActions : null
+                            },
                             ratings: {
                                 elo: parseFloat(
                                     (playerData.elo

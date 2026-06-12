@@ -1,6 +1,9 @@
 import { json } from '@sveltejs/kit';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
+import { getLeagueInfo } from '$lib/server/league.js';
+import { getEffectiveLeagueSettings } from '$lib/shared/defaults.js';
+import { buildChampionsMomentum, resolveMomentumConfig } from '$lib/server/momentum.js';
 
 /**
  * GET /api/champions - Get champions data for the hall of fame
@@ -22,6 +25,8 @@ export async function GET({ locals, url }) {
         const rankingsManager = createRankingsManager().setLeague(leagueId);
 
         let allPlayersData = {};
+        /** @type {Array<object>|null} */
+        let momentum = null;
 
         // If year is "all", aggregate data from all years
         if (yearParam === 'all') {
@@ -64,6 +69,21 @@ export async function GET({ locals, url }) {
                     history: playerData.history || {}
                 };
             });
+
+            // Momentum ("Form") is a who's-hot-now signal - only meaningful for
+            // the current year
+            if (year === new Date().getFullYear()) {
+                const config = resolveMomentumConfig(
+                    getEffectiveLeagueSettings(getLeagueInfo(leagueId))
+                );
+                if (config.enabled) {
+                    momentum = buildChampionsMomentum(
+                        rankings.players,
+                        config.champions,
+                        new Date()
+                    );
+                }
+            }
         }
 
         // Filter and sort players with championships
@@ -105,7 +125,7 @@ export async function GET({ locals, url }) {
                 return b.cupWins - a.cupWins;
             });
 
-        return json({ champions });
+        return json({ champions, momentum });
     } catch (error) {
         console.error('Error loading champions data:', error);
         return json(

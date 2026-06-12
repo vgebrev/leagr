@@ -60,6 +60,21 @@
  */
 
 /**
+ * @typedef {Object} MomentumBoardConfig
+ * @property {number} fastHalfLifeWeeks
+ * @property {number} slowHalfLifeWeeks
+ * @property {number} coolHalfLifeWeeks
+ * @property {number} minSessions
+ */
+
+/**
+ * @typedef {Object} MomentumSettings
+ * @property {boolean} enabled
+ * @property {MomentumBoardConfig} ballers
+ * @property {MomentumBoardConfig} champions
+ */
+
+/**
  * @typedef {Object} LeagueSettings
  * @property {number[]} competitionDays
  * @property {RegistrationWindow} registrationWindow
@@ -71,6 +86,7 @@
  * @property {boolean} [teamDrawRequiresAdmin]
  * @property {DisciplineSettings} discipline
  * @property {TeamLogosSettings} [teamLogos]
+ * @property {MomentumSettings} [momentum]
  */
 
 /**

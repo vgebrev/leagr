@@ -20,7 +20,7 @@
                 'Key passes creating a clear goalscoring chance',
                 'Notable skill/dribble beating at least 2 players'
             ],
-            notAwarded: ['Wild shots off target']
+            notAwarded: ['Wild shots off target', 'Goals']
         },
         {
             title: 'Defence',
