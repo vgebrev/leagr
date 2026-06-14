@@ -343,6 +343,118 @@ describe('DisciplineManager', () => {
         });
     });
 
+    describe('clearPlayerDiscipline (admin)', () => {
+        it('should return null when player has no record', async () => {
+            const result = await disciplineManager.clearPlayerDiscipline('Ghost', '2025-01-20');
+            expect(result).toBeNull();
+        });
+
+        it('should return null when there is nothing to clear', async () => {
+            // Record then clear the no-shows, leaving an empty active state
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const result = await disciplineManager.clearPlayerDiscipline(
+                'TestPlayer',
+                '2025-01-20'
+            );
+            expect(result).toBeNull();
+        });
+
+        it('should move active no-shows to cleared list', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-16');
+
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.activeNoShows).toEqual([]);
+            expect(record.clearedNoShows).toHaveLength(2);
+            expect(record.clearedNoShows.map((c) => c.date)).toEqual(['2025-01-15', '2025-01-16']);
+            expect(record.clearedNoShows[0].clearedOn).toBeDefined();
+        });
+
+        it('should revert an applied suspension for the session date', async () => {
+            await disciplineManager.applySuspension(
+                'TestPlayer',
+                '2025-01-20',
+                'Repeated no-shows'
+            );
+
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            // No longer matched by date in the active suspensions array
+            expect(record.suspensions.find((s) => s.date === '2025-01-20')).toBeUndefined();
+            // History preserved in revertedSuspensions with a timestamp
+            expect(record.revertedSuspensions).toHaveLength(1);
+            expect(record.revertedSuspensions[0].date).toBe('2025-01-20');
+            expect(record.revertedSuspensions[0].revertedOn).toBeDefined();
+        });
+
+        it('should leave totalSuspensions unchanged when reverting', async () => {
+            await disciplineManager.applySuspension('TestPlayer', '2025-01-20');
+            const before = (await disciplineManager.getPlayerRecord('TestPlayer')).totalSuspensions;
+
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const after = (await disciplineManager.getPlayerRecord('TestPlayer')).totalSuspensions;
+            expect(after).toBe(before);
+        });
+
+        it('should not revert a suspension for a different date', async () => {
+            await disciplineManager.applySuspension('TestPlayer', '2025-01-20');
+
+            const result = await disciplineManager.clearPlayerDiscipline(
+                'TestPlayer',
+                '2025-01-27'
+            );
+
+            expect(result).toBeNull();
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.suspensions.find((s) => s.date === '2025-01-20')).toBeDefined();
+        });
+
+        it('should remove the player from suspension checks after clearing', async () => {
+            await disciplineManager.applySuspension('TestPlayer', '2025-01-20');
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const status = await disciplineManager.isPlayerSuspended('TestPlayer', '2025-01-20');
+            expect(status.suspended).toBe(false);
+        });
+
+        it('should clear both no-shows and an applied suspension together', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-13');
+            await disciplineManager.applySuspension('TestPlayer', '2025-01-20');
+            // applySuspension clears existing active no-shows, so add a fresh one after
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-19');
+
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const record = await disciplineManager.getPlayerRecord('TestPlayer');
+            expect(record.activeNoShows).toEqual([]);
+            expect(record.suspensions.find((s) => s.date === '2025-01-20')).toBeUndefined();
+        });
+
+        it('should require league ID to be set', async () => {
+            const manager = createDisciplineManager();
+            await expect(manager.clearPlayerDiscipline('TestPlayer', '2025-01-20')).rejects.toThrow(
+                DisciplineError
+            );
+        });
+
+        it('should drop player off the watch list after clearing no-shows', async () => {
+            await disciplineManager.recordNoShow('TestPlayer', '2025-01-15');
+            await disciplineManager.clearPlayerDiscipline('TestPlayer', '2025-01-20');
+
+            const fuzzy = await disciplineManager.checkFuzzySuspensionMatch(
+                'TestPlayr',
+                '2025-01-20'
+            );
+            expect(fuzzy.isMatch).toBe(false);
+        });
+    });
+
     describe('Concurrency Safety', () => {
         it('should handle concurrent no-show records safely', async () => {
             const promises = Array(5)

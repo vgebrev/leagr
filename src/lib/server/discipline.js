@@ -406,6 +406,72 @@ export class DisciplineManager {
     }
 
     /**
+     * Admin action: clear a player's active discipline state for a session.
+     *
+     * Moves all active no-shows to the cleared list and reverts any suspension
+     * applied for the given session date. History is preserved: cleared no-shows
+     * are recorded with a clearedOn date, reverted suspensions are moved to a
+     * revertedSuspensions list with a revertedOn timestamp, and totalSuspensions
+     * is left unchanged. Reverted suspensions leave the active suspensions array,
+     * so they no longer match in isPlayerSuspended/watchlist/fuzzy checks.
+     *
+     * @param {string} playerName - Player name
+     * @param {string} sessionDate - Session date whose suspension should be reverted (YYYY-MM-DD)
+     * @returns {Promise<Object|null>} - Updated discipline data, or null if nothing was cleared
+     */
+    async clearPlayerDiscipline(playerName, sessionDate) {
+        if (!this.leagueId) {
+            throw new DisciplineError('League ID must be set before operations', 400);
+        }
+
+        const mutex = this.getDisciplineMutex();
+        return await mutex.runExclusive(async () => {
+            const disciplineData = await this.loadDisciplineDataUnsafe();
+            const player = disciplineData.players[playerName];
+            if (!player) {
+                return null; // No record for this player
+            }
+
+            let changed = false;
+
+            // Move all active no-shows to the cleared list
+            if (player.activeNoShows?.length) {
+                const clearedOn = new Date().toISOString().split('T')[0];
+                const clearedDates = player.activeNoShows.map((date) => ({
+                    date,
+                    clearedOn
+                }));
+                if (!Array.isArray(player.clearedNoShows)) {
+                    player.clearedNoShows = [];
+                }
+                player.clearedNoShows.push(...clearedDates);
+                player.activeNoShows = [];
+                changed = true;
+            }
+
+            // Revert any suspension applied for this session date
+            const suspensions = player.suspensions || [];
+            const toRevert = suspensions.filter((s) => s.date === sessionDate);
+            if (toRevert.length) {
+                const revertedOn = new Date().toISOString();
+                if (!Array.isArray(player.revertedSuspensions)) {
+                    player.revertedSuspensions = [];
+                }
+                player.revertedSuspensions.push(...toRevert.map((s) => ({ ...s, revertedOn })));
+                player.suspensions = suspensions.filter((s) => s.date !== sessionDate);
+                changed = true;
+            }
+
+            if (!changed) {
+                return null; // Nothing to clear
+            }
+
+            await this.saveDisciplineDataUnsafe(disciplineData);
+            return disciplineData;
+        });
+    }
+
+    /**
      * Update suspension readiness if threshold is reached
      * @param {string} playerName - Player name
      * @param {Object} settings - League settings

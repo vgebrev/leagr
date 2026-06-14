@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
 import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
-import { validateDateParameter } from '$lib/shared/validation.js';
+import { validateDateParameter, validateAndSanitizePlayerName } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const dateValidation = validateDateParameter(url.searchParams);
@@ -99,5 +99,53 @@ export const GET = async ({ url, locals }) => {
             return error(err.statusCode, err.message);
         }
         return error(500, 'Failed to fetch discipline data');
+    }
+};
+
+/**
+ * Admin-only: clear a player's active discipline state (no-shows + applied
+ * suspension) for the given session date. Expects { player } in the request
+ * body and the session date as a query parameter.
+ */
+export const DELETE = async ({ request, url, locals }) => {
+    if (!locals.isAdmin) {
+        return error(403, 'Admin privileges required.');
+    }
+
+    const dateValidation = validateDateParameter(url.searchParams);
+    if (!dateValidation.isValid) {
+        return error(400, dateValidation.error);
+    }
+
+    let body;
+    try {
+        body = await request.json();
+    } catch {
+        return error(400, 'Invalid request body.');
+    }
+
+    const nameValidation = validateAndSanitizePlayerName(body?.player);
+    if (!nameValidation.isValid) {
+        return error(400, nameValidation.errors[0] || 'Invalid player name.');
+    }
+
+    try {
+        const disciplineManager = createDisciplineManager().setLeague(locals.leagueId);
+        const result = await disciplineManager.clearPlayerDiscipline(
+            nameValidation.sanitizedName,
+            dateValidation.date
+        );
+
+        if (!result) {
+            return error(404, 'No active discipline records to clear for this player.');
+        }
+
+        return json({ success: true });
+    } catch (err) {
+        console.error('Error clearing discipline data:', err);
+        if (err instanceof DisciplineError || err instanceof PlayerError) {
+            return error(err.statusCode, err.message);
+        }
+        return error(500, 'Failed to clear discipline data');
     }
 };
