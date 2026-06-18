@@ -407,7 +407,9 @@ export function buildChampionsMomentum(players, config, now) {
             cup: round4(cupGames / (leagueGames + cupGames))
         };
 
-        board.push(boardEntry(momentum, playerName, components, { trophyStreak, woodenSpoonStreak }));
+        board.push(
+            boardEntry(momentum, playerName, components, { trophyStreak, woodenSpoonStreak })
+        );
     }
 
     return board.sort((a, b) => b.value - a.value);
