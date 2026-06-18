@@ -1,6 +1,14 @@
 <script>
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
+    import {
+        Table,
+        TableBody,
+        TableBodyCell,
+        TableBodyRow,
+        TableHead,
+        TableHeadCell
+    } from 'flowbite-svelte';
     import { StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
@@ -114,48 +122,73 @@
             </span>
         </span>
     </div>
-    <div
-        class="glass grid grid-cols-[1.25rem_minmax(5.5rem,2fr)_3fr_2.25rem] items-center gap-x-2 gap-y-2 rounded-lg border border-gray-200 p-2 text-xs shadow dark:border-gray-700">
-        {#each entries as entry, index (entry.playerName)}
-            <span class="text-center text-gray-500 dark:text-gray-400">{index + 1}</span>
-            <span class="flex min-w-0 items-center gap-1">
-                <span
-                    class="cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
-                    role="button"
-                    tabindex="0"
-                    onclick={() => handlePlayerClick(entry.playerName)}
-                    onkeydown={() => handlePlayerClick(entry.playerName)}>
-                    {entry.playerName}
-                </span>
-                {#each entry.badges as badge (badge.type)}
-                    {@const meta = badgeMeta[badge.type]}
-                    {#if meta}
-                        {@const BadgeIcon = meta.icon}
-                        <span
-                            class="flex shrink-0 items-center {meta.color}"
-                            title="{meta.label}: {badge.count} sessions">
-                            <BadgeIcon class="h-4 w-4" />
-                            <span class="text-[10px] font-bold">{badge.count}</span>
+    <Table
+        classes={{ div: 'w-full' }}
+        class="table-fixed dark:text-gray-300">
+        <TableHead class="dark:text-gray-300">
+            <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
+            <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                >Player</TableHeadCell>
+            <TableHeadCell class="w-14 px-1 py-1.5 text-center">Streak</TableHeadCell>
+            <TableHeadCell class="w-2/5 px-1 py-1.5 text-center">Form</TableHeadCell>
+            <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
+        </TableHead>
+        <TableBody>
+            {#each entries as entry, index (entry.playerName)}
+                <TableBodyRow>
+                    <TableBodyCell class="w-6 px-1 py-1.5 text-center">
+                        {index + 1}
+                    </TableBodyCell>
+                    <TableBodyCell class="max-w-0 px-1 py-1.5">
+                        <span class="flex min-w-0 items-center gap-1">
+                            <span
+                                class="cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
+                                role="button"
+                                tabindex="0"
+                                onclick={() => handlePlayerClick(entry.playerName)}
+                                onkeydown={() => handlePlayerClick(entry.playerName)}>
+                                {entry.playerName}
+                            </span>
+                            {#if entry.provisional}
+                                <span
+                                    class="shrink-0 rounded border border-gray-300 px-1 text-[9px] text-gray-400 uppercase dark:border-gray-600"
+                                    title="Provisional: only {entry.sessions} session{entry.sessions ===
+                                    1
+                                        ? ''
+                                        : 's'} played">
+                                    new
+                                </span>
+                            {/if}
                         </span>
-                    {/if}
-                {/each}
-                {#if entry.provisional}
-                    <span
-                        class="shrink-0 rounded border border-gray-300 px-1 text-[9px] text-gray-400 uppercase dark:border-gray-600"
-                        title="Provisional: only {entry.sessions} session{entry.sessions === 1
-                            ? ''
-                            : 's'} played">
-                        new
-                    </span>
-                {/if}
-            </span>
-            <MomentumBar
-                value={entry.value}
-                segments={segments(entry)}
-                provisional={entry.provisional} />
-            <span class="text-right font-medium {valueColor(entry.value)}">
-                {formatValue(entry.value)}
-            </span>
-        {/each}
-    </div>
+                    </TableBodyCell>
+                    <TableBodyCell class="w-14 px-1 py-1.5">
+                        <span class="flex items-center justify-center gap-1">
+                            {#each entry.badges as badge (badge.type)}
+                                {@const meta = badgeMeta[badge.type]}
+                                {#if meta}
+                                    {@const BadgeIcon = meta.icon}
+                                    <span
+                                        class="flex shrink-0 items-center {meta.color}"
+                                        title="{meta.label}: {badge.count} sessions">
+                                        <BadgeIcon class="h-4 w-4" />
+                                        <span class="text-[10px] font-bold">{badge.count}</span>
+                                    </span>
+                                {/if}
+                            {/each}
+                        </span>
+                    </TableBodyCell>
+                    <TableBodyCell class="w-2/5 px-1 py-1.5">
+                        <MomentumBar
+                            value={entry.value}
+                            segments={segments(entry)}
+                            provisional={entry.provisional} />
+                    </TableBodyCell>
+                    <TableBodyCell
+                        class="w-10 px-1 py-1.5 text-right font-medium {valueColor(entry.value)}">
+                        {formatValue(entry.value)}
+                    </TableBodyCell>
+                </TableBodyRow>
+            {/each}
+        </TableBody>
+    </Table>
 {/if}

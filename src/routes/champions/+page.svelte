@@ -154,13 +154,16 @@
 {:else if momentum?.length}
     <Tabs
         tabStyle="underline"
-        contentClass="pt-2">
+        contentClass="p-0 m-0 bg-transparent dark:bg-transparent">
         <TabItem
             open
+            classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
             title="Champions">
             {@render championsList()}
         </TabItem>
-        <TabItem title="Form">
+        <TabItem
+            classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
+            title="Form">
             <MomentumBoard
                 entries={momentum}
                 variant="champions" />
