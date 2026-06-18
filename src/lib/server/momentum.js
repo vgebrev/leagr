@@ -262,29 +262,25 @@ export function currentStreak(items, predicate) {
 }
 
 /**
- * Pick which champions streak badges to display. A badge only renders when its
- * streak is >= 2 and strictly longer than every more prestigious streak that
- * implies it (double implies league, cup and silverware; league/cup imply
- * silverware). The wooden spoon is independent.
- * @param {{double: number, league: number, cup: number, silverware: number, woodenSpoon: number}} streaks
- * @returns {Array<{type: string, count: number}>}
+ * The current trailing silverware run as the actual trophies won each session,
+ * chronological. Sessions with no competition observed are skipped (a missed
+ * week doesn't break the run); the run breaks on an observed no-win session.
+ * A double-winning session yields both flags so it can be drawn stacked.
+ * @param {Array<{date: string, entry: HistoryEntry}>} sessions - ascending date order
+ * @returns {Array<{league: boolean, cup: boolean}>}
  */
-export function selectChampionsBadges(streaks) {
-    const badges = [];
-    if (streaks.double >= 2) badges.push({ type: 'double', count: streaks.double });
-    if (streaks.league >= 2 && streaks.league > streaks.double)
-        badges.push({ type: 'league', count: streaks.league });
-    if (streaks.cup >= 2 && streaks.cup > streaks.double)
-        badges.push({ type: 'cup', count: streaks.cup });
-    if (
-        streaks.silverware >= 2 &&
-        streaks.silverware > streaks.double &&
-        streaks.silverware > streaks.league &&
-        streaks.silverware > streaks.cup
-    )
-        badges.push({ type: 'silverware', count: streaks.silverware });
-    if (streaks.woodenSpoon >= 2) badges.push({ type: 'woodenSpoon', count: streaks.woodenSpoon });
-    return badges;
+export function championsTrophyStreak(sessions) {
+    /** @type {Array<{league: boolean, cup: boolean}>} */
+    const streak = [];
+    for (let i = sessions.length - 1; i >= 0; i--) {
+        const perf = sessions[i].entry.performance ?? {};
+        const leagueObserved = perf.leaguePosition != null || perf.leagueWinner;
+        const cupObserved = perf.cupProgress != null || perf.cupWinner;
+        if (!leagueObserved && !cupObserved) continue;
+        if (!perf.leagueWinner && !perf.cupWinner) break;
+        streak.unshift({ league: !!perf.leagueWinner, cup: !!perf.cupWinner });
+    }
+    return streak;
 }
 
 /**
@@ -335,9 +331,9 @@ function round4(value) {
  * @param {NonNullable<ReturnType<typeof computeMomentum>>} momentum
  * @param {string} playerName
  * @param {object} components
- * @param {Array<{type: string, count: number}>} badges
+ * @param {object} streak - board-specific streak fields merged into the entry
  */
-function boardEntry(momentum, playerName, components, badges) {
+function boardEntry(momentum, playerName, components, streak) {
     return {
         playerName,
         value: round4(momentum.value),
@@ -345,7 +341,7 @@ function boardEntry(momentum, playerName, components, badges) {
         provisional: momentum.provisional,
         lastSession: momentum.lastSession,
         components,
-        badges,
+        ...streak,
         series: momentum.series.map((point) => ({ date: point.date, value: round4(point.value) }))
     };
 }
@@ -384,38 +380,13 @@ export function buildChampionsMomentum(players, config, now) {
             computeMomentum(observations, { ...config, leagueK, now })
         );
 
-        const streaks = {
-            double: currentStreak(sessions, ({ entry }) => {
-                const perf = entry.performance ?? {};
-                const leagueObserved = perf.leaguePosition != null || perf.leagueWinner;
-                const cupRan = perf.cupProgress != null || perf.cupWinner;
-                if (!leagueObserved || !cupRan) return null;
-                return !!(perf.leagueWinner && perf.cupWinner);
-            }),
-            league: currentStreak(sessions, ({ entry }) => {
-                const perf = entry.performance ?? {};
-                if (perf.leaguePosition == null && !perf.leagueWinner) return null;
-                return !!perf.leagueWinner;
-            }),
-            cup: currentStreak(sessions, ({ entry }) => {
-                const perf = entry.performance ?? {};
-                if (perf.cupProgress == null && !perf.cupWinner) return null;
-                return !!perf.cupWinner;
-            }),
-            silverware: currentStreak(sessions, ({ entry }) => {
-                const perf = entry.performance ?? {};
-                const leagueObserved = perf.leaguePosition != null || perf.leagueWinner;
-                const cupRan = perf.cupProgress != null || perf.cupWinner;
-                if (!leagueObserved && !cupRan) return null;
-                return !!(perf.leagueWinner || perf.cupWinner);
-            }),
-            woodenSpoon: currentStreak(sessions, ({ date, entry }) => {
-                const pos = entry.performance?.leaguePosition;
-                const teamCount = teamCounts.get(date);
-                if (pos == null || teamCount == null || teamCount < 2) return null;
-                return pos === teamCount;
-            })
-        };
+        const trophyStreak = championsTrophyStreak(sessions);
+        const woodenSpoonStreak = currentStreak(sessions, ({ date, entry }) => {
+            const pos = entry.performance?.leaguePosition;
+            const teamCount = teamCounts.get(date);
+            if (pos == null || teamCount == null || teamCount < 2) return null;
+            return pos === teamCount;
+        });
 
         // Painted bar split: the games-derived league:cup weight of the player's
         // latest observed session. Presentational only.
@@ -436,7 +407,7 @@ export function buildChampionsMomentum(players, config, now) {
             cup: round4(cupGames / (leagueGames + cupGames))
         };
 
-        board.push(boardEntry(momentum, playerName, components, selectChampionsBadges(streaks)));
+        board.push(boardEntry(momentum, playerName, components, { trophyStreak, woodenSpoonStreak }));
     }
 
     return board.sort((a, b) => b.value - a.value);
@@ -587,7 +558,7 @@ export function buildBallersMomentum(players, config, now) {
             saves: total > 0 ? round4(sums.saves / total) : 0
         };
 
-        board.push(boardEntry(momentum, playerName, components, badges));
+        board.push(boardEntry(momentum, playerName, components, { badges }));
     }
 
     return board.sort((a, b) => b.value - a.value);

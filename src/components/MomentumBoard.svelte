@@ -14,7 +14,6 @@
     import { QuestionCircleOutline, StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import DoubleTrophyIcon from '$components/Icons/DoubleTrophyIcon.svelte';
     import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
     import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
@@ -29,7 +28,9 @@
      * @property {number} sessions
      * @property {boolean} provisional
      * @property {Record<string, number>} components - painted bar shares
-     * @property {Array<{type: string, count: number}>} badges
+     * @property {Array<{type: string, count: number}>} [badges] - ballers: per-award streaks
+     * @property {Array<{league: boolean, cup: boolean}>} [trophyStreak] - champions: per-session run
+     * @property {number} [woodenSpoonStreak] - champions: trailing last-place run
      * @property {Array<{date: string, value: number}>} [series] - per-session momentum trace
      */
 
@@ -40,26 +41,19 @@
 
     let regularsOnly = $state(true);
 
-    // Streak badge icons mirror the boards/Stars of the Day conventions
+    // Render the literal run up to this length, then collapse to "icon ×N".
+    const STREAK_CAP = 6;
+
+    /** @param {number} n */
+    const range = (n) => Array.from({ length: n }, (_, i) => i);
+
+    // Champions trophies, matching the rank progression chart's icon language.
+    const LEAGUE = { icon: CrownIcon, color: 'text-yellow-500', label: 'League win' };
+    const CUP = { icon: TrophyIcon, color: 'text-amber-600', label: 'Cup win' };
+
+    // Ballers award streak icons mirror the Stars of the Day conventions.
     /** @type {Record<string, {icon: import('svelte').Component<any>, color: string, label: string}>} */
     const badgeMeta = {
-        double: {
-            icon: DoubleTrophyIcon,
-            color: 'text-amber-500',
-            label: 'League & cup double streak'
-        },
-        league: { icon: CrownIcon, color: 'text-yellow-600', label: 'League title streak' },
-        cup: { icon: TrophyIcon, color: 'text-amber-600', label: 'Cup win streak' },
-        silverware: {
-            icon: TrophyIcon,
-            color: 'text-slate-400',
-            label: 'Silverware streak (league or cup)'
-        },
-        woodenSpoon: {
-            icon: WoodenSpoonIcon,
-            color: 'text-amber-800',
-            label: 'Wooden spoon streak (league last place)'
-        },
         mvp: { icon: StarSolid, color: 'text-yellow-400', label: 'MVP streak' },
         goldenBoot: { icon: SoccerBootIcon, color: 'text-yellow-400', label: 'Golden Boot streak' },
         playmaker: { icon: BullseyeIcon, color: 'text-yellow-400', label: 'Playmaker streak' },
@@ -133,6 +127,77 @@
     }
 </script>
 
+<!-- A homogeneous streak: literal icons up to STREAK_CAP, then "icon ×N". -->
+{#snippet iconRun(
+    /** @type {import('svelte').Component<any>} */ Icon,
+    /** @type {string} */ colorClass,
+    /** @type {number} */ count,
+    /** @type {string} */ label
+)}
+    {#if count <= STREAK_CAP}
+        <span
+            class="flex w-max items-center gap-0.5 {colorClass}"
+            title="{label}: {count} sessions">
+            {#each range(count) as i (i)}
+                <Icon class="h-3 w-3 shrink-0" />
+            {/each}
+        </span>
+    {:else}
+        <span
+            class="flex w-max items-center gap-1.5 {colorClass}"
+            title="{label}: {count} sessions">
+            <Icon class="h-3 w-3 shrink-0" />
+            <span class="text-[10px] font-bold">×{count}</span>
+        </span>
+    {/if}
+{/snippet}
+
+<!-- Champions silverware run: one column per session, doubles stacked. -->
+{#snippet trophyColumns(/** @type {Array<{league: boolean, cup: boolean}>} */ streak)}
+    <span class="flex w-max items-center gap-0.5">
+        {#each streak as session, i (i)}
+            <span
+                class="flex shrink-0 flex-col items-center gap-0.5"
+                title={session.league && session.cup
+                    ? 'League & cup double'
+                    : session.league
+                      ? 'League win'
+                      : 'Cup win'}>
+                {#if session.league}
+                    <CrownIcon class="h-3 w-3 shrink-0 {LEAGUE.color}" />
+                {/if}
+                {#if session.cup}
+                    <TrophyIcon class="h-3 w-3 shrink-0 {CUP.color}" />
+                {/if}
+            </span>
+        {/each}
+    </span>
+{/snippet}
+
+<!-- Champions fallback for long runs: per-type counts, keeping crown/cup apart. -->
+{#snippet trophySummary(/** @type {Array<{league: boolean, cup: boolean}>} */ streak)}
+    {@const leagueWins = streak.filter((s) => s.league).length}
+    {@const cupWins = streak.filter((s) => s.cup).length}
+    <span class="flex w-max items-center gap-2">
+        {#if leagueWins}
+            <span
+                class="flex items-center gap-1 {LEAGUE.color}"
+                title="League wins: {leagueWins}">
+                <CrownIcon class="h-3 w-3 shrink-0" />
+                <span class="text-[10px] font-bold">×{leagueWins}</span>
+            </span>
+        {/if}
+        {#if cupWins}
+            <span
+                class="flex items-center gap-1 {CUP.color}"
+                title="Cup wins: {cupWins}">
+                <TrophyIcon class="h-3 w-3 shrink-0" />
+                <span class="text-[10px] font-bold">×{cupWins}</span>
+            </span>
+        {/if}
+    </span>
+{/snippet}
+
 {#if entries.length === 0}
     <p class="py-8 text-center text-gray-500">No form data yet.</p>
 {:else}
@@ -169,13 +234,13 @@
         </div>
         <Table
             classes={{ div: 'w-full' }}
-            class="table-fixed dark:text-gray-300">
+            class="w-full dark:text-gray-300">
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
                 <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                     >Player</TableHeadCell>
-                <TableHeadCell class="w-14 px-1 py-1.5 text-center">Streak</TableHeadCell>
-                <TableHeadCell class="w-2/5 px-1 py-1.5 text-center">Form</TableHeadCell>
+                <TableHeadCell class="px-1 py-1.5 text-center">Streak</TableHeadCell>
+                <TableHeadCell class="w-full px-1 py-1.5 text-center">Form</TableHeadCell>
                 <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
             </TableHead>
             <TableBody>
@@ -184,35 +249,49 @@
                         <TableBodyCell class="w-6 px-1 py-1.5 text-center">
                             {index + 1}
                         </TableBodyCell>
-                        <TableBodyCell class="max-w-0 px-1 py-1.5">
-                            <span class="flex min-w-0 items-center gap-1">
-                                <span
-                                    class="cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
-                                    role="button"
-                                    tabindex="0"
-                                    onclick={() => handlePlayerClick(entry.playerName)}
-                                    onkeydown={() => handlePlayerClick(entry.playerName)}>
-                                    {entry.playerName}
-                                </span>
+                        <TableBodyCell class="px-1 py-1.5">
+                            <span
+                                class="block max-w-[7rem] cursor-pointer truncate font-semibold text-gray-900 hover:underline lg:max-w-[12rem] dark:text-gray-100"
+                                role="button"
+                                tabindex="0"
+                                onclick={() => handlePlayerClick(entry.playerName)}
+                                onkeydown={() => handlePlayerClick(entry.playerName)}>
+                                {entry.playerName}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell class="w-14 px-1 py-1.5">
-                            <span class="flex items-center justify-center gap-1">
-                                {#each entry.badges as badge (badge.type)}
-                                    {@const meta = badgeMeta[badge.type]}
-                                    {#if meta}
-                                        {@const BadgeIcon = meta.icon}
-                                        <span
-                                            class="flex shrink-0 items-center {meta.color}"
-                                            title="{meta.label}: {badge.count} sessions">
-                                            <BadgeIcon class="h-4 w-4" />
-                                            <span class="text-[10px] font-bold">{badge.count}</span>
-                                        </span>
+                        <TableBodyCell class="px-1 py-1.5">
+                            {#if variant === 'champions'}
+                                {#if entry.trophyStreak && entry.trophyStreak.length >= 2}
+                                    {#if entry.trophyStreak.length <= STREAK_CAP}
+                                        {@render trophyColumns(entry.trophyStreak)}
+                                    {:else}
+                                        {@render trophySummary(entry.trophyStreak)}
                                     {/if}
-                                {/each}
-                            </span>
+                                {:else if entry.woodenSpoonStreak && entry.woodenSpoonStreak >= 2}
+                                    {@render iconRun(
+                                        WoodenSpoonIcon,
+                                        'text-amber-800',
+                                        entry.woodenSpoonStreak,
+                                        'Wooden spoon streak'
+                                    )}
+                                {/if}
+                            {:else}
+                                <span class="flex flex-col gap-0.5">
+                                    {#each entry.badges ?? [] as badge (badge.type)}
+                                        {@const meta = badgeMeta[badge.type]}
+                                        {#if meta}
+                                            {@render iconRun(
+                                                meta.icon,
+                                                meta.color,
+                                                badge.count,
+                                                meta.label
+                                            )}
+                                        {/if}
+                                    {/each}
+                                </span>
+                            {/if}
                         </TableBodyCell>
-                        <TableBodyCell class="w-2/5 px-1 py-1.5">
+                        <TableBodyCell class="w-full px-1 py-1.5">
                             <MomentumBar
                                 value={entry.value}
                                 segments={segments(entry)} />

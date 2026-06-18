@@ -7,7 +7,7 @@ import {
     contributionAggregate,
     computeMomentum,
     currentStreak,
-    selectChampionsBadges,
+    championsTrophyStreak,
     resolveMomentumConfig,
     buildChampionsMomentum,
     buildBallersMomentum
@@ -372,86 +372,65 @@ describe('currentStreak', () => {
     });
 });
 
-describe('selectChampionsBadges', () => {
-    it('lets the double subsume equal league/cup/silverware streaks', () => {
-        const badges = selectChampionsBadges({
-            double: 2,
-            league: 2,
-            cup: 2,
-            silverware: 2,
-            woodenSpoon: 0
-        });
-        expect(badges).toEqual([{ type: 'double', count: 2 }]);
-    });
+describe('championsTrophyStreak', () => {
+    /** @param {Array} entries */
+    const sessions = (entries) =>
+        Object.entries(history(entries)).map(([date, entry]) => ({ date, entry }));
 
-    it('shows a longer league streak alongside no double', () => {
-        const badges = selectChampionsBadges({
-            double: 1,
-            league: 3,
-            cup: 1,
-            silverware: 3,
-            woodenSpoon: 0
-        });
-        expect(badges).toEqual([{ type: 'league', count: 3 }]);
-    });
-
-    it('shows silverware when trophies alternate (cup, league, cup)', () => {
-        const badges = selectChampionsBadges({
-            double: 0,
-            league: 0,
-            cup: 1,
-            silverware: 3,
-            woodenSpoon: 0
-        });
-        expect(badges).toEqual([{ type: 'silverware', count: 3 }]);
-    });
-
-    it('shows the league streak when a double run continues as league-only', () => {
-        // [double, double, league] -> league 3, double 0 (broken), silverware 3
-        const badges = selectChampionsBadges({
-            double: 0,
-            league: 3,
-            cup: 0,
-            silverware: 3,
-            woodenSpoon: 0
-        });
-        expect(badges).toEqual([{ type: 'league', count: 3 }]);
-    });
-
-    it('shows streaks longer than the active double', () => {
-        const badges = selectChampionsBadges({
-            double: 2,
-            league: 4,
-            cup: 2,
-            silverware: 4,
-            woodenSpoon: 0
-        });
-        expect(badges).toEqual([
-            { type: 'double', count: 2 },
-            { type: 'league', count: 4 }
+    it('captures the actual mixed run, latest last', () => {
+        // Chris: league, league, cup, league
+        const streak = championsTrophyStreak(
+            sessions([
+                champEntry('blue', 1, null, { leagueWinner: true }),
+                champEntry('blue', 1, null, { leagueWinner: true }),
+                champEntry('blue', 2, 'winner', { cupWinner: true }),
+                champEntry('blue', 1, null, { leagueWinner: true })
+            ])
+        );
+        expect(streak).toEqual([
+            { league: true, cup: false },
+            { league: true, cup: false },
+            { league: false, cup: true },
+            { league: true, cup: false }
         ]);
     });
 
-    it('reports the wooden spoon independently', () => {
-        const badges = selectChampionsBadges({
-            double: 0,
-            league: 0,
-            cup: 0,
-            silverware: 0,
-            woodenSpoon: 3
-        });
-        expect(badges).toEqual([{ type: 'woodenSpoon', count: 3 }]);
+    it('flags double-winning sessions on both axes', () => {
+        const streak = championsTrophyStreak(
+            sessions([
+                champEntry('blue', 1, 'winner', { leagueWinner: true, cupWinner: true }),
+                champEntry('blue', 1, 'winner', { leagueWinner: true, cupWinner: true })
+            ])
+        );
+        expect(streak).toEqual([
+            { league: true, cup: true },
+            { league: true, cup: true }
+        ]);
     });
 
-    it('hides single-session streaks', () => {
-        const badges = selectChampionsBadges({
-            double: 1,
-            league: 1,
-            cup: 1,
-            silverware: 1,
-            woodenSpoon: 1
-        });
-        expect(badges).toEqual([]);
+    it('breaks the run on an observed no-win session', () => {
+        const streak = championsTrophyStreak(
+            sessions([
+                champEntry('blue', 1, null, { leagueWinner: true }),
+                champEntry('blue', 3, null),
+                champEntry('blue', 1, null, { leagueWinner: true })
+            ])
+        );
+        expect(streak).toEqual([{ league: true, cup: false }]);
+    });
+
+    it('skips no-competition sessions without breaking the run', () => {
+        const streak = championsTrophyStreak(
+            sessions([
+                champEntry('blue', 1, null, { leagueWinner: true }),
+                champEntry('blue', null, null),
+                champEntry('blue', 1, null, { leagueWinner: true })
+            ])
+        );
+        expect(streak).toEqual([
+            { league: true, cup: false },
+            { league: true, cup: false }
+        ]);
     });
 });
 
@@ -558,7 +537,7 @@ describe('buildChampionsMomentum', () => {
         expect(a.components.cup).toBeCloseTo(0.25, 10);
     });
 
-    it('awards trophy and wooden spoon streak badges with subsumption', () => {
+    it('emits the trophy streak pattern and wooden spoon count', () => {
         const players = {
             A: {
                 // double, double -> Double x2 only
@@ -583,9 +562,15 @@ describe('buildChampionsMomentum', () => {
         };
         const board = buildChampionsMomentum(players, champConfig, '2026-01-10');
         const byName = Object.fromEntries(board.map((p) => [p.playerName, p]));
-        expect(byName.A.badges).toEqual([{ type: 'double', count: 2 }]);
-        expect(byName.B.badges).toEqual([{ type: 'woodenSpoon', count: 2 }]);
-        expect(byName.C.badges).toEqual([]);
+        expect(byName.A.trophyStreak).toEqual([
+            { league: true, cup: true },
+            { league: true, cup: true }
+        ]);
+        expect(byName.A.woodenSpoonStreak).toBe(0);
+        expect(byName.B.trophyStreak).toEqual([]);
+        expect(byName.B.woodenSpoonStreak).toBe(2);
+        expect(byName.C.trophyStreak).toEqual([]);
+        expect(byName.C.woodenSpoonStreak).toBe(0);
     });
 
     it('does not break streaks on missed sessions', () => {
@@ -615,7 +600,10 @@ describe('buildChampionsMomentum', () => {
         };
         const board = buildChampionsMomentum(players, champConfig, '2026-01-31');
         const a = board.find((p) => p.playerName === 'A');
-        expect(a.badges).toContainEqual({ type: 'league', count: 2 });
+        expect(a.trophyStreak).toEqual([
+            { league: true, cup: false },
+            { league: true, cup: false }
+        ]);
     });
 
     it('marks short-history players provisional', () => {
