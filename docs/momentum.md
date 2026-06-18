@@ -96,30 +96,42 @@ enabled in settings. Entries are sorted hottest-first:
 Champions = games-derived league:cup weight of the latest session; Ballers =
 goals/attack/defence/saves shares over the last `minSessions` observed sessions.
 
-## Badges (streaks)
+## Streaks
 
-Strict consecutive streaks, shown at **count ≥ 2**. Break rule: a **below-threshold observed
-session breaks** a streak; a **missed session does not** (consistent with calendar cooling not
+Strict consecutive streaks, shown at **count ≥ 2**, drawn as the **actual icons of the run**
+(no abstract "trophy of any kind" badge). Break rule: a **below-threshold observed session
+breaks** a streak; a **missed session does not** (consistent with calendar cooling not
 punishing absence); a session where the category was untracked is skipped.
 
-**Champions Hall** — four streaks with a subsumption display rule (a badge renders only if
-strictly longer than every more prestigious streak that implies it; double ⊃ league/cup ⊃
-silverware):
+**Champions Hall** — a single trailing "won-something" run, rendered as **one column per
+session** in chronological order. Each column shows the actual trophies won that week; a
+**double** (league **and** cup) stacks crown over trophy. Columns are vertically centred so a
+lone crown/cup never reads as sitting on the "cup row". The **wooden spoon** (league last
+place) is an independent run. The server emits the run verbatim — `championsTrophyStreak()`
+returns `trophyStreak: [{league, cup}, …]`, plus `woodenSpoonStreak: number` (this replaces
+the old collapsed `selectChampionsBadges` / silverware-subsumption model).
 
-| Badge        | Condition per session           | Icon                 |
-| ------------ | ------------------------------- | -------------------- |
-| Double       | league **and** cup winner       | `DoubleTrophyIcon`   |
-| League       | league winner                   | `CrownIcon`          |
-| Cup          | cup winner                      | `TrophyIcon`         |
-| Silverware   | league **or** cup winner        | `TrophyIcon` (slate) |
-| Wooden Spoon | league last place (independent) | `WoodenSpoonIcon`    |
+| Element      | Condition per session           | Icon                          |
+| ------------ | ------------------------------- | ----------------------------- |
+| League win   | league winner                   | `CrownIcon` (yellow-500)      |
+| Cup win      | cup winner                      | `TrophyIcon` (amber-600)      |
+| Double       | league **and** cup winner       | crown stacked over trophy     |
+| Wooden Spoon | league last place (independent) | `WoodenSpoonIcon` (amber-800) |
 
 **Ballers Board** — five categories mirroring Stars of the Day (MVP, Golden Boot, Playmaker,
 Brick Wall, Golden Glove): a streak session = topping that category's per-session value across
-all players. **Ties count as a win for all tied players** (the in-day game-sequence tie-break
-isn't reconstructable from per-session totals — accepted deviation). No cold badge on Ballers
-by design: "lowest contributor" is league-relative and would pin on keepers/defenders, against
-the ADR's own-baseline principle.
+all players. Each active category is an **independent run rendered as its own row** of repeated
+icons (a player can hold several at once — e.g. MVP + Brick Wall). Server emits
+`badges: [{type, count}]` (count ≥ 2). **Ties count as a win for all tied players** (the in-day
+game-sequence tie-break isn't reconstructable from per-session totals — accepted deviation).
+No cold badge on Ballers by design: "lowest contributor" is league-relative and would pin on
+keepers/defenders, against the ADR's own-baseline principle.
+
+**Rendering cap.** Runs draw literal icons up to `STREAK_CAP` (6); beyond that they collapse to
+`icon ×N`. Ballers (homogeneous) collapse to a single icon + count; Champions collapse to a
+**per-type** summary (👑 ×league, 🏆 ×cup) so the trophy distinction survives long runs. The
+Streak column is auto-width (sizes to the widest run present, capped), and the Form column
+absorbs the remaining width.
 
 ## Config (operator-tunable, league-level `info.json → settings.momentum`)
 
@@ -152,26 +164,42 @@ configurable).
 - Both board pages become **two tabs** ("Champions"/"Ballers" | "Form") when momentum data is
   present; otherwise the plain board renders as before. The Form tab disappears for past
   years / `year=all`.
-- `MomentumBoard.svelte` — sorted signed-bar list, tally label ("3 heating up · 2 cooling
-  off", derived from the same continuous values that sort the board so they can't contradict),
-  badges, provisional pill, player links.
+- **Tab state uses shallow routing** (`pushState('', { formTab })` + `page.state`, mirroring
+  the team/player modal pattern) so switching to Form is reflected in browser back/forward.
+  `App.PageState.formTab` is declared in `src/app.d.ts`. Selecting the list tab calls
+  `history.back()`; state isn't URL-encoded, so a reload returns to the default tab.
+- `MomentumBoard.svelte` — sorted signed-bar list rendered as a **transparent, panel-less
+  table** matching the main board tables (the tab panel is `bg-transparent dark:bg-transparent`
+  so the page background shows through; rows keep the default table background). Columns:
+  #, Player, Streak, Form (bar), +/-. Tally label ("3 heating up · 2 cooling off", derived
+  from the same continuous values that sort the board so they can't contradict) and a hot/cold
+  legend sit above.
+- **Audience filtering**: **provisional players (<5 sessions) are always hidden** so "form" is
+  a meaningful signal (this absorbs the old provisional pill). A **"Regular players only"**
+  toggle (default on, mirrors the Rankings active-player filter — ≥2 observed sessions in the
+  last 2 months, computed client-side from the `series` dates) further narrows to recent
+  regulars; the hot/cold tally reflects the filtered set. Note the regulars toggle only changes
+  the view when a non-provisional player has lapsed (5+ sessions but quiet 2 months); on the
+  Ballers board such a player must also clear `minSessions` under the **current stat regime**,
+  so pre-regime players stay provisional there.
 - `MomentumBar.svelte` — centre-zero bar, hot grows right (oranges), cold grows left (blues),
   painted by component shares.
 
 ## Files
 
-| File                                                                                          | Change                                                                      |
-| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `src/lib/server/momentum.js`                                                                  | new — pure computation module                                               |
-| `src/lib/server/rankings.js`                                                                  | additive `stats` block in history entries                                   |
-| `src/lib/shared/defaults.js`                                                                  | momentum defaults + `getEffectiveMomentumSettings` + `LEAGUE_ONLY_SETTINGS` |
-| `src/lib/shared/types.js`                                                                     | `MomentumSettings`/`MomentumBoardConfig` typedefs                           |
-| `src/routes/api/champions/+server.js`, `src/routes/api/ballers-board/+server.js`              | momentum block in GET                                                       |
-| `src/routes/champions/+page.svelte`, `src/routes/ballers-board/+page.svelte`                  | tabs + Form tab                                                             |
-| `src/components/MomentumBoard.svelte`, `src/components/MomentumBar.svelte`                    | new                                                                         |
-| `src/components/Icons/WoodenSpoonIcon.svelte`, `src/components/Icons/DoubleTrophyIcon.svelte` | new                                                                         |
-| `src/routes/settings/components/MomentumSettings.svelte`, `src/routes/settings/+page.svelte`  | settings UI                                                                 |
-| `test/lib/server/momentum.test.js`                                                            | 65 unit/integration tests                                                   |
+| File                                                                                          | Change                                                                                                                                  |
+| --------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/server/momentum.js`                                                                  | pure computation module; `championsTrophyStreak()` + `trophyStreak`/`woodenSpoonStreak` entry fields (replaced `selectChampionsBadges`) |
+| `src/lib/server/rankings.js`                                                                  | additive `stats` block in history entries                                                                                               |
+| `src/lib/shared/defaults.js`                                                                  | momentum defaults + `getEffectiveMomentumSettings` + `LEAGUE_ONLY_SETTINGS`                                                             |
+| `src/lib/shared/types.js`                                                                     | `MomentumSettings`/`MomentumBoardConfig` typedefs                                                                                       |
+| `src/routes/api/champions/+server.js`, `src/routes/api/ballers-board/+server.js`              | momentum block in GET                                                                                                                   |
+| `src/routes/champions/+page.svelte`, `src/routes/ballers-board/+page.svelte`                  | tabs + Form tab + shallow-routing tab state                                                                                             |
+| `src/app.d.ts`                                                                                | `App.PageState.formTab`                                                                                                                 |
+| `src/components/MomentumBoard.svelte`, `src/components/MomentumBar.svelte`                    | panel-less table, regulars toggle, per-session/per-award streak rendering                                                               |
+| `src/components/Icons/WoodenSpoonIcon.svelte`, `src/components/Icons/DoubleTrophyIcon.svelte` | `DoubleTrophyIcon` no longer used (doubles draw crown+trophy stacked)                                                                   |
+| `src/routes/settings/components/MomentumSettings.svelte`, `src/routes/settings/+page.svelte`  | settings UI                                                                                                                             |
+| `test/lib/server/momentum.test.js`                                                            | 65 unit/integration tests                                                                                                               |
 
 ## Tests
 
@@ -180,8 +208,10 @@ bye-exit cases); combine weights (6:2 at N=4, 8:3 at N=5); the **ADR worked come
 (four last-place weeks then 0.875 → momentum > 0.7, top of board) and its inverse (fallen
 champion reads cold); flat champion reads 0; staleness cooling; cold-start damping; MAD
 fallback selection and zero-`k` guard; streak counting incl. missed-session and
-untracked-category skips; badge subsumption (the four discussed scenarios); tie handling;
-painted component shares; legacy entries without `stats`.
+untracked-category skips; `championsTrophyStreak` (mixed runs latest-last, doubles flagged on
+both axes, break-on-no-win, skip no-competition sessions) and the `trophyStreak` /
+`woodenSpoonStreak` board fields; tie handling; painted component shares; legacy entries
+without `stats`.
 
 ## Deferred (revisit after pilot data exists)
 
