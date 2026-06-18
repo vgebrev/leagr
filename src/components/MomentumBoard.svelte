@@ -7,9 +7,11 @@
         TableBodyCell,
         TableBodyRow,
         TableHead,
-        TableHeadCell
+        TableHeadCell,
+        Toggle,
+        Tooltip
     } from 'flowbite-svelte';
-    import { StarSolid } from 'flowbite-svelte-icons';
+    import { QuestionCircleOutline, StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import DoubleTrophyIcon from '$components/Icons/DoubleTrophyIcon.svelte';
@@ -28,12 +30,15 @@
      * @property {boolean} provisional
      * @property {Record<string, number>} components - painted bar shares
      * @property {Array<{type: string, count: number}>} badges
+     * @property {Array<{date: string, value: number}>} [series] - per-session momentum trace
      */
 
     /**
      * @type {{ entries: MomentumEntry[], variant: 'champions'|'ballers' }}
      */
     let { entries = [], variant = 'champions' } = $props();
+
+    let regularsOnly = $state(true);
 
     // Streak badge icons mirror the boards/Stars of the Day conventions
     /** @type {Record<string, {icon: import('svelte').Component<any>, color: string, label: string}>} */
@@ -77,8 +82,28 @@
         ]
     };
 
-    let hotCount = $derived(entries.filter((e) => e.value >= 0.1).length);
-    let coldCount = $derived(entries.filter((e) => e.value <= -0.1).length);
+    /**
+     * A "regular" has at least 2 observed sessions in the last 2 months,
+     * mirroring the Rankings page's active-player filter.
+     * @param {MomentumEntry} entry
+     */
+    function isRegular(entry) {
+        const ref = new Date();
+        const cutoff = new Date(ref.getFullYear(), ref.getMonth() - 2, ref.getDate());
+        const recent = (entry.series ?? []).filter((point) => new Date(point.date) >= cutoff);
+        return recent.length >= 2;
+    }
+
+    // Provisional (<5 sessions) players are always hidden so form is a meaningful
+    // signal; the toggle additionally narrows to recent regulars.
+    let visibleEntries = $derived(
+        entries
+            .filter((entry) => !entry.provisional)
+            .filter((entry) => !regularsOnly || isRegular(entry))
+    );
+
+    let hotCount = $derived(visibleEntries.filter((e) => e.value >= 0.1).length);
+    let coldCount = $derived(visibleEntries.filter((e) => e.value <= -0.1).length);
 
     /** @param {MomentumEntry} entry */
     function segments(entry) {
@@ -111,84 +136,96 @@
 {#if entries.length === 0}
     <p class="py-8 text-center text-gray-500">No form data yet.</p>
 {:else}
-    <div class="mb-2 flex items-center justify-between text-xs text-gray-400">
-        <span>{hotCount} heating up · {coldCount} cooling off</span>
-        <span class="flex items-center gap-2">
-            <span class="flex items-center gap-1">
-                <span class="inline-block h-2 w-2 rounded-full bg-orange-500"></span> hot
-            </span>
-            <span class="flex items-center gap-1">
-                <span class="inline-block h-2 w-2 rounded-full bg-blue-500"></span> cold
-            </span>
-        </span>
+    <div class="mb-2 flex items-center gap-1">
+        <Toggle
+            bind:checked={regularsOnly}
+            class="text-sm">
+            Regular players only
+        </Toggle>
+        <QuestionCircleOutline
+            class="h-4 w-4 cursor-help text-gray-400 hover:text-gray-600"
+            id="form-regulars-help" />
+        <Tooltip
+            triggeredBy="#form-regulars-help"
+            class="text-xs">
+            2+ sessions in the last 2 months
+        </Tooltip>
     </div>
-    <Table
-        classes={{ div: 'w-full' }}
-        class="table-fixed dark:text-gray-300">
-        <TableHead class="dark:text-gray-300">
-            <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
-                >Player</TableHeadCell>
-            <TableHeadCell class="w-14 px-1 py-1.5 text-center">Streak</TableHeadCell>
-            <TableHeadCell class="w-2/5 px-1 py-1.5 text-center">Form</TableHeadCell>
-            <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
-        </TableHead>
-        <TableBody>
-            {#each entries as entry, index (entry.playerName)}
-                <TableBodyRow>
-                    <TableBodyCell class="w-6 px-1 py-1.5 text-center">
-                        {index + 1}
-                    </TableBodyCell>
-                    <TableBodyCell class="max-w-0 px-1 py-1.5">
-                        <span class="flex min-w-0 items-center gap-1">
-                            <span
-                                class="cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
-                                role="button"
-                                tabindex="0"
-                                onclick={() => handlePlayerClick(entry.playerName)}
-                                onkeydown={() => handlePlayerClick(entry.playerName)}>
-                                {entry.playerName}
-                            </span>
-                            {#if entry.provisional}
+    {#if visibleEntries.length === 0}
+        <p class="py-8 text-center text-gray-500">
+            No regular players in form yet — toggle off to see everyone.
+        </p>
+    {:else}
+        <div class="mb-2 flex items-center justify-between text-xs text-gray-400">
+            <span>{hotCount} heating up · {coldCount} cooling off</span>
+            <span class="flex items-center gap-2">
+                <span class="flex items-center gap-1">
+                    <span class="inline-block h-2 w-2 rounded-full bg-orange-500"></span> hot
+                </span>
+                <span class="flex items-center gap-1">
+                    <span class="inline-block h-2 w-2 rounded-full bg-blue-500"></span> cold
+                </span>
+            </span>
+        </div>
+        <Table
+            classes={{ div: 'w-full' }}
+            class="table-fixed dark:text-gray-300">
+            <TableHead class="dark:text-gray-300">
+                <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
+                <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                    >Player</TableHeadCell>
+                <TableHeadCell class="w-14 px-1 py-1.5 text-center">Streak</TableHeadCell>
+                <TableHeadCell class="w-2/5 px-1 py-1.5 text-center">Form</TableHeadCell>
+                <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
+            </TableHead>
+            <TableBody>
+                {#each visibleEntries as entry, index (entry.playerName)}
+                    <TableBodyRow>
+                        <TableBodyCell class="w-6 px-1 py-1.5 text-center">
+                            {index + 1}
+                        </TableBodyCell>
+                        <TableBodyCell class="max-w-0 px-1 py-1.5">
+                            <span class="flex min-w-0 items-center gap-1">
                                 <span
-                                    class="shrink-0 rounded border border-gray-300 px-1 text-[9px] text-gray-400 uppercase dark:border-gray-600"
-                                    title="Provisional: only {entry.sessions} session{entry.sessions ===
-                                    1
-                                        ? ''
-                                        : 's'} played">
-                                    new
+                                    class="cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
+                                    role="button"
+                                    tabindex="0"
+                                    onclick={() => handlePlayerClick(entry.playerName)}
+                                    onkeydown={() => handlePlayerClick(entry.playerName)}>
+                                    {entry.playerName}
                                 </span>
-                            {/if}
-                        </span>
-                    </TableBodyCell>
-                    <TableBodyCell class="w-14 px-1 py-1.5">
-                        <span class="flex items-center justify-center gap-1">
-                            {#each entry.badges as badge (badge.type)}
-                                {@const meta = badgeMeta[badge.type]}
-                                {#if meta}
-                                    {@const BadgeIcon = meta.icon}
-                                    <span
-                                        class="flex shrink-0 items-center {meta.color}"
-                                        title="{meta.label}: {badge.count} sessions">
-                                        <BadgeIcon class="h-4 w-4" />
-                                        <span class="text-[10px] font-bold">{badge.count}</span>
-                                    </span>
-                                {/if}
-                            {/each}
-                        </span>
-                    </TableBodyCell>
-                    <TableBodyCell class="w-2/5 px-1 py-1.5">
-                        <MomentumBar
-                            value={entry.value}
-                            segments={segments(entry)}
-                            provisional={entry.provisional} />
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class="w-10 px-1 py-1.5 text-right font-medium {valueColor(entry.value)}">
-                        {formatValue(entry.value)}
-                    </TableBodyCell>
-                </TableBodyRow>
-            {/each}
-        </TableBody>
-    </Table>
+                            </span>
+                        </TableBodyCell>
+                        <TableBodyCell class="w-14 px-1 py-1.5">
+                            <span class="flex items-center justify-center gap-1">
+                                {#each entry.badges as badge (badge.type)}
+                                    {@const meta = badgeMeta[badge.type]}
+                                    {#if meta}
+                                        {@const BadgeIcon = meta.icon}
+                                        <span
+                                            class="flex shrink-0 items-center {meta.color}"
+                                            title="{meta.label}: {badge.count} sessions">
+                                            <BadgeIcon class="h-4 w-4" />
+                                            <span class="text-[10px] font-bold">{badge.count}</span>
+                                        </span>
+                                    {/if}
+                                {/each}
+                            </span>
+                        </TableBodyCell>
+                        <TableBodyCell class="w-2/5 px-1 py-1.5">
+                            <MomentumBar
+                                value={entry.value}
+                                segments={segments(entry)} />
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class="w-10 px-1 py-1.5 text-right font-medium {valueColor(
+                                entry.value
+                            )}">
+                            {formatValue(entry.value)}
+                        </TableBodyCell>
+                    </TableBodyRow>
+                {/each}
+            </TableBody>
+        </Table>
+    {/if}
 {/if}
