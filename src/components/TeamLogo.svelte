@@ -19,5 +19,5 @@
     <img
         src="/api/teams/logos/{encodeURIComponent(teamName)}?date={date}&size={size}"
         alt="{teamName} logo"
-        class="object-contain {shadow ? 'drop-shadow-[1px_1px_1px_#030712]' : ''}" />
+        class="object-contain {shadow ? 'drop-shadow-[2px_2px_2px_#030712]' : ''}" />
 </div>

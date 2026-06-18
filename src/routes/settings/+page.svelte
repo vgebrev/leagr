@@ -14,6 +14,7 @@
     import CompetitionTimeControls from './components/CompetitionTimeControls.svelte';
     import TeamLimitsSettings from './components/TeamLimitsSettings.svelte';
     import DisciplineSettings from './components/DisciplineSettings.svelte';
+    import MomentumSettings from './components/MomentumSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
     import AvatarApprovalQueue from '$components/avatars/AvatarApprovalQueue.svelte';
     import {
@@ -230,6 +231,9 @@
                     bind:leagueSettings
                     onSave={saveLeagueSettings} />
                 <DisciplineSettings
+                    bind:leagueSettings
+                    onSave={saveLeagueSettings} />
+                <MomentumSettings
                     bind:leagueSettings
                     onSave={saveLeagueSettings} />
             </div>

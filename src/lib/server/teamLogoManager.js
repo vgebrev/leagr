@@ -3,6 +3,7 @@ import fs from 'fs/promises';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 import { generateTeamLogo, pickBadgeShapes } from './openaiImageClient.js';
+import { removeCornerBackground } from './imageProcessor.js';
 import { logger } from './logger.js';
 import { env } from '$env/dynamic/private';
 
@@ -47,6 +48,10 @@ export class TeamLogoManager {
 
     getLogosDir() {
         return path.join(this.getDataPath(), 'logos');
+    }
+
+    getOpenAIOutputDir() {
+        return path.join(this.getLogosDir(), 'openai-output');
     }
 
     /**
@@ -159,6 +164,19 @@ export class TeamLogoManager {
     }
 
     /**
+     * Save the raw OpenAI-generated image for archival (no mutex needed — no metadata update).
+     * @param {string} date
+     * @param {string} teamName
+     * @param {Buffer} buffer
+     */
+    async saveRawLogo(date, teamName, buffer) {
+        const dir = this.getOpenAIOutputDir();
+        await fs.mkdir(dir, { recursive: true });
+        const safeKey = this.getLogoKey(date, teamName).replace(/[^a-z0-9_-]/gi, '_');
+        await fs.writeFile(path.join(dir, `${safeKey}.webp`), buffer);
+    }
+
+    /**
      * Generate logos for all teams in a draw that don't already have one.
      * Assigns a distinct random badge shape to each team.
      * Errors per team are logged and swallowed so a single failure doesn't
@@ -182,8 +200,15 @@ export class TeamLogoManager {
                         logger.info('[teamLogos] Skipping, logo already exists', { teamName });
                         return;
                     }
-                    const buffer = await generateTeamLogo(teamName, shapes[i], env.OPENAI_API_KEY);
-                    const filename = await this.saveLogo(date, teamName, buffer);
+                    const rawBuffer = await generateTeamLogo(
+                        teamName,
+                        shapes[i],
+                        env.OPENAI_API_KEY,
+                        env.OPENAI_MODEL
+                    );
+                    await this.saveRawLogo(date, teamName, rawBuffer);
+                    const processedBuffer = await removeCornerBackground(rawBuffer);
+                    const filename = await this.saveLogo(date, teamName, processedBuffer);
                     logger.info('[teamLogos] Saved logo', { teamName, filename });
                 } catch (err) {
                     logger.error(`[teamLogos] Failed to generate logo for "${teamName}"`, {

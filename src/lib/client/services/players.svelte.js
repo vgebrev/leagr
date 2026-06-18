@@ -120,6 +120,33 @@ class PlayersService {
     }
 
     /**
+     * Clear a player's active discipline records (admin only).
+     * Reloads the watchlist afterwards.
+     * @param {string} playerName - Player to clear
+     * @returns {Promise<boolean>} - True if cleared successfully
+     */
+    async clearSuspension(playerName) {
+        if (!this.currentDate) return false;
+
+        return await withLoading(
+            async () => {
+                await api.remove('discipline', this.currentDate, { player: playerName });
+                await this.loadSuspensions();
+                setNotification(`Cleared discipline records for ${playerName}.`, 'success');
+                return true;
+            },
+            (error) => {
+                console.error('Error clearing suspension:', error);
+                setNotification(
+                    error.message || 'Failed to clear discipline records. Please try again.',
+                    'error'
+                );
+                return false;
+            }
+        );
+    }
+
+    /**
      * Load ranked player names (for autocomplete)
      */
     async loadRankedPlayerNames() {

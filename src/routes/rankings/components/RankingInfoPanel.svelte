@@ -7,7 +7,7 @@
     const pointsInfo = [
         'Attendance: 1pt for showing up',
         'Match Results: 3pts for a win, 1pt for a draw, 0 for a loss',
-        'Team Bonus: 0-6pts based on final team position and number of teams',
+        'Team Bonus: 2pts for each team you finish above (e.g. 6pts for 1st in a 4-team session)',
         'Knockout Bonus: 4pts for each knockout match won'
     ];
 
@@ -20,16 +20,18 @@
     ];
 
     const eloInfo = [
-        'Each player is given an ELO rating, which is used for seeding and balancing teams.',
-        'New players start with an ELO of 1000.',
-        'Rating updates: After each game, player ratings change based on:',
-        '- Expected score (0-1) based on average ELO of each team.',
-        '- Actual score: 1 for a win, 0.5 for a draw, 0 for a loss.',
-        '- K-factor: 10 for league games, 7 for cup games.',
-        '- Rating Change: K-factor * (Actual Score - Expected Score).',
-        'Weekly Decay: 2% decay towards baseline (1000) each week of inactivity.',
-        'Example: If your team (avg 1050) beats opponent team (avg 950) in league:',
-        '- Expected: 0.76, Actual: 1.0, Change: +2.4 points per player'
+        'Each player is given an ELO rating, used for seeding and balancing teams.',
+        'New players start with a rating of 1000. ELO carries over year-to-year.',
+        'After each game, ratings change based on:',
+        '- Expected score (based on average ELO of each team vs opponent)',
+        '- Actual score: 1 for a win, 0.5 for a draw, 0 for a loss',
+        '- K-factor: 24 for league games, 15 for cup games',
+        '- Win margin bonus: 1.0× for a 1-goal win, up to 1.3× for 4+ goal victories',
+        '- Rating change = K × margin × (actual − expected) per player',
+        '- Penalty shootout: winner scores 0.65, loser 0.35 (not treated as a plain draw)',
+        'Weekly Decay: 2% towards baseline (1000) per week of inactivity.',
+        'Example: Team avg 1050 beats team avg 950 in a league game by 1 goal:',
+        '- Expected: 0.64, Actual: 1.0, Change: +8.6 pts per player'
     ];
 </script>
 

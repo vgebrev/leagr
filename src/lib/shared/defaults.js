@@ -24,7 +24,8 @@ export const LEAGUE_ONLY_SETTINGS = [
     'seedTeams',
     'teamDrawRequiresAdmin',
     'discipline',
-    'teamLogos'
+    'teamLogos',
+    'momentum'
 ];
 
 /**
@@ -59,6 +60,25 @@ export const defaultSettings = {
     },
     teamLogos: {
         enabled: false
+    },
+    momentum: {
+        enabled: true,
+        // Half-lives in weeks; coolHalfLifeWeeks decays the signal on calendar time
+        // between a player's last session and now. minSessions damps cold-start swings.
+        ballers: {
+            fastHalfLifeWeeks: 2,
+            slowHalfLifeWeeks: 10,
+            coolHalfLifeWeeks: 2,
+            minSessions: 5
+        },
+        // Champions uses a slower fast EMA: placement reflects the team draw, so a
+        // single lucky draw shouldn't spike a player to max heat.
+        champions: {
+            fastHalfLifeWeeks: 3,
+            slowHalfLifeWeeks: 10,
+            coolHalfLifeWeeks: 3,
+            minSessions: 5
+        }
     }
 };
 
@@ -78,6 +98,25 @@ export function getEffectiveLeagueSettings(leagueInfo) {
     return {
         ...defaultSettings,
         ...leagueInfo.settings
+    };
+}
+
+/**
+ * Get effective momentum settings by deep-merging league overrides over defaults
+ * (the top-level settings merge is shallow, so a partial momentum object would
+ * otherwise lose nested defaults).
+ * @param {Partial<LeagueSettings>|null|undefined} leagueSettings - Effective league settings
+ * @returns {import('./types.js').MomentumSettings}
+ */
+export function getEffectiveMomentumSettings(leagueSettings) {
+    const defaults = /** @type {import('./types.js').MomentumSettings} */ (
+        defaultSettings.momentum
+    );
+    const overrides = leagueSettings?.momentum;
+    return {
+        enabled: overrides?.enabled ?? defaults.enabled,
+        ballers: { ...defaults.ballers, ...overrides?.ballers },
+        champions: { ...defaults.champions, ...overrides?.champions }
     };
 }
 

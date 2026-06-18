@@ -8,7 +8,7 @@
  * Outputs a PNG to /tmp/test-logo.png
  */
 
-import { generateTeamLogo, pickBadgeShapes } from './src/lib/server/openaiImageClient.js';
+import { generateTeamLogo, pickBadgeShapes } from '$lib/server/openaiImageClient.js';
 import fs from 'fs/promises';
 
 const teamName = process.argv[2] || 'blue wolves';
@@ -16,7 +16,6 @@ const [shape] = pickBadgeShapes(1);
 
 console.log(`Generating logo for: "${teamName}"`);
 console.log(`Badge shape: ${shape}`);
-console.log('Calling OpenAI...');
 
 const apiKey = process.env.OPENAI_API_KEY;
 if (!apiKey) {
@@ -24,8 +23,12 @@ if (!apiKey) {
     process.exit(1);
 }
 
+const model = process.env.OPENAI_MODEL;
+console.log(`Model: ${model}`);
+console.log('Calling OpenAI...');
+
 try {
-    const buffer = await generateTeamLogo(teamName, shape, apiKey);
+    const buffer = await generateTeamLogo(teamName, shape, apiKey, model);
     const outPath = '/tmp/test-logo.png';
     await fs.writeFile(outPath, buffer);
     console.log(`Done. Saved to ${outPath} (${buffer.length} bytes)`);

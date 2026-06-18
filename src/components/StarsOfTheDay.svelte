@@ -335,7 +335,7 @@
                 {#if hasLeagueGames}
                     <Toggle
                         size="small"
-                        class="text-xs font-normal"
+                        class="text-sm font-normal"
                         bind:checked={includeLeague}>
                         League
                     </Toggle>
@@ -343,7 +343,7 @@
                 {#if hasKnockoutGames}
                     <Toggle
                         size="small"
-                        class="text-xs font-normal"
+                        class="text-sm font-normal"
                         bind:checked={includeCup}>
                         Cup
                     </Toggle>

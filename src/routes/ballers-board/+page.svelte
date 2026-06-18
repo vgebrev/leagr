@@ -10,18 +10,21 @@
         TableBodyCell,
         TableBodyRow,
         TableHead,
-        TableHeadCell
+        TableHeadCell,
+        TabItem,
+        Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid, StarSolid } from 'flowbite-svelte-icons';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
+    import MomentumBoard from '$components/MomentumBoard.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { page } from '$app/state';
-    import { goto } from '$app/navigation';
+    import { goto, pushState } from '$app/navigation';
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
@@ -29,6 +32,8 @@
 
     /** @type {Array<{playerName: string, appearances: number, saves: number, defence: number, attack: number, goals: number, total: number}>} */
     let ballers = $state([]);
+    /** @type {Array<any>|null} */
+    let momentum = $state(null);
     let error = $state(false);
     let yearDropdownOpen = $state(false);
 
@@ -74,6 +79,7 @@
             async () => {
                 const response = await api.get(`ballers-board?year=${selectedYear}`);
                 ballers = response.ballers || [];
+                momentum = response.momentum || null;
             },
             (err) => {
                 console.error('Error loading ballers board:', err);
@@ -114,6 +120,25 @@
             loadBallers();
         }
     });
+
+    // Tab selection lives in history state (shallow routing), so switching to
+    // the Form tab is reflected in browser back/forward, like the modals.
+    let ballersTabOpen = $state(true);
+    let formTabOpen = $state(false);
+
+    $effect(() => {
+        const isForm = !!page.state.formTab;
+        ballersTabOpen = !isForm;
+        formTabOpen = isForm;
+    });
+
+    function selectFormTab() {
+        if (!page.state.formTab) pushState('', { formTab: true });
+    }
+
+    function selectBallersTab() {
+        if (page.state.formTab) history.back();
+    }
 
     $effect(() => {
         titleParts.set(['Ballers Board']);
@@ -171,92 +196,119 @@
         <ExclamationCircleSolid />
         <span>Failed to load ballers board. Please try again.</span>
     </Alert>
-{:else if sorted.length === 0}
-    <div class="py-8 text-center">
-        <StarSolid class="mx-auto mb-4 h-16 w-16 text-gray-300" />
-        <p class="text-gray-500">No individual stats recorded yet.</p>
-    </div>
+{:else if momentum?.length}
+    <Tabs
+        tabStyle="underline"
+        contentClass="p-0 m-0 bg-transparent dark:bg-transparent">
+        <TabItem
+            bind:open={ballersTabOpen}
+            onclick={selectBallersTab}
+            classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
+            title="Ballers">
+            {@render ballersList()}
+        </TabItem>
+        <TabItem
+            bind:open={formTabOpen}
+            onclick={selectFormTab}
+            classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
+            title="Form">
+            <MomentumBoard
+                entries={momentum}
+                variant="ballers" />
+        </TabItem>
+    </Tabs>
 {:else}
-    {@const cols = [
-        { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-14 2xl:w-20' },
-        { key: 'saves', label: 'Saves', width: 'w-10 lg:w-14 2xl:w-20' },
-        { key: 'defence', label: 'DEF', width: 'w-10 lg:w-14 2xl:w-20' },
-        { key: 'attack', label: 'ATT', width: 'w-10 lg:w-14 2xl:w-20' },
-        { key: 'goals', label: 'Goals', width: 'w-12 lg:w-14 2xl:w-20' },
-        { key: 'total', label: 'Total', width: 'w-12 lg:w-14 2xl:w-20' }
-    ]}
-    <Table
-        classes={{ div: 'w-full overflow-hidden text-xs' }}
-        class="w-full table-fixed dark:text-gray-300"
-        shadow>
-        <TableHead class="dark:text-gray-300">
-            <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-            <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-white"
-                >Player</TableHeadCell>
-            {#each cols as col (col.key)}
-                <TableHeadCell
-                    class={`${col.width} cursor-pointer px-1 py-1.5 text-center select-none ${
-                        col.key === 'total' || sortCol === col.key
-                            ? 'font-bold dark:text-white'
-                            : 'font-medium text-gray-500 dark:text-gray-300'
-                    }`}
-                    onclick={() => handleSort(col.key)}>
-                    {col.label}
-                </TableHeadCell>
-            {/each}
-        </TableHead>
-        <TableBody>
-            {#each sorted as baller, index (baller.playerName)}
-                <TableBodyRow>
-                    <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                    <TableBodyCell
-                        class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-white">
-                        <span class="flex min-w-0 items-center gap-1">
-                            <span
-                                class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap hover:underline"
-                                role="button"
-                                tabindex="0"
-                                onclick={() => handlePlayerClick(baller.playerName)}
-                                onkeydown={() => handlePlayerClick(baller.playerName)}>
-                                {baller.playerName}</span>
-                            {#if leaders.total === baller.playerName}<StarSolid
-                                    class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                            {#if leaders.goals === baller.playerName}<LeagueIcon
-                                    class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                            {#if leaders.attack === baller.playerName}<BullseyeIcon
-                                    class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                            {#if leaders.defence === baller.playerName}<ShieldIcon
-                                    class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                            {#if leaders.saves === baller.playerName}<GloveIcon
-                                    class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                        </span>
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'appearances' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                        {baller.appearances}
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'saves' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                        {baller.saves}
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'defence' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                        {baller.defence}
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'attack' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                        {baller.attack}
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                        {baller.goals}
-                    </TableBodyCell>
-                    <TableBodyCell
-                        class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
-                        {baller.total}
-                    </TableBodyCell>
-                </TableBodyRow>
-            {/each}
-        </TableBody>
-    </Table>
+    {@render ballersList()}
 {/if}
+
+{#snippet ballersList()}
+    {#if sorted.length === 0}
+        <div class="py-8 text-center">
+            <StarSolid class="mx-auto mb-4 h-16 w-16 text-gray-300" />
+            <p class="text-gray-500">No individual stats recorded yet.</p>
+        </div>
+    {:else}
+        {@const cols = [
+            { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-14 2xl:w-20' },
+            { key: 'saves', label: 'Saves', width: 'w-10 lg:w-14 2xl:w-20' },
+            { key: 'defence', label: 'DEF', width: 'w-10 lg:w-14 2xl:w-20' },
+            { key: 'attack', label: 'ATT', width: 'w-10 lg:w-14 2xl:w-20' },
+            { key: 'goals', label: 'Goals', width: 'w-12 lg:w-14 2xl:w-20' },
+            { key: 'total', label: 'Total', width: 'w-12 lg:w-14 2xl:w-20' }
+        ]}
+        <Table
+            classes={{ div: 'w-full overflow-hidden text-xs' }}
+            class="w-full table-fixed dark:text-gray-300"
+            shadow>
+            <TableHead class="dark:text-gray-300">
+                <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
+                <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-white"
+                    >Player</TableHeadCell>
+                {#each cols as col (col.key)}
+                    <TableHeadCell
+                        class={`${col.width} cursor-pointer px-1 py-1.5 text-center select-none ${
+                            col.key === 'total' || sortCol === col.key
+                                ? 'font-bold dark:text-white'
+                                : 'font-medium text-gray-500 dark:text-gray-300'
+                        }`}
+                        onclick={() => handleSort(col.key)}>
+                        {col.label}
+                    </TableHeadCell>
+                {/each}
+            </TableHead>
+            <TableBody>
+                {#each sorted as baller, index (baller.playerName)}
+                    <TableBodyRow>
+                        <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
+                        <TableBodyCell
+                            class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-white">
+                            <span class="flex min-w-0 items-center gap-1">
+                                <span
+                                    class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap hover:underline"
+                                    role="button"
+                                    tabindex="0"
+                                    onclick={() => handlePlayerClick(baller.playerName)}
+                                    onkeydown={() => handlePlayerClick(baller.playerName)}>
+                                    {baller.playerName}</span>
+                                {#if leaders.total === baller.playerName}<StarSolid
+                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                                {#if leaders.goals === baller.playerName}<LeagueIcon
+                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                                {#if leaders.attack === baller.playerName}<BullseyeIcon
+                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                                {#if leaders.defence === baller.playerName}<ShieldIcon
+                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                                {#if leaders.saves === baller.playerName}<GloveIcon
+                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                            </span>
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class={`px-1 py-1.5 text-center ${sortCol === 'appearances' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                            {baller.appearances}
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class={`px-1 py-1.5 text-center ${sortCol === 'saves' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                            {baller.saves}
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class={`px-1 py-1.5 text-center ${sortCol === 'defence' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                            {baller.defence}
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class={`px-1 py-1.5 text-center ${sortCol === 'attack' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                            {baller.attack}
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                            {baller.goals}
+                        </TableBodyCell>
+                        <TableBodyCell
+                            class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
+                            {baller.total}
+                        </TableBodyCell>
+                    </TableBodyRow>
+                {/each}
+            </TableBody>
+        </Table>
+    {/if}
+{/snippet}

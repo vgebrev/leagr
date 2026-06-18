@@ -26,7 +26,11 @@ export const BADGE_SHAPES = [
  * @returns {string[]}
  */
 export function pickBadgeShapes(count) {
-    const shuffled = [...BADGE_SHAPES].sort(() => Math.random() - 0.5);
+    const shuffled = [...BADGE_SHAPES];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
     return shuffled.slice(0, count);
 }
 
@@ -36,9 +40,10 @@ export function pickBadgeShapes(count) {
  * @param {string} teamName - Full team name, e.g. "blue wolves"
  * @param {string} badgeShape - One of BADGE_SHAPES, e.g. "shield crest"
  * @param {string} apiKey - OpenAI API key
+ * @param {string} [model] - OpenAI image model (defaults to 'gpt-image-1.5')
  * @returns {Promise<Buffer>} PNG image buffer at 1024×1024
  */
-export async function generateTeamLogo(teamName, badgeShape, apiKey) {
+export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gpt-image-1.5') {
     if (!apiKey) {
         throw new Error('OpenAI API key is required');
     }
@@ -61,18 +66,18 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey) {
         `team name: ${noun};` +
         `${primary} and ${secondary} colour scheme;` +
         `modern esports style.` +
-        `the badge must be fully solid with no transparent areas inside the badge;` +
-        `only the area outside the badge shape should be transparent.`;
+        `badge fill: fully opaque solid colour (every pixel inside the ${badgeShape} boundary must be 100% opaque inside the badge);` +
+        `the area outside the badge should be a solid magenta color (#FD3DB5).`;
 
     logger.info('[teamLogos] Calling OpenAI', { teamName, badgeShape, primary, secondary });
 
     const response = await client.images.generate({
-        model: 'gpt-image-1.5',
+        model,
         prompt,
         n: 1,
         size: '1024x1024',
         quality: 'auto',
-        background: 'transparent',
+        background: 'opaque',
         output_format: 'webp'
     });
 

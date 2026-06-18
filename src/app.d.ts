@@ -15,6 +15,7 @@ declare global {
         interface PageState {
             teamModal?: { teamName: string };
             playerModal?: { playerName: string };
+            formTab?: boolean;
         }
         // interface Platform {}
     }
