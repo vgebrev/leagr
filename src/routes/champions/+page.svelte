@@ -23,7 +23,7 @@
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { page } from '$app/state';
-    import { goto } from '$app/navigation';
+    import { goto, pushState } from '$app/navigation';
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
@@ -95,6 +95,25 @@
         goto(resolve(`/rankings/${playerName}`));
     }
 
+    // Tab selection lives in history state (shallow routing), so switching to
+    // the Form tab is reflected in browser back/forward, like the modals.
+    let championsTabOpen = $state(true);
+    let formTabOpen = $state(false);
+
+    $effect(() => {
+        const isForm = !!page.state.formTab;
+        championsTabOpen = !isForm;
+        formTabOpen = isForm;
+    });
+
+    function selectFormTab() {
+        if (!page.state.formTab) pushState('', { formTab: true });
+    }
+
+    function selectChampionsTab() {
+        if (page.state.formTab) history.back();
+    }
+
     $effect(() => {
         titleParts.set(['Champions']);
         return () => titleParts.set([]);
@@ -156,12 +175,15 @@
         tabStyle="underline"
         contentClass="p-0 m-0 bg-transparent dark:bg-transparent">
         <TabItem
-            open
+            bind:open={championsTabOpen}
+            onclick={selectChampionsTab}
             classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
             title="Champions">
             {@render championsList()}
         </TabItem>
         <TabItem
+            bind:open={formTabOpen}
+            onclick={selectFormTab}
             classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
             title="Form">
             <MomentumBoard

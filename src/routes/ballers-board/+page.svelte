@@ -24,7 +24,7 @@
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { page } from '$app/state';
-    import { goto } from '$app/navigation';
+    import { goto, pushState } from '$app/navigation';
     import { getYearOptions } from '$lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
@@ -121,6 +121,25 @@
         }
     });
 
+    // Tab selection lives in history state (shallow routing), so switching to
+    // the Form tab is reflected in browser back/forward, like the modals.
+    let ballersTabOpen = $state(true);
+    let formTabOpen = $state(false);
+
+    $effect(() => {
+        const isForm = !!page.state.formTab;
+        ballersTabOpen = !isForm;
+        formTabOpen = isForm;
+    });
+
+    function selectFormTab() {
+        if (!page.state.formTab) pushState('', { formTab: true });
+    }
+
+    function selectBallersTab() {
+        if (page.state.formTab) history.back();
+    }
+
     $effect(() => {
         titleParts.set(['Ballers Board']);
         return () => titleParts.set([]);
@@ -182,12 +201,15 @@
         tabStyle="underline"
         contentClass="p-0 m-0 bg-transparent dark:bg-transparent">
         <TabItem
-            open
+            bind:open={ballersTabOpen}
+            onclick={selectBallersTab}
             classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
             title="Ballers">
             {@render ballersList()}
         </TabItem>
         <TabItem
+            bind:open={formTabOpen}
+            onclick={selectFormTab}
             classes={{ button: 'px-2 py-1.5 sm:px-3 sm:py-2' }}
             title="Form">
             <MomentumBoard
