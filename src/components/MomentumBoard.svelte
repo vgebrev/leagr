@@ -11,7 +11,7 @@
         Toggle,
         Tooltip
     } from 'flowbite-svelte';
-    import { QuestionCircleOutline, StarSolid } from 'flowbite-svelte-icons';
+    import { FireSolid, QuestionCircleOutline, StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
@@ -19,7 +19,7 @@
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import MomentumBar from '$components/MomentumBar.svelte';
+    import SnowflakeIcon from '$components/Icons/SnowflakeIcon.svelte';
 
     /**
      * @typedef {Object} MomentumEntry
@@ -27,7 +27,6 @@
      * @property {number} value - signed momentum, -1 (cold) to 1 (hot)
      * @property {number} sessions
      * @property {boolean} provisional
-     * @property {Record<string, number>} components - painted bar shares
      * @property {Array<{type: string, count: number}>} [badges] - ballers: per-award streaks
      * @property {Array<{league: boolean, cup: boolean}>} [trophyStreak] - champions: per-session run
      * @property {number} [woodenSpoonStreak] - champions: trailing last-place run
@@ -61,20 +60,10 @@
         goldenGlove: { icon: GloveIcon, color: 'text-yellow-400', label: 'Golden Glove streak' }
     };
 
-    // Painted bar sections per variant: hot and cold shades per component.
-    // Presentational only - the momentum value is computed server-side.
-    const segmentMeta = {
-        champions: [
-            { key: 'league', hot: 'bg-orange-500', cold: 'bg-blue-500', label: 'League' },
-            { key: 'cup', hot: 'bg-amber-400', cold: 'bg-sky-400', label: 'Cup' }
-        ],
-        ballers: [
-            { key: 'goals', hot: 'bg-orange-600', cold: 'bg-blue-600', label: 'Goals' },
-            { key: 'attack', hot: 'bg-orange-500', cold: 'bg-blue-500', label: 'Attack' },
-            { key: 'defence', hot: 'bg-orange-400', cold: 'bg-blue-400', label: 'Defence' },
-            { key: 'saves', hot: 'bg-orange-300', cold: 'bg-blue-300', label: 'Saves' }
-        ]
-    };
+    // Form is shown as a row of flames (hot) or snowflakes (cold), one icon per
+    // 20th percentile of magnitude (so 1-5 icons). Purely presentational - the
+    // momentum value is computed server-side.
+    const FORM_ICON_STEPS = 5;
 
     /**
      * A "regular" has at least 2 observed sessions in the last 2 months,
@@ -99,19 +88,18 @@
     let hotCount = $derived(visibleEntries.filter((e) => e.value >= 0.1).length);
     let coldCount = $derived(visibleEntries.filter((e) => e.value <= -0.1).length);
 
-    /** @param {MomentumEntry} entry */
-    function segments(entry) {
-        return segmentMeta[variant]
-            .map((meta) => ({
-                share: entry.components?.[meta.key] ?? 0,
-                colorClass: entry.value < 0 ? meta.cold : meta.hot
-            }))
-            .filter((segment) => segment.share > 0);
+    /**
+     * Number of flame/snowflake icons for a momentum magnitude: one per 20th
+     * percentile, so |value| 0.1-1.0 maps to 1-5 icons.
+     * @param {number} value
+     */
+    function iconCount(value) {
+        return Math.min(Math.ceil(Math.abs(value) * FORM_ICON_STEPS), FORM_ICON_STEPS);
     }
 
     /** @param {number} value */
     function formatValue(value) {
-        return (value > 0 ? '+' : '') + value.toFixed(2);
+        return `${Math.round(value * 100)}%`;
     }
 
     /** @param {number} value */
@@ -127,6 +115,24 @@
     }
 </script>
 
+<!-- Form as flames (hot) or snowflakes (cold); one lit icon per 20th percentile,
+     the rest ghosted. Neutral (|value| < 0.1) is fully ghosted, direction-coded. -->
+{#snippet formIcons(/** @type {number} */ value)}
+    {@const ghost = 'text-gray-300 dark:text-gray-600'}
+    {@const hot = value >= 0}
+    {@const lit = Math.abs(value) >= 0.1 ? iconCount(value) : 0}
+    {@const Icon = hot ? FireSolid : SnowflakeIcon}
+    {@const litColor = hot ? 'text-orange-500' : 'text-blue-500'}
+    {@const mood = lit === 0 ? 'Steady' : hot ? 'Heating up' : 'Cooling off'}
+    <span
+        class="flex items-center gap-0.5"
+        title="{mood} ({formatValue(value)})">
+        {#each range(FORM_ICON_STEPS) as i (i)}
+            <Icon class="h-4 w-4 shrink-0 {i < lit ? litColor : ghost}" />
+        {/each}
+    </span>
+{/snippet}
+
 <!-- A homogeneous streak: literal icons up to STREAK_CAP, then "icon ×N". -->
 {#snippet iconRun(
     /** @type {import('svelte').Component<any>} */ Icon,
@@ -136,17 +142,17 @@
 )}
     {#if count <= STREAK_CAP}
         <span
-            class="flex w-max items-center gap-0.5 {colorClass}"
+            class="flex w-max items-center gap-1 {colorClass}"
             title="{label}: {count} sessions">
             {#each range(count) as i (i)}
-                <Icon class="h-3 w-3 shrink-0" />
+                <Icon class="h-4 w-4 shrink-0" />
             {/each}
         </span>
     {:else}
         <span
             class="flex w-max items-center gap-1.5 {colorClass}"
             title="{label}: {count} sessions">
-            <Icon class="h-3 w-3 shrink-0" />
+            <Icon class="h-4 w-4 shrink-0" />
             <span class="text-[10px] font-bold">×{count}</span>
         </span>
     {/if}
@@ -154,7 +160,7 @@
 
 <!-- Champions silverware run: one column per session, doubles stacked. -->
 {#snippet trophyColumns(/** @type {Array<{league: boolean, cup: boolean}>} */ streak)}
-    <span class="flex w-max items-center gap-0.5">
+    <span class="flex w-max items-center gap-1">
         {#each streak as session, i (i)}
             <span
                 class="flex shrink-0 flex-col items-center gap-0.5"
@@ -164,10 +170,10 @@
                       ? 'League win'
                       : 'Cup win'}>
                 {#if session.league}
-                    <CrownIcon class="h-3 w-3 shrink-0 {LEAGUE.color}" />
+                    <CrownIcon class="h-4 w-4 shrink-0 {LEAGUE.color}" />
                 {/if}
                 {#if session.cup}
-                    <TrophyIcon class="h-3 w-3 shrink-0 {CUP.color}" />
+                    <TrophyIcon class="h-4 w-4 shrink-0 {CUP.color}" />
                 {/if}
             </span>
         {/each}
@@ -183,7 +189,7 @@
             <span
                 class="flex items-center gap-1 {LEAGUE.color}"
                 title="League wins: {leagueWins}">
-                <CrownIcon class="h-3 w-3 shrink-0" />
+                <CrownIcon class="h-4 w-4 shrink-0" />
                 <span class="text-[10px] font-bold">×{leagueWins}</span>
             </span>
         {/if}
@@ -191,7 +197,7 @@
             <span
                 class="flex items-center gap-1 {CUP.color}"
                 title="Cup wins: {cupWins}">
-                <TrophyIcon class="h-3 w-3 shrink-0" />
+                <TrophyIcon class="h-4 w-4 shrink-0" />
                 <span class="text-[10px] font-bold">×{cupWins}</span>
             </span>
         {/if}
@@ -237,11 +243,11 @@
             class="w-full dark:text-gray-300">
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-                <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                <TableHeadCell class="w-1/3 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                     >Player</TableHeadCell>
-                <TableHeadCell class="px-1 py-1.5 text-center">Streak</TableHeadCell>
-                <TableHeadCell class="w-full px-1 py-1.5 text-center">Form</TableHeadCell>
-                <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
+                <TableHeadCell class="w-1/3 px-1 py-1.5 text-left">Streak</TableHeadCell>
+                <TableHeadCell class="w-1/3 px-1 py-1.5 text-left">Form</TableHeadCell>
+                <TableHeadCell class="w-10 px-1 py-1.5 text-right">%</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#each visibleEntries as entry, index (entry.playerName)}
@@ -249,9 +255,9 @@
                         <TableBodyCell class="w-6 px-1 py-1.5 text-center">
                             {index + 1}
                         </TableBodyCell>
-                        <TableBodyCell class="px-1 py-1.5">
+                        <TableBodyCell class="w-1/3 px-1 py-1.5">
                             <span
-                                class="block max-w-[7rem] cursor-pointer truncate font-semibold text-gray-900 hover:underline lg:max-w-[12rem] dark:text-gray-100"
+                                class="block w-full cursor-pointer truncate font-semibold text-gray-900 hover:underline dark:text-gray-100"
                                 role="button"
                                 tabindex="0"
                                 onclick={() => handlePlayerClick(entry.playerName)}
@@ -259,7 +265,7 @@
                                 {entry.playerName}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell class="px-1 py-1.5">
+                        <TableBodyCell class="w-1/3 px-1 py-1.5">
                             {#if variant === 'champions'}
                                 {#if entry.trophyStreak && entry.trophyStreak.length >= 2}
                                     {#if entry.trophyStreak.length <= STREAK_CAP}
@@ -291,10 +297,8 @@
                                 </span>
                             {/if}
                         </TableBodyCell>
-                        <TableBodyCell class="w-full px-1 py-1.5">
-                            <MomentumBar
-                                value={entry.value}
-                                segments={segments(entry)} />
+                        <TableBodyCell class="w-1/3 px-1 py-1.5">
+                            {@render formIcons(entry.value)}
                         </TableBodyCell>
                         <TableBodyCell
                             class="w-10 px-1 py-1.5 text-right font-medium {valueColor(
