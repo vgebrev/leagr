@@ -116,7 +116,7 @@ The application includes rudimentary security features to prevent abuse:
 
 The application includes comprehensive automated testing:
 
-- **1000+ tests** covering backend logic and frontend components
+- **800+ tests** covering backend logic and frontend components
 - **Backend tests** use Node environment (unit and integration tests)
 - **Frontend tests** use jsdom environment (component and store tests)
 - **Automated test execution** runs before every deployment
@@ -145,7 +145,8 @@ docker run -d \
   -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
   -e SESSION_SECRET="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
   -e APP_URL="https://your-production-url.com" \
-  -e MAILGUN_SENDING_KEY="your-mailgun-sending-key" \
+  -e PLAYER_OWNER_SALT="a-long-random-secret" \
+  -e MAILGUN_API_KEY="your-mailgun-api-key" \
   -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
   -e BODY_SIZE_LIMIT=6291456 \
   -e LOG_LEVEL="info" \
@@ -160,7 +161,8 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 - `ALLOWED_ORIGIN`: Comma-separated allowed origins (required for CORS protection)
 - `SESSION_SECRET`: Secret used to sign session cookies (required for API authentication)
 - `APP_URL`: The base URL of your application (used for generating links in emails)
-- `MAILGUN_SENDING_KEY`: Mailgun API key for sending emails
+- `PLAYER_OWNER_SALT`: Secret salt for HMAC-based player-ownership hashing (optional but recommended; falls back to `APP_URL`, then an insecure default)
+- `MAILGUN_API_KEY`: Mailgun API key for sending emails
 - `MAILGUN_DOMAIN`: Mailgun domain for sending emails
 - `BODY_SIZE_LIMIT`: Maximum request body size in bytes (default: 524288 / 512KB). Set to 6291456 (6MB) for avatar uploads
 - `LOGS_DIR`: Directory path for application logs (default: /app/logs). Mount as volume for persistent logs
