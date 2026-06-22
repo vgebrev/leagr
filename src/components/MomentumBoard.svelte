@@ -176,7 +176,7 @@
               : 'Cooling off'
           : 'Consistent'}
     <span
-        class="flex items-center justify-end gap-0.5 whitespace-nowrap {color} {strong
+        class="flex items-center justify-start gap-0.5 whitespace-nowrap {color} {strong
             ? 'font-bold'
             : ''}"
         title="{label} ({formatSwing(swing)} on last session)">
@@ -305,7 +305,7 @@
                     >Player</TableHeadCell>
                 <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Streak</TableHeadCell>
                 <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Form</TableHeadCell>
-                <TableHeadCell class="w-1/4 px-1 py-1.5 text-right">Trend</TableHeadCell>
+                <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Trend</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#each visibleEntries as entry, index (entry.playerName)}
