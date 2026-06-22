@@ -145,10 +145,10 @@
     {@const litColor = hot ? 'text-orange-500' : 'text-blue-500'}
     {@const mood = lit === 0 ? 'Neutral' : hot ? 'Hot form' : 'Cold form'}
     <span
-        class="flex items-center gap-0.5"
+        class="flex items-center gap-px sm:gap-0.5"
         title="{mood} ({Math.round(value * 100)}%)">
         {#each range(FORM_ICON_STEPS) as i (i)}
-            <Icon class="h-4 w-4 shrink-0 {i < lit ? litColor : ghost}" />
+            <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {i < lit ? litColor : ghost}" />
         {/each}
     </span>
 {/snippet}
@@ -162,10 +162,10 @@
     {@const down = swing <= -SWING_DEADBAND}
     {@const strong = Math.abs(swing) >= SWING_STRONG}
     {@const color = up
-        ? 'text-green-600 dark:text-green-500'
+        ? 'ext-green-500'
         : down
-          ? 'text-red-600 dark:text-red-500'
-          : 'text-gray-400 dark:text-gray-500'}
+          ? 'text-red-500'
+          : 'text-gray-500'}
     {@const label = up
         ? strong
             ? 'Surging'
@@ -176,18 +176,16 @@
               : 'Cooling off'
           : 'Consistent'}
     <span
-        class="flex items-center justify-start gap-0.5 whitespace-nowrap {color} {strong
-            ? 'font-bold'
-            : ''}"
+        class="flex items-center justify-start gap-0.5 whitespace-nowrap {color}"
         title="{label} ({formatSwing(swing)} on last session)">
         {#if up}
-            <AngleUpOutline class="h-4 w-4 shrink-0" />
+            <AngleUpOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
         {:else if down}
-            <AngleDownOutline class="h-4 w-4 shrink-0" />
+            <AngleDownOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
         {:else}
-            <MinusOutline class="h-4 w-4 shrink-0" />
+            <MinusOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
         {/if}
-        <span class="text-sm">{label}</span>
+        <sub class="text-xs">{label}</sub>
     </span>
 {/snippet}
 
@@ -200,17 +198,17 @@
 )}
     {#if count <= STREAK_CAP}
         <span
-            class="flex w-max items-center gap-1 {colorClass}"
+            class="flex w-max items-center gap-0.5 sm:gap-1 {colorClass}"
             title="{label}: {count} sessions">
             {#each range(count) as i (i)}
-                <Icon class="h-4 w-4 shrink-0" />
+                <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             {/each}
         </span>
     {:else}
         <span
             class="flex w-max items-center gap-1.5 {colorClass}"
             title="{label}: {count} sessions">
-            <Icon class="h-4 w-4 shrink-0" />
+            <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             <span class="text-[10px] font-bold">×{count}</span>
         </span>
     {/if}
@@ -218,7 +216,7 @@
 
 <!-- Champions silverware run: one column per session, doubles stacked. -->
 {#snippet trophyColumns(/** @type {Array<{league: boolean, cup: boolean}>} */ streak)}
-    <span class="flex w-max items-center gap-1">
+    <span class="flex w-max items-center gap-0.5 sm:gap-1">
         {#each streak as session, i (i)}
             <span
                 class="flex shrink-0 flex-col items-center gap-0.5"
@@ -228,10 +226,10 @@
                       ? 'League win'
                       : 'Cup win'}>
                 {#if session.league}
-                    <CrownIcon class="h-4 w-4 shrink-0 {LEAGUE.color}" />
+                    <CrownIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {LEAGUE.color}" />
                 {/if}
                 {#if session.cup}
-                    <TrophyIcon class="h-4 w-4 shrink-0 {CUP.color}" />
+                    <TrophyIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {CUP.color}" />
                 {/if}
             </span>
         {/each}
@@ -247,7 +245,7 @@
             <span
                 class="flex items-center gap-1 {LEAGUE.color}"
                 title="League wins: {leagueWins}">
-                <CrownIcon class="h-4 w-4 shrink-0" />
+                <CrownIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
                 <span class="text-[10px] font-bold">×{leagueWins}</span>
             </span>
         {/if}
@@ -255,7 +253,7 @@
             <span
                 class="flex items-center gap-1 {CUP.color}"
                 title="Cup wins: {cupWins}">
-                <TrophyIcon class="h-4 w-4 shrink-0" />
+                <TrophyIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
                 <span class="text-[10px] font-bold">×{cupWins}</span>
             </span>
         {/if}
@@ -301,11 +299,11 @@
             class="w-full dark:text-gray-300">
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-                <TableHeadCell class="w-1/4 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                <TableHeadCell class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                     >Player</TableHeadCell>
-                <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Streak</TableHeadCell>
-                <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Form</TableHeadCell>
-                <TableHeadCell class="w-1/4 px-1 py-1.5 text-left">Trend</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Streak</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Form</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Trend</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#each visibleEntries as entry, index (entry.playerName)}
@@ -313,9 +311,9 @@
                         <TableBodyCell class="w-6 px-1 py-1.5 text-center">
                             {index + 1}
                         </TableBodyCell>
-                        <TableBodyCell class="w-1/4 px-1 py-1.5">
+                        <TableBodyCell class="max-w-0 px-1 py-1.5">
                             <span
-                                class="block w-full cursor-pointer truncate font-semibold text-gray-900 hover:underline dark:text-gray-100"
+                                class="block min-w-0 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-900 hover:underline dark:text-gray-100"
                                 role="button"
                                 tabindex="0"
                                 onclick={() => handlePlayerClick(entry.playerName)}
@@ -323,7 +321,7 @@
                                 {entry.playerName}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell class="w-1/4 px-1 py-1.5">
+                        <TableBodyCell class="w-px px-1 py-1.5">
                             {#if variant === 'champions'}
                                 {#if entry.trophyStreak && entry.trophyStreak.length >= 2}
                                     {#if entry.trophyStreak.length <= STREAK_CAP}
@@ -355,10 +353,10 @@
                                 </span>
                             {/if}
                         </TableBodyCell>
-                        <TableBodyCell class="w-1/4 px-1 py-1.5">
+                        <TableBodyCell class="w-px px-1 py-1.5">
                             {@render formIcons(entry.value)}
                         </TableBodyCell>
-                        <TableBodyCell class="w-1/4 px-1 py-1.5">
+                        <TableBodyCell class="w-px px-1 py-1.5">
                             {@render deltaTrend(swingOf(entry))}
                         </TableBodyCell>
                     </TableBodyRow>
