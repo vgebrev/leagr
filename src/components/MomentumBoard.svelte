@@ -162,7 +162,7 @@
     {@const down = swing <= -SWING_DEADBAND}
     {@const strong = Math.abs(swing) >= SWING_STRONG}
     {@const color = up
-        ? 'ext-green-500'
+        ? 'text-green-500'
         : down
           ? 'text-red-500'
           : 'text-gray-500'}
