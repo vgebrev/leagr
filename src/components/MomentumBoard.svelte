@@ -161,11 +161,7 @@
     {@const up = swing >= SWING_DEADBAND}
     {@const down = swing <= -SWING_DEADBAND}
     {@const strong = Math.abs(swing) >= SWING_STRONG}
-    {@const color = up
-        ? 'text-green-500'
-        : down
-          ? 'text-red-500'
-          : 'text-gray-500'}
+    {@const color = up ? 'text-green-500' : down ? 'text-red-500' : 'text-gray-500'}
     {@const label = up
         ? strong
             ? 'Surging'
@@ -299,7 +295,8 @@
             class="w-full dark:text-gray-300">
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-                <TableHeadCell class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                <TableHeadCell
+                    class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                     >Player</TableHeadCell>
                 <TableHeadCell class="w-px px-1 py-1.5 text-left">Streak</TableHeadCell>
                 <TableHeadCell class="w-px px-1 py-1.5 text-left">Form</TableHeadCell>
@@ -313,7 +310,7 @@
                         </TableBodyCell>
                         <TableBodyCell class="max-w-0 px-1 py-1.5">
                             <span
-                                class="block min-w-0 cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap font-semibold text-gray-900 hover:underline dark:text-gray-100"
+                                class="block min-w-0 cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
                                 role="button"
                                 tabindex="0"
                                 onclick={() => handlePlayerClick(entry.playerName)}
