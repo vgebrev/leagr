@@ -454,6 +454,85 @@ describe('PlayerManager', () => {
             );
         });
     });
+
+    describe('assignManyToTeams', () => {
+        beforeEach(() => {
+            playerManager.setDate('2025-01-25').setLeague('test-league');
+        });
+
+        it('assigns multiple players to teams atomically in one save', async () => {
+            const mockGameData = {
+                players: {
+                    available: ['A1', 'A2', 'New1', 'New2'],
+                    waitingList: []
+                },
+                teams: {
+                    Blue: ['A1', null],
+                    White: ['A2', null]
+                },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 7 } }
+            };
+
+            vi.spyOn(playerManager, 'getData').mockResolvedValue(mockGameData);
+            mockData.setMany.mockResolvedValue({});
+
+            const result = await playerManager.assignManyToTeams([
+                { playerName: 'New1', teamName: 'Blue' },
+                { playerName: 'New2', teamName: 'White' }
+            ]);
+
+            // Both players filled the empty slots
+            expect(result.teams).toEqual({
+                Blue: ['A1', 'New1'],
+                White: ['A2', 'New2']
+            });
+
+            // Single atomic save for the whole batch
+            expect(mockData.setMany).toHaveBeenCalledTimes(1);
+        });
+
+        it('promotes waiting-list players when assigning them to a team', async () => {
+            const mockGameData = {
+                players: {
+                    available: ['A1', 'A2'],
+                    waitingList: ['Wait1']
+                },
+                teams: {
+                    Blue: ['A1', null],
+                    White: ['A2']
+                },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 7 } }
+            };
+
+            vi.spyOn(playerManager, 'getData').mockResolvedValue(mockGameData);
+            mockData.setMany.mockResolvedValue({});
+
+            const result = await playerManager.assignManyToTeams([
+                { playerName: 'Wait1', teamName: 'Blue' }
+            ]);
+
+            expect(result.teams.Blue).toEqual(['A1', 'Wait1']);
+            expect(result.players.available).toContain('Wait1');
+            expect(result.players.waitingList).not.toContain('Wait1');
+        });
+
+        it('rejects the whole batch if any assignment is invalid', async () => {
+            const mockGameData = {
+                players: { available: ['A1'], waitingList: [] },
+                teams: { Blue: ['A1', null] },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 7 } }
+            };
+
+            vi.spyOn(playerManager, 'getData').mockResolvedValue(mockGameData);
+            mockData.setMany.mockResolvedValue({});
+
+            await expect(
+                playerManager.assignManyToTeams([{ playerName: 'Ghost', teamName: 'Blue' }])
+            ).rejects.toThrow(PlayerError);
+
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+    });
 });
 
 describe('PlayerError', () => {

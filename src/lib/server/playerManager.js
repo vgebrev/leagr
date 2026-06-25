@@ -1229,6 +1229,21 @@ export class PlayerManager {
     }
 
     /**
+     * Assign multiple players to teams atomically in a single transaction.
+     * Each assignment is applied in order; the whole batch succeeds or fails together.
+     * @param {Array<{ playerName: string, teamName: string }>} assignments
+     */
+    async assignManyToTeams(assignments) {
+        return await this.executeTransaction((state) => {
+            let newState = state;
+            for (const { playerName, teamName } of assignments) {
+                newState = newState.movePlayerToTeam(playerName, teamName);
+            }
+            return newState;
+        });
+    }
+
+    /**
      * Validate and clean up inconsistencies between players and teams
      */
     async validateAndCleanup() {

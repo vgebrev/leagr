@@ -8,6 +8,8 @@
         canModifyList,
         onremove,
         onassign,
+        onAutoAssign,
+        onAutoAssignToTeam,
         onrename,
         onPlayerClick,
         onTeamClick,
@@ -27,6 +29,8 @@
             color={teamName.split(' ')[0].toLowerCase()}
             {canModifyList}
             {onassign}
+            {onAutoAssign}
+            {onAutoAssignToTeam}
             {onremove}
             {onrename}
             {onPlayerClick}
@@ -45,6 +49,8 @@
                     {canModifyList}
                     allTeams={teams}
                     {onassign}
+                    {onAutoAssign}
+                    {onAutoAssignToTeam}
                     {onremove}
                     {onrename}
                     {onPlayerClick}
@@ -59,6 +65,8 @@
                     {canModifyList}
                     allTeams={teams}
                     {onassign}
+                    {onAutoAssign}
+                    {onAutoAssignToTeam}
                     {onremove}
                     {onrename}
                     {onPlayerClick}
