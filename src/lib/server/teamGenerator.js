@@ -210,6 +210,58 @@ class TeamGenerator {
     }
 
     /**
+     * Filter to established players (35+ ELO games) and sort them by ELO descending,
+     * with ranking-point and points tie-breaks. Mirrors the primary seeding sort.
+     * @param {string[]} players - Candidate player names
+     * @returns {string[]} Established players sorted strongest-first
+     */
+    sortEstablishedPlayers(players) {
+        const established = players.filter((name) => {
+            // Try current year first, fall back to previous year for carry-over
+            let playerData = this.rankings?.players?.[name];
+            if (!playerData && this.previousYearRankings?.players?.[name]) {
+                playerData = this.previousYearRankings.players[name];
+            }
+            const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
+            return gamesPlayed >= GAMES_THRESHOLD;
+        });
+
+        return [...established].sort((a, b) => {
+            // Try current year first, fall back to previous year for carry-over
+            let playerA = this.rankings?.players?.[a];
+            if (!playerA && this.previousYearRankings?.players?.[a]) {
+                playerA = this.previousYearRankings.players[a];
+            }
+            let playerB = this.rankings?.players?.[b];
+            if (!playerB && this.previousYearRankings?.players?.[b]) {
+                playerB = this.previousYearRankings.players[b];
+            }
+
+            const eloA = playerA?.elo?.rating ?? DEFAULT_ELO;
+            const eloB = playerB?.elo?.rating ?? DEFAULT_ELO;
+            if (eloA !== eloB) return eloB - eloA;
+
+            const rankingA = playerA?.rankingPoints ?? 0;
+            const rankingB = playerB?.rankingPoints ?? 0;
+            if (rankingA !== rankingB) return rankingB - rankingA;
+
+            return (playerB?.points || 0) - (playerA?.points || 0);
+        });
+    }
+
+    /**
+     * Compute provisional anchors from a player pool and store them on the instance
+     * so the balance-scoring methods can use consistent provisional ratings.
+     * @param {string[]} players - Player pool to derive anchors from
+     * @returns {{elo: number, attack: number, control: number}} Anchor values
+     */
+    prepareAnchors(players) {
+        const anchors = this.calculateProvisionalAnchors(this.sortEstablishedPlayers(players));
+        this._provisionalAnchors = anchors;
+        return anchors;
+    }
+
+    /**
      * Get player data with provisional ratings calculated
      * @param {string} playerName - Player name
      * @param {{elo: number, attack: number, control: number}} anchors - Anchor values for provisional calc
@@ -1109,46 +1161,9 @@ class TeamGenerator {
         const numTeams = teamSizes.length;
         const teamNames = await this.generateTeamNames(numTeams);
 
-        // STEP 1: First pass - sort ONLY established players (35+ games) by actual ELO
-        // to determine pot structure and calculate anchor values
-        const establishedPlayers = this.players.filter((name) => {
-            // Try current year first, fall back to previous year for carry-over
-            let playerData = this.rankings?.players?.[name];
-            if (!playerData && this.previousYearRankings?.players?.[name]) {
-                playerData = this.previousYearRankings.players[name];
-            }
-            const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
-            return gamesPlayed >= GAMES_THRESHOLD;
-        });
-
-        const sortedEstablished = [...establishedPlayers].sort((a, b) => {
-            // Try current year first, fall back to previous year for carry-over
-            let playerA = this.rankings?.players?.[a];
-            if (!playerA && this.previousYearRankings?.players?.[a]) {
-                playerA = this.previousYearRankings.players[a];
-            }
-            let playerB = this.rankings?.players?.[b];
-            if (!playerB && this.previousYearRankings?.players?.[b]) {
-                playerB = this.previousYearRankings.players[b];
-            }
-
-            const eloA = playerA?.elo?.rating ?? DEFAULT_ELO;
-            const eloB = playerB?.elo?.rating ?? DEFAULT_ELO;
-
-            if (eloA !== eloB) return eloB - eloA;
-
-            const rankingA = playerA?.rankingPoints ?? 0;
-            const rankingB = playerB?.rankingPoints ?? 0;
-            if (rankingA !== rankingB) return rankingB - rankingA;
-
-            return (playerB?.points || 0) - (playerA?.points || 0);
-        });
-
-        // Calculate anchor values from established players' weakest pot
-        const anchors = this.calculateProvisionalAnchors(sortedEstablished);
-
-        // Store anchors for use by balance calculation methods
-        this._provisionalAnchors = anchors;
+        // STEP 1: First pass - establish pot structure from trusted players and
+        // calculate (and store) anchor values for provisional rating calculations.
+        const anchors = this.prepareAnchors(this.players);
 
         // STEP 2: Build provisional player data for all players
         const playerDataMap = new Map();
@@ -1405,6 +1420,198 @@ class TeamGenerator {
                     (topBlocked ? ` | most-blocked: ${topBlocked}` : '')
             );
         }
+    }
+
+    /**
+     * Build a null-stripped roster map (team name -> array of player names) from a
+     * teams object that may contain null/empty slots.
+     * @param {TeamsMap} teams - Teams object, possibly with null slots
+     * @returns {Record<string, string[]>} Roster map without empty slots
+     */
+    stripEmptySlots(teams) {
+        /** @type {Record<string, string[]>} */
+        const rosters = {};
+        for (const [teamName, players] of Object.entries(teams)) {
+            rosters[teamName] = (players || []).filter((p) => p !== null && p !== undefined);
+        }
+        return rosters;
+    }
+
+    /**
+     * Compute the pool ELO range and hard ELO delta limit for a set of players,
+     * using provisional ratings. Mirrors the adaptive limit used during seeded draws.
+     * Requires `_provisionalAnchors` to be set (call prepareAnchors first).
+     * @param {string[]} players - Player names in the pool
+     * @returns {{ eloRange: number, hardEloDeltaLimit: number }}
+     */
+    poolEloMetrics(players) {
+        const anchors = this._provisionalAnchors || {
+            elo: DEFAULT_ELO,
+            attack: DEFAULT_RATING,
+            control: DEFAULT_RATING
+        };
+        const elos = players.map((name) => this.getProvisionalPlayerData(name, anchors).elo);
+        const eloRange = elos.length > 0 ? Math.max(...elos) - Math.min(...elos) : 0;
+        const hardEloDeltaLimit = Math.max(60, Math.floor(eloRange * 0.15));
+        return { eloRange, hardEloDeltaLimit };
+    }
+
+    /**
+     * Resolve scoring range inputs, computing them from the pool when not supplied.
+     * @param {string[]} poolPlayers - Players involved in the scoring decision
+     * @param {number | null | undefined} eloRange
+     * @param {number | null | undefined} hardEloDeltaLimit
+     * @returns {{ eloRange: number, hardEloDeltaLimit: number }}
+     */
+    resolveScoringRange(poolPlayers, eloRange, hardEloDeltaLimit) {
+        if (eloRange != null && hardEloDeltaLimit != null) {
+            return { eloRange, hardEloDeltaLimit };
+        }
+        const metrics = this.poolEloMetrics(poolPlayers);
+        return {
+            eloRange: eloRange ?? metrics.eloRange,
+            hardEloDeltaLimit: hardEloDeltaLimit ?? metrics.hardEloDeltaLimit
+        };
+    }
+
+    /**
+     * Find the best team to place a single player into, keeping teams balanced.
+     *
+     * Equal team sizes take precedence over absolute balance: only teams with the
+     * fewest current players (and still below max capacity) are considered, then the
+     * one yielding the best normalized balance score is chosen (ELO delta breaks ties).
+     *
+     * Requires rankings/teammate history setters and prepareAnchors() to have been called.
+     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {string} playerName - Player to place
+     * @param {{ maxPlayersPerTeam?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null }} [options]
+     * @returns {string | null} Best team name, or null if no team has space
+     */
+    findBestTeamForPlayer(teams, playerName, options = {}) {
+        const { maxPlayersPerTeam = 7, eloRange = null, hardEloDeltaLimit = null } = options;
+        const rosters = this.stripEmptySlots(teams);
+        const teamNames = Object.keys(rosters);
+        if (teamNames.length === 0) return null;
+
+        // Only teams below max capacity are eligible
+        const eligible = teamNames.filter((t) => rosters[t].length < maxPlayersPerTeam);
+        if (eligible.length === 0) return null;
+
+        // Equal-sizing first: restrict to the smallest eligible teams
+        const minCount = Math.min(...eligible.map((t) => rosters[t].length));
+        const candidates = eligible.filter((t) => rosters[t].length === minCount);
+        if (candidates.length === 1) return candidates[0];
+
+        const pool = [...Object.values(rosters).flat(), playerName];
+        const range = this.resolveScoringRange(pool, eloRange, hardEloDeltaLimit);
+
+        let bestTeam = null;
+        let bestScore = Infinity;
+        let bestEloDelta = Infinity;
+        for (const teamName of candidates) {
+            const test = structuredClone(rosters);
+            test[teamName] = [...test[teamName], playerName];
+            const metrics = this.calculateNormalizedScore(
+                test,
+                range.eloRange,
+                range.hardEloDeltaLimit
+            );
+            if (
+                metrics.totalNorm < bestScore ||
+                (metrics.totalNorm === bestScore && metrics.eloDelta < bestEloDelta)
+            ) {
+                bestScore = metrics.totalNorm;
+                bestEloDelta = metrics.eloDelta;
+                bestTeam = teamName;
+            }
+        }
+        return bestTeam;
+    }
+
+    /**
+     * Find the best candidate player to fill a specific team, keeping teams balanced.
+     * Simulates adding each candidate to the given team and returns the one yielding
+     * the best normalized balance score (ELO delta breaks ties).
+     *
+     * Requires rankings/teammate history setters and prepareAnchors() to have been called.
+     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {string} teamName - Team to fill
+     * @param {string[]} candidates - Candidate player names
+     * @param {{ eloRange?: number | null, hardEloDeltaLimit?: number | null }} [options]
+     * @returns {string | null} Best candidate player name, or null if none
+     */
+    findBestPlayerForTeam(teams, teamName, candidates, options = {}) {
+        const { eloRange = null, hardEloDeltaLimit = null } = options;
+        const rosters = this.stripEmptySlots(teams);
+        if (!rosters[teamName] || !candidates || candidates.length === 0) return null;
+        if (candidates.length === 1) return candidates[0];
+
+        const pool = [...Object.values(rosters).flat(), ...candidates];
+        const range = this.resolveScoringRange(pool, eloRange, hardEloDeltaLimit);
+
+        let bestPlayer = null;
+        let bestScore = Infinity;
+        let bestEloDelta = Infinity;
+        for (const candidate of candidates) {
+            const test = structuredClone(rosters);
+            test[teamName] = [...test[teamName], candidate];
+            const metrics = this.calculateNormalizedScore(
+                test,
+                range.eloRange,
+                range.hardEloDeltaLimit
+            );
+            if (
+                metrics.totalNorm < bestScore ||
+                (metrics.totalNorm === bestScore && metrics.eloDelta < bestEloDelta)
+            ) {
+                bestScore = metrics.totalNorm;
+                bestEloDelta = metrics.eloDelta;
+                bestPlayer = candidate;
+            }
+        }
+        return bestPlayer;
+    }
+
+    /**
+     * Build a balance-aware plan for assigning many candidates across the teams.
+     * Greedily places each candidate (in the supplied order) into the smallest,
+     * best-balanced team, stopping at the player cap or when all teams are full.
+     *
+     * Requires rankings/teammate history setters and prepareAnchors() to have been called.
+     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {string[]} orderedCandidates - Candidate players in priority order
+     * @param {{ maxPlayersPerTeam?: number, playerLimit?: number, assignedCount?: number | null }} [options]
+     * @returns {Array<{ player: string, team: string }>} Ordered assignment plan
+     */
+    planAutoAssignAll(teams, orderedCandidates, options = {}) {
+        const { maxPlayersPerTeam = 7, playerLimit = Infinity, assignedCount = null } = options;
+        const working = this.stripEmptySlots(teams);
+        let assigned =
+            assignedCount ?? Object.values(working).reduce((sum, r) => sum + r.length, 0);
+
+        // Compute scoring range once from the full involved pool for consistency
+        const pool = [...Object.values(working).flat(), ...orderedCandidates];
+        const range = this.resolveScoringRange(pool, null, null);
+
+        /** @type {Array<{ player: string, team: string }>} */
+        const plan = [];
+        for (const player of orderedCandidates) {
+            if (assigned >= playerLimit) break;
+            const hasRoom = Object.values(working).some((r) => r.length < maxPlayersPerTeam);
+            if (!hasRoom) break;
+
+            const team = this.findBestTeamForPlayer(working, player, {
+                maxPlayersPerTeam,
+                eloRange: range.eloRange,
+                hardEloDeltaLimit: range.hardEloDeltaLimit
+            });
+            if (!team) break;
+
+            working[team] = [...working[team], player];
+            plan.push({ player, team });
+            assigned++;
+        }
+        return plan;
     }
 
     /**

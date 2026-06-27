@@ -2,9 +2,12 @@
     import { onMount } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { Toggle } from 'flowbite-svelte';
+    import { Button, Toggle } from 'flowbite-svelte';
+    import { UsersGroupOutline } from 'flowbite-svelte-icons';
     import { teamsService } from '$lib/client/services/teams.svelte.js';
     import { playersService } from '$lib/client/services/players.svelte.js';
+    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '$lib/client/services/auth.js';
     import PlayerSummary from './components/PlayerSummary.svelte';
     import TeamGeneration from './components/TeamGeneration.svelte';
     import TeamsGrid from './components/TeamsGrid.svelte';
@@ -72,6 +75,20 @@
     );
     let canModifyList = $derived(playersService.canModifyList);
 
+    const leagueId = $derived(getLeagueId());
+    const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
+
+    // Candidates available for bulk auto-assign (unassigned + waiting list)
+    let hasAssignableCandidates = $derived(
+        (unassignedPlayers?.length || 0) + (waitingList?.length || 0) > 0
+    );
+    let canAutoAssignAll = $derived(
+        isAdmin &&
+            !teamsService.isCompetitionEnded &&
+            Object.keys(teams).length > 0 &&
+            hasAssignableCandidates
+    );
+
     // Get summary data
     let playerSummary = $derived(teamsService.playerSummary);
 
@@ -121,6 +138,16 @@
                 size="small">
                 Show ELO
             </Toggle>
+            {#if canAutoAssignAll}
+                <Button
+                    size="xs"
+                    color="alternative"
+                    class="ms-auto"
+                    onclick={() => teamsService.autoAssignAll()}>
+                    <UsersGroupOutline class="me-2 h-4 w-4" />
+                    Auto-Assign All
+                </Button>
+            {/if}
         </div>
     {/if}
 
@@ -133,6 +160,8 @@
         {date}
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)}
+        onAutoAssign={teamsService.autoAssignPlayer.bind(teamsService)}
+        onAutoAssignToTeam={teamsService.autoAssignToTeam.bind(teamsService)}
         onrename={handleRename}
         onPlayerClick={handlePlayerClick}
         onTeamClick={handleTeamClick} />

@@ -92,7 +92,7 @@
             {/if}
         </div>
     </TableBodyCell>
-    <TableBodyCell class="text-bold flex max-w-24 overflow-hidden px-1 py-1.5 font-bold">
+    <TableBodyCell class="text-bold flex max-w-32 overflow-hidden px-1 py-1.5 font-bold">
         <span
             class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
             role="button"

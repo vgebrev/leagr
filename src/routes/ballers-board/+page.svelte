@@ -229,24 +229,32 @@
         </div>
     {:else}
         {@const cols = [
-            { key: 'appearances', label: 'Apps', width: 'w-10 lg:w-14 2xl:w-20' },
-            { key: 'saves', label: 'Saves', width: 'w-10 lg:w-14 2xl:w-20' },
-            { key: 'defence', label: 'DEF', width: 'w-10 lg:w-14 2xl:w-20' },
-            { key: 'attack', label: 'ATT', width: 'w-10 lg:w-14 2xl:w-20' },
-            { key: 'goals', label: 'Goals', width: 'w-12 lg:w-14 2xl:w-20' },
-            { key: 'total', label: 'Total', width: 'w-12 lg:w-14 2xl:w-20' }
+            { key: 'appearances', label: 'Apps', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+            { key: 'saves', label: 'Saves', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+            { key: 'defence', label: 'DEF', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+            { key: 'attack', label: 'ATT', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+            { key: 'goals', label: 'Goals', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' },
+            { key: 'total', label: 'Total', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' }
         ]}
+        {@const statIcons = {
+            saves: GloveIcon,
+            defence: ShieldIcon,
+            attack: BullseyeIcon,
+            goals: LeagueIcon,
+            total: StarSolid
+        }}
         <Table
             classes={{ div: 'w-full overflow-hidden text-xs' }}
-            class="w-full table-fixed dark:text-gray-300"
+            class="w-full table-auto sm:table-fixed dark:text-gray-300"
             shadow>
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-                <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-white"
+                <TableHeadCell
+                    class="w-full max-w-0 overflow-hidden px-0 py-1.5 font-bold text-ellipsis text-gray-900 dark:text-white"
                     >Player</TableHeadCell>
                 {#each cols as col (col.key)}
                     <TableHeadCell
-                        class={`${col.width} cursor-pointer px-1 py-1.5 text-center select-none ${
+                        class={`${col.width} cursor-pointer px-1 py-1.5 text-right select-none ${
                             col.key === 'total' || sortCol === col.key
                                 ? 'font-bold dark:text-white'
                                 : 'font-medium text-gray-500 dark:text-gray-300'
@@ -260,52 +268,29 @@
                 {#each sorted as baller, index (baller.playerName)}
                     <TableBodyRow>
                         <TableBodyCell class="px-1 py-1.5 text-center">{index + 1}</TableBodyCell>
-                        <TableBodyCell
-                            class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-white">
-                            <span class="flex min-w-0 items-center gap-1">
-                                <span
-                                    class="cursor-pointer overflow-hidden text-ellipsis whitespace-nowrap hover:underline"
-                                    role="button"
-                                    tabindex="0"
-                                    onclick={() => handlePlayerClick(baller.playerName)}
-                                    onkeydown={() => handlePlayerClick(baller.playerName)}>
-                                    {baller.playerName}</span>
-                                {#if leaders.total === baller.playerName}<StarSolid
-                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                                {#if leaders.goals === baller.playerName}<LeagueIcon
-                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                                {#if leaders.attack === baller.playerName}<BullseyeIcon
-                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                                {#if leaders.defence === baller.playerName}<ShieldIcon
-                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
-                                {#if leaders.saves === baller.playerName}<GloveIcon
-                                        class="h-4 w-4 shrink-0 text-yellow-400" />{/if}
+                        <TableBodyCell class="w-full max-w-0 px-0 py-1.5">
+                            <span
+                                class="block min-w-0 cursor-pointer overflow-hidden font-bold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-white"
+                                role="button"
+                                tabindex="0"
+                                onclick={() => handlePlayerClick(baller.playerName)}
+                                onkeydown={() => handlePlayerClick(baller.playerName)}>
+                                {baller.playerName}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell
-                            class={`px-1 py-1.5 text-center ${sortCol === 'appearances' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                            {baller.appearances}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class={`px-1 py-1.5 text-center ${sortCol === 'saves' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                            {baller.saves}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class={`px-1 py-1.5 text-center ${sortCol === 'defence' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                            {baller.defence}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class={`px-1 py-1.5 text-center ${sortCol === 'attack' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                            {baller.attack}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class={`px-1 py-1.5 text-center ${sortCol === 'goals' ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
-                            {baller.goals}
-                        </TableBodyCell>
-                        <TableBodyCell
-                            class="px-1 py-1.5 text-center font-bold text-gray-900 dark:text-white">
-                            {baller.total}
-                        </TableBodyCell>
+                        {#each cols as col (col.key)}
+                            {@const Icon = statIcons[col.key]}
+                            <TableBodyCell
+                                class={`${col.width} px-1 py-1.5 text-right ${col.key === 'total' || sortCol === col.key ? 'font-bold text-gray-900 dark:text-white' : 'text-gray-500 dark:text-gray-300'}`}>
+                                <span class="flex items-center justify-end gap-0.5">
+                                    {#if Icon && leaders[col.key] === baller.playerName}
+                                        <Icon
+                                            class="h-3.5 w-3.5 shrink-0 text-yellow-400 sm:h-4 sm:w-4" />
+                                    {/if}
+                                    {baller[col.key]}
+                                </span>
+                            </TableBodyCell>
+                        {/each}
                     </TableBodyRow>
                 {/each}
             </TableBody>

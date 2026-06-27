@@ -11,6 +11,8 @@
         canModifyList = true,
         onremove = null,
         onassign = null,
+        onAutoAssign = null,
+        onAutoAssignToTeam = null,
         onrename = null,
         onPlayerClick = null,
         onTeamClick = null,
@@ -150,6 +152,18 @@
     function handleAssignPlayer(playerName, targetTeamName) {
         if (onassign) {
             onassign(playerName, targetTeamName);
+        }
+    }
+
+    function handleAutoAssignPlayer(playerName) {
+        if (onAutoAssign) {
+            onAutoAssign(playerName);
+        }
+    }
+
+    function handleAutoAssignToTeam(targetTeamName) {
+        if (onAutoAssignToTeam) {
+            onAutoAssignToTeam(targetTeamName);
         }
     }
 
@@ -330,6 +344,16 @@
                                     {@const playerName =
                                         typeof player === 'string' ? player : player.name || player}
                                     {@const actions = [
+                                        ...(onAutoAssign && teamsWithEmptySlots.length > 0
+                                            ? [
+                                                  {
+                                                      type: 'assign',
+                                                      label: 'Auto-assign',
+                                                      onclick: () =>
+                                                          handleAutoAssignPlayer(playerName)
+                                                  }
+                                              ]
+                                            : []),
                                         ...teamsWithEmptySlots.map((teamName) => ({
                                             type: 'assign',
                                             label: capitalize(teamName),
@@ -401,8 +425,8 @@
                                         {@const actions = [
                                             {
                                                 type: 'assign',
-                                                label: 'Auto-assign first available',
-                                                onclick: () => handleAssignPlayer(null, teamName)
+                                                label: 'Auto-assign',
+                                                onclick: () => handleAutoAssignToTeam(teamName)
                                             },
                                             ...assignablePlayers.map((waitingPlayer) => {
                                                 const playerName =

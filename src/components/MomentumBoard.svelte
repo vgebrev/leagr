@@ -11,7 +11,14 @@
         Toggle,
         Tooltip
     } from 'flowbite-svelte';
-    import { QuestionCircleOutline, StarSolid } from 'flowbite-svelte-icons';
+    import {
+        AngleDownOutline,
+        AngleUpOutline,
+        FireSolid,
+        MinusOutline,
+        QuestionCircleOutline,
+        StarSolid
+    } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
@@ -19,7 +26,7 @@
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import MomentumBar from '$components/MomentumBar.svelte';
+    import SnowflakeIcon from '$components/Icons/SnowflakeIcon.svelte';
 
     /**
      * @typedef {Object} MomentumEntry
@@ -27,7 +34,6 @@
      * @property {number} value - signed momentum, -1 (cold) to 1 (hot)
      * @property {number} sessions
      * @property {boolean} provisional
-     * @property {Record<string, number>} components - painted bar shares
      * @property {Array<{type: string, count: number}>} [badges] - ballers: per-award streaks
      * @property {Array<{league: boolean, cup: boolean}>} [trophyStreak] - champions: per-session run
      * @property {number} [woodenSpoonStreak] - champions: trailing last-place run
@@ -61,20 +67,16 @@
         goldenGlove: { icon: GloveIcon, color: 'text-yellow-400', label: 'Golden Glove streak' }
     };
 
-    // Painted bar sections per variant: hot and cold shades per component.
-    // Presentational only - the momentum value is computed server-side.
-    const segmentMeta = {
-        champions: [
-            { key: 'league', hot: 'bg-orange-500', cold: 'bg-blue-500', label: 'League' },
-            { key: 'cup', hot: 'bg-amber-400', cold: 'bg-sky-400', label: 'Cup' }
-        ],
-        ballers: [
-            { key: 'goals', hot: 'bg-orange-600', cold: 'bg-blue-600', label: 'Goals' },
-            { key: 'attack', hot: 'bg-orange-500', cold: 'bg-blue-500', label: 'Attack' },
-            { key: 'defence', hot: 'bg-orange-400', cold: 'bg-blue-400', label: 'Defence' },
-            { key: 'saves', hot: 'bg-orange-300', cold: 'bg-blue-300', label: 'Saves' }
-        ]
-    };
+    // Form (the heat level) is shown as a row of flames (hot) or snowflakes
+    // (cold), one icon per 20th percentile of magnitude (so 1-5 icons). Purely
+    // presentational - the momentum value is computed server-side.
+    const FORM_ICON_STEPS = 5;
+
+    // Session-over-session change in (uncooled) momentum. Moves smaller than the
+    // deadband read as "consistent"; moves past the strong threshold are the
+    // standout movers/slumpers (~top fifth on real data) and get a louder label.
+    const SWING_DEADBAND = 0.05;
+    const SWING_STRONG = 0.3;
 
     /**
      * A "regular" has at least 2 observed sessions in the last 2 months,
@@ -88,37 +90,43 @@
         return recent.length >= 2;
     }
 
+    // Session-over-session swing: the change between the player's last two
+    // (uncooled) series points. This is the "which way are they moving" signal
+    // shown alongside the heat level, distinct from it (a player can be cold
+    // overall yet swinging up after a strong session).
+    /** @param {MomentumEntry} entry */
+    function swingOf(entry) {
+        const s = entry.series ?? [];
+        if (s.length < 2) return 0;
+        return s[s.length - 1].value - s[s.length - 2].value;
+    }
+
     // Provisional (<5 sessions) players are always hidden so form is a meaningful
-    // signal; the toggle additionally narrows to recent regulars.
+    // signal; the toggle additionally narrows to recent regulars. Hottest form
+    // (heat level) sorts to the top.
     let visibleEntries = $derived(
         entries
             .filter((entry) => !entry.provisional)
             .filter((entry) => !regularsOnly || isRegular(entry))
+            .toSorted((a, b) => b.value - a.value)
     );
 
     let hotCount = $derived(visibleEntries.filter((e) => e.value >= 0.1).length);
     let coldCount = $derived(visibleEntries.filter((e) => e.value <= -0.1).length);
 
-    /** @param {MomentumEntry} entry */
-    function segments(entry) {
-        return segmentMeta[variant]
-            .map((meta) => ({
-                share: entry.components?.[meta.key] ?? 0,
-                colorClass: entry.value < 0 ? meta.cold : meta.hot
-            }))
-            .filter((segment) => segment.share > 0);
+    /**
+     * Number of flame/snowflake icons for a momentum magnitude: one per 20th
+     * percentile, so |value| 0.1-1.0 maps to 1-5 icons.
+     * @param {number} value
+     */
+    function iconCount(value) {
+        return Math.min(Math.ceil(Math.abs(value) * FORM_ICON_STEPS), FORM_ICON_STEPS);
     }
 
-    /** @param {number} value */
-    function formatValue(value) {
-        return (value > 0 ? '+' : '') + value.toFixed(2);
-    }
-
-    /** @param {number} value */
-    function valueColor(value) {
-        if (value >= 0.1) return 'text-orange-500';
-        if (value <= -0.1) return 'text-blue-500';
-        return 'text-gray-400 dark:text-gray-500';
+    /** Signed percentage, e.g. +34% / -12%. @param {number} swing */
+    function formatSwing(swing) {
+        const pct = Math.round(swing * 100);
+        return `${pct > 0 ? '+' : ''}${pct}%`;
     }
 
     /** @param {string} playerName */
@@ -126,6 +134,56 @@
         goto(resolve(`/rankings/${playerName}`, {}));
     }
 </script>
+
+<!-- Form (heat level) as flames (hot) or snowflakes (cold); one lit icon per
+     20th percentile, the rest ghosted. Neutral (|value| < 0.1) is fully ghosted. -->
+{#snippet formIcons(/** @type {number} */ value)}
+    {@const ghost = 'text-gray-300 dark:text-gray-600'}
+    {@const hot = value >= 0}
+    {@const lit = Math.abs(value) >= 0.1 ? iconCount(value) : 0}
+    {@const Icon = hot ? FireSolid : SnowflakeIcon}
+    {@const litColor = hot ? 'text-orange-500' : 'text-blue-500'}
+    {@const mood = lit === 0 ? 'Neutral' : hot ? 'Hot form' : 'Cold form'}
+    <span
+        class="flex items-center gap-px sm:gap-0.5"
+        title="{mood} ({Math.round(value * 100)}%)">
+        {#each range(FORM_ICON_STEPS) as i (i)}
+            <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {i < lit ? litColor : ghost}" />
+        {/each}
+    </span>
+{/snippet}
+
+<!-- Session-over-session direction: a coloured angle + label. Up/green = improved
+     on last session, down/red = dropped, steady = held within the deadband. This
+     is what explains a cold-but-rising (or hot-but-fading) player at a glance.
+     The signed delta stays in the tooltip for anyone who wants the number. -->
+{#snippet deltaTrend(/** @type {number} */ swing)}
+    {@const up = swing >= SWING_DEADBAND}
+    {@const down = swing <= -SWING_DEADBAND}
+    {@const strong = Math.abs(swing) >= SWING_STRONG}
+    {@const color = up ? 'text-green-500' : down ? 'text-red-500' : 'text-gray-500'}
+    {@const label = up
+        ? strong
+            ? 'Surging'
+            : 'Heating up'
+        : down
+          ? strong
+              ? 'Slumping'
+              : 'Cooling off'
+          : 'Consistent'}
+    <span
+        class="flex items-center justify-start gap-0.5 whitespace-nowrap {color}"
+        title="{label} ({formatSwing(swing)} on last session)">
+        {#if up}
+            <AngleUpOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+        {:else if down}
+            <AngleDownOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+        {:else}
+            <MinusOutline class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+        {/if}
+        <sub class="text-xs">{label}</sub>
+    </span>
+{/snippet}
 
 <!-- A homogeneous streak: literal icons up to STREAK_CAP, then "icon ×N". -->
 {#snippet iconRun(
@@ -136,17 +194,17 @@
 )}
     {#if count <= STREAK_CAP}
         <span
-            class="flex w-max items-center gap-0.5 {colorClass}"
+            class="flex w-max items-center gap-0.5 sm:gap-1 {colorClass}"
             title="{label}: {count} sessions">
             {#each range(count) as i (i)}
-                <Icon class="h-3 w-3 shrink-0" />
+                <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             {/each}
         </span>
     {:else}
         <span
             class="flex w-max items-center gap-1.5 {colorClass}"
             title="{label}: {count} sessions">
-            <Icon class="h-3 w-3 shrink-0" />
+            <Icon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
             <span class="text-[10px] font-bold">×{count}</span>
         </span>
     {/if}
@@ -154,7 +212,7 @@
 
 <!-- Champions silverware run: one column per session, doubles stacked. -->
 {#snippet trophyColumns(/** @type {Array<{league: boolean, cup: boolean}>} */ streak)}
-    <span class="flex w-max items-center gap-0.5">
+    <span class="flex w-max items-center gap-0.5 sm:gap-1">
         {#each streak as session, i (i)}
             <span
                 class="flex shrink-0 flex-col items-center gap-0.5"
@@ -164,10 +222,10 @@
                       ? 'League win'
                       : 'Cup win'}>
                 {#if session.league}
-                    <CrownIcon class="h-3 w-3 shrink-0 {LEAGUE.color}" />
+                    <CrownIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {LEAGUE.color}" />
                 {/if}
                 {#if session.cup}
-                    <TrophyIcon class="h-3 w-3 shrink-0 {CUP.color}" />
+                    <TrophyIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4 {CUP.color}" />
                 {/if}
             </span>
         {/each}
@@ -183,7 +241,7 @@
             <span
                 class="flex items-center gap-1 {LEAGUE.color}"
                 title="League wins: {leagueWins}">
-                <CrownIcon class="h-3 w-3 shrink-0" />
+                <CrownIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
                 <span class="text-[10px] font-bold">×{leagueWins}</span>
             </span>
         {/if}
@@ -191,7 +249,7 @@
             <span
                 class="flex items-center gap-1 {CUP.color}"
                 title="Cup wins: {cupWins}">
-                <TrophyIcon class="h-3 w-3 shrink-0" />
+                <TrophyIcon class="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
                 <span class="text-[10px] font-bold">×{cupWins}</span>
             </span>
         {/if}
@@ -222,7 +280,7 @@
         </p>
     {:else}
         <div class="mb-2 flex items-center justify-between text-xs text-gray-400">
-            <span>{hotCount} heating up · {coldCount} cooling off</span>
+            <span>{hotCount} hot · {coldCount} cold</span>
             <span class="flex items-center gap-2">
                 <span class="flex items-center gap-1">
                     <span class="inline-block h-2 w-2 rounded-full bg-orange-500"></span> hot
@@ -237,11 +295,12 @@
             class="w-full dark:text-gray-300">
             <TableHead class="dark:text-gray-300">
                 <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
-                <TableHeadCell class="px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
+                <TableHeadCell
+                    class="max-w-0 px-1 py-1.5 font-bold text-gray-900 dark:text-gray-100"
                     >Player</TableHeadCell>
-                <TableHeadCell class="px-1 py-1.5 text-center">Streak</TableHeadCell>
-                <TableHeadCell class="w-full px-1 py-1.5 text-center">Form</TableHeadCell>
-                <TableHeadCell class="w-10 px-1 py-1.5 text-right">+/-</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Streak</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Form</TableHeadCell>
+                <TableHeadCell class="w-px px-1 py-1.5 text-left">Trend</TableHeadCell>
             </TableHead>
             <TableBody>
                 {#each visibleEntries as entry, index (entry.playerName)}
@@ -249,9 +308,9 @@
                         <TableBodyCell class="w-6 px-1 py-1.5 text-center">
                             {index + 1}
                         </TableBodyCell>
-                        <TableBodyCell class="px-1 py-1.5">
+                        <TableBodyCell class="max-w-0 px-1 py-1.5">
                             <span
-                                class="block max-w-[7rem] cursor-pointer truncate font-semibold text-gray-900 hover:underline lg:max-w-[12rem] dark:text-gray-100"
+                                class="block min-w-0 cursor-pointer overflow-hidden font-semibold text-ellipsis whitespace-nowrap text-gray-900 hover:underline dark:text-gray-100"
                                 role="button"
                                 tabindex="0"
                                 onclick={() => handlePlayerClick(entry.playerName)}
@@ -259,7 +318,7 @@
                                 {entry.playerName}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell class="px-1 py-1.5">
+                        <TableBodyCell class="w-px px-1 py-1.5">
                             {#if variant === 'champions'}
                                 {#if entry.trophyStreak && entry.trophyStreak.length >= 2}
                                     {#if entry.trophyStreak.length <= STREAK_CAP}
@@ -291,16 +350,11 @@
                                 </span>
                             {/if}
                         </TableBodyCell>
-                        <TableBodyCell class="w-full px-1 py-1.5">
-                            <MomentumBar
-                                value={entry.value}
-                                segments={segments(entry)} />
+                        <TableBodyCell class="w-px px-1 py-1.5">
+                            {@render formIcons(entry.value)}
                         </TableBodyCell>
-                        <TableBodyCell
-                            class="w-10 px-1 py-1.5 text-right font-medium {valueColor(
-                                entry.value
-                            )}">
-                            {formatValue(entry.value)}
+                        <TableBodyCell class="w-px px-1 py-1.5">
+                            {@render deltaTrend(swingOf(entry))}
                         </TableBodyCell>
                     </TableBodyRow>
                 {/each}

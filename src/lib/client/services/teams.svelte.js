@@ -293,6 +293,83 @@ class TeamsService {
     }
 
     /**
+     * Apply an assignment API response (teams/players) to local state.
+     * @param {Object} result - API response with teams, players and ownedByMe
+     */
+    #applyAssignmentResult(result) {
+        this.teams = result.teams;
+        this.availablePlayersWithElo = result.players.available;
+        this.waitingListWithElo = result.players.waitingList;
+        playersService.players = result.players.available.map((p) => p.name);
+        playersService.waitingList = result.players.waitingList.map((p) => p.name);
+        playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
+    }
+
+    /**
+     * Run a balance-aware auto-assign request and reconcile local state.
+     * @param {Object} body - Request body ({ playerName } | { teamName } | {})
+     * @param {string} fallbackError - User-facing error message on failure
+     */
+    async #runAutoAssign(body, fallbackError) {
+        const restoreTeams = { ...this.teams };
+        const restorePlayers = [...playersService.players];
+        const restoreWaitingList = [...playersService.waitingList];
+
+        await withLoading(
+            async () => {
+                const result = await api.post('teams/auto-assign', this.currentDate, body);
+                if (result) {
+                    this.#applyAssignmentResult(result);
+                    await this.loadTeamConfigurations();
+                }
+            },
+            (err) => {
+                console.error(fallbackError, err);
+                setNotification(err.message || fallbackError, 'error');
+                this.teams = restoreTeams;
+                playersService.players = restorePlayers;
+                playersService.waitingList = restoreWaitingList;
+            }
+        );
+    }
+
+    /**
+     * Auto-assign a single waiting/unassigned player to the best-balanced team.
+     * @param {string} playerName - Player to assign
+     */
+    async autoAssignPlayer(playerName) {
+        if (this.isCompetitionEnded || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
+            return;
+        }
+        await this.#runAutoAssign({ playerName }, 'Failed to auto-assign player.');
+    }
+
+    /**
+     * Auto-assign the best-balanced available/waiting player to a specific team.
+     * @param {string} teamName - Team to fill
+     */
+    async autoAssignToTeam(teamName) {
+        if (this.isCompetitionEnded || !playersService.canModifyList) {
+            setNotification('Teams cannot be changed.', 'warning');
+            return;
+        }
+        await this.#runAutoAssign({ teamName }, 'Failed to auto-assign player.');
+    }
+
+    /**
+     * Auto-assign all waiting then unassigned players across teams, keeping balance
+     * and even team sizes. Admin-only (enforced server-side).
+     */
+    async autoAssignAll() {
+        if (this.isCompetitionEnded) {
+            setNotification('Teams cannot be changed.', 'warning');
+            return;
+        }
+        await this.#runAutoAssign({}, 'Failed to auto-assign players.');
+    }
+
+    /**
      * Load teams data for a specific date
      * @param {string} date - The date to load teams for
      */

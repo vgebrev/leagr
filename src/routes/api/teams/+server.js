@@ -2,9 +2,7 @@ import { error, isHttpError, json } from '@sveltejs/kit';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
+import { buildTeamGenerationContext } from '$lib/server/teamGenerationContext.js';
 import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import { logger } from '$lib/server/logger.js';
@@ -128,56 +126,14 @@ export const POST = async ({ request, url, locals }) => {
             return error(401, drawValidation.error);
         }
 
-        // Get rankings for both seeded and random teams (needed for draw history ELO display)
-        // Load current year rankings (with fallback to previous year if current year is empty)
-        const currentYear = new Date(dateValidation.date).getFullYear();
-        const previousYear = currentYear - 1;
-
-        const rankings = await createRankingsManager()
-            .setLeague(leagueId)
-            .loadEnhancedRankings(currentYear, { fallbackToPreviousYear: true });
-
-        // Load previous year rankings for players who haven't played yet this year
-        const previousYearRankings = await createRankingsManager()
-            .setLeague(leagueId)
-            .loadEnhancedRankings(previousYear);
-
-        // Load avatars and merge them into rankings data
-        const avatars = await createAvatarManager().setLeague(leagueId).loadAvatars();
-        if (rankings.players) {
-            for (const [playerName, avatarData] of Object.entries(avatars)) {
-                if (rankings.players[playerName]) {
-                    rankings.players[playerName].avatar = avatarData.avatar || null;
-                }
-            }
-        }
-        // Also merge avatars into previous year rankings
-        if (previousYearRankings?.players) {
-            for (const [playerName, avatarData] of Object.entries(avatars)) {
-                if (previousYearRankings.players[playerName]) {
-                    previousYearRankings.players[playerName].avatar = avatarData.avatar || null;
-                }
-            }
-        }
-
-        // Load teammate history for variance-conscious team generation
-        let teammateHistory = null;
-        if (method === 'seeded') {
-            try {
-                const historyTracker = createTeammateHistoryTracker();
-                const { historyData } = await historyTracker.updateTeammateHistory(
-                    leagueId,
-                    10,
-                    dateValidation.date
-                );
-                teammateHistory = historyData;
-            } catch (error) {
-                console.warn(
-                    'Failed to load teammate history, proceeding without variance consideration:',
-                    error.message
-                );
-            }
-        }
+        // Build shared generation context (rankings, previous-year rankings, teammate history).
+        // Teammate history is only needed for seeded (variance-conscious) draws.
+        const { rankings, previousYearRankings, teammateHistory } =
+            await buildTeamGenerationContext({
+                leagueId,
+                date: dateValidation.date,
+                includeTeammateHistory: method === 'seeded'
+            });
 
         // Get eligible players (respecting player limit)
         const effectivePlayerLimit =

@@ -49,11 +49,15 @@ Required environment variables for production:
 ```bash
 ALLOWED_ORIGIN      # CORS whitelist (supports wildcards, e.g., "*.leagr.co.za")
 SESSION_SECRET      # Signs HttpOnly session cookies issued to first-party clients
+PLAYER_OWNER_SALT   # Salt for HMAC-SHA256 player-ownership hashing
 APP_URL             # Base application URL
 MAILGUN_API_KEY     # Email service API key
 MAILGUN_DOMAIN      # Email service domain
+OPENAI_API_KEY      # OpenAI key for AI team-logo generation (optional)
 BODY_SIZE_LIMIT     # Max request size (default: 6MB for avatar uploads)
+DATA_DIR            # Data storage directory path (defaults to ./data)
 LOGS_DIR            # Log directory path
+LOG_LEVEL           # Logger verbosity (e.g., info, debug)
 ```
 
 ## Architecture
@@ -81,7 +85,10 @@ LOGS_DIR            # Log directory path
     - `data/{leagueId}/discipline.json` - Discipline records
     - `data/{leagueId}/avatars.json` - Avatar metadata
     - `data/{leagueId}/avatars/` - Avatar image files
-- `test/` - Comprehensive test suite (1,039+ test cases)
+    - `data/{leagueId}/logos.json` + `logos/` - Team-logo metadata and image files
+    - `data/{leagueId}/teammate-history.json` - Recent teammate pairings (team-variety tracking)
+    - `data/{leagueId}/noun-pool.json` - Per-league noun pool for generated names
+- `test/` - Comprehensive test suite (840+ test cases across 34 files)
 - `tasks/` - Implementation documentation for major features
 
 ### Multi-League Architecture
@@ -115,14 +122,23 @@ Leagr supports multiple independent leagues via subdomain-based routing:
 All API endpoints require proper authentication (see Security section below):
 
 - `/api/players` - Player registration and management
+    - `/api/players/ranked` - Players enriched with ranking data
+    - `/api/players/pending-avatars` - Avatar approval queue (admin only)
 - `/api/teams` - Team generation (random or seeded)
+    - `/api/teams/configurations`, `/api/teams/draw-history`, `/api/teams/players`
+    - `/api/teams/logos`, `/api/teams/logos/[teamName]` - AI team-logo generation (logos are public)
 - `/api/games` - Match scheduling and results
+    - `/api/games/knockout` - Knockout tournament generation
+- `/api/standings` - League standings
 - `/api/rankings` - Player performance rankings (supports year parameter)
+    - `/api/rankings/[player]`, `/api/rankings/[player]/avatar` (avatar is public)
 - `/api/champions` - League and cup winners (supports year parameter)
+- `/api/golden-boot`, `/api/ballers-board` - Scoring and form leaderboards
+- `/api/year-recap/[year]` - Annual statistics recap
 - `/api/settings` - Configuration management
-- `/api/leagues` - League creation and access code management
-- `/api/avatars` - Avatar upload and approval (admin only)
 - `/api/discipline` - No-show tracking and suspensions (admin only)
+- `/api/leagues` - League creation and access code management (public)
+    - `authenticate`, `authenticate-admin`, `forgot-access-code`, `reset-access-code`, `validate-reset-code`
 
 ### Security & Authentication
 
@@ -132,10 +148,11 @@ Multi-layer authentication system:
     - Validates `Origin` header against `ALLOWED_ORIGIN` env var
     - Supports wildcard patterns (e.g., `*.leagr.co.za`)
 
-2. **API Key Authentication**
+2. **Session Cookie Authentication**
     - Requires a valid `_ls` HttpOnly session cookie (signed with `SESSION_SECRET`)
     - Cookie is issued automatically on first page load; browser sends it on all same-origin API calls
     - Applied to all non-public API endpoints
+    - Public endpoints (no session/access code required): `/api/leagues/*`, `GET /api/rankings/[player]/avatar`, `GET /api/teams/logos/*`
 
 3. **Client ID Tracking**
     - Auto-generated UUID stored in localStorage
@@ -156,8 +173,8 @@ Multi-layer authentication system:
 
 **Rate Limiting**: Rule-based limiting per IP + clientId:
 
-- POST `/api/players`: 1 request per hour
-- General API: 60 requests per minute
+- POST `/api/players`: 100 requests per hour (keyed per IP + clientId + date)
+- General API: 60 requests per minute (keyed per IP)
 
 **Input Validation**: All inputs validated with XSS protection via `$lib/shared/validation.js`
 
@@ -207,6 +224,15 @@ Core business logic modules in `src/lib/server/`:
     - Fuzzy name matching for record consolidation
     - Configurable thresholds per league
 
+- **`momentum.js`**: Player "Form" / momentum metric
+    - Display-only signal (fast vs. slow EMA divergence, scaled by player variability)
+    - Powers the Champions Hall (placement substrate) and Ballers Board (contribution substrate)
+    - Pure module, deliberately separate from ELO/rankings calculations
+
+- **`teamLogoManager.js`** / **`openaiImageClient.js`**: AI team-logo generation
+    - Generates team badges via OpenAI image API (requires `OPENAI_API_KEY`)
+    - Generated logos are served from public `/api/teams/logos/*` endpoints
+
 ### State Management
 
 - **Svelte stores** in `src/lib/client/stores/`
@@ -218,7 +244,7 @@ Core business logic modules in `src/lib/server/`:
 
 ### Testing Architecture
 
-- **Vitest** for unit and integration testing (1,039+ test cases across 25+ files)
+- **Vitest** for unit and integration testing (840+ test cases across 34 files)
 - **Separate configs** for backend and frontend tests
 - **Test structure** mirrors `src/` directory in `test/`
 - **Backend tests** use Node environment (`test/**/*.{test,spec}.{js,ts}`)
@@ -318,7 +344,7 @@ await manager.addPlayer('John Doe', date);
 
 ### Testing Best Practices
 
-- **Test coverage**: 1,039+ test cases across backend and frontend
+- **Test coverage**: 840+ test cases across backend and frontend
 - **Unit tests**: PlayerManager, data layer, rankings, team generator, API endpoints
 - **Integration tests**: Player-team relationships, multi-operation workflows
 - **Race condition tests**: Verify atomic operations with concurrent access
@@ -369,7 +395,7 @@ await manager.addPlayer('John Doe', date);
 - **Use factory functions** for server managers and call `.setLeague(leagueId)` before operations
 - **Use `setMany()` for atomic multi-key updates** to prevent race conditions
 - **Validate all inputs** using `$lib/shared/validation.js` helpers
-- **Remember authentication headers**: `X-API-KEY`, `Authorization` (access code), `X-ADMIN-CODE` (for admin ops)
+- **Authentication**: a signed `_ls` HttpOnly session cookie is required on all non-public API calls (issued automatically on page load); send `Authorization` (league access code) and `X-CLIENT-ID` headers, plus `X-ADMIN-CODE` for admin ops
 - **Invalidate settings cache** after modifying league or day-level settings
 - **Use TodoWrite tool** for in-session progress tracking
 - **Create persistent summary docs** in `tasks/` folder for completed features
