@@ -103,7 +103,7 @@ export const POST = async ({ request, url, locals }) => {
         const canPromoteWaiting = available.length < playerLimit;
 
         // Build scoring context and configure the generator
-        const { rankings, previousYearRankings, teammateHistory } =
+        const { rankings, previousYearRankings, teammateHistory, overduePairs } =
             await buildTeamGenerationContext({ leagueId, date });
 
         const generator = createTeamGenerator()
@@ -111,7 +111,8 @@ export const POST = async ({ request, url, locals }) => {
             .setSettings(gameData.settings)
             .setRankings(rankings)
             .setPreviousYearRankings(previousYearRankings)
-            .setTeammateHistory(teammateHistory);
+            .setTeammateHistory(teammateHistory)
+            .setOverduePairs(overduePairs);
 
         if (mode === 'player') {
             const pool = [...teamPlayers, playerName];

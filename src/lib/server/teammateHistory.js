@@ -158,6 +158,125 @@ export class TeammateHistoryTracker {
     }
 
     /**
+     * Compute statistically starved ("overdue") pairs from session team lists.
+     *
+     * A pair is overdue when their most recent co-attendances contain no pairing
+     * despite that being improbable under a random draw: per co-attended session
+     * the null probability of sharing a team is Σ s_j(s_j-1) / N(N-1) (s_j = team
+     * sizes, N = attendees), and the pair qualifies when the product of "not paired"
+     * probabilities drops below alpha. The null is deliberately pot-blind — pot
+     * seeding bias is part of what overdue detection is meant to surface.
+     *
+     * Evidence is counted per pair over their own co-attendances (newest first,
+     * capped at coAttendanceLimit), so sessions a player misses neither add nor
+     * erode the pair's debt.
+     *
+     * @param {Array<Array<Array<string>>>} sessions - Per-session list of teams
+     *   (arrays of player names), ordered newest first
+     * @param {{ alpha?: number, coAttendanceLimit?: number | null }} options -
+     *   Significance threshold (default: 0.05) and per-pair cap on co-attendances
+     *   considered (default: null = unlimited)
+     * @returns {Array<{player1: string, player2: string, coAttendance: number, probNone: number}>}
+     *   Overdue pairs sorted most-starved first
+     */
+    computeOverduePairs(sessions, { alpha = 0.05, coAttendanceLimit = null } = {}) {
+        /** @type {Map<string, {coAttendance: number, probNone: number, paired: boolean}>} */
+        const pairStats = new Map();
+
+        for (const teams of sessions) {
+            const validTeams = teams.map((team) =>
+                (Array.isArray(team) ? team : []).filter(
+                    (player) => player && typeof player === 'string' && player.trim().length > 0
+                )
+            );
+            const attendees = validTeams.flat();
+            const n = attendees.length;
+            if (n < 2) continue;
+
+            const sameTeamProbability =
+                validTeams.reduce((sum, team) => sum + team.length * (team.length - 1), 0) /
+                (n * (n - 1));
+
+            const sameTeamKeys = new Set();
+            for (const team of validTeams) {
+                for (let i = 0; i < team.length; i++) {
+                    for (let j = i + 1; j < team.length; j++) {
+                        const [p1, p2] = [team[i], team[j]].sort();
+                        sameTeamKeys.add(`${p1}|${p2}`);
+                    }
+                }
+            }
+
+            for (let i = 0; i < attendees.length; i++) {
+                for (let j = i + 1; j < attendees.length; j++) {
+                    const [p1, p2] = [attendees[i], attendees[j]].sort();
+                    const key = `${p1}|${p2}`;
+                    const entry = pairStats.get(key) || {
+                        coAttendance: 0,
+                        probNone: 1,
+                        paired: false
+                    };
+                    // Only the pair's own most recent co-attendances count as evidence
+                    if (
+                        entry.paired ||
+                        (coAttendanceLimit != null && entry.coAttendance >= coAttendanceLimit)
+                    ) {
+                        continue;
+                    }
+                    entry.coAttendance++;
+                    entry.probNone *= 1 - sameTeamProbability;
+                    if (sameTeamKeys.has(key)) entry.paired = true;
+                    pairStats.set(key, entry);
+                }
+            }
+        }
+
+        const overdue = [];
+        for (const [key, entry] of pairStats) {
+            if (entry.paired || entry.probNone >= alpha) continue;
+            const [player1, player2] = key.split('|');
+            overdue.push({
+                player1,
+                player2,
+                coAttendance: entry.coAttendance,
+                probNone: entry.probNone
+            });
+        }
+        return overdue.sort((a, b) => a.probNone - b.probNone);
+    }
+
+    /**
+     * Find statistically overdue pairs from recent sessions.
+     * sessionLimit caps the calendar lookback (staleness bound); coAttendanceLimit
+     * caps how many of each pair's own most recent co-attendances count as evidence,
+     * so absences (injury, holiday) don't erode a pair's accumulated debt.
+     * @param {string} leagueId - League identifier
+     * @param {{ sessionLimit?: number, coAttendanceLimit?: number, alpha?: number, beforeDate?: string | null }} options
+     * @returns {Promise<Array<{player1: string, player2: string, coAttendance: number, probNone: number}>>}
+     */
+    async findOverduePairs(
+        leagueId,
+        { sessionLimit = 40, coAttendanceLimit = 15, alpha = 0.05, beforeDate = null } = {}
+    ) {
+        const fileLimit = Math.max(70, sessionLimit * 7);
+        const sessionFiles = await this.getSessionFiles(leagueId, fileLimit, beforeDate);
+
+        const sessions = [];
+        for (const filePath of sessionFiles) {
+            if (sessions.length >= sessionLimit) break;
+            const sessionData = await this.loadSessionData(filePath);
+            if (!sessionData?.teams) continue;
+            const teams = Object.values(sessionData.teams).filter(
+                (team) => Array.isArray(team) && team.length > 0
+            );
+            if (teams.length === 0) continue;
+            sessions.push(teams);
+        }
+
+        return this.computeOverduePairs(sessions, { alpha, coAttendanceLimit });
+    }
+
+    /**
      * Save teammate history to file
      * @param {string} leagueId - League identifier
      * @param {Object} historyData - Teammate history data
