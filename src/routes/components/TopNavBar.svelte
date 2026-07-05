@@ -1,5 +1,9 @@
 <script>
-    import { AdjustmentsHorizontalSolid, ForwardOutline } from 'flowbite-svelte-icons';
+    import {
+        AdjustmentsHorizontalSolid,
+        ForwardOutline,
+        NewspaperOutline
+    } from 'flowbite-svelte-icons';
     import { DarkMode, Navbar, NavBrand, Spinner, Tooltip } from 'flowbite-svelte';
     import { scale } from 'svelte/transition';
     import { isLoading } from '$lib/client/stores/loading.js';
@@ -61,6 +65,14 @@
                 class="shadow-lg"
                 triggeredBy="#share-button"
                 transition={scale}>Share link</Tooltip>
+            <a
+                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
+                href={resolve(`/news?date=${date}`)}
+                id="news-link"><NewspaperOutline /></a>
+            <Tooltip
+                class="shadow-lg"
+                triggeredBy="#news-link"
+                transition={scale}>News</Tooltip>
             <a
                 class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
                 href={resolve(`/settings?date=${date}`)}

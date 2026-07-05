@@ -23,7 +23,7 @@ function mergeAvatars(rankings, avatars) {
  * teammate history. Used by both the team-draw and auto-assign endpoints.
  *
  * @param {{ leagueId: string, date: string, includeTeammateHistory?: boolean }} params
- * @returns {Promise<{ rankings: any, previousYearRankings: any, teammateHistory: any | null }>}
+ * @returns {Promise<{ rankings: any, previousYearRankings: any, teammateHistory: any | null, overduePairs: Array<{player1: string, player2: string, coAttendance: number, probNone: number}> }>}
  */
 export async function buildTeamGenerationContext({
     leagueId,
@@ -47,11 +47,22 @@ export async function buildTeamGenerationContext({
     mergeAvatars(previousYearRankings, avatars);
 
     let teammateHistory = null;
+    let overduePairs = [];
     if (includeTeammateHistory) {
         try {
             const historyTracker = createTeammateHistoryTracker();
             const { historyData } = await historyTracker.updateTeammateHistory(leagueId, 10, date);
             teammateHistory = historyData;
+            // Statistically starved pairs feed the reunion norm. Evidence is counted per
+            // pair over their own last 15 co-attendances (absences don't erode debt),
+            // bounded by a 40-session staleness lookback; alpha 0.05 keeps the list to
+            // chronic cases (~4 pairs at current attendance).
+            overduePairs = await historyTracker.findOverduePairs(leagueId, {
+                sessionLimit: 40,
+                coAttendanceLimit: 15,
+                alpha: 0.05,
+                beforeDate: date
+            });
         } catch (error) {
             logger.warn(
                 `[teams] Failed to load teammate history, proceeding without it: ${error.message}`
@@ -59,5 +70,5 @@ export async function buildTeamGenerationContext({
         }
     }
 
-    return { rankings, previousYearRankings, teammateHistory };
+    return { rankings, previousYearRankings, teammateHistory, overduePairs };
 }

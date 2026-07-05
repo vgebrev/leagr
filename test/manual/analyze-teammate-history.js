@@ -1,239 +1,390 @@
 #!/usr/bin/env node
 /* eslint-disable no-console */
 
+/**
+ * Analyze teammate pairing history and hard-constraint pressure for a league.
+ *
+ * For each recent session, rebuilds the 10-session history window as it stood
+ * BEFORE that draw (matching what the team generator saw) and reports:
+ *   - how many attendee pairs were blocked (>= 4 prior pairings, the hard constraint)
+ *   - how many were at the limit (exactly 3 prior pairings)
+ *   - whether the drawn teams actually contained blocked pairs (fallback draw)
+ *
+ * Also emits an HTML report (heatmap matrix + per-session table).
+ *
+ * Usage: node test/manual/analyze-teammate-history.js [leagueId] [sessionsToAnalyze]
+ */
+
 import { createTeammateHistoryTracker } from '../../src/lib/server/teammateHistory.js';
-import { join } from 'path';
 import { writeFile } from 'fs/promises';
 
-/**
- * Generate a report of all player pairings ordered by frequency
- * @param {Object} historyData - Teammate history data
- * @returns {Array} Sorted array of pairing reports
- */
-function generatePairingReport(historyData) {
-    const { players, matrix } = historyData;
-    const pairings = [];
+// Must match teamGenerator.js: hardConstraintLimit = 4, sessionLimit = 10
+const HARD_CONSTRAINT_LIMIT = 4;
+const SESSION_WINDOW = 10;
 
-    // Extract all pairings from matrix (avoiding duplicates)
+const LEAGUE_ID = process.argv[2] || 'pirates';
+const SESSIONS_TO_ANALYZE = Number(process.argv[3]) || 15;
+
+/**
+ * Look up prior pairing count for two players in a history matrix
+ * @param {Object} history - Teammate history data
+ * @param {string} p1 - First player
+ * @param {string} p2 - Second player
+ * @returns {number} Prior pairing count
+ */
+function priorCount(history, p1, p2) {
+    const i = history.players.indexOf(p1);
+    const j = history.players.indexOf(p2);
+    return i >= 0 && j >= 0 ? history.matrix[i][j] : 0;
+}
+
+/**
+ * Extract all unique pairs from a list of players
+ * @param {string[]} players - Player names
+ * @returns {Array<[string, string]>} Unique pairs
+ */
+function allPairs(players) {
+    const pairs = [];
     for (let i = 0; i < players.length; i++) {
         for (let j = i + 1; j < players.length; j++) {
-            const count = matrix[i][j];
-            pairings.push({
-                player1: players[i],
-                player2: players[j],
-                timesPaired: count,
-                pairKey: `${players[i]} & ${players[j]}`
-            });
+            pairs.push([players[i], players[j]]);
         }
     }
-
-    // Sort by frequency (descending) then alphabetically by pair key
-    return pairings.sort((a, b) => {
-        if (a.timesPaired !== b.timesPaired) {
-            return b.timesPaired - a.timesPaired;
-        }
-        return a.pairKey.localeCompare(b.pairKey);
-    });
+    return pairs;
 }
 
 /**
- * Print pairing report to console
- * @param {Array} pairingReport - Array of pairing data
- * @param {number} limit - Maximum number of pairings to show (default: all)
+ * Analyze constraint pressure for each recent session
+ * @param {import('../../src/lib/server/teammateHistory.js').TeammateHistoryTracker} tracker
+ * @returns {Promise<Array<Object>>} Per-session analysis, oldest first
  */
-function printPairingReport(pairingReport, limit = null) {
-    console.log('\n=== TEAMMATE PAIRING REPORT ===');
-    console.log('(Ordered by frequency, descending)\n');
+async function analyzeSessions(tracker) {
+    const files = await tracker.getSessionFiles(LEAGUE_ID, null);
+    const sessions = [];
 
-    const itemsToShow = limit ? pairingReport.slice(0, limit) : pairingReport;
-
-    itemsToShow.forEach((pairing, index) => {
-        console.log(
-            `${(index + 1).toString().padStart(3)}: ${pairing.pairKey.padEnd(30)} - ${pairing.timesPaired} times`
-        );
-    });
-
-    if (limit && pairingReport.length > limit) {
-        console.log(`\n... and ${pairingReport.length - limit} more pairings`);
+    for (const filePath of files) {
+        const data = await tracker.loadSessionData(filePath);
+        if (!data?.teams || Object.keys(data.teams).length === 0) continue;
+        const date = filePath.match(/(\d{4}-\d{2}-\d{2})\.json$/)[1];
+        sessions.push({ date, teams: data.teams });
+        if (sessions.length >= SESSIONS_TO_ANALYZE) break;
     }
+    sessions.reverse(); // oldest first
 
-    console.log(`\nTotal unique pairings: ${pairingReport.length}`);
+    const results = [];
+    for (const { date, teams } of sessions) {
+        const history = await tracker.buildTeammateHistory(LEAGUE_ID, SESSION_WINDOW, date);
+        const attendees = Object.values(teams)
+            .flat()
+            .filter((p) => p && typeof p === 'string' && p.trim().length > 0);
+
+        const candidatePairs = allPairs(attendees);
+        const blockedPairs = [];
+        const atLimitPairs = [];
+        for (const [p1, p2] of candidatePairs) {
+            const count = priorCount(history, p1, p2);
+            if (count >= HARD_CONSTRAINT_LIMIT) blockedPairs.push({ p1, p2, count });
+            else if (count === HARD_CONSTRAINT_LIMIT - 1) atLimitPairs.push({ p1, p2, count });
+        }
+
+        // Pairs actually drawn into the same team, by prior count
+        const drawnViolations = [];
+        const drawnAtLimit = [];
+        for (const team of Object.values(teams)) {
+            const valid = team.filter((p) => p && typeof p === 'string' && p.trim().length > 0);
+            for (const [p1, p2] of allPairs(valid)) {
+                const count = priorCount(history, p1, p2);
+                if (count >= HARD_CONSTRAINT_LIMIT) drawnViolations.push({ p1, p2, count });
+                else if (count === HARD_CONSTRAINT_LIMIT - 1) drawnAtLimit.push({ p1, p2, count });
+            }
+        }
+
+        results.push({
+            date,
+            attendees: attendees.length,
+            teamCount: Object.keys(teams).length,
+            historySessions: history.totalSessions,
+            possiblePairs: candidatePairs.length,
+            blockedPairs,
+            atLimitPairs,
+            drawnViolations,
+            drawnAtLimit
+        });
+    }
+    return results;
 }
 
 /**
- * Generate comprehensive pairing report file
- * @param {Object} historyData - Teammate history data
- * @param {Array} pairingReport - Array of pairing data
+ * Compute pairing frequency distribution for a history window
+ * @param {Object} history - Teammate history data
+ * @returns {{distribution: Object, pairings: Array, totalPairs: number}}
  */
-async function generatePairingReportFile(historyData, pairingReport) {
-    const filePath = join('data', historyData.leagueId, 'pairing-report.txt');
+function summarizeHistory(history) {
+    const pairings = [];
+    for (let i = 0; i < history.players.length; i++) {
+        for (let j = i + 1; j < history.players.length; j++) {
+            if (history.matrix[i][j] > 0) {
+                pairings.push({
+                    p1: history.players[i],
+                    p2: history.players[j],
+                    count: history.matrix[i][j]
+                });
+            }
+        }
+    }
+    pairings.sort((a, b) => b.count - a.count || `${a.p1}${a.p2}`.localeCompare(`${b.p1}${b.p2}`));
 
-    // Calculate statistics
-    const pairCounts = pairingReport.map((p) => p.timesPaired);
-    const averagePairings = pairCounts.reduce((sum, count) => sum + count, 0) / pairCounts.length;
-    const variance =
-        pairCounts.reduce((sum, count) => sum + Math.pow(count - averagePairings, 2), 0) /
-        pairCounts.length;
-    const stdDev = Math.sqrt(variance);
-
-    // Calculate distribution
     const distribution = {};
-    pairCounts.forEach((count) => {
+    pairings.forEach(({ count }) => {
         distribution[count] = (distribution[count] || 0) + 1;
     });
-
-    // Generate report content
-    const reportContent = [
-        '='.repeat(80),
-        '                    TEAMMATE PAIRING ANALYSIS REPORT',
-        `                           ${historyData.leagueId.toUpperCase()} LEAGUE`,
-        '='.repeat(80),
-        '',
-        `Analysis Date: ${new Date(historyData.lastUpdated).toLocaleString()}`,
-        `Data Period: ${historyData.totalSessions} sessions analyzed`,
-        '',
-        '📊 SUMMARY STATISTICS',
-        '─'.repeat(50),
-        `Total Players: ${historyData.metadata.totalPlayers}`,
-        `Total Sessions: ${historyData.totalSessions}`,
-        `Possible Player Pairs: ${(historyData.players.length * (historyData.players.length - 1)) / 2}`,
-        `Actual Pairings: ${historyData.metadata.totalUniquePairs}`,
-        `Maximum Pairings (any pair): ${historyData.metadata.maxPairings}`,
-        '',
-        '📈 PAIRING VARIANCE ANALYSIS',
-        '─'.repeat(50),
-        `Average pairings per pair: ${averagePairings.toFixed(2)}`,
-        `Standard deviation: ${stdDev.toFixed(2)}`,
-        `Variance: ${variance.toFixed(2)}`,
-        '',
-        '📋 FREQUENCY DISTRIBUTION',
-        '─'.repeat(50)
-    ];
-
-    // Add distribution data
-    Object.keys(distribution)
-        .map(Number)
-        .sort((a, b) => b - a)
-        .forEach((count) => {
-            const frequency = distribution[count];
-            const percentage = ((frequency / pairCounts.length) * 100).toFixed(1);
-            const bar = '█'.repeat(Math.floor(percentage / 2)); // Visual bar
-            reportContent.push(
-                `${count} pairings: ${frequency.toString().padStart(4)} pairs (${percentage.padStart(5)}%) ${bar}`
-            );
-        });
-
-    reportContent.push('');
-    reportContent.push('🔍 KEY FINDINGS');
-    reportContent.push('─'.repeat(50));
-
-    // Add insights
-    const neverPaired = distribution[0] || 0;
-    const pairedOnce = distribution[1] || 0;
-    const frequentPairs = pairCounts.filter((count) => count >= 4).length;
-
-    reportContent.push(
-        `• ${neverPaired} pairs (${((neverPaired / pairCounts.length) * 100).toFixed(1)}%) have NEVER been teammates`
-    );
-    reportContent.push(
-        `• ${pairedOnce} pairs (${((pairedOnce / pairCounts.length) * 100).toFixed(1)}%) have been teammates exactly ONCE`
-    );
-    reportContent.push(
-        `• ${frequentPairs} pairs (${((frequentPairs / pairCounts.length) * 100).toFixed(1)}%) have been teammates 4+ times`
-    );
-    reportContent.push(`• Highest pairing frequency: ${historyData.metadata.maxPairings} times`);
-    reportContent.push('');
-
-    if (stdDev > 1.0) {
-        reportContent.push('⚠️  HIGH VARIANCE detected - significant pairing imbalance exists');
-    } else if (stdDev > 0.5) {
-        reportContent.push('⚡ MODERATE VARIANCE - some pairing patterns emerging');
-    } else {
-        reportContent.push('✅ LOW VARIANCE - relatively balanced pairing distribution');
-    }
-
-    reportContent.push('');
-    reportContent.push('👥 COMPLETE PAIRING REPORT');
-    reportContent.push('─'.repeat(50));
-    reportContent.push('(Ordered by frequency, then alphabetically)');
-    reportContent.push('');
-
-    // Add all pairings
-    pairingReport.forEach((pairing, index) => {
-        const rank = (index + 1).toString().padStart(4);
-        const pairKey = pairing.pairKey.padEnd(35);
-        const times = pairing.timesPaired.toString().padStart(2);
-        reportContent.push(`${rank}: ${pairKey} - ${times} times`);
-    });
-
-    reportContent.push('');
-    reportContent.push('='.repeat(80));
-    reportContent.push(`Report generated by Leagr Teammate History Tracker`);
-    reportContent.push(`${new Date().toLocaleString()}`);
-    reportContent.push('='.repeat(80));
-
-    // Write to file
-    await writeFile(filePath, reportContent.join('\n'));
-    console.log(`\n📄 Full pairing report saved to: ${filePath}`);
+    return { distribution, pairings };
 }
 
 /**
- * Script to analyze teammate history for the pirates league
+ * Render the HTML report
+ * @param {Object} history - Current teammate history window
+ * @param {Array} sessionResults - Per-session constraint analysis
+ * @returns {string} HTML document
  */
+function renderHtml(history, sessionResults) {
+    const { distribution, pairings } = summarizeHistory(history);
+    const hotPairs = pairings.filter((p) => p.count >= HARD_CONSTRAINT_LIMIT - 1);
+    const blockedNow = pairings.filter((p) => p.count >= HARD_CONSTRAINT_LIMIT);
+    const sessionsWithViolations = sessionResults.filter((s) => s.drawnViolations.length > 0);
+
+    const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const cellStyle = (count) => {
+        if (count >= 4) return 'background:#dc2626;color:#fff;font-weight:700';
+        if (count === 3) return 'background:#f59e0b;color:#111;font-weight:700';
+        if (count === 2) return 'background:#3b82f6;color:#fff';
+        if (count === 1) return 'background:#334155;color:#cbd5e1';
+        return 'background:#0f172a;color:#1e293b';
+    };
+
+    // Sort players by total pairings (descending) for the matrix
+    const totals = history.players.map((p, i) => ({
+        player: p,
+        index: i,
+        total: history.matrix[i].reduce((sum, c) => sum + c, 0)
+    }));
+    totals.sort((a, b) => b.total - a.total);
+
+    const matrixHeader = totals
+        .map((t) => `<th class="rot"><div><span>${esc(t.player)}</span></div></th>`)
+        .join('');
+    const matrixRows = totals
+        .map((row) => {
+            const cells = totals
+                .map((col) => {
+                    if (row.index === col.index) {
+                        return '<td style="background:#1e293b">·</td>';
+                    }
+                    const count = history.matrix[row.index][col.index];
+                    return `<td style="${cellStyle(count)}" title="${esc(row.player)} &amp; ${esc(col.player)}: ${count}">${count || ''}</td>`;
+                })
+                .join('');
+            return `<tr><td class="player-name">${esc(row.player)}</td><td class="total">${row.total}</td>${cells}</tr>`;
+        })
+        .join('\n');
+
+    const distRows = Object.keys(distribution)
+        .map(Number)
+        .sort((a, b) => b - a)
+        .map((count) => {
+            const n = distribution[count];
+            const pct = ((n / pairings.length) * 100).toFixed(1);
+            return `<tr><td>${count}×</td><td>${n}</td><td>${pct}%</td><td><div class="bar" style="width:${Math.min(100, pct * 2)}%"></div></td></tr>`;
+        })
+        .join('\n');
+
+    const fmtPairs = (list) =>
+        list.length === 0
+            ? '<span class="ok">—</span>'
+            : list.map((p) => `${esc(p.p1)} &amp; ${esc(p.p2)} (${p.count})`).join(', ');
+
+    const sessionRows = sessionResults
+        .map((s) => {
+            const blockedPct = ((s.blockedPairs.length / s.possiblePairs) * 100).toFixed(1);
+            const status =
+                s.drawnViolations.length > 0
+                    ? '<span class="badge bad">violated</span>'
+                    : s.blockedPairs.length > 0
+                      ? '<span class="badge warn">constrained</span>'
+                      : '<span class="badge ok">free</span>';
+            return `<tr>
+                <td class="player-name">${s.date}</td>
+                <td>${s.attendees} / ${s.teamCount}</td>
+                <td>${s.historySessions}</td>
+                <td>${s.blockedPairs.length} <span class="dim">(${blockedPct}%)</span></td>
+                <td>${s.atLimitPairs.length}</td>
+                <td>${s.drawnAtLimit.length}</td>
+                <td class="wrap">${fmtPairs(s.drawnViolations)}</td>
+                <td>${status}</td>
+            </tr>`;
+        })
+        .join('\n');
+
+    return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${esc(LEAGUE_ID)} — Teammate Pairing &amp; Hard-Constraint Report</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, -apple-system, sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; }
+h1 { font-size: 1.6rem; margin-bottom: 4px; color: #f8fafc; }
+h2 { font-size: 1.1rem; margin: 28px 0 10px; color: #f1f5f9; }
+.subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px; }
+.summary { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 12px 20px; }
+.stat-card .label { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.05em; }
+.stat-card .value { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
+.legend { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
+.legend h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #94a3b8; margin-bottom: 10px; }
+.legend-items { display: flex; flex-wrap: wrap; gap: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+.legend-box { width: 14px; height: 14px; border-radius: 3px; }
+.table-wrap { overflow-x: auto; margin-bottom: 12px; }
+table { border-collapse: collapse; font-size: 0.85rem; }
+th { padding: 8px 12px; text-align: center; font-weight: 600; background: #1e293b; position: sticky; top: 0; z-index: 2; }
+td { padding: 6px 10px; text-align: center; border: 1px solid #1e293b; }
+td.player-name { text-align: left; font-weight: 500; background: #1e293b; white-space: nowrap; color: #f1f5f9; border-right: 2px solid #334155; position: sticky; left: 0; z-index: 1; }
+td.total { background: #1e293b; color: #94a3b8; font-weight: 600; }
+td.wrap { text-align: left; max-width: 420px; }
+.dim { color: #64748b; }
+.ok { color: #6ee7b7; }
+.badge { padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 700; }
+.badge.ok { background: #064e3b; color: #6ee7b7; }
+.badge.warn { background: #78350f; color: #fbbf24; }
+.badge.bad { background: #7f1d1d; color: #fca5a5; }
+.bar { height: 10px; background: #3b82f6; border-radius: 2px; min-width: 2px; }
+th.rot { height: 130px; white-space: nowrap; padding: 0; vertical-align: bottom; }
+th.rot > div { transform: translate(6px, -5px) rotate(315deg); width: 24px; }
+th.rot > div > span { padding: 2px; font-size: 0.7rem; }
+.matrix td { min-width: 26px; height: 26px; padding: 2px; font-size: 0.75rem; }
+.note { color: #64748b; font-size: 0.75rem; margin-top: 20px; line-height: 1.6; }
+tr:hover td { filter: brightness(1.15); }
+</style>
+</head>
+<body>
+<h1>🤝 ${esc(LEAGUE_ID)} — Teammate Pairing &amp; Hard-Constraint Report</h1>
+<p class="subtitle">Window: last ${SESSION_WINDOW} sessions · hard constraint blocks pairs with ${HARD_CONSTRAINT_LIMIT}+ prior pairings · generated ${new Date().toISOString().slice(0, 10)}</p>
+
+<div class="summary">
+    <div class="stat-card"><div class="label">Sessions analyzed</div><div class="value">${sessionResults.length}</div></div>
+    <div class="stat-card"><div class="label">Players in window</div><div class="value">${history.metadata.totalPlayers}</div></div>
+    <div class="stat-card"><div class="label">Max pairings (window)</div><div class="value">${history.metadata.maxPairings}</div></div>
+    <div class="stat-card"><div class="label">Pairs blocked next draw</div><div class="value" style="color:${blockedNow.length ? '#fca5a5' : '#6ee7b7'}">${blockedNow.length}</div></div>
+    <div class="stat-card"><div class="label">Pairs at limit (3×)</div><div class="value" style="color:#fbbf24">${hotPairs.length - blockedNow.length}</div></div>
+    <div class="stat-card"><div class="label">Sessions w/ violated draws</div><div class="value" style="color:${sessionsWithViolations.length ? '#fca5a5' : '#6ee7b7'}">${sessionsWithViolations.length}</div></div>
+</div>
+
+<div class="legend">
+    <h3>How to read this report</h3>
+    <div class="legend-items">
+        <div class="legend-item"><div class="legend-box" style="background:#dc2626"></div>4+ pairings — blocked by hard constraint</div>
+        <div class="legend-item"><div class="legend-box" style="background:#f59e0b"></div>3 pairings — at limit (one more allowed)</div>
+        <div class="legend-item"><div class="legend-box" style="background:#3b82f6"></div>2 pairings</div>
+        <div class="legend-item"><div class="legend-box" style="background:#334155"></div>1 pairing</div>
+        <div class="legend-item">"violated" = drawn teams contained a blocked pair (generator fell back or draw was manual/random)</div>
+    </div>
+</div>
+
+<h2>Per-session constraint pressure (as seen by the generator before each draw)</h2>
+<div class="table-wrap">
+<table>
+<thead><tr>
+    <th>Session</th><th>Players / Teams</th><th>History depth</th>
+    <th>Blocked pairs available</th><th>At-limit pairs available</th>
+    <th>At-limit pairs drawn</th><th>Blocked pairs drawn (violations)</th><th>Status</th>
+</tr></thead>
+<tbody>
+${sessionRows}
+</tbody>
+</table>
+</div>
+
+<h2>Current window — pairing frequency distribution</h2>
+<div class="table-wrap">
+<table>
+<thead><tr><th>Pairings</th><th>Pairs</th><th>%</th><th></th></tr></thead>
+<tbody>
+${distRows}
+</tbody>
+</table>
+</div>
+
+<h2>Current window — pairing matrix (sorted by total pairings)</h2>
+<div class="table-wrap">
+<table class="matrix">
+<thead><tr><th style="text-align:left">Player</th><th>Total</th>${matrixHeader}</tr></thead>
+<tbody>
+${matrixRows}
+</tbody>
+</table>
+</div>
+
+<p class="note">
+History window and limits mirror teamGenerator.js (hardConstraintLimit=${HARD_CONSTRAINT_LIMIT}, sessionLimit=${SESSION_WINDOW}).
+Per-session analysis rebuilds the window with beforeDate=session date, exactly as the generator does, so
+"blocked pairs available" is the number of attendee pairs the generator was forbidden from putting on the same team that day.
+</p>
+</body>
+</html>`;
+}
+
 async function main() {
     try {
         const tracker = createTeammateHistoryTracker();
 
-        // Update teammate history for pirates league
-        const { historyData } = await tracker.updateTeammateHistory('pirates');
-        const pairingReport = generatePairingReport(historyData);
+        // Current window (what the NEXT draw will see) — read-only, does not touch teammate-history.json
+        const history = await tracker.buildTeammateHistory(LEAGUE_ID, SESSION_WINDOW);
+        const { distribution, pairings } = summarizeHistory(history);
 
-        // Print summary statistics
-        console.log('\n=== SUMMARY STATISTICS ===');
-        console.log(`League: ${historyData.leagueId}`);
-        console.log(`Total players: ${historyData.metadata.totalPlayers}`);
-        console.log(`Total sessions processed: ${historyData.totalSessions}`);
-        console.log(`Total unique player pairs: ${historyData.metadata.totalUniquePairs}`);
-        console.log(
-            `Maximum pairings between any two players: ${historyData.metadata.maxPairings}`
-        );
-        console.log(`Last updated: ${historyData.lastUpdated}`);
-
-        // Print pairing report (top 20 most frequent pairings) to console
-        printPairingReport(pairingReport, 20);
-
-        // Generate full pairing report file
-        await generatePairingReportFile(historyData, pairingReport);
-
-        // Print some statistics about pairing variance
-        const pairCounts = pairingReport.map((p) => p.timesPaired);
-        const averagePairings =
-            pairCounts.reduce((sum, count) => sum + count, 0) / pairCounts.length;
-        const variance =
-            pairCounts.reduce((sum, count) => sum + Math.pow(count - averagePairings, 2), 0) /
-            pairCounts.length;
-        const stdDev = Math.sqrt(variance);
-
-        console.log('\n=== PAIRING VARIANCE ANALYSIS ===');
-        console.log(`Average pairings per pair: ${averagePairings.toFixed(2)}`);
-        console.log(`Standard deviation: ${stdDev.toFixed(2)}`);
-        console.log(`Variance: ${variance.toFixed(2)}`);
-
-        // Show distribution
-        const distribution = {};
-        pairCounts.forEach((count) => {
-            distribution[count] = (distribution[count] || 0) + 1;
-        });
+        console.log('=== CURRENT WINDOW ===');
+        console.log(`League: ${history.leagueId}`);
+        console.log(`Sessions in window: ${history.totalSessions}`);
+        console.log(`Players: ${history.metadata.totalPlayers}`);
+        console.log(`Unique pairs: ${history.metadata.totalUniquePairs}`);
+        console.log(`Max pairings: ${history.metadata.maxPairings}`);
 
         console.log('\n=== PAIRING FREQUENCY DISTRIBUTION ===');
         Object.keys(distribution)
             .map(Number)
             .sort((a, b) => b - a)
             .forEach((count) => {
-                const frequency = distribution[count];
-                const percentage = ((frequency / pairCounts.length) * 100).toFixed(1);
-                console.log(`${count} pairings: ${frequency} pairs (${percentage}%)`);
+                const n = distribution[count];
+                console.log(
+                    `${count} pairings: ${n} pairs (${((n / pairings.length) * 100).toFixed(1)}%)`
+                );
             });
+
+        const hot = pairings.filter((p) => p.count >= HARD_CONSTRAINT_LIMIT - 1);
+        console.log(`\n=== PAIRS AT/OVER LIMIT (${HARD_CONSTRAINT_LIMIT - 1}+) ===`);
+        hot.forEach((p) =>
+            console.log(
+                `${p.p1} & ${p.p2}: ${p.count}${p.count >= HARD_CONSTRAINT_LIMIT ? '  ← BLOCKED next draw' : ''}`
+            )
+        );
+
+        console.log('\n=== PER-SESSION CONSTRAINT PRESSURE ===');
+        const sessionResults = await analyzeSessions(tracker);
+        sessionResults.forEach((s) => {
+            const pct = ((s.blockedPairs.length / s.possiblePairs) * 100).toFixed(1);
+            const violations = s.drawnViolations.length
+                ? ` VIOLATIONS: ${s.drawnViolations.map((v) => `${v.p1}&${v.p2}(${v.count})`).join(', ')}`
+                : '';
+            console.log(
+                `${s.date}: ${s.attendees} players, ${s.blockedPairs.length}/${s.possiblePairs} pairs blocked (${pct}%), ` +
+                    `${s.atLimitPairs.length} at limit, drawn at-limit: ${s.drawnAtLimit.length}${violations}`
+            );
+        });
+
+        const reportPath = `teammate-pairing-report.html`;
+        await writeFile(reportPath, renderHtml(history, sessionResults));
+        console.log(`\n📄 HTML report saved to: ${reportPath}`);
     } catch (error) {
         console.error('Error analyzing teammate history:', error);
         process.exit(1);

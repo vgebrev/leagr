@@ -300,7 +300,7 @@ function sortedHistory(history) {
  * @param {PlayersWithHistory} players
  * @returns {Map<string, number>}
  */
-function deriveTeamCounts(players) {
+export function deriveTeamCounts(players) {
     /** @type {Map<string, {maxPos: number, teams: Set<string>}>} */
     const meta = new Map();
     for (const playerData of Object.values(players)) {
@@ -415,7 +415,7 @@ export function buildChampionsMomentum(players, config, now) {
     return board.sort((a, b) => b.value - a.value);
 }
 
-const BALLER_CATEGORIES = [
+export const BALLER_CATEGORIES = [
     {
         type: 'mvp',
         valueOf: (/** @type {SessionStats|undefined} */ stats) => contributionAggregate(stats)
@@ -437,6 +437,35 @@ const BALLER_CATEGORIES = [
         valueOf: (/** @type {SessionStats|undefined} */ stats) => stats?.saveActions ?? null
     }
 ];
+
+/**
+ * Per-date baller category tops across all players (the session's award
+ * winners): date -> { categoryType: top value or null when untracked }.
+ * @param {PlayersWithHistory} players
+ * @returns {Map<string, Record<string, number|null>>}
+ */
+export function deriveBallerTops(players) {
+    /** @type {Map<string, Record<string, number|null>>} */
+    const tops = new Map();
+    for (const playerData of Object.values(players)) {
+        for (const [date, entry] of Object.entries(playerData.history ?? {})) {
+            let dateTops = tops.get(date);
+            if (!dateTops) {
+                dateTops = Object.fromEntries(BALLER_CATEGORIES.map((c) => [c.type, null]));
+                tops.set(date, dateTops);
+            }
+            for (const category of BALLER_CATEGORIES) {
+                const value = category.valueOf(entry?.stats);
+                if (value == null) continue;
+                const top = dateTops[category.type];
+                if (top == null || value > top) {
+                    dateTops[category.type] = value;
+                }
+            }
+        }
+    }
+    return tops;
+}
 
 /**
  * Build the Ballers Board (contribution) momentum board.
@@ -499,26 +528,7 @@ export function buildBallersMomentum(players, config, now) {
     let leagueK = mad(pooled);
     if (!(leagueK > EPS)) leagueK = CONTRIBUTION_FALLBACK_K;
 
-    // Per-date category tops across all players (the session's award winners)
-    /** @type {Map<string, Record<string, number|null>>} */
-    const tops = new Map();
-    for (const { sessions } of perPlayer) {
-        for (const { date, entry } of sessions) {
-            let dateTops = tops.get(date);
-            if (!dateTops) {
-                dateTops = Object.fromEntries(BALLER_CATEGORIES.map((c) => [c.type, null]));
-                tops.set(date, dateTops);
-            }
-            for (const category of BALLER_CATEGORIES) {
-                const value = category.valueOf(entry.stats);
-                if (value == null) continue;
-                const top = dateTops[category.type];
-                if (top == null || value > top) {
-                    dateTops[category.type] = value;
-                }
-            }
-        }
-    }
+    const tops = deriveBallerTops(players);
 
     const board = [];
     for (const { playerName, sessions, observations } of perPlayer) {

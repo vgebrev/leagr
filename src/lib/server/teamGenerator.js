@@ -77,6 +77,8 @@ class TeamGenerator {
         this.initialPots = [];
         /** @type {TeammateHistory | null} */
         this.teammateHistory = null;
+        /** @type {Array<{player1: string, player2: string, coAttendance?: number, probNone?: number}>} */
+        this.overduePairs = [];
         /** @type {{ elo: number, attack: number, control: number } | null} */
         this._provisionalAnchors = null;
     }
@@ -138,6 +140,17 @@ class TeamGenerator {
      */
     setTeammateHistory(teammateHistory) {
         this.teammateHistory = teammateHistory;
+        return this;
+    }
+
+    /**
+     * Set statistically overdue pairs (never paired despite frequent co-attendance).
+     * The reunion norm rewards draws that put at least one of these pairs on the same team.
+     * @param {Array<{player1: string, player2: string}> | null} overduePairs - Overdue pairs, most starved first
+     * @returns {TeamGenerator} - Fluent interface
+     */
+    setOverduePairs(overduePairs) {
+        this.overduePairs = overduePairs ?? [];
         return this;
     }
 
@@ -647,6 +660,52 @@ class TeamGenerator {
     }
 
     /**
+     * Check whether any overdue pair has both players present in the given teams.
+     * @param {TeamsMap} teams - Generated teams object
+     * @returns {boolean} True if at least one overdue pair fully attends
+     */
+    hasAttendingOverduePairs(teams) {
+        if (!this.overduePairs || this.overduePairs.length === 0) return false;
+        const attending = new Set(Object.values(teams).flat());
+        return this.overduePairs.some(
+            ({ player1, player2 }) => attending.has(player1) && attending.has(player2)
+        );
+    }
+
+    /**
+     * Calculate normalized reunion score for overdue pairs (0-1, lower is better).
+     * Each attending overdue pair contributes credit weighted by how starved it is
+     * (w = -ln(probNone), so rarer no-pairing streaks weigh more): the score is
+     * 1 - satisfiedWeight / totalWeight. Reuniting every attending pair scores 0,
+     * reuniting none scores 1, and when only some fit the balance cap the most
+     * starved pairs are preferred. Reunited pairs leave the overdue set on the
+     * next draw, so the backlog rotates naturally.
+     * @param {TeamsMap} teams - Generated teams object
+     * @returns {number} Reunion score [0, 1], 0 when no overdue pair attends
+     */
+    calculateReunionScoreNormalized(teams) {
+        if (!this.overduePairs || this.overduePairs.length === 0) return 0;
+
+        /** @type {Map<string, string>} */
+        const teamOf = new Map();
+        Object.entries(teams).forEach(([teamName, teamPlayers]) => {
+            teamPlayers.forEach((player) => teamOf.set(player, teamName));
+        });
+
+        let totalWeight = 0;
+        let satisfiedWeight = 0;
+        for (const { player1, player2, probNone } of this.overduePairs) {
+            const team1 = teamOf.get(player1);
+            const team2 = teamOf.get(player2);
+            if (team1 === undefined || team2 === undefined) continue;
+            const weight = probNone > 0 && probNone < 1 ? -Math.log(probNone) : 1;
+            totalWeight += weight;
+            if (team1 === team2) satisfiedWeight += weight;
+        }
+        return totalWeight > 0 ? 1 - satisfiedWeight / totalWeight : 0;
+    }
+
+    /**
      * Calculate ELO spread balance to ensure each team has similar distribution of skill levels.
      * Prevents one team from getting all "top of pot" players while another gets all "bottom of pot".
      * Uses provisional ratings for consistency with pot sorting.
@@ -741,6 +800,7 @@ class TeamGenerator {
      *  eloNorm: number,
      *  spreadNorm: number,
      *  pairNorm: number,
+     *  reunionNorm: number,
      *  attackNorm: number,
      *  controlNorm: number,
      *  traitsNorm: number,
@@ -757,6 +817,8 @@ class TeamGenerator {
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
         const W_TRAITS = 0.8;
+        // Only weigh reunions when an overdue pair actually attends, so scores stay identical otherwise
+        const W_REUNION = this.hasAttendingOverduePairs(teams) ? 0.4 : 0;
         const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
         /** @param {number} value */
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -783,6 +845,9 @@ class TeamGenerator {
         // Pairing novelty score
         const pairNorm = this.calculatePairingScoreNormalized(teams);
 
+        // Overdue-pair reunion score
+        const reunionNorm = this.calculateReunionScoreNormalized(teams);
+
         // Spread balance normalization
         const spreadBalance = this.calculateEloSpreadBalance(teams);
         const spreadIdeal = eloRange * 0.5;
@@ -799,16 +864,18 @@ class TeamGenerator {
             (eloNorm * W_ELO +
                 spreadNorm * W_SPREAD +
                 pairNorm * W_PAIR +
+                reunionNorm * W_REUNION +
                 attackNorm * W_ATTACK +
                 controlNorm * W_CONTROL +
                 traitsNorm * W_TRAITS) /
-            (W_ELO + W_SPREAD + W_PAIR + W_ATTACK + W_CONTROL + W_TRAITS);
+            (W_ELO + W_SPREAD + W_PAIR + W_REUNION + W_ATTACK + W_CONTROL + W_TRAITS);
 
         return {
             totalNorm,
             eloNorm,
             spreadNorm,
             pairNorm,
+            reunionNorm,
             attackNorm,
             controlNorm,
             traitsNorm,
@@ -1408,6 +1475,20 @@ class TeamGenerator {
                     : '') +
                 `fallback=${fallbackUsed}`
         );
+
+        if (this.overduePairs.length > 0) {
+            const attending = new Set(sortedPlayers);
+            const candidates = this.overduePairs.filter(
+                ({ player1, player2 }) => attending.has(player1) && attending.has(player2)
+            );
+            if (candidates.length > 0) {
+                logger.info(
+                    `[teams] reunion: ${candidates.length} overdue pair(s) attending ` +
+                        `(${candidates.map((p) => `${p.player1}&${p.player2}`).join(', ')}) | ` +
+                        `score=${m ? m.reunionNorm.toFixed(2) : 'n/a'} (0=all reunited, 1=none)`
+                );
+            }
+        }
 
         if (this.teammateHistory) {
             const topBlocked = Object.entries(blockedPerPlayer)

@@ -128,7 +128,7 @@ export const POST = async ({ request, url, locals }) => {
 
         // Build shared generation context (rankings, previous-year rankings, teammate history).
         // Teammate history is only needed for seeded (variance-conscious) draws.
-        const { rankings, previousYearRankings, teammateHistory } =
+        const { rankings, previousYearRankings, teammateHistory, overduePairs } =
             await buildTeamGenerationContext({
                 leagueId,
                 date: dateValidation.date,
@@ -151,6 +151,7 @@ export const POST = async ({ request, url, locals }) => {
             .setRankings(rankings)
             .setPreviousYearRankings(previousYearRankings)
             .setTeammateHistory(teammateHistory)
+            .setOverduePairs(overduePairs)
             .setHistoryRecording(true);
 
         const result = await teamGenerator.generateTeams(method, teamConfig);
