@@ -660,6 +660,101 @@ describe('team result threads', () => {
         expect(cup.double).toBe(true);
     });
 
+    it('flags an unbeaten league winner as invincible', () => {
+        const players = trophyPlayers([
+            champEntry('blue', 1, null, { leagueWinner: true }),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null)
+        ]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6],
+            standingsByDate: {
+                '2026-01-03': [
+                    { team: 'blue', losses: 0, goalsFor: 8, goalsAgainst: 3 },
+                    { team: 'white', losses: 2, goalsFor: 5, goalsAgainst: 7 }
+                ]
+            }
+        });
+        const league = cardFor(cards, '2026-01-03').threads.find((t) => t.type === 'teamLeague');
+        expect(league.invincible).toBe(true);
+    });
+
+    it('does not flag a league winner who lost a game', () => {
+        const players = trophyPlayers([
+            champEntry('blue', 1, null, { leagueWinner: true }),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null)
+        ]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6],
+            standingsByDate: {
+                '2026-01-03': [{ team: 'blue', losses: 1, goalsFor: 8, goalsAgainst: 5 }]
+            }
+        });
+        const league = cardFor(cards, '2026-01-03').threads.find((t) => t.type === 'teamLeague');
+        expect(league.invincible).toBe(false);
+    });
+
+    it('does not flag a league winner eliminated in the cup as invincible', () => {
+        const players = trophyPlayers([
+            champEntry('blue', 1, 'final', { leagueWinner: true }), // lost the cup final
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null)
+        ]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6],
+            standingsByDate: {
+                '2026-01-03': [{ team: 'blue', losses: 0, goalsFor: 8, goalsAgainst: 3 }]
+            }
+        });
+        const league = cardFor(cards, '2026-01-03').threads.find((t) => t.type === 'teamLeague');
+        expect(league.invincible).toBe(false);
+    });
+
+    it('flags an unbeaten cup winner as invincible', () => {
+        const players = trophyPlayers([
+            champEntry('blue', 2, 'winner', { cupWinner: true }),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null)
+        ]);
+        // Someone else wins the league so there's a distinct cup story
+        players.Ben.history['2026-01-03'] = champEntry('white', 1, 'final', { leagueWinner: true });
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6],
+            standingsByDate: {
+                '2026-01-03': [
+                    { team: 'white', losses: 1, goalsFor: 9, goalsAgainst: 6 },
+                    { team: 'blue', losses: 0, goalsFor: 7, goalsAgainst: 4 }
+                ]
+            }
+        });
+        const cup = cardFor(cards, '2026-01-03').threads.find((t) => t.type === 'teamCup');
+        expect(cup.invincible).toBe(true);
+    });
+
+    it('leaves invincible false when standings are not supplied', () => {
+        const players = trophyPlayers([
+            champEntry('blue', 1, null, { leagueWinner: true }),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null),
+            champEntry('blue', 2, null)
+        ]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6]
+        });
+        const league = cardFor(cards, '2026-01-03').threads.find((t) => t.type === 'teamLeague');
+        expect(league.invincible).toBe(false);
+    });
+
     it('keeps the team scoreline even when winners already carry streak threads', () => {
         const players = trophyPlayers([
             ...chrisWins3,
@@ -917,25 +1012,47 @@ describe('notability and selection', () => {
         expect(spoonBreak.notability).toBeGreaterThan(trophyExtend.notability);
     });
 
-    it('sorts threads by notability descending and honours maxThreads', () => {
+    it('anchors reserved fixtures at the top ahead of higher-scored stories, honouring maxThreads', () => {
         const players = trophyPlayers([
             ...chrisWins3,
             champEntry('blue', 1, null, { leagueWinner: true })
         ]);
         players.Ben.history['2026-01-24'] = champEntry('white', 2, null);
-        players.Cara.history['2026-01-24'] = champEntry('orange', 4, null);
         const cards = buildNewsFeed(players, config, {
             asOf: '2026-01-24',
             competitionDays: [6],
             maxThreads: 2
         });
         const card = cardFor(cards, '2026-01-24');
-        expect(card.threads.length).toBeLessThanOrEqual(2);
-        for (let i = 1; i < card.threads.length; i++) {
-            expect(card.threads[i - 1].notability).toBeGreaterThanOrEqual(
-                card.threads[i].notability
-            );
-        }
+        expect(card.threads).toHaveLength(2);
+        const chris = card.threads.find((t) => t.player === 'Chris');
+        const league = card.threads.find((t) => t.type === 'teamLeague');
+        // Chris's 4-session trophy run outscores the league line...
+        expect(chris.notability).toBeGreaterThan(league.notability);
+        // ...yet the team result is anchored first.
+        expect(card.threads[0].type).toBe('teamLeague');
+        expect(card.threads[1].player).toBe('Chris');
+    });
+
+    it('anchors team league, team cup, then stars of the day in that order', () => {
+        const stats = { goals: 3, offActions: 1, defActions: 1, saveActions: 0 };
+        const players = {
+            Ace: {
+                history: history([
+                    {
+                        ...champEntry('blue', 1, 'winner', { leagueWinner: true, cupWinner: true }),
+                        stats
+                    }
+                ])
+            },
+            Bo: { history: history([champEntry('white', 2, 'final')]) }
+        };
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-03',
+            competitionDays: [6]
+        });
+        const types = cardFor(cards, '2026-01-03').threads.map((t) => t.type);
+        expect(types.slice(0, 3)).toEqual(['teamLeague', 'teamCup', 'starsOfTheDay']);
     });
 
     it('ranks long streak extensions above the double team scorelines', () => {
