@@ -1,6 +1,6 @@
 <script>
     import { pushState } from '$app/navigation';
-    import { AngleDownOutline, FireSolid, StarSolid } from 'flowbite-svelte-icons';
+    import { FireSolid, StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
@@ -125,7 +125,7 @@
             case 'biggestMover':
                 return { icon: FireSolid, color: 'text-green-500' };
             case 'biggestFaller':
-                return { icon: AngleDownOutline, color: 'text-red-500' };
+                return { icon: SnowflakeIcon, color: 'text-blue-400' };
             case 'teamLeague':
                 return { icon: CrownIcon, color: 'text-yellow-500' };
             case 'teamCup':
