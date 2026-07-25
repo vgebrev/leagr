@@ -43,6 +43,7 @@ import {
  * @property {number|null} [margin]
  * @property {{winner: number, runnerUp: number}|null} [gd]
  * @property {boolean} [double]
+ * @property {boolean} [invincible]
  * @property {Array<{category: string, players: string[], value: number}>} [winners]
  */
 
@@ -351,6 +352,21 @@ function starsOfTheDay(players, date) {
 }
 
 /**
+ * A team that suffered no defeats all session: no league losses (from the
+ * session standings) and no cup elimination (cupProgress absent, or 'winner').
+ * Undetermined without standings, so returns false when they aren't loaded.
+ * @param {string} team
+ * @param {string|null|undefined} cupProgress - the team's cup exit round
+ * @param {Array<{team: string, losses?: number}>|undefined} table - session standings
+ * @returns {boolean}
+ */
+function isInvincible(team, cupProgress, table) {
+    if (cupProgress != null && cupProgress !== 'winner') return false;
+    const row = table?.find((t) => t.team === team);
+    return row != null && row.losses === 0;
+}
+
+/**
  * Build the news feed: one preview card for the upcoming session plus a
  * recap card per played session, newest first. Threads per card are scored
  * for notability and capped.
@@ -483,6 +499,7 @@ export function buildNewsFeed(players, config, options) {
             // winners' entries. The margin is the league match-points gap
             // to the runner-up team.
             let leagueTeam = null;
+            let leagueCupProgress = null;
             let winnerMatch = null;
             let runnerUpTeam = null;
             let runnerUpMatch = null;
@@ -494,7 +511,10 @@ export function buildNewsFeed(players, config, options) {
                 const perf = entry.performance ?? {};
                 const match = entry.points?.match;
                 if (perf.leagueWinner) {
-                    leagueTeam ??= entry.team;
+                    if (leagueTeam == null) {
+                        leagueTeam = entry.team;
+                        leagueCupProgress = perf.cupProgress ?? null;
+                    }
                     if (winnerMatch == null && typeof match === 'number') winnerMatch = match;
                 }
                 if (perf.leaguePosition === 2) {
@@ -505,6 +525,7 @@ export function buildNewsFeed(players, config, options) {
                 if (perf.cupProgress === 'final') finalist ??= entry.team;
             }
             const double = leagueTeam != null && leagueTeam === cupTeam;
+            const table = standingsByDate?.[date];
             if (leagueTeam) {
                 const margin =
                     winnerMatch != null && runnerUpMatch != null
@@ -513,8 +534,7 @@ export function buildNewsFeed(players, config, options) {
                 // Points don't separate the top two - the title was decided on
                 // goal difference, which lives only in the session standings.
                 let gd = null;
-                if (margin === 0 && runnerUpTeam && standingsByDate?.[date]) {
-                    const table = standingsByDate[date];
+                if (margin === 0 && runnerUpTeam && table) {
                     const w = table.find((t) => t.team === leagueTeam);
                     const r = table.find((t) => t.team === runnerUpTeam);
                     if (w && r) {
@@ -532,6 +552,7 @@ export function buildNewsFeed(players, config, options) {
                     margin,
                     gd,
                     double,
+                    invincible: isInvincible(leagueTeam, leagueCupProgress, table),
                     notability: double ? TEAM_NOTABILITY.leagueOfDouble : TEAM_NOTABILITY.league
                 });
             }
@@ -541,6 +562,9 @@ export function buildNewsFeed(players, config, options) {
                     team: cupTeam,
                     finalist: finalist ?? null,
                     double,
+                    // A cup winner never loses in the cup; invincible iff they
+                    // also went unbeaten in the league.
+                    invincible: isInvincible(cupTeam, 'winner', table),
                     notability: double ? TEAM_NOTABILITY.cupOfDouble : TEAM_NOTABILITY.cup
                 });
             }
@@ -565,13 +589,14 @@ export function buildNewsFeed(players, config, options) {
         const storyThreads =
             state === 'preview' && roster ? threads.filter((t) => roster.has(t.player)) : threads;
 
-        // Reserved fixtures always show; stories compete for the rest
+        // Reserved fixtures (team league, team cup, stars of the day) are
+        // anchored at the top of a recap in that order; the individual stories
+        // follow, ranked by notability, filling the remaining slots.
         storyThreads.sort(byNotability);
         const selected = [
             ...reservedThreads,
             ...storyThreads.slice(0, Math.max(maxThreads - reservedThreads.length, 0))
         ];
-        selected.sort(byNotability);
         return { date, state, threads: selected.slice(0, maxThreads) };
     }
 

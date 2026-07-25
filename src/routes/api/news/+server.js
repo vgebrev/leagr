@@ -10,44 +10,30 @@ import { data } from '$lib/server/data.js';
 import { dateString } from '$lib/shared/helpers.js';
 
 /**
- * Session standings (points + goal difference) for dates where the league
- * title was shared on points, so the recap can report the goal-difference
- * margin - which isn't in the rankings history. Only these tied dates are
- * loaded (usually none or a couple), not the whole season.
- * @param {Record<string, {history?: Record<string, any>}>} players
+ * Session standings (points, goal difference, wins/losses) per played date.
+ * The recap's team lines need data that isn't in the rankings history: the
+ * goal-difference margin when the top two are level on points, and each
+ * winning team's league losses (to flag an unbeaten "invincible" side).
  * @param {Set<string>} playedDates
+ * @param {string} asOf
  * @param {string} leagueId
  * @returns {Promise<Record<string, Array>>}
  */
-async function tiedLeagueStandings(players, playedDates, leagueId) {
-    const tiedDates = [];
-    for (const date of playedDates) {
-        let winnerPts = null;
-        let runnerUpPts = null;
-        for (const player of Object.values(players)) {
-            const entry = player.history?.[date];
-            const match = entry?.points?.match;
-            if (typeof match !== 'number') continue;
-            const perf = entry.performance ?? {};
-            if (perf.leagueWinner && winnerPts == null) winnerPts = match;
-            if (perf.leaguePosition === 2 && runnerUpPts == null) runnerUpPts = match;
-        }
-        if (winnerPts != null && runnerUpPts != null && winnerPts === runnerUpPts) {
-            tiedDates.push(date);
-        }
-    }
-
+async function loadSessionStandings(playedDates, asOf, leagueId) {
     const standingsManager = createStandingsManager();
     /** @type {Record<string, Array>} */
     const standingsByDate = {};
     await Promise.all(
-        tiedDates.map(async (date) => {
-            try {
-                standingsByDate[date] = await standingsManager.getStandingsForDate(date, leagueId);
-            } catch {
-                // A session without recorded games has no standings - skip it
-            }
-        })
+        [...playedDates]
+            .filter((date) => date <= asOf)
+            .map(async (date) => {
+                try {
+                    const table = await standingsManager.getStandingsForDate(date, leagueId);
+                    if (table.length > 0) standingsByDate[date] = table;
+                } catch {
+                    // A session without recorded games has no standings - skip it
+                }
+            })
     );
     return standingsByDate;
 }
@@ -138,7 +124,7 @@ export async function GET({ locals, url }) {
             ? [...(registration.available ?? []), ...(registration.waitingList ?? [])]
             : [];
 
-        const standingsByDate = await tiedLeagueStandings(rankings.players, playedDates, leagueId);
+        const standingsByDate = await loadSessionStandings(playedDates, asOf, leagueId);
 
         const cards = buildNewsFeed(
             rankings.players,

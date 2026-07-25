@@ -1,6 +1,6 @@
 <script>
     import { pushState } from '$app/navigation';
-    import { AngleDownOutline, FireSolid, StarSolid } from 'flowbite-svelte-icons';
+    import { FireSolid, StarSolid } from 'flowbite-svelte-icons';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
@@ -26,12 +26,47 @@
      * @property {number|null} [margin]
      * @property {{winner: number, runnerUp: number}|null} [gd]
      * @property {boolean} [double]
+     * @property {boolean} [invincible]
      */
 
     /**
      * @type {{ card: { date: string, state: 'preview'|'recap', threads: Thread[] } }}
      */
     let { card } = $props();
+
+    /** @type {HTMLElement | undefined} */
+    let cardEl = $state();
+
+    /** The nearest scrollable ancestor (the layout's content container). */
+    function scroller() {
+        let el = cardEl?.parentElement;
+        while (el) {
+            const overflowY = getComputedStyle(el).overflowY;
+            if (
+                (overflowY === 'auto' || overflowY === 'scroll') &&
+                el.scrollHeight > el.clientHeight
+            )
+                return el;
+            el = el.parentElement;
+        }
+        return null;
+    }
+
+    // Opening a modal shows a native <dialog>, which resets the scroll
+    // container to the top. Capture the position first and restore it over the
+    // next few frames once the dialog has opened (the restore then sticks).
+    function preserveScroll() {
+        const sc = scroller();
+        if (!sc) return;
+        const top = sc.scrollTop;
+        const restore = () => {
+            if (sc.scrollTop !== top) sc.scrollTop = top;
+        };
+        requestAnimationFrame(restore);
+        requestAnimationFrame(() => requestAnimationFrame(restore));
+        setTimeout(restore, 60);
+        setTimeout(restore, 180);
+    }
 
     const awardLabels = {
         mvp: 'MVP',
@@ -90,7 +125,7 @@
             case 'biggestMover':
                 return { icon: FireSolid, color: 'text-green-500' };
             case 'biggestFaller':
-                return { icon: AngleDownOutline, color: 'text-red-500' };
+                return { icon: SnowflakeIcon, color: 'text-blue-400' };
             case 'teamLeague':
                 return { icon: CrownIcon, color: 'text-yellow-500' };
             case 'teamCup':
@@ -170,10 +205,11 @@
                     thread.points != null
                         ? `${thread.points} point${thread.points === 1 ? '' : 's'}`
                         : null;
+                const unbeaten = thread.invincible ? ' Unbeaten all day.' : '';
                 if (thread.runnerUp == null || thread.margin == null) {
                     return [
                         T(thread.team),
-                        pts ? ` win the league with ${pts}.` : ' win the league.'
+                        (pts ? ` win the league with ${pts}.` : ' win the league.') + unbeaten
                     ];
                 }
                 if (thread.margin === 0) {
@@ -185,7 +221,7 @@
                         T(thread.team),
                         ' edge ',
                         T(thread.runnerUp),
-                        ` to the league on goal difference${both}${gd}.`
+                        ` to the league on goal difference${both}${gd}.${unbeaten}`
                     ];
                 }
                 const clear = `${thread.margin} point${thread.margin === 1 ? '' : 's'} clear of `;
@@ -193,21 +229,22 @@
                     T(thread.team),
                     pts ? ` win the league with ${pts}, ${clear}` : ` win the league, ${clear}`,
                     T(thread.runnerUp),
-                    '.'
+                    `.${unbeaten}`
                 ];
             }
             case 'teamCup': {
                 const also = thread.double ? ' also' : '';
                 const dbl = thread.double ? ' — for the double' : '';
+                const unbeaten = thread.invincible ? ' Unbeaten all day.' : '';
                 if (thread.finalist) {
                     return [
                         T(thread.team),
                         `${also} win the cup, besting `,
                         T(thread.finalist),
-                        ` in the final${dbl}.`
+                        ` in the final${dbl}.${unbeaten}`
                     ];
                 }
-                return [T(thread.team), `${also} win the cup${dbl}.`];
+                return [T(thread.team), `${also} win the cup${dbl}.${unbeaten}`];
             }
             default:
                 return [p ?? ''];
@@ -216,11 +253,13 @@
 
     /** @param {string} name */
     function openPlayer(name) {
+        preserveScroll();
         pushState('', { playerModal: { playerName: name, date: card.date } });
     }
 
     /** @param {string} name */
     function openTeam(name) {
+        preserveScroll();
         pushState('', { teamModal: { teamName: name, date: card.date } });
     }
 
@@ -259,7 +298,9 @@
         onkeydown={onKeyActivate(activate)}>{display}</span>
 {/snippet}
 
-<div class="glass rounded-lg border border-gray-200 p-3 shadow-sm dark:border-gray-700">
+<div
+    bind:this={cardEl}
+    class="glass rounded-lg border border-gray-200 p-3 shadow-sm dark:border-gray-700">
     <div class="mb-2 flex items-center justify-between">
         <h6 class="text-sm font-bold text-gray-900 dark:text-gray-100">
             {formatDisplayDate(card.date)}
