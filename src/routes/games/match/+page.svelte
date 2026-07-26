@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
@@ -17,6 +17,8 @@
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import TeamActionPanel from './components/TeamActionPanel.svelte';
     import StatsGuide from './components/StatsGuide.svelte';
+    import MatchTimer from './components/MatchTimer.svelte';
+    import { matchTimer } from '$lib/client/services/matchTimer.svelte.js';
     import {
         gamesService,
         findLeagueMatch,
@@ -237,6 +239,19 @@
     });
 
     let competitionEnded = $derived(isCompetitionEnded(date, $settings));
+
+    // The timer is a module singleton, so it survives navigation within the app;
+    // attaching on a new match key is what resets an on-the-fly duration override.
+    let matchKey = $derived(`${date}:${competition}:${roundParam}:${matchParam}`);
+
+    $effect(() => {
+        matchTimer.attach(matchKey, {
+            durationMinutes: $settings?.gameDurationMinutes ?? 8,
+            lastPlaySeconds: $settings?.lastPlayEnabled ? ($settings?.lastPlaySeconds ?? 60) : 0
+        });
+    });
+
+    onDestroy(() => matchTimer.detach());
 
     let selectedTeam = $state(/** @type {string | null} */ (null));
     let showTeamModal = $state(false);
@@ -600,6 +615,8 @@
                     </div>
                 </div>
             </div>
+            <!-- Game timer -->
+            <MatchTimer disabled={competitionEnded} />
             <!-- Penalty shootout (knockout only, when scores are a draw) -->
             {#if competition === 'knockout' && match.homeScore !== null && match.awayScore !== null && match.homeScore === match.awayScore}
                 <div class="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">

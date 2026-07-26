@@ -25,7 +25,10 @@ export const LEAGUE_ONLY_SETTINGS = [
     'teamDrawRequiresAdmin',
     'discipline',
     'teamLogos',
-    'momentum'
+    'momentum',
+    'gameDurationMinutes',
+    'lastPlayEnabled',
+    'lastPlaySeconds'
 ];
 
 /**
@@ -50,6 +53,14 @@ export const defaultSettings = {
         maxPlayersPerTeam: 7
     },
     playerLimit: 24,
+    // Match Centre game timer. Flat keys rather than a nested block: the league
+    // settings merge is shallow, so a nested object would drop its own defaults
+    // on a partial write (see getEffectiveMomentumSettings for that workaround).
+    gameDurationMinutes: 8,
+    // "Last play": after regulation time the team in possession gets one final
+    // chance. Off by default — it's a per-league rule, not a general convention.
+    lastPlayEnabled: false,
+    lastPlaySeconds: 60,
     canRegenerateTeams: false,
     canResetSchedule: false,
     seedTeams: true,

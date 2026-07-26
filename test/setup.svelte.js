@@ -43,6 +43,53 @@ if (!global.fetch) {
     global.fetch = vi.fn();
 }
 
+// jsdom implements neither of these; the match timer touches both.
+if (!navigator.vibrate) {
+    Object.defineProperty(navigator, 'vibrate', {
+        writable: true,
+        value: vi.fn().mockReturnValue(true)
+    });
+}
+
+global.AudioContext = vi.fn().mockImplementation(() => ({
+    state: 'running',
+    currentTime: 0,
+    destination: {},
+    sampleRate: 48000,
+    resume: vi.fn().mockResolvedValue(undefined),
+    createOscillator: vi.fn(() => ({
+        type: 'sine',
+        frequency: { value: 0, setValueAtTime: vi.fn(), exponentialRampToValueAtTime: vi.fn() },
+        connect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn()
+    })),
+    createGain: vi.fn(() => ({
+        gain: {
+            value: 0,
+            setValueAtTime: vi.fn(),
+            linearRampToValueAtTime: vi.fn(),
+            exponentialRampToValueAtTime: vi.fn()
+        },
+        connect: vi.fn()
+    })),
+    createBiquadFilter: vi.fn(() => ({
+        type: 'bandpass',
+        frequency: { value: 0, setValueAtTime: vi.fn() },
+        Q: { value: 0 },
+        connect: vi.fn()
+    })),
+    createBufferSource: vi.fn(() => ({
+        buffer: null,
+        connect: vi.fn(),
+        start: vi.fn(),
+        stop: vi.fn()
+    })),
+    createBuffer: vi.fn(() => ({
+        getChannelData: vi.fn(() => new Float32Array(128))
+    }))
+}));
+
 // Mock URL for SvelteKit environments
 global.URL = global.URL || URL;
 

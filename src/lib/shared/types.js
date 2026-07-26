@@ -80,6 +80,9 @@
  * @property {RegistrationWindow} registrationWindow
  * @property {TeamGenerationSettings} teamGeneration
  * @property {number} playerLimit
+ * @property {number} [gameDurationMinutes]
+ * @property {boolean} [lastPlayEnabled]
+ * @property {number} [lastPlaySeconds]
  * @property {boolean} canRegenerateTeams
  * @property {boolean} canResetSchedule
  * @property {boolean} seedTeams
