@@ -9,10 +9,53 @@
  * restart after a stoppage, or "regulation is over, last play is live"); long
  * means the game is done. Duration carries better across a noisy pitch than a
  * change of pitch or timbre would.
+ *
+ * Loudness comes from saturation rather than raw gain. The voices are summed
+ * well past unity and pushed through a `tanh` soft-clipper, which is bounded —
+ * so peaks cannot clip however hard it is driven — while the flattened waveform
+ * raises average level far above what a bare sine reaches at the same peak. The
+ * harmonics that clipping generates are the point too: a pure sine is polite,
+ * and a whistle on a pitch needs to be anything but.
  */
+
+/**
+ * Tuning knobs, all in one place — this is a thing judged by ear, so expect to
+ * turn these rather than restructure the graph below.
+ */
+const WHISTLE = {
+    /** The pair that beats against each other; the beat is what says "whistle". */
+    frequencies: [2350, 2510],
+    /** Level per fundamental, before saturation. */
+    voiceLevel: 0.5,
+    /**
+     * An octave up, for bite. Kept deliberately low: the saturation below
+     * already generates harmonics, so this only tops them up. Measured, at the
+     * same loudness to within 0.1 dB — 0.22 made the octave the *strongest*
+     * partial, which moves the perceived pitch up and reads as a smoke alarm;
+     * 0 is darker and purer. 0.1 keeps the fundamental dominant.
+     */
+    harmonicRatio: 2,
+    harmonicLevel: 0.1,
+    /** The rattling "pea": LFO rate in Hz and its swing in Hz either side. */
+    trillHz: 20,
+    trillDepth: 150,
+    /** Air noise: a chiff on the attack settling to a hiss under the tone. */
+    breathLevel: 0.12,
+    breathAttackLevel: 0.4,
+    /** Soft-clip drive. Higher is louder and harsher; peaks stay bounded. */
+    drive: 3.2,
+    /** Final peak level. The clipper guarantees nothing exceeds this. */
+    outputLevel: 0.92,
+    /** Seconds. Long is a full-time blast, short is everything else. */
+    shortDuration: 1.0,
+    longDuration: 1.5
+};
 
 /** @type {AudioContext | null} */
 let context = null;
+
+/** @type {Float32Array | null} */
+let clipCurve = null;
 
 /**
  * Lazily create the shared AudioContext.
@@ -56,13 +99,33 @@ export function unlockAudio() {
 }
 
 /**
- * Short burst of filtered noise, giving the whistle its breathy attack.
+ * Transfer curve for the soft-clipper: a normalised `tanh`, so an input of any
+ * size maps into ±1 and the output can never clip the device.
+ * @returns {Float32Array}
+ */
+function getClipCurve() {
+    if (clipCurve) return clipCurve;
+
+    const samples = 1024;
+    const curve = new Float32Array(samples);
+    const norm = Math.tanh(WHISTLE.drive);
+    for (let i = 0; i < samples; i++) {
+        const x = (i / (samples - 1)) * 2 - 1;
+        curve[i] = Math.tanh(WHISTLE.drive * x) / norm;
+    }
+
+    clipCurve = curve;
+    return curve;
+}
+
+/**
+ * Air noise running the length of the whistle, loudest on the attack.
  * @param {AudioContext} ctx
  * @param {AudioNode} destination
  * @param {number} startAt
+ * @param {number} duration
  */
-function addBreath(ctx, destination, startAt) {
-    const duration = 0.06;
+function addAir(ctx, destination, startAt, duration) {
     const buffer = ctx.createBuffer(
         1,
         Math.max(1, Math.floor(ctx.sampleRate * duration)),
@@ -70,8 +133,7 @@ function addBreath(ctx, destination, startAt) {
     );
     const samples = buffer.getChannelData(0);
     for (let i = 0; i < samples.length; i++) {
-        // Fades across the burst so it reads as an attack rather than a click.
-        samples[i] = (Math.random() * 2 - 1) * (1 - i / samples.length);
+        samples[i] = Math.random() * 2 - 1;
     }
 
     const source = ctx.createBufferSource();
@@ -79,11 +141,12 @@ function addBreath(ctx, destination, startAt) {
 
     const filter = ctx.createBiquadFilter();
     filter.type = 'bandpass';
-    filter.frequency.value = 2400;
-    filter.Q.value = 1.2;
+    filter.frequency.value = 2600;
+    filter.Q.value = 0.8;
 
     const gain = ctx.createGain();
-    gain.gain.value = 0.08;
+    gain.gain.setValueAtTime(WHISTLE.breathAttackLevel, startAt);
+    gain.gain.exponentialRampToValueAtTime(WHISTLE.breathLevel, startAt + 0.08);
 
     source.connect(filter);
     filter.connect(gain);
@@ -104,51 +167,72 @@ export function playWhistle({ long = false } = {}) {
         unlockAudio();
 
         const now = ctx.currentTime;
-        const duration = long ? 1.2 : 0.35;
+        const duration = long ? WHISTLE.longDuration : WHISTLE.shortDuration;
 
-        // Bandpass keeps the tone thin and whistle-like rather than buzzy.
+        // Output stage first, so everything below has somewhere to land.
+        // Envelope sits *after* the clipper: the clipper then sees a steady
+        // level and saturates evenly, instead of only biting on the attack.
+        const envelope = ctx.createGain();
+        envelope.gain.setValueAtTime(0.0001, now);
+        envelope.gain.linearRampToValueAtTime(WHISTLE.outputLevel, now + 0.008);
+        envelope.gain.setValueAtTime(WHISTLE.outputLevel, now + duration * 0.85);
+        envelope.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        envelope.connect(ctx.destination);
+
+        const shaper = ctx.createWaveShaper();
+        shaper.curve = getClipCurve();
+        shaper.connect(envelope);
+
+        // Wide enough to pass the harmonics that make it cut; narrow enough to
+        // keep the low rumble of the noise out.
         const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
-        filter.frequency.value = 2500;
-        filter.Q.value = 4;
+        filter.frequency.value = 2450;
+        filter.Q.value = 1.5;
+        filter.connect(shaper);
 
-        const master = ctx.createGain();
-        master.gain.setValueAtTime(0.0001, now);
-        master.gain.linearRampToValueAtTime(0.35, now + 0.005); // 5ms attack
-        master.gain.setValueAtTime(0.35, now + duration * 0.6);
-        master.gain.exponentialRampToValueAtTime(0.0001, now + duration);
-
-        filter.connect(master);
-        master.connect(ctx.destination);
-
-        // The "pea": an LFO wobbling both oscillators.
+        // The "pea": an LFO wobbling every voice together.
         const lfo = ctx.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.value = 18;
+        lfo.frequency.value = WHISTLE.trillHz;
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 120;
+        lfoGain.gain.value = WHISTLE.trillDepth;
         lfo.connect(lfoGain);
 
-        // Two detuned oscillators - the beating between them is what makes this
-        // read as a whistle instead of a beep.
-        for (const frequency of [2400, 2560]) {
+        /**
+         * @param {number} frequency
+         * @param {number} level
+         */
+        const addVoice = (frequency, level) => {
             const osc = ctx.createOscillator();
             osc.type = 'sine';
             osc.frequency.setValueAtTime(frequency, now);
             if (long) {
-                // Full time drops away at the end, like a whistle running out of breath.
-                osc.frequency.exponentialRampToValueAtTime(frequency * 0.82, now + duration);
+                // Full time sags at the very end, like a whistle running out of
+                // breath. Held flat until then, so it stays a blast not a siren.
+                osc.frequency.setValueAtTime(frequency, now + duration * 0.7);
+                osc.frequency.exponentialRampToValueAtTime(frequency * 0.85, now + duration);
             }
+
+            const gain = ctx.createGain();
+            gain.gain.value = level;
+
             lfoGain.connect(osc.frequency);
-            osc.connect(filter);
+            osc.connect(gain);
+            gain.connect(filter);
             osc.start(now);
             osc.stop(now + duration);
+        };
+
+        for (const frequency of WHISTLE.frequencies) {
+            addVoice(frequency, WHISTLE.voiceLevel);
+            addVoice(frequency * WHISTLE.harmonicRatio, WHISTLE.harmonicLevel);
         }
 
         lfo.start(now);
         lfo.stop(now + duration);
 
-        addBreath(ctx, filter, now);
+        addAir(ctx, filter, now, duration);
     } catch (error) {
         console.error('Error playing whistle:', error);
     }

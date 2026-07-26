@@ -87,6 +87,10 @@ global.AudioContext = vi.fn().mockImplementation(() => ({
     })),
     createBuffer: vi.fn(() => ({
         getChannelData: vi.fn(() => new Float32Array(128))
+    })),
+    createWaveShaper: vi.fn(() => ({
+        curve: null,
+        connect: vi.fn()
     }))
 }));
 
