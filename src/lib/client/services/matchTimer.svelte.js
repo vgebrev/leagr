@@ -169,6 +169,32 @@ class MatchTimerService {
         this.#persist();
     }
 
+    /**
+     * Start the clock for a game that is already under way — no countdown, no
+     * kick-off whistle. Triggered when a stat is recorded before anyone started
+     * the timer: play is demonstrably in progress, so counting down to a
+     * kick-off would announce something that has already happened.
+     *
+     * The clock will read late by however long it took to record that first
+     * stat. That is the deliberate trade: an approximate clock beats none.
+     * Must be called from a user gesture so the audio unlock still takes.
+     */
+    startLate() {
+        if (this.status !== 'idle') return;
+
+        unlockAudio();
+        this.#requestWakeLock();
+
+        this.now = Date.now();
+        this.runStartedAt = this.now;
+        this.countdownStartedAt = null;
+        this.countdownValue = 0;
+        this.status = 'running';
+        this.#ensureTicking();
+        this.#watchVisibility();
+        this.#persist();
+    }
+
     pause() {
         if (this.status !== 'running') return;
 
@@ -216,6 +242,9 @@ class MatchTimerService {
 
     /** Back to the start, keeping whatever duration is currently set. */
     reset() {
+        if (!this.isActive)
+            return;
+
         this.#stopTicking();
         this.#releaseWakeLock();
         this.accumulatedMs = 0;

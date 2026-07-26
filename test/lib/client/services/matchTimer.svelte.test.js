@@ -139,6 +139,58 @@ describe('matchTimer service', () => {
         });
     });
 
+    describe('late start', () => {
+        it('picks up a game already in progress with no countdown and no whistle', () => {
+            timer.attach(KEY, DEFAULTS);
+
+            timer.startLate();
+
+            expect(timer.status).toBe('running');
+            expect(timer.countdownValue).toBe(0);
+            // Announcing a kick-off would be wrong: play is already under way.
+            expect(whistle.playWhistle).not.toHaveBeenCalled();
+            expect(whistle.vibrate).not.toHaveBeenCalled();
+
+            vi.advanceTimersByTime(MINUTE);
+            expect(timer.elapsedMs).toBe(MINUTE);
+        });
+
+        it('still unlocks audio so full time is audible', () => {
+            timer.attach(KEY, DEFAULTS);
+            timer.startLate();
+            expect(whistle.unlockAudio).toHaveBeenCalled();
+
+            vi.advanceTimersByTime(8 * MINUTE);
+
+            expect(timer.status).toBe('finished');
+            expect(whistle.playWhistle).toHaveBeenCalledTimes(1);
+            expect(whistle.playWhistle).toHaveBeenCalledWith({ long: true });
+        });
+
+        it('does not disturb a clock that is already running', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(2 * MINUTE);
+
+            timer.startLate();
+
+            expect(timer.status).toBe('running');
+            expect(timer.elapsedMs).toBe(2 * MINUTE);
+        });
+
+        it('leaves a paused clock paused', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+            timer.pause();
+
+            timer.startLate();
+
+            expect(timer.status).toBe('paused');
+            expect(timer.elapsedMs).toBe(MINUTE);
+        });
+    });
+
     describe('pause and resume', () => {
         it('freezes elapsed time while paused', () => {
             timer.attach(KEY, DEFAULTS);
@@ -183,7 +235,7 @@ describe('matchTimer service', () => {
             timer.attach(KEY, DEFAULTS);
 
             timer.adjustDuration(-20);
-            expect(timer.durationMs).toBe(1 * MINUTE);
+            expect(timer.durationMs).toBe(MINUTE);
 
             timer.adjustDuration(200);
             expect(timer.durationMs).toBe(60 * MINUTE);

@@ -75,6 +75,14 @@
      * @param {number} delta
      */
     async function handleAction(side, playerName, mode, delta) {
+        // Recording a stat means play is under way, so a match with no score yet
+        // is one whose clock nobody started. Pick it up here, inside the tap, so
+        // the audio unlock still has a user gesture behind it. The score itself
+        // is seeded by the service, alongside the stat, in one save.
+        if (delta > 0 && match?.homeScore == null && match?.awayScore == null) {
+            matchTimer.startLate();
+        }
+
         await gamesService.applyPlayerAction(
             competition,
             roundParam,
@@ -84,6 +92,11 @@
             mode,
             delta
         );
+    }
+
+    /** Starting the clock puts a 0-0 on the board, the same as the score inputs would. */
+    async function handleKickOff() {
+        await gamesService.startScoring(competition, roundParam, matchParam);
     }
 
     // Manual score inputs
@@ -615,8 +628,6 @@
                     </div>
                 </div>
             </div>
-            <!-- Game timer -->
-            <MatchTimer disabled={competitionEnded} />
             <!-- Penalty shootout (knockout only, when scores are a draw) -->
             {#if competition === 'knockout' && match.homeScore !== null && match.awayScore !== null && match.homeScore === match.awayScore}
                 <div class="mt-3 border-t border-gray-200 pt-3 dark:border-gray-700">
@@ -693,6 +704,11 @@
                 </div>
             {/if}
         </div>
+
+        <!-- Game timer -->
+        <MatchTimer
+            disabled={competitionEnded}
+            onKickOff={handleKickOff} />
 
         <!-- Team action panels -->
         <div class="grid grid-cols-2 gap-2">
