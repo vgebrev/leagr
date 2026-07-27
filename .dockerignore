@@ -10,4 +10,15 @@ Dockerfile
 *.tar
 deploy.ps1
 deploy.sh
+deploy.env
+deploy.env.example
+copy-live-data.sh
+copy-live-logs.sh
+.githooks
 scripts
+
+# Keep local secrets out of the build context. Without this, `COPY . .` pulls
+# .env.local into the image and Vite inlines every VITE_* value into the server
+# bundle. Production gets its config from `docker run -e` instead (see deploy.sh).
+.env
+.env.*

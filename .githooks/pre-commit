@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# Blocks commits containing credential-shaped strings.
+#
+# This repo is public, and deploy.sh was once committed with a live key in it
+# (18e87d4, "Oops"). Config now lives in the gitignored deploy.env, and this
+# hook is the backstop for the case where a secret gets pasted somewhere else.
+#
+# Enable once per clone:
+#   git config core.hooksPath .githooks
+#
+# To bypass for a known-good commit: git commit --no-verify
+
+set -u
+
+RED=$'\033[1;31m'
+YELLOW=$'\033[1;33m'
+RESET=$'\033[0m'
+
+# Files allowed to contain placeholder- or hash-shaped strings.
+is_allowlisted() {
+    case "$1" in
+        deploy.env.example | README.md | package-lock.json | .githooks/pre-commit)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Each rule is "description|regex|confirming-regex". A line must match both
+# patterns to be reported; the confirming pattern may be empty.
+#
+# The last rule deliberately requires a digit in the value: it keeps names like
+# STORAGE_KEY = 'leagr:matchTimer' and test fixtures such as 'test-secret-key'
+# from tripping the hook, while still catching real random-looking credentials.
+RULES=(
+    "OpenAI/Anthropic API key|(sk-proj-|sk-ant-|sk-)[A-Za-z0-9_-]{24,}|"
+    "Mailgun API key|(key-)?[0-9a-f]{32}-[0-9a-f]{8}-[0-9a-f]{8}|"
+    "AWS access key id|AKIA[0-9A-Z]{16}|"
+    "Private key block|-----BEGIN [A-Z ]*PRIVATE KEY-----|"
+    "Secret assigned a long literal|[A-Z0-9_]*(SECRET|PASSWORD|TOKEN|API_?KEY|ACCESS_KEY|PRIVATE_KEY|SENDING_KEY|SALT)[A-Z0-9_]*[[:space:]]*[=:][[:space:]]*[\"'][^\"'\$][^\"']{11,}[\"']|[=:][[:space:]]*[\"'][^\"']*[0-9][^\"']*[\"']"
+)
+
+failed=0
+
+# Only added lines of added/copied/modified files, one file at a time so we can
+# report a usable location and honour the allowlist.
+while IFS= read -r file; do
+    [[ -z "$file" ]] && continue
+    is_allowlisted "$file" && continue
+
+    added=$(git diff --cached -U0 -- "$file" | grep '^+' | grep -v '^+++' | sed 's/^+//') || true
+    [[ -z "$added" ]] && continue
+
+    for rule in "${RULES[@]}"; do
+        desc="${rule%%|*}"
+        rest="${rule#*|}"
+        pattern="${rest%|*}"
+        confirm="${rest##*|}"
+        hits=$(printf '%s\n' "$added" | grep -nEi -- "$pattern" || true)
+        if [[ -n "$hits" && -n "$confirm" ]]; then
+            hits=$(printf '%s\n' "$hits" | grep -Ei -- "$confirm" || true)
+        fi
+        if [[ -n "$hits" ]]; then
+            if [[ $failed -eq 0 ]]; then
+                echo "${RED}Commit blocked: possible secret in staged changes.${RESET}" >&2
+                failed=1
+            fi
+            echo "" >&2
+            echo "  ${YELLOW}$file${RESET} - $desc" >&2
+            printf '%s\n' "$hits" | head -5 | sed 's/^/    /' >&2
+        fi
+    done
+done < <(git diff --cached --name-only --diff-filter=ACM)
+
+if [[ $failed -ne 0 ]]; then
+    echo "" >&2
+    echo "Move real values into deploy.env (gitignored) or .env.local." >&2
+    echo "If this is a false positive: git commit --no-verify" >&2
+    exit 1
+fi
+
+exit 0

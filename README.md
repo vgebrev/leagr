@@ -68,6 +68,14 @@ For development (needs [Node.js](https://nodejs.org/en)):
 - `npm run lint` - Code linting.
 - `npm run format` - Code formatting.
 
+Enable the repo's secret-scanning pre-commit hook once per clone (git does not pick up tracked hooks automatically):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+It blocks commits containing credential-shaped strings. Bypass a false positive with `git commit --no-verify`.
+
 ### Subdomain Setup
 
 Since leagues are registered/accessed on subdomains, it's useful to set up your `hosts` file to test locally:
@@ -178,6 +186,53 @@ Expose the app to the internet by configuring your web server or reverse proxy (
 - Replace the allowed origins, app URL with your actual domain(s)
 - Replace Mailgun credentials with your actual Mailgun account details
 - The `BODY_SIZE_LIMIT` is set to 6MB (6291456 bytes) to support avatar uploads up to 5MB
+
+### Scripted Deployment
+
+`deploy.sh` automates the above: it runs the test suite, bumps and tags the version, builds the
+image, ships it to a remote Docker host over SSH, and swaps the container over with automatic
+rollback if any step fails.
+
+All environment-specific configuration — target host, paths, port, domains and secrets — lives in
+`deploy.env`, which is **gitignored**. The script itself contains no values, so it is safe to keep
+in version control.
+
+```bash
+cp deploy.env.example deploy.env
+chmod 600 deploy.env
+# edit deploy.env with your own values
+```
+
+`REMOTE_HOST` is an alias defined in your `~/.ssh/config`, which keeps the real hostname, user, port
+and key path out of the repo entirely:
+
+```
+Host my-deploy-alias
+  HostName <your-host>
+  User <your-user>
+  IdentityFile ~/.ssh/<your-key>
+```
+
+Then deploy:
+
+```bash
+./deploy.sh                  # bump patch version, tag, deploy
+./deploy.sh -v 2.30.0        # deploy a specific version
+./deploy.sh --no-version     # deploy without versioning or tagging
+```
+
+The script refuses to run if `deploy.env` is missing or incomplete, listing every missing key. It
+also requires a clean working tree when versioning, and reminds you to `git push origin v<version>`
+on success.
+
+`copy-live-data.sh [league]` and `copy-live-logs.sh` read the same `deploy.env` to pull production
+data and logs down to your dev environment.
+
+**Note:** the deploy scripts target a Windows host running Docker (hence the `C:/` paths and
+`cmd.exe`-style remote commands). Adjust `REMOTE_*` paths and the cleanup commands for a Linux host.
+
+Deployment is intentionally operator-initiated and not wired into GitHub Actions — CI runs lint,
+tests and a build only, so no CI system holds credentials to the production host.
 
 ## License
 
