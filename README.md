@@ -29,6 +29,7 @@ Features include:
 - **Game Scheduling and Score Tracking**
     - Generate a round-robin home-away match schedule and track results.
     - Match Centre page for live stats tracking (goals, attack/defence contributions, and saves).
+    - Match Centre game timer with a configurable game length, pause/resume, and a referee's whistle.
     - Individual goal-scorer tracking with interactive popover UI (league + knockout matches).
     - Standings table based on match results.
     - Knockout tournament generation with teams seeded by standings.
