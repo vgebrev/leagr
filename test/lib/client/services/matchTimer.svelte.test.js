@@ -538,6 +538,53 @@ describe('matchTimer service', () => {
         });
     });
 
+    describe('expanded view preference', () => {
+        it('defaults to the compact row', () => {
+            expect(timer.expanded).toBe(false);
+        });
+
+        it('toggles between compact and full controls', () => {
+            timer.toggleExpanded();
+            expect(timer.expanded).toBe(true);
+
+            timer.toggleExpanded();
+            expect(timer.expanded).toBe(false);
+        });
+
+        it('persists across a reload', async () => {
+            timer.setExpanded(true);
+
+            vi.resetModules();
+            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+
+            expect(reloaded.expanded).toBe(true);
+            reloaded.destroy();
+        });
+
+        it('is independent of mute', async () => {
+            timer.setExpanded(true);
+            timer.setMuted(false);
+
+            vi.resetModules();
+            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+
+            expect(reloaded.expanded).toBe(true);
+            expect(reloaded.muted).toBe(false);
+            reloaded.destroy();
+        });
+
+        it('does not touch the clock', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            timer.toggleExpanded();
+
+            expect(timer.status).toBe('running');
+            expect(timer.elapsedMs).toBe(MINUTE);
+        });
+    });
+
     describe('cleanup', () => {
         it('stops ticking once destroyed', () => {
             timer.attach(KEY, DEFAULTS);

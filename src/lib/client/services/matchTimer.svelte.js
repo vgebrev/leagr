@@ -16,6 +16,7 @@ import { unlockAudio, playWhistle, vibrate } from './whistle.js';
 
 const STORAGE_KEY = 'leagr:matchTimer';
 const MUTE_KEY = 'leagr:matchTimerMuted';
+const EXPANDED_KEY = 'leagr:matchTimerExpanded';
 const TICK_MS = 250;
 const COUNTDOWN_MS = 3000;
 const MIN_MINUTES = 1;
@@ -55,6 +56,13 @@ class MatchTimerService {
     regulationSignalled = $state(false);
     /** @type {boolean} Audio suppressed (haptics still fire) */
     muted = $state(false);
+    /**
+     * @type {boolean} Timer panel showing its full controls rather than the
+     * compact row. A view preference rather than clock state, kept here so that
+     * every per-device timer preference persists the same way and survives
+     * navigating between matches.
+     */
+    expanded = $state(false);
     /** @type {number} Refreshed by the tick interval so derived values recompute */
     now = $state(0);
 
@@ -67,7 +75,8 @@ class MatchTimerService {
 
     constructor() {
         this.now = Date.now();
-        this.muted = this.#readMuted();
+        this.muted = this.#readFlag(MUTE_KEY);
+        this.expanded = this.#readFlag(EXPANDED_KEY);
     }
 
     /** Total run time, anchored to the wall clock rather than accumulated from ticks */
@@ -242,8 +251,7 @@ class MatchTimerService {
 
     /** Back to the start, keeping whatever duration is currently set. */
     reset() {
-        if (!this.isActive)
-            return;
+        if (!this.isActive) return;
 
         this.#stopTicking();
         this.#releaseWakeLock();
@@ -262,16 +270,23 @@ class MatchTimerService {
      */
     setMuted(muted) {
         this.muted = muted;
-        if (typeof window === 'undefined') return;
-        try {
-            localStorage.setItem(MUTE_KEY, muted ? 'true' : 'false');
-        } catch (error) {
-            console.error('Error storing timer mute state:', error);
-        }
+        this.#storeFlag(MUTE_KEY, muted);
     }
 
     toggleMute() {
         this.setMuted(!this.muted);
+    }
+
+    /**
+     * @param {boolean} expanded - Show the full control set rather than the compact row
+     */
+    setExpanded(expanded) {
+        this.expanded = expanded;
+        this.#storeFlag(EXPANDED_KEY, expanded);
+    }
+
+    toggleExpanded() {
+        this.setExpanded(!this.expanded);
     }
 
     /** Tear down everything, including listeners. */
@@ -491,15 +506,30 @@ class MatchTimerService {
     }
 
     /**
+     * Read a persisted device preference (mute, expanded).
+     * @param {string} key
      * @returns {boolean}
      */
-    #readMuted() {
+    #readFlag(key) {
         if (typeof window === 'undefined') return false;
         try {
-            return localStorage.getItem(MUTE_KEY) === 'true';
+            return localStorage.getItem(key) === 'true';
         } catch (error) {
-            console.error('Error reading timer mute state:', error);
+            console.error('Error reading timer preference:', error);
             return false;
+        }
+    }
+
+    /**
+     * @param {string} key
+     * @param {boolean} value
+     */
+    #storeFlag(key, value) {
+        if (typeof window === 'undefined') return;
+        try {
+            localStorage.setItem(key, value ? 'true' : 'false');
+        } catch (error) {
+            console.error('Error storing timer preference:', error);
         }
     }
 }
