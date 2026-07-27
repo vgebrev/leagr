@@ -1,5 +1,5 @@
 <script>
-    import { onMount } from 'svelte';
+    import { onMount, onDestroy } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
@@ -17,6 +17,8 @@
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import TeamActionPanel from './components/TeamActionPanel.svelte';
     import StatsGuide from './components/StatsGuide.svelte';
+    import MatchTimer from './components/MatchTimer.svelte';
+    import { matchTimer } from '$lib/client/services/matchTimer.svelte.js';
     import {
         gamesService,
         findLeagueMatch,
@@ -73,6 +75,14 @@
      * @param {number} delta
      */
     async function handleAction(side, playerName, mode, delta) {
+        // Recording a stat means play is under way, so a match with no score yet
+        // is one whose clock nobody started. Pick it up here, inside the tap, so
+        // the audio unlock still has a user gesture behind it. The score itself
+        // is seeded by the service, alongside the stat, in one save.
+        if (delta > 0 && match?.homeScore == null && match?.awayScore == null) {
+            matchTimer.startLate();
+        }
+
         await gamesService.applyPlayerAction(
             competition,
             roundParam,
@@ -82,6 +92,11 @@
             mode,
             delta
         );
+    }
+
+    /** Starting the clock puts a 0-0 on the board, the same as the score inputs would. */
+    async function handleKickOff() {
+        await gamesService.startScoring(competition, roundParam, matchParam);
     }
 
     // Manual score inputs
@@ -237,6 +252,19 @@
     });
 
     let competitionEnded = $derived(isCompetitionEnded(date, $settings));
+
+    // The timer is a module singleton, so it survives navigation within the app;
+    // attaching on a new match key is what resets an on-the-fly duration override.
+    let matchKey = $derived(`${date}:${competition}:${roundParam}:${matchParam}`);
+
+    $effect(() => {
+        matchTimer.attach(matchKey, {
+            durationMinutes: $settings?.gameDurationMinutes ?? 8,
+            lastPlaySeconds: $settings?.lastPlayEnabled ? ($settings?.lastPlaySeconds ?? 60) : 0
+        });
+    });
+
+    onDestroy(() => matchTimer.detach());
 
     let selectedTeam = $state(/** @type {string | null} */ (null));
     let showTeamModal = $state(false);
@@ -676,6 +704,11 @@
                 </div>
             {/if}
         </div>
+
+        <!-- Game timer -->
+        <MatchTimer
+            disabled={competitionEnded}
+            onKickOff={handleKickOff} />
 
         <!-- Team action panels -->
         <div class="grid grid-cols-2 gap-2">

@@ -13,6 +13,7 @@
     import CompetitionDaysSettings from './components/CompetitionDaysSettings.svelte';
     import CompetitionTimeControls from './components/CompetitionTimeControls.svelte';
     import TeamLimitsSettings from './components/TeamLimitsSettings.svelte';
+    import GameTimerSettings from './components/GameTimerSettings.svelte';
     import DisciplineSettings from './components/DisciplineSettings.svelte';
     import MomentumSettings from './components/MomentumSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
@@ -228,6 +229,9 @@
                     onUpdateTeamDrawDayOffset={updateTeamDrawDayOffset}
                     onUpdateEndDayOffset={updateEndDayOffset} />
                 <TeamLimitsSettings
+                    bind:leagueSettings
+                    onSave={saveLeagueSettings} />
+                <GameTimerSettings
                     bind:leagueSettings
                     onSave={saveLeagueSettings} />
                 <DisciplineSettings

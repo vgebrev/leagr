@@ -291,6 +291,57 @@ class GamesService {
     }
 
     /**
+     * Locate a match by its URL params.
+     * @param {'league'|'knockout'} competition
+     * @param {string} roundParam - 1-indexed round number (league) or round name (knockout)
+     * @param {string} matchParam - Match number as string
+     * @returns {Object|null}
+     */
+    #findMatch(competition, roundParam, matchParam) {
+        return competition === 'league'
+            ? findLeagueMatch(this.schedule, roundParam, matchParam)
+            : findKnockoutMatch(this.knockoutBracket, roundParam, matchParam);
+    }
+
+    /**
+     * Persist one updated match through the endpoint its competition uses.
+     * @param {'league'|'knockout'} competition
+     * @param {string} roundParam
+     * @param {string} matchParam
+     * @param {Object} updatedMatch
+     */
+    async #saveMatch(competition, roundParam, matchParam, updatedMatch) {
+        if (competition === 'league') {
+            const roundIndex = parseInt(roundParam, 10) - 1;
+            const matchIndex = parseInt(matchParam, 10) - 1;
+            await this.updateLeagueMatch(roundIndex, matchIndex, updatedMatch);
+        } else {
+            await this.updateKnockoutMatch(updatedMatch);
+        }
+    }
+
+    /**
+     * Open a match's scoreline at 0-0, marking it as under way. Called when the
+     * game demonstrably starts — the timer being started, or the first stat
+     * being recorded — so a match in progress reads differently from one that
+     * has not been played. A no-op once any score exists.
+     * @param {'league'|'knockout'} competition
+     * @param {string} roundParam - 1-indexed round number (league) or round name (knockout)
+     * @param {string} matchParam - Match number as string
+     */
+    async startScoring(competition, roundParam, matchParam) {
+        const currentMatch = this.#findMatch(competition, roundParam, matchParam);
+        if (!currentMatch) return;
+        if (currentMatch.homeScore != null || currentMatch.awayScore != null) return;
+
+        await this.#saveMatch(competition, roundParam, matchParam, {
+            ...currentMatch,
+            homeScore: 0,
+            awayScore: 0
+        });
+    }
+
+    /**
      * Apply a player action (goal, offensive, or defensive) to a specific match.
      * Performs an optimistic update and saves to the server.
      * @param {'league'|'knockout'} competition
@@ -302,10 +353,7 @@ class GamesService {
      * @param {number} delta - +1 or -1
      */
     async applyPlayerAction(competition, roundParam, matchParam, team, playerName, mode, delta) {
-        const currentMatch =
-            competition === 'league'
-                ? findLeagueMatch(this.schedule, roundParam, matchParam)
-                : findKnockoutMatch(this.knockoutBracket, roundParam, matchParam);
+        const currentMatch = this.#findMatch(competition, roundParam, matchParam);
 
         if (!currentMatch) return;
 
@@ -366,15 +414,17 @@ class GamesService {
                 ...currentMatch,
                 [actionsKey]: updateActionCount(currentMatch[actionsKey], playerName, delta)
             };
+
+            // A stat means the game is being played, so give an untouched match a
+            // scoreline. Only on the way up: taking a stat back is a correction,
+            // not evidence of play.
+            if (delta > 0 && currentMatch.homeScore == null && currentMatch.awayScore == null) {
+                updatedMatch.homeScore = 0;
+                updatedMatch.awayScore = 0;
+            }
         }
 
-        if (competition === 'league') {
-            const roundIndex = parseInt(roundParam, 10) - 1;
-            const matchIndex = parseInt(matchParam, 10) - 1;
-            await this.updateLeagueMatch(roundIndex, matchIndex, updatedMatch);
-        } else {
-            await this.updateKnockoutMatch(updatedMatch);
-        }
+        await this.#saveMatch(competition, roundParam, matchParam, updatedMatch);
     }
 }
 
