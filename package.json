@@ -29,11 +29,11 @@
         "@tailwindcss/forms": "^0.5.11",
         "@tailwindcss/typography": "^0.5.19",
         "@tailwindcss/vite": "^4.2.4",
-        "@testing-library/jest-dom": "^6.9.1",
+        "@testing-library/jest-dom": "^7.0.0",
         "@testing-library/svelte": "^5.3.1",
         "@testing-library/user-event": "^14.6.1",
         "@types/canvas-confetti": "^1.9.0",
-        "@types/node": "^25.6.0",
+        "@types/node": "^26.1.1",
         "@vitest/ui": "^4.1.5",
         "eslint": "^10.2.1",
         "eslint-config-prettier": "^10.1.8",
@@ -60,6 +60,6 @@
         "fuzzball": "^2.2.3",
         "mailgun.js": "^13.0.0",
         "openai": "^6.34.0",
-        "sharp": "^0.34.5"
+        "sharp": "^0.35.3"
     }
 }
