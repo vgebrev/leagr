@@ -1,0 +1,57 @@
+name: Release Tag
+
+# Every deploy creates a vX.Y.Z tag, but only some of those become GitHub
+# Releases. This mirrors each published Release onto a release/vX.Y.Z tag, so
+# the "this one shipped as a release" subset is visible in git itself:
+#
+#   git describe --tags --match 'release/v*' --abbrev=0    # last release
+#   git log $(git describe --tags --match 'release/v*' --abbrev=0)..HEAD
+#
+# Releases published before this workflow existed are backfilled by
+# ./sync-release-tags.sh, which reconciles the same state from the API.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  mirror-tag:
+    name: Mirror release onto a release/* tag
+    runs-on: ubuntu-latest
+    if: github.event.release.prerelease == false
+
+    steps:
+      - name: Create release/${{ github.event.release.tag_name }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::notice::'$TAG' is not a vX.Y.Z version tag - nothing to mirror."
+            exit 0
+          fi
+
+          if gh api "repos/$REPO/git/ref/tags/release/$TAG" >/dev/null 2>&1; then
+            echo "::notice::release/$TAG already exists - nothing to do."
+            exit 0
+          fi
+
+          # Resolve the release's tag to a commit. deploy.sh creates annotated
+          # tags, which point at a tag object and need one more hop.
+          ref_json=$(gh api "repos/$REPO/git/ref/tags/$TAG")
+          sha=$(jq -r '.object.sha' <<<"$ref_json")
+          if [[ "$(jq -r '.object.type' <<<"$ref_json")" == "tag" ]]; then
+            sha=$(gh api "repos/$REPO/git/tags/$sha" --jq '.object.sha')
+          fi
+
+          gh api "repos/$REPO/git/refs" \
+            -f ref="refs/tags/release/$TAG" \
+            -f sha="$sha" >/dev/null
+
+          echo "::notice::Created release/$TAG at $sha"

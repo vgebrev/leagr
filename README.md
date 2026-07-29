@@ -234,6 +234,48 @@ data and logs down to your dev environment.
 Deployment is intentionally operator-initiated and not wired into GitHub Actions — CI runs lint,
 tests and a build only, so no CI system holds credentials to the production host.
 
+### Releases
+
+Every deploy tags a version, but only some of those versions are promoted to a GitHub Release —
+typically a minor bump, after a few patch-level deploys. Two tag namespaces keep the two apart:
+
+| Tag              | Meaning                                        | Created by                          |
+| ---------------- | ---------------------------------------------- | ----------------------------------- |
+| `vX.Y.Z`         | a deploy went out at this commit               | `deploy.sh`                         |
+| `release/vX.Y.Z` | that version was published as a GitHub Release | `.github/workflows/release-tag.yml` |
+
+Publishing a release in the GitHub UI is unchanged; the workflow fires on `release: published` and
+mirrors the release's tag onto a `release/*` tag at the same commit. It runs from the **default
+branch**, so it only takes effect once merged to `main`.
+
+`./sync-release-tags.sh` reconciles the same state from the GitHub API. It backfills releases
+published before the workflow existed and can be re-run any time — it is idempotent, needs no
+credentials on a public repo, and reports (never deletes) local release tags with no matching
+release.
+
+```bash
+./sync-release-tags.sh --dry-run   # report what would change
+./sync-release-tags.sh             # create the missing tags and push them
+./sync-release-tags.sh --no-push   # create locally only
+```
+
+With those tags in place, the range for the next set of release notes is exact:
+
+```bash
+git log $(git describe --tags --match 'release/v*' --abbrev=0)..HEAD
+```
+
+`./release-notes-draft.sh` does that and scaffolds the notes, grouping commits by
+conventional-commit type into the section headings the published notes use:
+
+```bash
+./release-notes-draft.sh                        # draft for the package.json version
+./release-notes-draft.sh -v 2.30.0 --to v2.30.0 # explicit version and range end
+```
+
+The output is a **draft** — bullets are raw commit subjects and need rewriting into user-facing
+prose, and the appended raw log is there to write from, not to publish.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
