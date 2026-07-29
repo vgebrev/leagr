@@ -844,9 +844,11 @@ export function validateMatchScorers(match, teams) {
  * Validate if competition modification operations are allowed based on timing
  * @param {string} dateString - Date in YYYY-MM-DD format
  * @param {Object} settings - Settings object with registration window configuration
+ * @param {string|null} [adminUnlockDate] - Session date an admin has explicitly unlocked for
+ *   post-session fixes. Bypasses the competition-end gate for that date only.
  * @returns {{isValid: boolean, error?: string}}
  */
-export function validateCompetitionOperationsAllowed(dateString, settings) {
+export function validateCompetitionOperationsAllowed(dateString, settings, adminUnlockDate = null) {
     if (!dateString || !settings) {
         return {
             isValid: false,
@@ -855,6 +857,9 @@ export function validateCompetitionOperationsAllowed(dateString, settings) {
     }
 
     if (isCompetitionEnded(dateString, settings)) {
+        if (adminUnlockDate && adminUnlockDate === dateString) {
+            return { isValid: true };
+        }
         return {
             isValid: false,
             error: 'Competition has ended. No modifications allowed.'

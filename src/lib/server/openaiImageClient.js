@@ -35,15 +35,15 @@ export function pickBadgeShapes(count) {
 }
 
 /**
- * Generate a team logo via gpt-image-1 and return the raw image buffer.
+ * Generate a team logo via gpt-image-2 and return the raw image buffer.
  *
  * @param {string} teamName - Full team name, e.g. "blue wolves"
  * @param {string} badgeShape - One of BADGE_SHAPES, e.g. "shield crest"
  * @param {string} apiKey - OpenAI API key
- * @param {string} [model] - OpenAI image model (defaults to 'gpt-image-1.5')
+ * @param {string} [model] - OpenAI image model (defaults to 'gpt-image-2')
  * @returns {Promise<Buffer>} PNG image buffer at 1024×1024
  */
-export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gpt-image-1.5') {
+export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gpt-image-2') {
     if (!apiKey) {
         throw new Error('OpenAI API key is required');
     }

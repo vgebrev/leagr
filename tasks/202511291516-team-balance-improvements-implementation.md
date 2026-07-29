@@ -126,11 +126,12 @@ const ELO_DECAY_RATE = 0.02; // 2% per week
 - Better reflects true long-term skill levels
 
 **Decay Examples**:
+
 | Weeks Idle | Old (5%) | New (2%) |
-|-----------|----------|----------|
-| 4 weeks | -37 pts | -15 pts |
-| 12 weeks | -100 pts | -43 pts |
-| 24 weeks | -152 pts | -81 pts |
+| ---------- | -------- | -------- |
+| 4 weeks    | -37 pts  | -15 pts  |
+| 12 weeks   | -100 pts | -43 pts  |
+| 24 weeks   | -152 pts | -81 pts  |
 
 ---
 
@@ -207,13 +208,14 @@ const effectiveKFactor = kFactor * marginMultiplier;
 - Rewards consistent dominant performance
 
 **Examples** (1050 ELO beats 1000 ELO):
+
 | Result | Base Change | With Margin | Total Change |
-|--------|-------------|-------------|--------------|
-| 1-0 | +12 ELO | ×1.0 | +12 ELO |
-| 2-0 | +12 ELO | ×1.15 | +13.8 ELO |
-| 3-0 | +12 ELO | ×1.25 | +15 ELO |
-| 4-0 | +12 ELO | ×1.3 | +15.6 ELO |
-| 6-0 | +12 ELO | ×1.3 (cap) | +15.6 ELO |
+| ------ | ----------- | ----------- | ------------ |
+| 1-0    | +12 ELO     | ×1.0        | +12 ELO      |
+| 2-0    | +12 ELO     | ×1.15       | +13.8 ELO    |
+| 3-0    | +12 ELO     | ×1.25       | +15 ELO      |
+| 4-0    | +12 ELO     | ×1.3        | +15.6 ELO    |
+| 6-0    | +12 ELO     | ×1.3 (cap)  | +15.6 ELO    |
 
 ---
 

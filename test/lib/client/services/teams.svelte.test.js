@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { teamsService } from '$lib/client/services/teams.svelte.js';
+import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 // Mock the API client
 vi.mock('$lib/client/services/api-client.svelte.js', () => ({
@@ -71,6 +72,7 @@ describe('TeamsService', () => {
 
         // Reset service state
         teamsService.reset();
+        sessionUnlock.lock();
 
         // Mock canModifyList and isCompetitionEnded to return appropriate values
         Object.defineProperty(teamsService, 'isCompetitionEnded', {
@@ -85,6 +87,7 @@ describe('TeamsService', () => {
 
     afterEach(() => {
         teamsService.reset();
+        sessionUnlock.lock();
     });
 
     describe('loadTeams', () => {
@@ -227,6 +230,33 @@ describe('TeamsService', () => {
             expect(mockSetNotification).toHaveBeenCalledWith('Teams cannot be changed.', 'warning');
         });
 
+        it('should generate on an ended session an admin has unlocked', async () => {
+            Object.defineProperty(teamsService, 'isCompetitionEnded', {
+                get: () => true,
+                configurable: true
+            });
+            sessionUnlock.unlock('2025-01-25');
+            mockApi.post.mockResolvedValue({ teams: {} });
+
+            const result = await teamsService.generateTeams({ teams: 2 });
+
+            expect(mockApi.post).toHaveBeenCalled();
+            expect(result).toBe(true);
+        });
+
+        it('should not generate when the unlock is for a different session', async () => {
+            Object.defineProperty(teamsService, 'isCompetitionEnded', {
+                get: () => true,
+                configurable: true
+            });
+            sessionUnlock.unlock('2025-01-18');
+
+            const result = await teamsService.generateTeams({ teams: 2 });
+
+            expect(mockApi.post).not.toHaveBeenCalled();
+            expect(result).toBe(false);
+        });
+
         it('should validate options are provided', async () => {
             const result = await teamsService.generateTeams(null);
 
@@ -328,6 +358,26 @@ describe('TeamsService', () => {
 
             expect(mockApi.remove).not.toHaveBeenCalled();
             expect(mockSetNotification).toHaveBeenCalledWith(
+                'Players cannot be changed.',
+                'warning'
+            );
+        });
+
+        it('should remove from an ended session an admin has unlocked', async () => {
+            Object.defineProperty(teamsService, 'isCompetitionEnded', {
+                get: () => true,
+                configurable: true
+            });
+            sessionUnlock.unlock('2025-01-25');
+            mockApi.remove.mockResolvedValue({
+                teams: { 'Team A': ['Alice', null] },
+                players: { available: [{ name: 'Alice' }], waitingList: [] }
+            });
+
+            await teamsService.removePlayer('Bob');
+
+            expect(mockApi.remove).toHaveBeenCalled();
+            expect(mockSetNotification).not.toHaveBeenCalledWith(
                 'Players cannot be changed.',
                 'warning'
             );

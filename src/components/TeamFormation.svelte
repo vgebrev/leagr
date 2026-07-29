@@ -1,13 +1,15 @@
 <script>
     import Avatar from '$components/avatars/Avatar.svelte';
-    import SoccerBallIcon from '$components/Icons/SoccerBallIcon.svelte';
+    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
+    import { StarSolid } from 'flowbite-svelte-icons';
     import { teamStyles } from '$lib/shared/helpers.js';
     import { resolve } from '$app/paths';
 
     /**
+     * Callers supply the four raw counters; the contributions total is derived here.
      * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
      * @type {{
      *   players: Array<{name: string, avatar?: string | null, elo?: number}>,
@@ -61,11 +63,45 @@
     });
 
     const statDefs = [
-        { key: 'goals', label: 'goals', Icon: SoccerBallIcon },
+        { key: 'goals', label: 'goals', Icon: LeagueIcon },
         { key: 'attack', label: 'attack', Icon: BullseyeIcon },
         { key: 'defence', label: 'defence', Icon: ShieldIcon },
-        { key: 'saves', label: 'saves', Icon: GloveIcon }
+        { key: 'saves', label: 'saves', Icon: GloveIcon },
+        { key: 'total', label: 'total', Icon: StarSolid, divider: true }
     ];
+
+    // Per-player stats augmented with the contributions total
+    const statsWithTotal = $derived.by(() => {
+        /** @type {Record<string, Record<string, number>>} */
+        const out = {};
+        for (const player of players) {
+            const stat = player?.name ? playerStats[player.name] : null;
+            if (!stat) continue;
+            const goals = stat.goals ?? 0;
+            const attack = stat.attack ?? 0;
+            const defence = stat.defence ?? 0;
+            const saves = stat.saves ?? 0;
+            out[player.name] = {
+                goals,
+                attack,
+                defence,
+                saves,
+                total: goals + attack + defence + saves
+            };
+        }
+        return out;
+    });
+
+    // Highest value per stat across this team; 0 means there is no leader to highlight
+    const statMaxes = $derived.by(() => {
+        /** @type {Record<string, number>} */
+        const maxes = {};
+        const rows = Object.values(statsWithTotal);
+        for (const { key } of statDefs) {
+            maxes[key] = Math.max(0, ...rows.map((row) => row[key] ?? 0));
+        }
+        return maxes;
+    });
 </script>
 
 <div class="relative mx-auto aspect-[2/3] w-full overflow-hidden rounded-xl shadow-lg">
@@ -162,7 +198,7 @@
                     {@const avatarUrl = player?.avatar
                         ? `/api/rankings/${encodeURIComponent(player.name)}/avatar`
                         : null}
-                    {@const stats = player?.name ? playerStats[player.name] : null}
+                    {@const stats = player?.name ? statsWithTotal[player.name] : null}
                     <div class="flex items-start gap-1.5">
                         <!-- Avatar + name -->
                         <a
@@ -192,15 +228,27 @@
                         {#if stats}
                             <div
                                 class="flex flex-col gap-0.5 rounded bg-black/50 px-1.5 py-1 text-white backdrop-blur-sm">
-                                {#each statDefs as { key, label, Icon } (key)}
+                                {#each statDefs as { key, label, Icon, divider } (key)}
                                     {@const val = stats[key] ?? 0}
-                                    <div class="flex items-center gap-1">
-                                        <Icon class="h-3 w-3 shrink-0 text-gray-300" />
-                                        <span class="text-[10px] text-gray-300">{label}</span>
+                                    {@const isLeader = val > 0 && val === statMaxes[key]}
+                                    <div
+                                        class="flex items-center gap-1 {divider
+                                            ? 'mt-0.5 border-t border-white/25 pt-1'
+                                            : ''}">
+                                        <Icon
+                                            class="h-3 w-3 shrink-0 {isLeader
+                                                ? 'text-yellow-400'
+                                                : 'text-gray-300'}" />
                                         <span
-                                            class="ms-auto text-[10px] font-bold {val === 0
-                                                ? 'text-gray-500'
-                                                : 'text-white'}">
+                                            class="text-[10px] {isLeader
+                                                ? 'text-yellow-400'
+                                                : 'text-gray-300'}">{label}</span>
+                                        <span
+                                            class="ms-auto text-[10px] font-bold {isLeader
+                                                ? 'text-yellow-400'
+                                                : val === 0
+                                                  ? 'text-gray-500'
+                                                  : 'text-white'}">
                                             {val}
                                         </span>
                                     </div>

@@ -14,7 +14,11 @@ RUN mkdir -p /app/data
 RUN mkdir -p /app/logs
 
 # --- Stage 2: Install only production dependencies ---
-FROM node:24-alpine AS prod-deps
+# Must be a glibc base matching the distroless debian-12 runtime below. sharp's
+# prebuilt binaries are libc-specific, and npm only installs the variant matching
+# the build platform, so installing here on alpine (musl) ships binaries the
+# runtime cannot load.
+FROM node:24-bookworm-slim AS prod-deps
 
 WORKDIR /app
 

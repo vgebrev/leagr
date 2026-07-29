@@ -5,6 +5,7 @@ import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { isCompetitionEnded } from '$lib/shared/helpers.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
+import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class TeamsService {
     #settings = $state(defaultSettings);
@@ -62,7 +63,7 @@ class TeamsService {
     /** @type {boolean} */
     canGenerateTeams = $derived.by(() => {
         return (
-            !this.isCompetitionEnded &&
+            !this.isLocked() &&
             playersService.canModifyList &&
             (this.#settings.canRegenerateTeams || Object.keys(this.teams).length === 0)
         );
@@ -100,6 +101,17 @@ class TeamsService {
         });
     }
 
+    /**
+     * Competition-end lock, honouring an admin session unlock.
+     * Deliberately a method rather than a $derived: the service tests stub
+     * `isCompetitionEnded` with Object.defineProperty, which a memoised derived
+     * would not observe.
+     * @returns {boolean}
+     */
+    isLocked() {
+        return this.isCompetitionEnded && !sessionUnlock.isUnlocked(this.currentDate);
+    }
+
     // Methods
     /**
      * Load team configurations from the server
@@ -128,7 +140,7 @@ class TeamsService {
      * @param {Object} options - Configuration object containing team options
      */
     async generateTeams(options) {
-        if (this.isCompetitionEnded || !playersService.canModifyList) {
+        if (this.isLocked() || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return false;
         }
@@ -176,7 +188,7 @@ class TeamsService {
      * @param {?string} [teamName] - Team name (auto-detected if not provided)
      */
     async removePlayer(playerName, action = 'waitingList', teamName = null) {
-        if (this.isCompetitionEnded || !playersService.canModifyList) {
+        if (this.isLocked() || !playersService.canModifyList) {
             setNotification('Players cannot be changed.', 'warning');
             return;
         }
@@ -239,7 +251,7 @@ class TeamsService {
      * @param {string} teamName - Team name to assign to
      */
     async assignPlayerToTeam(playerName, teamName) {
-        if (this.isCompetitionEnded || !playersService.canModifyList) {
+        if (this.isLocked() || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return;
         }
@@ -338,7 +350,7 @@ class TeamsService {
      * @param {string} playerName - Player to assign
      */
     async autoAssignPlayer(playerName) {
-        if (this.isCompetitionEnded || !playersService.canModifyList) {
+        if (this.isLocked() || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return;
         }
@@ -350,7 +362,7 @@ class TeamsService {
      * @param {string} teamName - Team to fill
      */
     async autoAssignToTeam(teamName) {
-        if (this.isCompetitionEnded || !playersService.canModifyList) {
+        if (this.isLocked() || !playersService.canModifyList) {
             setNotification('Teams cannot be changed.', 'warning');
             return;
         }
@@ -362,7 +374,7 @@ class TeamsService {
      * and even team sizes. Admin-only (enforced server-side).
      */
     async autoAssignAll() {
-        if (this.isCompetitionEnded) {
+        if (this.isLocked()) {
             setNotification('Teams cannot be changed.', 'warning');
             return;
         }

@@ -100,7 +100,8 @@ export const POST = async ({ request, url, locals }) => {
     // Validate if operations are allowed based on competition end state
     const operationValidation = validateCompetitionOperationsAllowed(
         dateValidation.date,
-        gameData.settings
+        gameData.settings,
+        locals.adminUnlockDate
     );
     if (!operationValidation.isValid) {
         return error(400, operationValidation.error);
@@ -217,7 +218,8 @@ export const DELETE = async ({ request, url, locals }) => {
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             dateValidation.date,
-            gameData.settings
+            gameData.settings,
+            locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
             return error(400, operationValidation.error);
@@ -291,7 +293,8 @@ export const PATCH = async ({ request, url, locals }) => {
             // Validate if operations are allowed based on competition end state
             const operationValidation = validateCompetitionOperationsAllowed(
                 dateValidation.date,
-                gameData.settings
+                gameData.settings,
+                locals.adminUnlockDate
             );
             if (!operationValidation.isValid) {
                 return error(400, operationValidation.error);
@@ -365,7 +368,8 @@ export const PATCH = async ({ request, url, locals }) => {
             // Validate if operations are allowed based on competition end state
             const operationValidation = validateCompetitionOperationsAllowed(
                 dateValidation.date,
-                gameData.settings
+                gameData.settings,
+                locals.adminUnlockDate
             );
             if (!operationValidation.isValid) {
                 return error(400, operationValidation.error);

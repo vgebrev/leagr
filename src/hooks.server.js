@@ -194,7 +194,7 @@ export const handle = async ({ event, resolve }) => {
                 'Access-Control-Allow-Origin': allowed ? origin || '*' : 'null',
                 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS',
                 'Access-Control-Allow-Headers':
-                    'Content-Type,X-CLIENT-ID,X-ADMIN-CODE,Authorization',
+                    'Content-Type,X-CLIENT-ID,X-ADMIN-CODE,X-ADMIN-UNLOCK,Authorization',
                 'Access-Control-Max-Age': '86400'
             }
         });
@@ -292,6 +292,17 @@ export const handle = async ({ event, resolve }) => {
         event.locals.isAdmin = Boolean(
             suppliedAdminCode && expectedAdminCode && suppliedAdminCode === expectedAdminCode
         );
+
+        // Admin "unlock session" intent for post-session fixes. The header carries the date the
+        // admin explicitly unlocked, so a stale unlock can never affect a different session.
+        const suppliedUnlockDate = request.headers.get('x-admin-unlock');
+        event.locals.adminUnlockDate =
+            event.locals.isAdmin &&
+            suppliedUnlockDate &&
+            /^\d{4}-\d{2}-\d{2}$/.test(suppliedUnlockDate)
+                ? suppliedUnlockDate
+                : null;
+
         event.locals.clientId = clientId;
     }
 

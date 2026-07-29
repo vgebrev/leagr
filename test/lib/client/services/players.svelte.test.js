@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { playersService } from '$lib/client/services/players.svelte.js';
+import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
+import { defaultSettings } from '$lib/shared/defaults.js';
 
 // Mock the API client
 vi.mock('$lib/client/services/api-client.svelte.js', () => ({
@@ -60,6 +62,7 @@ describe('PlayersService', () => {
 
         // Reset service state
         playersService.reset();
+        sessionUnlock.lock();
 
         // Mock canModifyList to return true by default
         Object.defineProperty(playersService, 'canModifyList', {
@@ -70,6 +73,8 @@ describe('PlayersService', () => {
 
     afterEach(() => {
         playersService.reset();
+        sessionUnlock.lock();
+        vi.useRealTimers();
     });
 
     describe('loadPlayers', () => {
@@ -291,6 +296,66 @@ describe('PlayersService', () => {
             expect(playersService.players).toEqual([]);
             expect(playersService.waitingList).toEqual([]);
             expect(playersService.currentDate).toBeNull();
+        });
+    });
+
+    describe('canModifyList', () => {
+        // Default window: opens 2 days before at 07:30, closes on the day at 12:00
+        const DATE = '2025-01-25';
+        const OTHER_DATE = '2025-01-18';
+
+        beforeEach(() => {
+            // Drop the blanket mock installed above so the real derived is exercised
+            delete playersService.canModifyList;
+            playersService.currentDate = DATE;
+            vi.useFakeTimers();
+        });
+
+        it('sanity-checks the settings this suite assumes', () => {
+            expect(defaultSettings.registrationWindow.enabled).toBe(true);
+            expect(defaultSettings.registrationWindow.startDayOffset).toBe(-2);
+            expect(defaultSettings.registrationWindow.startTime).toBe('07:30');
+            expect(defaultSettings.registrationWindow.endDayOffset).toBe(0);
+            expect(defaultSettings.registrationWindow.endTime).toBe('12:00');
+        });
+
+        it('is closed before registration opens', () => {
+            vi.setSystemTime(new Date('2025-01-23T07:00:00'));
+
+            expect(playersService.canModifyList).toBe(false);
+        });
+
+        it('stays closed before registration opens even when an admin unlocks', () => {
+            vi.setSystemTime(new Date('2025-01-23T07:00:00'));
+            sessionUnlock.unlock(DATE);
+
+            expect(playersService.canModifyList).toBe(false);
+        });
+
+        it('is open inside the window', () => {
+            vi.setSystemTime(new Date('2025-01-24T10:00:00'));
+
+            expect(playersService.canModifyList).toBe(true);
+        });
+
+        it('is closed once the competition has ended', () => {
+            vi.setSystemTime(new Date('2025-01-25T12:01:00'));
+
+            expect(playersService.canModifyList).toBe(false);
+        });
+
+        it('reopens after the end time when an admin unlocks this session', () => {
+            vi.setSystemTime(new Date('2025-01-25T12:01:00'));
+            sessionUnlock.unlock(DATE);
+
+            expect(playersService.canModifyList).toBe(true);
+        });
+
+        it('stays closed when the unlock is for a different session', () => {
+            vi.setSystemTime(new Date('2025-01-25T12:01:00'));
+            sessionUnlock.unlock(OTHER_DATE);
+
+            expect(playersService.canModifyList).toBe(false);
         });
     });
 });

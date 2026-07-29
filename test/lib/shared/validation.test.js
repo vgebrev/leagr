@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
     validateTeamDrawAllowed,
+    validateCompetitionOperationsAllowed,
     validateAndSanitizePlayerName,
     validatePlayerNameForUI,
     isValidSubdomain,
@@ -1128,6 +1129,99 @@ describe('validateTeamDrawAllowed', () => {
             const settings = makeSettings({ teamDrawRequiresAdmin: true });
             const result = validateTeamDrawAllowed('2025-04-19', settings, true);
             expect(result.isValid).toBe(true);
+        });
+    });
+});
+
+describe('validateCompetitionOperationsAllowed', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    const makeSettings = (overrides = {}) => ({
+        registrationWindow: {
+            enabled: true,
+            startDayOffset: -2,
+            startTime: '07:30',
+            teamDrawDayOffset: -1,
+            teamDrawTime: '16:00',
+            endDayOffset: 0,
+            endTime: '12:00',
+            ...overrides
+        }
+    });
+
+    describe('missing arguments', () => {
+        it('rejects a missing date', () => {
+            const result = validateCompetitionOperationsAllowed(null, makeSettings());
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Missing date or settings for validation');
+        });
+
+        it('rejects missing settings even with an unlock', () => {
+            const result = validateCompetitionOperationsAllowed('2025-04-19', null, '2025-04-19');
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Missing date or settings for validation');
+        });
+    });
+
+    describe('before the competition ends', () => {
+        it('allows operations', () => {
+            vi.setSystemTime(new Date('2025-04-19T11:59:00'));
+            const result = validateCompetitionOperationsAllowed('2025-04-19', makeSettings());
+            expect(result.isValid).toBe(true);
+        });
+    });
+
+    describe('after the competition ends', () => {
+        it('blocks operations without an admin unlock', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:01:00'));
+            const result = validateCompetitionOperationsAllowed('2025-04-19', makeSettings());
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Competition has ended. No modifications allowed.');
+        });
+
+        it('blocks operations when called with the legacy two-argument signature', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:01:00'));
+            const result = validateCompetitionOperationsAllowed('2025-04-19', makeSettings());
+            expect(result.isValid).toBe(false);
+        });
+
+        it('allows operations when an admin unlocked this session', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:01:00'));
+            const result = validateCompetitionOperationsAllowed(
+                '2025-04-19',
+                makeSettings(),
+                '2025-04-19'
+            );
+            expect(result.isValid).toBe(true);
+        });
+
+        it('blocks operations when the unlock is for a different session', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:01:00'));
+            const result = validateCompetitionOperationsAllowed(
+                '2025-04-19',
+                makeSettings(),
+                '2025-04-12'
+            );
+            expect(result.isValid).toBe(false);
+            expect(result.error).toBe('Competition has ended. No modifications allowed.');
+        });
+
+        it('honours an unlock when time controls are disabled', () => {
+            vi.setSystemTime(new Date('2025-04-21T08:00:00'));
+            const settings = makeSettings({ enabled: false });
+
+            expect(validateCompetitionOperationsAllowed('2025-04-19', settings).isValid).toBe(
+                false
+            );
+            expect(
+                validateCompetitionOperationsAllowed('2025-04-19', settings, '2025-04-19').isValid
+            ).toBe(true);
         });
     });
 });

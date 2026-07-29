@@ -1,4 +1,5 @@
 import { getStoredAccessCode, removeStoredAccessCode } from './auth.js';
+import { sessionUnlock } from './sessionUnlock.svelte.js';
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 
@@ -36,6 +37,16 @@ export function setAdminCode(code) {
 
 export function clearAdminCode() {
     adminCode = '';
+}
+
+/**
+ * Reactive admin-presence check. Prefer this over reading localStorage directly in
+ * components: the admin code is restored asynchronously on layout mount, so a
+ * one-shot storage read at component creation can miss it.
+ * @returns {boolean}
+ */
+export function hasAdminCode() {
+    return Boolean(adminCode);
 }
 
 export function setClientId(id) {
@@ -82,6 +93,12 @@ function getAuthHeaders() {
 
     if (adminCode) {
         headers['x-admin-code'] = adminCode;
+
+        // Signals an explicit admin unlock of one closed session. Carries the date so the
+        // server can scope it — without this header a closed session stays read-only.
+        if (sessionUnlock.unlockedDate) {
+            headers['x-admin-unlock'] = sessionUnlock.unlockedDate;
+        }
     }
 
     // Add access code to the "Authorization" header if we have a league context

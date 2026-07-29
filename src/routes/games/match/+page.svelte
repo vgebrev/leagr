@@ -4,7 +4,7 @@
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
     import { settings } from '$lib/client/stores/settings.js';
-    import { isCompetitionEnded } from '$lib/shared/helpers.js';
+    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
     import { Button, Input } from 'flowbite-svelte';
     import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
     import TeamBadge from '$components/TeamBadge.svelte';
@@ -251,7 +251,7 @@
             .filter(({ home, away }) => home.length > 0 || away.length > 0);
     });
 
-    let competitionEnded = $derived(isCompetitionEnded(date, $settings));
+    let sessionLocked = $derived(isSessionLocked(date, $settings));
 
     // The timer is a module singleton, so it survives navigation within the app;
     // attaching on a new match key is what resets an on-the-fly duration override.
@@ -599,7 +599,7 @@
                             type="number"
                             size="md"
                             class="w-16! text-center! text-2xl! font-bold!"
-                            disabled={competitionEnded}
+                            disabled={sessionLocked}
                             value={match.homeScore?.toString() ?? ''}
                             onchange={(e) => handleScoreChange('home', e)}
                             onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
@@ -615,7 +615,7 @@
                             type="number"
                             size="md"
                             class="w-16! text-center! text-2xl! font-bold!"
-                            disabled={competitionEnded}
+                            disabled={sessionLocked}
                             value={match.awayScore?.toString() ?? ''}
                             onchange={(e) => handleScoreChange('away', e)}
                             onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
@@ -638,7 +638,7 @@
                                 type="number"
                                 size="sm"
                                 class="text-center!"
-                                disabled={competitionEnded}
+                                disabled={sessionLocked}
                                 value={match.homePenalties?.toString() ?? ''}
                                 onchange={(e) => handlePenaltyChange('home', e)}
                                 onfocus={(e) =>
@@ -656,7 +656,7 @@
                                 type="number"
                                 size="sm"
                                 class="text-center!"
-                                disabled={competitionEnded}
+                                disabled={sessionLocked}
                                 value={match.awayPenalties?.toString() ?? ''}
                                 onchange={(e) => handlePenaltyChange('away', e)}
                                 onfocus={(e) =>
@@ -707,7 +707,7 @@
 
         <!-- Game timer -->
         <MatchTimer
-            disabled={competitionEnded}
+            disabled={sessionLocked}
             onKickOff={handleKickOff} />
 
         <!-- Team action panels -->
@@ -717,7 +717,7 @@
                 players={homePlayers}
                 {match}
                 side="home"
-                disabled={competitionEnded}
+                disabled={sessionLocked}
                 onAction={handleAction}
                 onPlayerClick={openPlayerModal} />
             <TeamActionPanel
@@ -725,7 +725,7 @@
                 players={awayPlayers}
                 {match}
                 side="away"
-                disabled={competitionEnded}
+                disabled={sessionLocked}
                 onAction={handleAction}
                 onPlayerClick={openPlayerModal} />
         </div>
