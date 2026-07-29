@@ -3,7 +3,7 @@
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { dateTimeString } from '$lib/shared/helpers.js';
 
-    let { registrationOpenDate, registrationCloseDate } = $props();
+    let { registrationOpenDate, registrationCloseDate, unlocked = false } = $props();
 
     const now = new Date();
 </script>
@@ -15,7 +15,7 @@
     </Alert>
 {/if}
 
-{#if registrationCloseDate && now >= registrationCloseDate}
+{#if !unlocked && registrationCloseDate && now >= registrationCloseDate}
     <Alert class="glass flex items-center border">
         <ExclamationCircleSolid />
         You can't add players for this day after {dateTimeString(registrationCloseDate)}

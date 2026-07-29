@@ -64,7 +64,8 @@ export const POST = async ({ request, url, locals }) => {
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             dateValidation.date,
-            settings
+            settings,
+            locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
             return error(400, operationValidation.error);

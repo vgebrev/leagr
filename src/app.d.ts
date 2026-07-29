@@ -9,6 +9,7 @@ declare global {
             leagueId: string | null;
             leagueInfo: LeagueInfo | null;
             isAdmin?: boolean;
+            adminUnlockDate?: string | null;
             clientId?: string | null;
         }
         // interface PageData {}

@@ -3,7 +3,7 @@
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { settings } from '$lib/client/stores/settings.js';
-    import { isCompetitionEnded } from '$lib/shared/helpers.js';
+    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { gamesService } from '$lib/client/services/games.svelte.js';
     import ScheduleDisplay from './components/ScheduleDisplay.svelte';
@@ -38,10 +38,10 @@
     }
 
     /** @type {boolean} */
-    let competitionEnded = $derived(isCompetitionEnded(date, $settings));
+    let sessionLocked = $derived(isSessionLocked(date, $settings));
 
     async function generateSchedule() {
-        if (competitionEnded) {
+        if (sessionLocked) {
             setNotification('The competition has ended. Games cannot be changed.', 'warning');
             return;
         }
@@ -49,7 +49,7 @@
     }
 
     async function addMoreGames() {
-        if (competitionEnded) {
+        if (sessionLocked) {
             setNotification('The competition has ended. Games cannot be changed.', 'warning');
             return;
         }
@@ -70,7 +70,7 @@
     hasTeams={gamesService.hasTeams}
     hasSchedule={gamesService.hasSchedule}
     canResetSchedule={$settings.canResetSchedule}
-    {competitionEnded}
+    competitionEnded={sessionLocked}
     {date}
     onGenerateSchedule={generateSchedule}
     onAddMoreGames={addMoreGames} />
@@ -79,7 +79,7 @@
     schedule={gamesService.schedule}
     teams={gamesService.teams}
     {date}
-    disabled={competitionEnded}
+    disabled={sessionLocked}
     onMatchUpdate={(roundIndex, matchIndex, updatedMatch) =>
         gamesService.updateLeagueMatch(roundIndex, matchIndex, updatedMatch)}
     onTeamClick={handleTeamClick} />

@@ -5,6 +5,7 @@ import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
 import { isDateInPast } from '$lib/shared/helpers.js';
+import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class PlayersService {
     #settings = $state(defaultSettings);
@@ -53,13 +54,27 @@ class PlayersService {
         return limit;
     });
 
-    canModifyList = $derived.by(() => {
-        if (!this.#settings.registrationWindow.enabled) return !isDateInPast(this.currentDate);
+    /** @type {boolean} Registration-open gate. Applies to everyone — never bypassable. */
+    isRegistrationOpen = $derived.by(() => {
+        if (!this.#settings.registrationWindow.enabled) return true;
 
-        if (!this.registrationOpenDate || !this.registrationCloseDate) return false;
-        const now = new Date();
-        return now >= this.registrationOpenDate && now <= this.registrationCloseDate;
+        if (!this.registrationOpenDate) return false;
+        return new Date() >= this.registrationOpenDate;
     });
+
+    /** @type {boolean} Competition-end gate. Bypassable by an admin session unlock. */
+    isCompetitionEnded = $derived.by(() => {
+        if (!this.#settings.registrationWindow.enabled) return isDateInPast(this.currentDate);
+
+        if (!this.registrationCloseDate) return true;
+        return new Date() > this.registrationCloseDate;
+    });
+
+    canModifyList = $derived.by(
+        () =>
+            this.isRegistrationOpen &&
+            (!this.isCompetitionEnded || sessionUnlock.isUnlocked(this.currentDate))
+    );
 
     constructor() {
         settings.subscribe((settings) => {

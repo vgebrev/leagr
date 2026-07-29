@@ -14,6 +14,7 @@
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
+    import SessionUnlockBanner from '$components/SessionUnlockBanner.svelte';
     import Notification from '$components/Notification.svelte';
     import { isAuthenticated } from '$lib/client/services/auth.js';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
@@ -78,6 +79,10 @@
         '/settings'
     ];
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
+
+    // Pages where an admin can unlock a closed session to make post-session fixes
+    const unlockablePages = ['/players', '/teams', '/games', '/games/match', '/knockout'];
+    let showSessionUnlock = $derived(unlockablePages.includes(page.url.pathname));
 
     // Pages that should be accessible without authentication
     const publicPages = ['/', '/auth', '/auth/forgot', '/auth/reset'];
@@ -167,6 +172,9 @@
             class="container mx-auto flex flex-col justify-between gap-2 p-2 md:w-2/3 lg:w-1/2 xl:w-1/3">
             {#if showDateSelector}
                 <DateSelector {selectedDate} />
+            {/if}
+            {#if showSessionUnlock}
+                <SessionUnlockBanner {date} />
             {/if}
             {@render children()}
         </div>

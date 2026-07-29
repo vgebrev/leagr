@@ -10,12 +10,15 @@
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
-    import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
+    import { teamColours } from '$lib/shared/helpers.js';
+    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = data.date;
+
+    let sessionLocked = $derived(isSessionLocked(date, $settings));
 
     let showTeamModal = $state(false);
     let selectedTeam = $state(null);
@@ -150,7 +153,7 @@
     {:else}
         <Button
             onclick={() => handleAddKnockoutGames(false)}
-            disabled={isCompetitionEnded(date, $settings)}>
+            disabled={sessionLocked}>
             <TrophyIcon class="me-2 h-4 w-4" />
             Start Knockout Cup Phase
         </Button>
@@ -173,7 +176,7 @@
                 bracket={gamesService.knockoutBracket}
                 teams={gamesService.teams}
                 {date}
-                disabled={isCompetitionEnded(date, $settings)}
+                disabled={sessionLocked}
                 onMatchUpdate={handleKnockoutMatchUpdate}
                 onCelebrate={celebrateTeam}
                 onTeamClick={handleTeamClick} />

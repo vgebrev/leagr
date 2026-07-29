@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isTeamDrawOpen } from '$lib/shared/helpers.js';
+import { isTeamDrawOpen, isCompetitionEnded } from '$lib/shared/helpers.js';
 
 describe('isTeamDrawOpen', () => {
     beforeEach(() => {
@@ -101,6 +101,91 @@ describe('isTeamDrawOpen', () => {
 
             vi.setSystemTime(new Date('2025-04-19T10:00:00'));
             expect(isTeamDrawOpen('2025-04-19', settings)).toBe(true);
+        });
+    });
+});
+
+describe('isCompetitionEnded', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    const makeSettings = (overrides = {}) => ({
+        registrationWindow: {
+            enabled: true,
+            startDayOffset: -2,
+            startTime: '07:30',
+            teamDrawDayOffset: -1,
+            teamDrawTime: '16:00',
+            endDayOffset: 0,
+            endTime: '12:00',
+            ...overrides
+        }
+    });
+
+    it('returns false without a date', () => {
+        vi.setSystemTime(new Date('2025-04-25T08:00:00'));
+        expect(isCompetitionEnded(null, makeSettings())).toBe(false);
+        expect(isCompetitionEnded(undefined, makeSettings())).toBe(false);
+    });
+
+    describe('when time controls are enabled', () => {
+        it('is false right up to the end time', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:00:00'));
+            expect(isCompetitionEnded('2025-04-19', makeSettings())).toBe(false);
+        });
+
+        it('is true just after the end time', () => {
+            vi.setSystemTime(new Date('2025-04-19T12:00:01'));
+            expect(isCompetitionEnded('2025-04-19', makeSettings())).toBe(true);
+        });
+
+        it('is false well before the session', () => {
+            vi.setSystemTime(new Date('2025-04-17T08:00:00'));
+            expect(isCompetitionEnded('2025-04-19', makeSettings())).toBe(false);
+        });
+
+        it('respects a positive end day offset', () => {
+            // Competition stays open until midday the day after the session
+            const settings = makeSettings({ endDayOffset: 1 });
+
+            vi.setSystemTime(new Date('2025-04-19T23:00:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(false);
+
+            vi.setSystemTime(new Date('2025-04-20T12:01:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(true);
+        });
+
+        it('respects a custom end time', () => {
+            const settings = makeSettings({ endTime: '18:30' });
+
+            vi.setSystemTime(new Date('2025-04-19T18:29:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(false);
+
+            vi.setSystemTime(new Date('2025-04-19T18:31:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(true);
+        });
+    });
+
+    describe('when time controls are disabled', () => {
+        it('falls back to midnight after the session date', () => {
+            const settings = makeSettings({ enabled: false });
+
+            vi.setSystemTime(new Date('2025-04-19T23:59:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(false);
+
+            vi.setSystemTime(new Date('2025-04-20T00:01:00'));
+            expect(isCompetitionEnded('2025-04-19', settings)).toBe(true);
+        });
+
+        it('uses the same fallback when settings are absent', () => {
+            vi.setSystemTime(new Date('2025-04-20T00:01:00'));
+            expect(isCompetitionEnded('2025-04-19', null)).toBe(true);
+            expect(isCompetitionEnded('2025-04-20', null)).toBe(false);
         });
     });
 });

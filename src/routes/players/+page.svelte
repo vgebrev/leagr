@@ -3,6 +3,7 @@
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { playersService } from '$lib/client/services/players.svelte.js';
+    import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
     import PlayerRegistrationForm from './components/PlayerRegistrationForm.svelte';
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
     import PlayersGrid from './components/PlayersGrid.svelte';
@@ -98,7 +99,8 @@
 
         <RegistrationAlerts
             registrationOpenDate={playersService.registrationOpenDate}
-            registrationCloseDate={playersService.registrationCloseDate} />
+            registrationCloseDate={playersService.registrationCloseDate}
+            unlocked={sessionUnlock.isUnlocked(data.date)} />
 
         <PlayersGrid
             availablePlayers={playersService.players}

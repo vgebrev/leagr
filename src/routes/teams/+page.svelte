@@ -84,7 +84,7 @@
     );
     let canAutoAssignAll = $derived(
         isAdmin &&
-            !teamsService.isCompetitionEnded &&
+            !teamsService.isLocked() &&
             Object.keys(teams).length > 0 &&
             hasAssignableCandidates
     );
