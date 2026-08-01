@@ -7,9 +7,20 @@
             content="width=device-width, initial-scale=1" />
         <script>
             (function () {
-                const saved = localStorage.getItem('theme') || 'system';
+                let saved = localStorage.getItem('theme');
+                if (!saved) {
+                    // Adopt the choice made through the old flowbite DarkMode button, which
+                    // stored it under its own key, so upgrading users keep their theme.
+                    const legacy = localStorage.getItem('THEME_PREFERENCE_KEY');
+                    if (legacy === 'dark' || legacy === 'light') {
+                        saved = legacy;
+                        localStorage.setItem('theme', legacy);
+                    }
+                    localStorage.removeItem('THEME_PREFERENCE_KEY');
+                }
                 const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-                const shouldDark = saved === 'dark' || (saved === 'system' && prefersDark);
+                const shouldDark =
+                    saved === 'dark' || ((saved || 'system') === 'system' && prefersDark);
                 if (shouldDark) document.documentElement.classList.add('dark');
             })();
         </script>

@@ -1,4 +1,4 @@
-import { writable } from 'svelte/store';
+import { derived, get, writable } from 'svelte/store';
 
 const getPreferredTheme = () => {
     if (typeof localStorage !== 'undefined') {
@@ -7,6 +7,9 @@ const getPreferredTheme = () => {
     }
     return 'system';
 };
+
+const prefersDark = () =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
 export const theme = writable(getPreferredTheme());
 
@@ -25,3 +28,14 @@ theme.subscribe((value) => {
         root.classList.remove('dark');
     }
 });
+
+/** Whether dark mode is currently showing, resolving 'system' against the OS preference. */
+export const isDarkMode = derived(
+    theme,
+    ($theme) => $theme === 'dark' || ($theme === 'system' && prefersDark())
+);
+
+/** Flip between light and dark, resolving 'system' to whichever it is currently showing. */
+export function toggleTheme() {
+    theme.set(get(isDarkMode) ? 'light' : 'dark');
+}

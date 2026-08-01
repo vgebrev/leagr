@@ -168,8 +168,7 @@
         leagueInfo={data.leagueInfo} />
 
     <div class="flex-1 overflow-y-auto pb-16">
-        <div
-            class="container mx-auto flex flex-col justify-between gap-2 p-2 md:w-2/3 lg:w-1/2 xl:w-1/3">
+        <div class="app-container flex flex-col justify-between gap-2 p-2">
             {#if showDateSelector}
                 <DateSelector {selectedDate} />
             {/if}
