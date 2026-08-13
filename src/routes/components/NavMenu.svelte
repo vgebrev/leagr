@@ -2,9 +2,9 @@
     import {
         AdjustmentsHorizontalSolid,
         DotsVerticalOutline,
-        ForwardOutline,
         MoonOutline,
         NewspaperOutline,
+        ShareNodesSolid,
         SunOutline
     } from 'flowbite-svelte-icons';
     import { Dropdown, DropdownItem } from 'flowbite-svelte';
@@ -67,12 +67,12 @@
 </script>
 
 <button
-    class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden dark:text-gray-300 dark:hover:bg-gray-700"
+    class="cursor-default rounded-lg p-1 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden dark:text-gray-300 dark:hover:bg-gray-700"
     type="button"
     id="nav-menu-button"
     aria-label="Menu"
     aria-haspopup="menu"
-    aria-expanded={isOpen}><DotsVerticalOutline /></button>
+    aria-expanded={isOpen}><DotsVerticalOutline size="lg" /></button>
 
 <Dropdown
     class="glass-strong border border-gray-200 dark:border-gray-700"
@@ -92,7 +92,7 @@
                 }
             }}>
             <span class="flex items-center">
-                <ForwardOutline class="me-2 h-4 w-4" />Share link
+                <ShareNodesSolid class="me-2 h-4 w-4" />Share link
             </span>
         </DropdownItem>
         <DropdownItem
