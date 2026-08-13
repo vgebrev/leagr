@@ -54,6 +54,20 @@ if (!Element.prototype.animate) {
     };
 }
 
+// jsdom timestamps requestAnimationFrame callbacks from when its window was created, while
+// performance.now() counts from process start, so the two clocks are skewed by however long the
+// environment took to boot (~700ms alone, >1s when the suite runs files in parallel). Flowbite's
+// popover debounce measures elapsed time as (rAF timestamp - performance.now()), which turns that
+// skew into extra open/close latency and makes popover tests time out under load. Browsers put
+// both on the same timeline, so align jsdom with that.
+if (typeof globalThis.requestAnimationFrame === 'function') {
+    const nativeRaf = globalThis.requestAnimationFrame.bind(globalThis);
+    const alignedRaf = (/** @type {FrameRequestCallback} */ callback) =>
+        nativeRaf(() => callback(performance.now()));
+    globalThis.requestAnimationFrame = alignedRaf;
+    window.requestAnimationFrame = alignedRaf;
+}
+
 // Mock IntersectionObserver / ResizeObserver. These must be constructible with `new`
 // (floating-ui does exactly that), so they are classes rather than arrow-function mocks.
 class ObserverStub {

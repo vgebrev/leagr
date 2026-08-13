@@ -74,11 +74,15 @@
     aria-haspopup="menu"
     aria-expanded={isOpen}><DotsVerticalOutline size="lg" /></button>
 
+<!-- triggerDelay is Flowbite's mutual open/close debounce, defaulting to 200ms to keep
+     hover-triggered popovers from flickering. This menu opens on mousedown, so most of that
+     is just lag; 50ms is still long enough to coalesce the mousedown/focusin pair. -->
 <Dropdown
     class="glass-strong border border-gray-200 dark:border-gray-700"
     simple
     role="menu"
     placement="bottom-end"
+    triggerDelay={50}
     {activeUrl}
     bind:isOpen>
     {#if leagueInfo}
