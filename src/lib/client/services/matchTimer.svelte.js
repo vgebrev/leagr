@@ -22,6 +22,11 @@ const COUNTDOWN_MS = 3000;
 const MIN_MINUTES = 1;
 const MAX_MINUTES = 60;
 
+/** A stored clock older than this belongs to a session that is long over. */
+const MAX_CLOCK_AGE_MS = 12 * 60 * 60 * 1000;
+/** Comfortably more matches than a session has, so nothing in play is evicted. */
+const MAX_STORED_CLOCKS = 12;
+
 const SHORT_BUZZ = [120];
 const LONG_BUZZ = [400, 120, 400, 120, 600];
 
@@ -119,6 +124,9 @@ class MatchTimerService {
     /**
      * Bind the clock to a match. Re-attaching the same match is a no-op beyond
      * re-establishing the tick, so the effect that calls this can run freely.
+     *
+     * Every match keeps its own stored clock, so moving to another match banks
+     * this one rather than discarding it: only the referee resets a clock.
      * @param {string|null} matchKey - `${date}:${competition}:${round}:${match}`
      * @param {{durationMinutes?: number, lastPlaySeconds?: number}} [options] - League settings
      */
@@ -131,14 +139,16 @@ class MatchTimerService {
             return;
         }
 
-        const snapshot = this.#readSnapshot();
-        if (snapshot && snapshot.matchKey === matchKey) {
-            this.#restore(snapshot);
+        this.#stopTicking();
+        this.#releaseWakeLock();
+
+        const snapshot = this.#readSnapshot(matchKey);
+        if (snapshot) {
+            this.#restore(matchKey, snapshot);
             return;
         }
 
         const { durationMinutes = 8, lastPlaySeconds = 0 } = options;
-        this.#stopTicking();
         this.matchKey = matchKey;
         this.durationMs =
             clamp(Math.round(durationMinutes) || 1, MIN_MINUTES, MAX_MINUTES) * 60_000;
@@ -150,16 +160,19 @@ class MatchTimerService {
         this.regulationSignalled = false;
         this.status = 'idle';
         this.now = Date.now();
-        this.#releaseWakeLock();
         this.#watchVisibility();
         this.#persist();
     }
 
-    /** Stop driving the clock without discarding it; the snapshot is left in place. */
+    /**
+     * Stop driving the clock without discarding it; the snapshot is left in place.
+     *
+     * A live clock is left running: it belongs to a game in progress, so full
+     * time has to sound wherever in the app the referee happens to be.
+     */
     detach() {
-        this.#stopTicking();
-        this.#releaseWakeLock();
-        this.#unwatchVisibility();
+        if (this.isRunning || this.status === 'countdown') return;
+        this.destroy();
     }
 
     /** Begin the kick-off countdown. Must be called from a user gesture. */
@@ -215,7 +228,14 @@ class MatchTimerService {
         this.#persist();
     }
 
-    /** Restart play after a stoppage: a single whistle, no countdown. */
+    /**
+     * Restart play after a stoppage: no countdown, and no whistle.
+     *
+     * A restart blast is indistinguishable from a kick-off or a full time
+     * signal to everyone on the pitch, so it reads as confusion rather than
+     * information. Only three moments are announced: kick-off, last play, and
+     * the end of the match. The buzz stays as confirmation the tap took.
+     */
     resume() {
         if (this.status !== 'paused') return;
 
@@ -224,7 +244,7 @@ class MatchTimerService {
         this.now = Date.now();
         this.runStartedAt = this.now;
         this.status = 'running';
-        this.#signal(false);
+        vibrate(SHORT_BUZZ);
         this.#ensureTicking();
         this.#persist();
     }
@@ -289,9 +309,11 @@ class MatchTimerService {
         this.setExpanded(!this.expanded);
     }
 
-    /** Tear down everything, including listeners. */
+    /** Tear down everything, including listeners, live clock or not. */
     destroy() {
-        this.detach();
+        this.#stopTicking();
+        this.#releaseWakeLock();
+        this.#unwatchVisibility();
     }
 
     // -- internals -------------------------------------------------------
@@ -442,45 +464,84 @@ class MatchTimerService {
     // -- persistence -----------------------------------------------------
 
     /**
-     * @returns {any|null}
+     * Every match's clock, keyed by match key.
+     * @returns {Record<string, any>}
      */
-    #readSnapshot() {
-        if (typeof window === 'undefined') return null;
+    #readAll() {
+        if (typeof window === 'undefined') return {};
         try {
             const raw = localStorage.getItem(STORAGE_KEY);
-            return raw ? JSON.parse(raw) : null;
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (!parsed || typeof parsed !== 'object') return {};
+
+            // Clocks were once stored one at a time, with the key inside the
+            // record. Carry that one over rather than dropping a live game.
+            if (typeof parsed.matchKey === 'string') {
+                return { [parsed.matchKey]: { ...parsed, updatedAt: Date.now() } };
+            }
+            return parsed;
         } catch (error) {
             console.error('Error reading timer state from localStorage:', error);
-            return null;
+            return {};
         }
     }
 
+    /**
+     * @param {string} matchKey
+     * @returns {any|null}
+     */
+    #readSnapshot(matchKey) {
+        const entry = this.#readAll()[matchKey];
+        if (!entry || typeof entry !== 'object') return null;
+        return Date.now() - (entry.updatedAt ?? 0) > MAX_CLOCK_AGE_MS ? null : entry;
+    }
+
     #persist() {
-        if (typeof window === 'undefined') return;
+        if (typeof window === 'undefined' || !this.matchKey) return;
         try {
-            localStorage.setItem(
-                STORAGE_KEY,
-                JSON.stringify({
-                    matchKey: this.matchKey,
-                    durationMs: this.durationMs,
-                    lastPlayMs: this.lastPlayMs,
-                    accumulatedMs: this.accumulatedMs,
-                    runStartedAt: this.runStartedAt,
-                    status: this.status,
-                    regulationSignalled: this.regulationSignalled
-                })
-            );
+            const clocks = this.#readAll();
+            clocks[this.matchKey] = {
+                durationMs: this.durationMs,
+                lastPlayMs: this.lastPlayMs,
+                accumulatedMs: this.accumulatedMs,
+                runStartedAt: this.runStartedAt,
+                status: this.status,
+                regulationSignalled: this.regulationSignalled,
+                updatedAt: Date.now()
+            };
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.#prune(clocks)));
         } catch (error) {
             console.error('Error storing timer state in localStorage:', error);
         }
     }
 
     /**
+     * Keep storage to this session: anything from an older one is gone, and the
+     * rest is capped most-recent-first. The match being played is never dropped,
+     * however many others are stored.
+     * @param {Record<string, any>} clocks
+     * @returns {Record<string, any>}
+     */
+    #prune(clocks) {
+        const cutoff = Date.now() - MAX_CLOCK_AGE_MS;
+        const kept = Object.entries(clocks)
+            .filter(([key, entry]) => key === this.matchKey || (entry?.updatedAt ?? 0) > cutoff)
+            .sort(([keyA, a], [keyB, b]) => {
+                if (keyA === this.matchKey) return -1;
+                if (keyB === this.matchKey) return 1;
+                return (b?.updatedAt ?? 0) - (a?.updatedAt ?? 0);
+            });
+
+        return Object.fromEntries(kept.slice(0, MAX_STORED_CLOCKS));
+    }
+
+    /**
+     * @param {string} matchKey
      * @param {any} snapshot
      */
-    #restore(snapshot) {
+    #restore(matchKey, snapshot) {
         this.#stopTicking();
-        this.matchKey = snapshot.matchKey;
+        this.matchKey = matchKey;
         this.durationMs = snapshot.durationMs ?? 0;
         this.lastPlayMs = snapshot.lastPlayMs ?? 0;
         this.accumulatedMs = snapshot.accumulatedMs ?? 0;

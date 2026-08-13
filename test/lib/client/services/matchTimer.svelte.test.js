@@ -86,6 +86,52 @@ describe('matchTimer service', () => {
             expect(timer.durationMs).toBe(8 * MINUTE);
             expect(timer.elapsedMs).toBe(0);
         });
+
+        it('gives back the running clock when you come back to its match', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            // Nipping over to the next match to check a scoreline.
+            timer.attach(OTHER_KEY, DEFAULTS);
+            vi.advanceTimersByTime(30_000);
+            timer.attach(KEY, DEFAULTS);
+
+            expect(timer.status).toBe('running');
+            expect(timer.elapsedMs).toBe(MINUTE + 30_000);
+        });
+
+        it('gives back a paused clock and its duration override', () => {
+            timer.attach(KEY, DEFAULTS);
+            timer.adjustDuration(2); // cup final: 10 minutes
+            kickOff();
+            vi.advanceTimersByTime(2 * MINUTE);
+            timer.pause();
+
+            timer.attach(OTHER_KEY, DEFAULTS);
+            vi.advanceTimersByTime(5 * MINUTE);
+            timer.attach(KEY, DEFAULTS);
+
+            expect(timer.status).toBe('paused');
+            expect(timer.durationMs).toBe(10 * MINUTE);
+            expect(timer.elapsedMs).toBe(2 * MINUTE);
+        });
+
+        it('finishes with one long whistle if play ran out while you were elsewhere', () => {
+            timer.attach(KEY, WITH_LAST_PLAY);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            timer.attach(OTHER_KEY, WITH_LAST_PLAY);
+            whistle.playWhistle.mockClear();
+            vi.advanceTimersByTime(10 * MINUTE);
+
+            timer.attach(KEY, WITH_LAST_PLAY);
+
+            expect(timer.status).toBe('finished');
+            expect(whistle.playWhistle).toHaveBeenCalledTimes(1);
+            expect(whistle.playWhistle).toHaveBeenCalledWith({ long: true });
+        });
     });
 
     describe('countdown and running', () => {
@@ -218,7 +264,7 @@ describe('matchTimer service', () => {
             expect(timer.elapsedMs).toBe(MINUTE + 30_000);
         });
 
-        it('whistles on resume without another countdown', () => {
+        it('restarts silently - no countdown, no whistle, just the buzz', () => {
             timer.attach(KEY, DEFAULTS);
             kickOff();
             timer.pause();
@@ -226,7 +272,8 @@ describe('matchTimer service', () => {
             timer.resume();
 
             expect(timer.status).toBe('running');
-            expect(whistle.playWhistle).toHaveBeenCalledWith({ long: false });
+            expect(whistle.playWhistle).not.toHaveBeenCalled();
+            expect(whistle.vibrate).toHaveBeenLastCalledWith([120]);
         });
     });
 
@@ -387,6 +434,38 @@ describe('matchTimer service', () => {
             expect(timer.status).toBe('running');
         });
 
+        it('stays in last play across a pause, so it can still be ended by hand', () => {
+            timer.attach(KEY, WITH_LAST_PLAY);
+            kickOff();
+            vi.advanceTimersByTime(8 * MINUTE + 20_000);
+
+            timer.pause();
+
+            expect(timer.status).toBe('paused');
+            expect(timer.isLastPlay).toBe(true);
+
+            whistle.playWhistle.mockClear();
+            timer.resume();
+
+            expect(timer.status).toBe('running');
+            expect(timer.phase).toBe('lastPlay');
+            expect(whistle.playWhistle).not.toHaveBeenCalled();
+        });
+
+        it('endLastPlay ends a paused game on the referee tap', () => {
+            timer.attach(KEY, WITH_LAST_PLAY);
+            kickOff();
+            vi.advanceTimersByTime(8 * MINUTE + 10_000);
+            timer.pause();
+            whistle.playWhistle.mockClear();
+
+            timer.endLastPlay();
+
+            expect(timer.status).toBe('finished');
+            expect(whistle.playWhistle).toHaveBeenCalledTimes(1);
+            expect(whistle.playWhistle).toHaveBeenCalledWith({ long: true });
+        });
+
         it('blowing past both thresholds while frozen gives one long whistle only', () => {
             timer.attach(KEY, WITH_LAST_PLAY);
             kickOff();
@@ -449,7 +528,7 @@ describe('matchTimer service', () => {
             reloaded.destroy();
         });
 
-        it('ignores a snapshot belonging to a different match', async () => {
+        it('starts fresh on a match that has no stored clock', async () => {
             timer.attach(KEY, DEFAULTS);
             kickOff();
             vi.advanceTimersByTime(2 * MINUTE);
@@ -461,6 +540,67 @@ describe('matchTimer service', () => {
             expect(reloaded.status).toBe('idle');
             expect(reloaded.elapsedMs).toBe(0);
             reloaded.destroy();
+        });
+
+        it('stores each match under its own key', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            timer.attach(OTHER_KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(30_000);
+
+            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+            expect(Object.keys(stored).sort()).toEqual([KEY, OTHER_KEY]);
+            expect(stored[KEY].status).toBe('running');
+            expect(stored[OTHER_KEY].status).toBe('running');
+        });
+
+        it('drops clocks left over from an earlier session', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            // Next Saturday's session, on a phone that never cleared its storage.
+            vi.setSystemTime(Date.now() + 7 * 24 * 60 * MINUTE);
+            timer.attach(OTHER_KEY, DEFAULTS);
+
+            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+            expect(Object.keys(stored)).toEqual([OTHER_KEY]);
+        });
+
+        it('keeps only the most recent clocks', () => {
+            for (let i = 1; i <= 15; i++) {
+                timer.attach(`2026-07-25:league:1:${i}`, DEFAULTS);
+                vi.advanceTimersByTime(1000);
+            }
+
+            const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
+            expect(Object.keys(stored)).toHaveLength(12);
+            expect(stored['2026-07-25:league:1:15']).toBeTruthy();
+            expect(stored['2026-07-25:league:1:1']).toBeUndefined();
+        });
+
+        it('picks up a clock left by the single-record format', () => {
+            localStorage.setItem(
+                STORAGE_KEY,
+                JSON.stringify({
+                    matchKey: KEY,
+                    durationMs: 8 * MINUTE,
+                    lastPlayMs: 0,
+                    accumulatedMs: 2 * MINUTE,
+                    runStartedAt: Date.now(),
+                    status: 'running',
+                    regulationSignalled: false
+                })
+            );
+
+            timer.attach(KEY, DEFAULTS);
+            vi.advanceTimersByTime(30_000);
+
+            expect(timer.status).toBe('running');
+            expect(timer.elapsedMs).toBe(2 * MINUTE + 30_000);
         });
 
         it('restores mid-last-play without replaying the full time whistle', async () => {
@@ -596,6 +736,20 @@ describe('matchTimer service', () => {
             vi.advanceTimersByTime(MINUTE);
 
             expect(timer.elapsedMs).toBe(at);
+        });
+
+        it('keeps a live clock running after leaving the match centre', () => {
+            timer.attach(KEY, DEFAULTS);
+            kickOff();
+            vi.advanceTimersByTime(MINUTE);
+
+            // Off to the standings table mid-game.
+            timer.detach();
+            vi.advanceTimersByTime(7 * MINUTE);
+
+            expect(timer.elapsedMs).toBe(8 * MINUTE);
+            expect(timer.status).toBe('finished');
+            expect(whistle.playWhistle).toHaveBeenCalledWith({ long: true });
         });
 
         it('leaves the snapshot behind so the clock can be picked back up', () => {

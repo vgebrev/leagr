@@ -253,8 +253,9 @@
 
     let sessionLocked = $derived(isSessionLocked(date, $settings));
 
-    // The timer is a module singleton, so it survives navigation within the app;
-    // attaching on a new match key is what resets an on-the-fly duration override.
+    // The timer is a module singleton, so it survives navigation within the app,
+    // and every match keeps its own stored clock under this key - stepping to the
+    // next match banks the current one rather than resetting it.
     let matchKey = $derived(`${date}:${competition}:${roundParam}:${matchParam}`);
 
     $effect(() => {
