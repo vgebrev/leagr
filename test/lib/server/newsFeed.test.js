@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { buildNewsFeed, nextCompetitionDate, previewSessionDate } from '$lib/server/newsFeed.js';
+import {
+    buildNewsFeed,
+    nextCompetitionDate,
+    pageRecapDates,
+    playedSessionDates,
+    previewSessionDate
+} from '$lib/server/newsFeed.js';
 
 const config = {
     champions: {
@@ -65,6 +71,14 @@ function ballerEntry(team, stats) {
         stats
     };
 }
+
+/** Per-session raw stats block */
+const stats = (goals, offActions, defActions, saveActions) => ({
+    goals,
+    offActions,
+    defActions,
+    saveActions
+});
 
 /**
  * Zip dates and entries into a history object (null entries = absent that week)
@@ -482,13 +496,6 @@ describe('wooden spoon streak threads', () => {
 });
 
 describe('baller award streak threads', () => {
-    const stats = (goals, offActions, defActions, saveActions) => ({
-        goals,
-        offActions,
-        defActions,
-        saveActions
-    });
-
     function keeperPlayers(week4Saves) {
         return {
             Kat: {
@@ -570,6 +577,134 @@ describe('baller award streak threads', () => {
         expect(threads).toHaveLength(1);
         expect(threads[0].streak).toBe(4);
         expect(threads[0].outcome).toBeUndefined();
+    });
+});
+
+describe('carried-over streaks during a long absence', () => {
+    /**
+     * A non-appearance history entry. Rankings writes one of these for every
+     * ranked player every session (a rank/decay snapshot), so the presence of
+     * a history key says nothing about whether the player turned up.
+     */
+    const snapshotEntry = () => ({
+        ratings: { elo: 1500, eloGames: { allTime: 12, season: 6 } },
+        ranking: { rank: 4, totalPlayers: 4, rankingPoints: 0 }
+    });
+
+    it('reports the carried-over trophy run only for the first session missed', () => {
+        // Chris wins weeks 1-3, then misses weeks 4 and 5
+        const players = trophyPlayers([...chrisWins3]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6]
+        });
+        const first = threadOf(cardFor(cards, '2026-01-24'), 'trophyStreak', 'Chris');
+        expect(first.outcome).toBe('carriedOver');
+        expect(first.streak).toBe(3);
+        expect(threadOf(cardFor(cards, '2026-01-31'), 'trophyStreak', 'Chris')).toBeUndefined();
+    });
+
+    it('treats a rank-snapshot entry as sitting out', () => {
+        const players = trophyPlayers([...chrisWins3, snapshotEntry(), snapshotEntry()]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6]
+        });
+        expect(threadOf(cardFor(cards, '2026-01-24'), 'trophyStreak', 'Chris').outcome).toBe(
+            'carriedOver'
+        );
+        expect(threadOf(cardFor(cards, '2026-01-31'), 'trophyStreak', 'Chris')).toBeUndefined();
+    });
+
+    it('resumes reporting the run when the player comes back', () => {
+        const players = trophyPlayers([
+            ...chrisWins3,
+            null,
+            champEntry('blue', 1, null, { leagueWinner: true })
+        ]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6]
+        });
+        const thread = threadOf(cardFor(cards, '2026-01-31'), 'trophyStreak', 'Chris');
+        expect(thread.outcome).toBe('extended');
+        expect(thread.streak).toBe(4);
+    });
+
+    it('drops the wooden-spoon run after the first session missed', () => {
+        const players = trophyPlayers([
+            ...chrisWins3,
+            champEntry('blue', 1, null, { leagueWinner: true }),
+            champEntry('blue', 1, null, { leagueWinner: true })
+        ]);
+        players.Ben.history['2026-01-24'] = champEntry('white', 2, null);
+        // Dan collects three spoons then misses weeks 4 and 5
+        players.Dan = {
+            history: history([
+                champEntry('green', 4, null),
+                champEntry('green', 4, null),
+                champEntry('green', 4, null)
+            ])
+        };
+        // Someone still has to finish last once Dan is gone
+        players.Cara.history['2026-01-24'] = champEntry('orange', 4, null);
+        players.Cara.history['2026-01-31'] = champEntry('orange', 4, null);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6]
+        });
+        expect(threadOf(cardFor(cards, '2026-01-24'), 'spoonStreak', 'Dan').outcome).toBe(
+            'carriedOver'
+        );
+        expect(threadOf(cardFor(cards, '2026-01-31'), 'spoonStreak', 'Dan')).toBeUndefined();
+    });
+
+    it('drops the award run after the first session missed', () => {
+        const players = {
+            // Kat tops saves for three weeks, then misses weeks 4 and 5
+            Kat: {
+                history: history([
+                    ballerEntry('blue', stats(0, 0, 1, 5)),
+                    ballerEntry('blue', stats(0, 0, 0, 6)),
+                    ballerEntry('blue', stats(0, 0, 1, 5))
+                ])
+            },
+            Leo: {
+                history: history([
+                    ballerEntry('white', stats(2, 1, 1, 1)),
+                    ballerEntry('white', stats(1, 2, 1, 0)),
+                    ballerEntry('white', stats(2, 1, 1, 1)),
+                    ballerEntry('white', stats(2, 1, 1, 2)),
+                    ballerEntry('white', stats(2, 1, 1, 2))
+                ])
+            }
+        };
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6],
+            maxThreads: 10
+        });
+        const glovesOn = (date) =>
+            cardFor(cards, date).threads.filter(
+                (t) =>
+                    t.type === 'ballerStreak' && t.player === 'Kat' && t.category === 'goldenGlove'
+            );
+        expect(glovesOn('2026-01-24')).toHaveLength(1);
+        expect(glovesOn('2026-01-24')[0].outcome).toBe('carriedOver');
+        expect(glovesOn('2026-01-31')).toHaveLength(0);
+    });
+
+    it('keeps a recap card frozen when the absence continues into later sessions', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        const early = buildNewsFeed(players, config, {
+            asOf: '2026-01-24',
+            competitionDays: [6]
+        });
+        const late = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6]
+        });
+        expect(cardFor(late, '2026-01-24')).toEqual(cardFor(early, '2026-01-24'));
     });
 });
 
@@ -1101,5 +1236,166 @@ describe('notability and selection', () => {
         const previewThread = threadOf(cards[0], 'trophyStreak', 'Chris');
         expect(recapThread.outcome).toBe('carriedOver');
         expect(previewThread.notability).toBeGreaterThan(recapThread.notability);
+    });
+});
+
+describe('playedSessionDates', () => {
+    it('lists the played session dates newest first, deduped across players', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        expect(playedSessionDates(players, '2026-02-14')).toEqual([
+            '2026-01-31',
+            '2026-01-24',
+            '2026-01-17',
+            '2026-01-10',
+            '2026-01-03'
+        ]);
+    });
+
+    it('clamps to the viewing clock', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        expect(playedSessionDates(players, '2026-01-17')).toEqual([
+            '2026-01-17',
+            '2026-01-10',
+            '2026-01-03'
+        ]);
+    });
+
+    it('returns nothing on a blank slate', () => {
+        expect(playedSessionDates({}, '2026-01-03')).toEqual([]);
+    });
+});
+
+describe('pageRecapDates', () => {
+    const dates = ['2026-01-31', '2026-01-24', '2026-01-17', '2026-01-10', '2026-01-03'];
+
+    it('returns the first page with a cursor pointing past it', () => {
+        expect(pageRecapDates(dates, { limit: 2 })).toEqual({
+            dates: ['2026-01-31', '2026-01-24'],
+            hasMore: true,
+            nextCursor: '2026-01-24'
+        });
+    });
+
+    it('continues strictly after the cursor', () => {
+        expect(pageRecapDates(dates, { before: '2026-01-24', limit: 2 })).toEqual({
+            dates: ['2026-01-17', '2026-01-10'],
+            hasMore: true,
+            nextCursor: '2026-01-10'
+        });
+    });
+
+    it('reports the end of the feed when the page exhausts it', () => {
+        expect(pageRecapDates(dates, { before: '2026-01-10', limit: 2 })).toEqual({
+            dates: ['2026-01-03'],
+            hasMore: false,
+            nextCursor: null
+        });
+    });
+
+    it('reports the end when the remainder is exactly one page', () => {
+        expect(pageRecapDates(dates, { before: '2026-01-17', limit: 2 })).toEqual({
+            dates: ['2026-01-10', '2026-01-03'],
+            hasMore: false,
+            nextCursor: null
+        });
+    });
+
+    it('returns an empty page for a cursor older than everything', () => {
+        expect(pageRecapDates(dates, { before: '2025-12-01', limit: 5 })).toEqual({
+            dates: [],
+            hasMore: false,
+            nextCursor: null
+        });
+    });
+
+    it('accepts a cursor that is not itself a session date', () => {
+        expect(pageRecapDates(dates, { before: '2026-01-20', limit: 5 }).dates).toEqual([
+            '2026-01-17',
+            '2026-01-10',
+            '2026-01-03'
+        ]);
+    });
+
+    it('handles a limit larger than the feed', () => {
+        expect(pageRecapDates(dates, { limit: 50 })).toEqual({
+            dates,
+            hasMore: false,
+            nextCursor: null
+        });
+    });
+});
+
+describe('paged feeds', () => {
+    it('builds only the requested recap dates', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6],
+            recapDates: ['2026-01-17']
+        });
+        expect(cards.map((c) => [c.state, c.date])).toEqual([
+            ['preview', '2026-02-07'],
+            ['recap', '2026-01-17']
+        ]);
+    });
+
+    it('omits the preview card on later pages', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6],
+            recapDates: ['2026-01-10', '2026-01-03'],
+            includePreview: false
+        });
+        expect(cards.every((c) => c.state === 'recap')).toBe(true);
+        expect(cards.map((c) => c.date)).toEqual(['2026-01-10', '2026-01-03']);
+    });
+
+    it('ignores unknown dates and imposes newest-first order', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6],
+            recapDates: ['2026-01-03', '2099-01-01', '2026-01-24'],
+            includePreview: false
+        });
+        expect(cards.map((c) => c.date)).toEqual(['2026-01-24', '2026-01-03']);
+    });
+
+    it('produces the same feed page by page as it does in one pass', () => {
+        const players = trophyPlayers([...chrisWins3]);
+        const options = { asOf: '2026-01-31', competitionDays: [6] };
+        const whole = buildNewsFeed(players, config, options);
+
+        const dates = playedSessionDates(players, options.asOf);
+        const paged = [];
+        let before = null;
+        let page = pageRecapDates(dates, { before, limit: 2 });
+        paged.push(...buildNewsFeed(players, config, { ...options, recapDates: page.dates }));
+        while (page.hasMore) {
+            before = page.nextCursor;
+            page = pageRecapDates(dates, { before, limit: 2 });
+            paged.push(
+                ...buildNewsFeed(players, config, {
+                    ...options,
+                    recapDates: page.dates,
+                    includePreview: false
+                })
+            );
+        }
+        expect(paged).toEqual(whole);
+    });
+
+    it('suppresses an ongoing absence even when the previous session is off the page', () => {
+        // Chris misses weeks 4 and 5; the 01-31 card is built alone, so the
+        // absence at 01-24 has to come from the full history, not the page.
+        const players = trophyPlayers([...chrisWins3]);
+        const cards = buildNewsFeed(players, config, {
+            asOf: '2026-01-31',
+            competitionDays: [6],
+            recapDates: ['2026-01-31'],
+            includePreview: false
+        });
+        expect(threadOf(cards[0], 'trophyStreak', 'Chris')).toBeUndefined();
     });
 });

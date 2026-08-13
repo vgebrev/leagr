@@ -4,27 +4,38 @@ import { createRankingsManager } from '$lib/server/rankings.js';
 import { getLeagueInfo, getLeagueDataPath } from '$lib/server/league.js';
 import { getEffectiveLeagueSettings } from '$lib/shared/defaults.js';
 import { resolveMomentumConfig } from '$lib/server/momentum.js';
-import { buildNewsFeed, previewSessionDate } from '$lib/server/newsFeed.js';
+import {
+    buildNewsFeed,
+    pageRecapDates,
+    playedSessionDates,
+    previewSessionDate
+} from '$lib/server/newsFeed.js';
 import { createStandingsManager } from '$lib/server/standings.js';
 import { data } from '$lib/server/data.js';
 import { dateString } from '$lib/shared/helpers.js';
+
+// The feed is paged over recap cards; the preview card rides along on page 1.
+const DEFAULT_LIMIT = 5;
+const MAX_LIMIT = 50;
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * Session standings (points, goal difference, wins/losses) per played date.
  * The recap's team lines need data that isn't in the rankings history: the
  * goal-difference margin when the top two are level on points, and each
  * winning team's league losses (to flag an unbeaten "invincible" side).
- * @param {Set<string>} playedDates
+ * Only the dates being rendered need loading.
+ * @param {string[]} dates
  * @param {string} asOf
  * @param {string} leagueId
  * @returns {Promise<Record<string, Array>>}
  */
-async function loadSessionStandings(playedDates, asOf, leagueId) {
+async function loadSessionStandings(dates, asOf, leagueId) {
     const standingsManager = createStandingsManager();
     /** @type {Record<string, Array>} */
     const standingsByDate = {};
     await Promise.all(
-        [...playedDates]
+        dates
             .filter((date) => date <= asOf)
             .map(async (date) => {
                 try {
@@ -71,8 +82,17 @@ async function earliestRegisteredSession(leagueId, asOf, playedDates) {
 
 /**
  * GET /api/news - Session preview/recap news feed derived from momentum
+ *
+ * Stories are derived from the whole season, but only one page of cards is
+ * returned. Page 1 is the preview card plus the newest `limit` recaps; follow
+ * `nextCursor` back through the season from there.
+ *
  * Query params:
- *   - asOf=YYYY-MM-DD to view the feed as it stood at a past date (default: today)
+ *   - asOf=YYYY-MM-DD to view the feed as it stood at a past date (default: today).
+ *     Echoed back so a client can pin the clock across pages.
+ *   - limit=N recap cards per page (default 5, capped at 50)
+ *   - before=YYYY-MM-DD to fetch recaps older than this date (the previous
+ *     page's nextCursor). Pages after the first carry no preview card.
  */
 export async function GET({ locals, url }) {
     try {
@@ -83,16 +103,26 @@ export async function GET({ locals, url }) {
         }
 
         const asOfParam = url.searchParams.get('asOf');
-        if (asOfParam && !/^\d{4}-\d{2}-\d{2}$/.test(asOfParam)) {
+        if (asOfParam && !DATE_PATTERN.test(asOfParam)) {
             return json({ error: 'asOf must be formatted YYYY-MM-DD' }, { status: 400 });
+        }
+        const before = url.searchParams.get('before');
+        if (before && !DATE_PATTERN.test(before)) {
+            return json({ error: 'before must be formatted YYYY-MM-DD' }, { status: 400 });
         }
         const today = dateString(new Date());
         const asOf = asOfParam && asOfParam <= today ? asOfParam : today;
 
+        // Garbage clamps rather than erroring, the way asOf clamps to today
+        const parsedLimit = Number.parseInt(url.searchParams.get('limit') ?? '', 10);
+        const limit = Number.isNaN(parsedLimit)
+            ? DEFAULT_LIMIT
+            : Math.min(Math.max(parsedLimit, 1), MAX_LIMIT);
+
         const settings = getEffectiveLeagueSettings(getLeagueInfo(leagueId));
         const config = resolveMomentumConfig(settings);
         if (!config.enabled) {
-            return json({ cards: null });
+            return json({ cards: null, hasMore: false, nextCursor: null, asOf });
         }
 
         // The feed, like momentum, is a current-year signal
@@ -103,36 +133,55 @@ export async function GET({ locals, url }) {
 
         const competitionDays = settings.competitionDays;
 
-        // The preview card describes the next upcoming session. Normally that's
-        // the next competition day, but a session can be scheduled off-calendar
-        // (e.g. a public holiday) - if players have already registered for an
-        // earlier date, that registered session is the one going in.
-        const playedDates = new Set(
-            Object.values(rankings.players).flatMap((p) => Object.keys(p.history ?? {}))
-        );
-        const nextCompetition = previewSessionDate(rankings.players, { asOf, competitionDays });
-        const registeredSession = await earliestRegisteredSession(leagueId, asOf, playedDates);
-        const previewDate =
-            registeredSession && registeredSession < nextCompetition
-                ? registeredSession
-                : nextCompetition;
+        // Only the first page carries the preview card, so the work behind it
+        // (a directory scan plus the registration lookups) is page-1 only.
+        const includePreview = !before;
+        let previewDate;
+        let registeredPlayers;
+        if (includePreview) {
+            // The preview card describes the next upcoming session. Normally
+            // that's the next competition day, but a session can be scheduled
+            // off-calendar (e.g. a public holiday) - if players have already
+            // registered for an earlier date, that registered session is the
+            // one going in. Note this played-date set is deliberately not
+            // clamped to asOf: a future session that already has results isn't
+            // an upcoming one.
+            const playedDates = new Set(
+                Object.values(rankings.players).flatMap((p) => Object.keys(p.history ?? {}))
+            );
+            const nextCompetition = previewSessionDate(rankings.players, { asOf, competitionDays });
+            const registeredSession = await earliestRegisteredSession(leagueId, asOf, playedDates);
+            previewDate =
+                registeredSession && registeredSession < nextCompetition
+                    ? registeredSession
+                    : nextCompetition;
 
-        // Gate the preview to the roster registered for that session (available
-        // + waiting list), which lives in the daily session file.
-        const registration = await data.get('players', previewDate, leagueId);
-        const registeredPlayers = registration
-            ? [...(registration.available ?? []), ...(registration.waitingList ?? [])]
-            : [];
+            // Gate the preview to the roster registered for that session
+            // (available + waiting list), which lives in the daily session file.
+            const registration = await data.get('players', previewDate, leagueId);
+            registeredPlayers = registration
+                ? [...(registration.available ?? []), ...(registration.waitingList ?? [])]
+                : [];
+        }
 
-        const standingsByDate = await loadSessionStandings(playedDates, asOf, leagueId);
+        const page = pageRecapDates(playedSessionDates(rankings.players, asOf), { before, limit });
+        const standingsByDate = await loadSessionStandings(page.dates, asOf, leagueId);
 
         const cards = buildNewsFeed(
             rankings.players,
             { champions: config.champions, ballers: config.ballers },
-            { asOf, competitionDays, previewDate, registeredPlayers, standingsByDate }
+            {
+                asOf,
+                competitionDays,
+                previewDate,
+                registeredPlayers,
+                standingsByDate,
+                recapDates: page.dates,
+                includePreview
+            }
         );
 
-        return json({ cards });
+        return json({ cards, hasMore: page.hasMore, nextCursor: page.nextCursor, asOf });
     } catch (error) {
         console.error('Error building news feed:', error);
         return json(
