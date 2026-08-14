@@ -47,18 +47,31 @@ jobs:
             exit 0
           fi
 
-          NOTES="$RUNNER_TEMP/notes.md"
-          ./release-notes-draft.sh -v "${TAG#v}" --to "$TAG" -o "$NOTES"
+          DRAFT="$RUNNER_TEMP/draft.md"
+          BODY="$RUNNER_TEMP/body.md"
+          ./release-notes-draft.sh -v "${TAG#v}" --to "$TAG" -o "$DRAFT"
 
           # The script exits 0 without writing anything when the range is empty.
-          if [[ ! -f "$NOTES" ]]; then
+          if [[ ! -f "$DRAFT" ]]; then
             echo "::warning::No commits since the last release - drafting an empty release."
-            printf '# Release %s\n' "$TAG" > "$NOTES"
+            : > "$DRAFT"
+          fi
+
+          # The file's "# Release vX.Y.Z" heading is its title as a standalone
+          # .md; in a release body it just repeats the release title.
+          sed '1{/^# Release /d}' "$DRAFT" | sed '/./,$!d' > "$BODY"
+
+          # Every published release ends with a compare link. GitHub renders it
+          # as "Full Changelog: <from>...<tag>".
+          PREVIOUS=$(git describe --tags --match 'v*.0' --abbrev=0 "${TAG}^" 2>/dev/null || true)
+          if [[ -n "$PREVIOUS" ]]; then
+            printf '\n**Full Changelog**: %s/compare/%s...%s\n' \
+              "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" "$PREVIOUS" "$TAG" >> "$BODY"
           fi
 
           gh release create "$TAG" \
             --draft \
             --title "$TAG" \
-            --notes-file "$NOTES"
+            --notes-file "$BODY"
 
           echo "::notice::Drafted release $TAG - review the wording and publish it."

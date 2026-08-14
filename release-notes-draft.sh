@@ -135,7 +135,10 @@ FIXES=()
 MAINTENANCE=()
 OTHER=()
 
-# %x1f separates fields, %x1e separates records - neither occurs in commit text.
+# %x1f separates fields, %x1e terminates records - neither occurs in commit text.
+# %x1e must come last: as a prefix it leaves the final record undelimited, and
+# `read` then hits EOF and returns before the loop body runs, silently dropping
+# the newest commit.
 while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
     SUBJECT="${SUBJECT#$'\n'}"
     [[ -z "$SUBJECT" ]] && continue
@@ -181,7 +184,7 @@ while IFS=$'\x1f' read -r -d $'\x1e' SUBJECT BODY; do
             OTHER+=("$BULLET")
             ;;
     esac
-done < <(git log --no-merges --reverse --format="%x1e%s%x1f%b" "$RANGE")
+done < <(git log --no-merges --reverse --format="%s%x1f%b%x1e" "$RANGE")
 
 {
     echo "# Release v${VERSION}"
