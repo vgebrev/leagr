@@ -674,8 +674,9 @@ class TeamGenerator {
 
     /**
      * Calculate normalized reunion score for overdue pairs (0-1, lower is better).
-     * Each attending overdue pair contributes credit weighted by how starved it is
-     * (w = -ln(probNone), so rarer no-pairing streaks weigh more): the score is
+     * Each attending overdue pair contributes credit weighted by how long its drought
+     * has actually run (w = (-ln droughtProbNone)^SEVERITY_EXPONENT, so longer
+     * no-pairing streaks weigh more): the score is
      * 1 - satisfiedWeight / totalWeight. Reuniting every attending pair scores 0,
      * reuniting none scores 1, and when only some fit the balance cap the most
      * starved pairs are preferred. Reunited pairs leave the overdue set on the
@@ -692,13 +693,22 @@ class TeamGenerator {
             teamPlayers.forEach((player) => teamOf.set(player, teamName));
         });
 
+        // Weigh by the uncapped drought, not the alpha-capped probNone: the cap floors
+        // probNone near alpha, so every qualifying pair scores 3.05-3.67 and the optimizer
+        // treats a 25 co-attendance drought as interchangeable with a 12 one, then buys
+        // whichever is cheapest in ELO. The exponent sets how decisive that preference is:
+        // swept over real sessions (40 draws each), 1.0 under-serves the starved pair and
+        // 1.5+ starts starving the mild ones in turn. 1.25 is the balance point.
+        const SEVERITY_EXPONENT = 1.25;
+
         let totalWeight = 0;
         let satisfiedWeight = 0;
-        for (const { player1, player2, probNone } of this.overduePairs) {
+        for (const { player1, player2, probNone, droughtProbNone } of this.overduePairs) {
             const team1 = teamOf.get(player1);
             const team2 = teamOf.get(player2);
             if (team1 === undefined || team2 === undefined) continue;
-            const weight = probNone > 0 && probNone < 1 ? -Math.log(probNone) : 1;
+            const p = droughtProbNone ?? probNone;
+            const weight = p > 0 && p < 1 ? Math.pow(-Math.log(p), SEVERITY_EXPONENT) : 1;
             totalWeight += weight;
             if (team1 === team2) satisfiedWeight += weight;
         }
@@ -817,8 +827,11 @@ class TeamGenerator {
         const W_ATTACK = 0.8;
         const W_CONTROL = 0.8;
         const W_TRAITS = 0.8;
-        // Only weigh reunions when an overdue pair actually attends, so scores stay identical otherwise
-        const W_REUNION = this.hasAttendingOverduePairs(teams) ? 0.4 : 0;
+        // Only weigh reunions when an overdue pair actually attends, so scores stay identical otherwise.
+        // 2.0 is the middle of the 1.5-3.0 plateau measured against real sessions: below 1.5 the
+        // reunion is cheaper to skip than to buy, so chronically starved pairs involving an ELO
+        // outlier (e.g. Dan & Veli) never got drawn together.
+        const W_REUNION = this.hasAttendingOverduePairs(teams) ? 2.0 : 0;
         const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
         /** @param {number} value */
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
@@ -1373,6 +1386,10 @@ class TeamGenerator {
                 hardEloDeltaLimit,
                 hardConstraintLimit
             });
+            // The optimizer replaced the teams, so the search-loop metrics now describe a
+            // discarded candidate. Re-score the teams actually being returned so the log
+            // matches what gets saved.
+            bestMetrics = this.calculateNormalizedScore(bestTeams, eloRange, hardEloDeltaLimit);
         }
 
         this.logDrawInfo({
@@ -1471,7 +1488,9 @@ class TeamGenerator {
                 `${iterationsUsed}/${maxIterations} iter | ` +
                 `rejects: ${pairingRejects} pairing + ${eloRejects} elo (${rejectTotal} total) | ` +
                 (m
-                    ? `best: score=${m.totalNorm.toFixed(3)} elo=${Math.round(m.eloDelta)}pts(limit ${hardEloDeltaLimit}) pair=${m.pairNorm.toFixed(2)} spread=${m.spreadNorm.toFixed(2)} | `
+                    ? `best: score=${m.totalNorm.toFixed(3)} elo=${Math.round(m.eloDelta)}pts(limit ${hardEloDeltaLimit}) ` +
+                      `pair=${m.pairNorm.toFixed(2)} reunion=${m.reunionNorm.toFixed(2)} ` +
+                      `atk=${m.attackNorm.toFixed(2)} ctl=${m.controlNorm.toFixed(2)} traits=${m.traitsNorm.toFixed(2)} | `
                     : '') +
                 `fallback=${fallbackUsed}`
         );
@@ -1484,7 +1503,15 @@ class TeamGenerator {
             if (candidates.length > 0) {
                 logger.info(
                     `[teams] reunion: ${candidates.length} overdue pair(s) attending ` +
-                        `(${candidates.map((p) => `${p.player1}&${p.player2}`).join(', ')}) | ` +
+                        `(${candidates
+                            .map(
+                                (p) =>
+                                    `${p.player1}&${p.player2}` +
+                                    (p.droughtCoAttendance != null
+                                        ? `(${p.droughtCoAttendance})`
+                                        : '')
+                            )
+                            .join(', ')}) | ` +
                         `score=${m ? m.reunionNorm.toFixed(2) : 'n/a'} (0=all reunited, 1=none)`
                 );
             }

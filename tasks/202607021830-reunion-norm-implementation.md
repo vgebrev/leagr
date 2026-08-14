@@ -101,5 +101,11 @@ the old calendar-window detection, motivating the per-pair co-attendance window.
   beyond ~3 pairs.
 - The norm is soft: if no balanced reunion draw exists under the hard ELO cap that week,
   the reunion just doesn't happen and is retried next week.
-- `logDrawInfo` reports reunion satisfaction from pre-swap-optimizer metrics; the swap
-  optimizer can only improve it (it uses the same score).
+- ~~`logDrawInfo` reports reunion satisfaction from pre-swap-optimizer metrics; the swap
+  optimizer can only improve it (it uses the same score).~~ This was a bug, not a caveat —
+  the logged metrics described a discarded candidate, not the teams saved.
+
+**Superseded (2026-08-14):** the logging bug above is fixed and `W_REUNION` is raised
+0.4 → 2.0; at 0.4 the norm was too weak to buy an ELO-costly reunion, so Dan & Veli fired
+0/20 in practice rather than the 9/20 measured here. See
+[202608141220-reunion-norm-retune-implementation.md](202608141220-reunion-norm-retune-implementation.md).
