@@ -68,7 +68,30 @@ Two safety properties: a push failure **warns rather than rolling back**, since 
 live; and `rollback()` skips its `git tag -d` / `git reset --hard HEAD~1` once `GIT_PUSHED` is set,
 because a hard reset over published history is the one unrecoverable failure mode here.
 
-### 6. Not adopting PR-per-change
+### 6. A latent bug the smoke test exposed
+
+`release-notes-draft.sh` used `%x1e` as a record **prefix** in its `git log --format`. The final
+record therefore had no trailing delimiter, so `read -d $'\x1e'` hit EOF and returned non-zero before
+the loop body ran — silently dropping the newest commit from every range, while the header still
+reported the correct count.
+
+It had never shown up because `deploy.sh` always makes the version bump the newest commit in the
+range, and bump commits are filtered out as markers anyway: the dropped commit was always one that
+would have been discarded. The throwaway smoke-test tag sat on an ordinary commit, which made it
+visible. Moving `%x1e` to the end of the format makes it a terminator; the existing
+`SUBJECT="${SUBJECT#$'\n'}"` strip already handles the leading newline this shifts onto each record.
+
+Output for real deploy-shaped ranges is byte-identical before and after, which is what confirms the
+change is safe rather than merely different.
+
+### 7. The release body is shaped for GitHub, not for a file
+
+The script writes `# Release vX.Y.Z` as the file's title, which is right for a standalone `.md` and
+redundant as a release body — GitHub already shows the release name above it. The workflow strips
+that heading and appends the `**Full Changelog**` compare link that every published release ends
+with, so the draft opens in the same shape as the 26 releases before it.
+
+### 8. Not adopting PR-per-change
 
 GitHub's native "Generate release notes" builds "What's Changed" from merged PRs in the range. Work
 lands as linear commits straight onto `develop` with a single `develop → main` promotion PR, so there
@@ -80,12 +103,12 @@ and the conventional-commit scaffold is the better input. The promotion PR is un
 
 - **`.github/workflows/release-draft.yml`** (added) — on push of a `v*.0` tag: checkout with
   `fetch-depth: 0` (`git describe` needs the full history and tags), skip if a release already
-  exists, run `release-notes-draft.sh`, `gh release create --draft`. Built-in `GITHUB_TOKEN`, no
-  secrets.
+  exists, run `release-notes-draft.sh`, strip the duplicated title heading, append the Full Changelog
+  link, `gh release create --draft`. Built-in `GITHUB_TOKEN`, no secrets.
 - **`release-notes-draft.sh`** — range start now resolves from `git describe --tags --match 'v*.0'`.
   Resolved from `${TO_REF}^`, **not** `$TO_REF`: `git describe` returns a ref's own tag, so
   `--to v2.28.0` would otherwise resolve the start to `v2.28.0` and leave an empty range. Grouping,
-  bump-commit filtering and output format unchanged.
+  bump-commit filtering and output format unchanged. Also fixes the dropped-commit bug below.
 - **`deploy.sh`** — added `-m|--minor` (rejected in combination with `--version`/`--no-version`),
   minor version math, the push-on-success block, the `GIT_PUSHED` rollback guard, and updated
   usage/header/final messages.
@@ -113,8 +136,14 @@ application code; nothing in the repo tests shell). Application code is untouche
   were untouched.
 - `bash -n` on both scripts; `npm run lint` clean (its `prettier --check .` covers the new `.yml` and
   the `.md` edits).
-- Workflow end-to-end: a throwaway `v9.9.0` tag pushed on `develop`, draft release verified, then
-  draft and tag deleted.
+- Record-splitting fix: `git log` count vs. loop-processed count compared across five ranges
+  (1, 6, 8, 9 and 6 commits); every range was short by exactly one before the fix and matches after.
+  Regenerating the `v2.26.0..v2.27.0` notes produced a byte-identical file.
+- Workflow end-to-end: a throwaway `v9.9.0` tag pushed on `develop`. First run confirmed the trigger,
+  the checkout and the draft, and exposed both the duplicated heading and the dropped commit. Second
+  run, after the fixes, produced a draft in the published shape — "What's Changed" first, both
+  commits present, Full Changelog compare link last. Draft and tag then deleted from origin; the 26
+  real releases and 160 `v*` tags were verified intact.
 
 ## Assumptions and limitations
 
