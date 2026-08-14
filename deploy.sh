@@ -6,6 +6,11 @@
 # from deploy.env, which is gitignored. Before first use:
 #   cp deploy.env.example deploy.env && chmod 600 deploy.env
 # then fill in your values. Override the location with DEPLOY_ENV_FILE.
+#
+# A minor bump is a release. `--minor` produces vX.Y.0, and pushing that tag
+# opens a draft GitHub Release (.github/workflows/release-draft.yml); a plain
+# run bumps the patch and just deploys. The commit and tag are pushed to origin
+# once the deploy has succeeded.
 set -e  # Exit on any error
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -86,6 +91,7 @@ fi
 PREVIOUS_VERSION=""
 GIT_TAG_CREATED=false
 PACKAGE_JSON_MODIFIED=false
+GIT_PUSHED=false
 REMOTE_CONTAINER_STOPPED=false
 OLD_CONTAINER_BACKED_UP=false
 DOCKER_IMAGE_BUILT=false
@@ -136,15 +142,21 @@ rollback() {
         docker rmi "${APP_NAME}:${VERSION}" 2>/dev/null || true
     fi
     
-    # Revert git changes if we made them
-    if [[ "$GIT_TAG_CREATED" == true ]]; then
-        print_step "Removing git tag v$VERSION..."
-        git tag -d "v$VERSION" 2>/dev/null || true
-    fi
-    
-    if [[ "$PACKAGE_JSON_MODIFIED" == true ]]; then
-        print_step "Reverting version commit (hard reset to HEAD~1)..."
-        git reset --hard HEAD~1 2>/dev/null || true
+    # Revert git changes if we made them - but never after they have been
+    # pushed, since a hard reset over published history is not recoverable
+    # locally.
+    if [[ "$GIT_PUSHED" == true ]]; then
+        print_warning "v$VERSION was already pushed to origin - leaving git history alone."
+    else
+        if [[ "$GIT_TAG_CREATED" == true ]]; then
+            print_step "Removing git tag v$VERSION..."
+            git tag -d "v$VERSION" 2>/dev/null || true
+        fi
+
+        if [[ "$PACKAGE_JSON_MODIFIED" == true ]]; then
+            print_step "Reverting version commit (hard reset to HEAD~1)..."
+            git reset --hard HEAD~1 2>/dev/null || true
+        fi
     fi
     
     print_error "Rollback completed. Deployment aborted."
@@ -157,29 +169,47 @@ trap 'rollback "Unexpected error occurred"' ERR
 # Parse command line arguments
 VERSION=""
 NO_VERSION=false
+MINOR_BUMP=false
 while [[ $# -gt 0 ]]; do
     case $1 in
         -v|--version)
             VERSION="$2"
             shift 2
             ;;
+        -m|--minor)
+            MINOR_BUMP=true
+            shift
+            ;;
         --no-version)
             NO_VERSION=true
             shift
             ;;
         *)
-            echo "Usage: $0 [-v|--version VERSION] [--no-version]"
+            echo "Usage: $0 [-v|--version VERSION] [-m|--minor] [--no-version]"
+            echo
+            echo "  -v, --version  deploy a specific version"
+            echo "  -m, --minor    bump the minor version - marks this deploy as a release"
+            echo "      --no-version  deploy without versioning or tagging"
             exit 1
             ;;
     esac
 done
+
+if [[ "$MINOR_BUMP" == true ]] && { [[ -n "$VERSION" ]] || [[ "$NO_VERSION" == true ]]; }; then
+    print_error "--minor cannot be combined with --version or --no-version."
+    exit 1
+fi
 
 # Step 1: Determine and apply version upfront
 if [[ "$NO_VERSION" == true ]]; then
     VERSION="latest"
     print_step "Using version: latest (no versioning)"
 elif [[ -z "$VERSION" ]]; then
-    print_step "No version specified. Reading and incrementing patch version from package.json..."
+    if [[ "$MINOR_BUMP" == true ]]; then
+        print_step "Reading and incrementing minor version from package.json..."
+    else
+        print_step "No version specified. Reading and incrementing patch version from package.json..."
+    fi
 
     if [[ ! -f "package.json" ]]; then
         rollback "package.json not found"
@@ -192,11 +222,17 @@ elif [[ -z "$VERSION" ]]; then
         PREVIOUS_VERSION=$(node -p "require('./package.json').version")
     fi
 
-    # Parse version components
+    # Parse version components. A minor bump is the release marker: vX.Y.0 gets
+    # a draft GitHub Release, vX.Y.Z (Z>0) is a routine deploy.
     IFS='.' read -ra VERSION_PARTS <<< "$PREVIOUS_VERSION"
     MAJOR=${VERSION_PARTS[0]}
-    MINOR=${VERSION_PARTS[1]}
-    PATCH=$((${VERSION_PARTS[2]} + 1))
+    if [[ "$MINOR_BUMP" == true ]]; then
+        MINOR=$((${VERSION_PARTS[1]} + 1))
+        PATCH=0
+    else
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=$((${VERSION_PARTS[2]} + 1))
+    fi
     VERSION="$MAJOR.$MINOR.$PATCH"
 
     print_step "Current version: $PREVIOUS_VERSION"
@@ -402,7 +438,21 @@ if ! ssh "$REMOTE_HOST" "del /Q \"${WINDOWS_DEPLOY_DIR}\\$TAR_FILE\" 2>nul"; the
 fi
 
 print_success "Deployment complete: $APP_NAME version $VERSION is now running on prod."
+
+# Push last, once the deploy has actually succeeded. A failure here is not worth
+# rolling a live deployment back for, so it warns rather than aborting.
 if [[ "$NO_VERSION" != true ]]; then
-    print_success "Git tag v$VERSION created successfully."
-    print_step "Remember to push the tag: git push origin v$VERSION"
+    CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+    print_step "Pushing $CURRENT_BRANCH and tag v$VERSION to origin..."
+    if git push origin "$CURRENT_BRANCH" && git push origin "v$VERSION"; then
+        GIT_PUSHED=true
+        print_success "Pushed $CURRENT_BRANCH and v$VERSION."
+        if [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.0$ ]]; then
+            print_success "v$VERSION is a release: a draft release is being prepared on GitHub."
+            print_step "Review the wording and publish it: https://github.com/vgebrev/leagr/releases"
+        fi
+    else
+        print_warning "Push failed. The deploy is live; push by hand when you can:"
+        print_warning "  git push origin $CURRENT_BRANCH && git push origin v$VERSION"
+    fi
 fi

@@ -217,13 +217,14 @@ Then deploy:
 
 ```bash
 ./deploy.sh                  # bump patch version, tag, deploy
+./deploy.sh --minor          # bump minor version — marks this deploy as a release
 ./deploy.sh -v 2.30.0        # deploy a specific version
 ./deploy.sh --no-version     # deploy without versioning or tagging
 ```
 
 The script refuses to run if `deploy.env` is missing or incomplete, listing every missing key. It
-also requires a clean working tree when versioning, and reminds you to `git push origin v<version>`
-on success.
+also requires a clean working tree when versioning, and pushes the version commit and tag to origin
+once the deploy has succeeded — a push failure warns rather than rolling the live deploy back.
 
 `copy-live-data.sh [league]` and `copy-live-logs.sh` read the same `deploy.env` to pull production
 data and logs down to your dev environment.
@@ -233,6 +234,53 @@ data and logs down to your dev environment.
 
 Deployment is intentionally operator-initiated and not wired into GitHub Actions — CI runs lint,
 tests and a build only, so no CI system holds credentials to the production host.
+
+### Releases
+
+Every deploy tags a version, but only some of those versions are worth announcing. **A minor bump is
+a release:**
+
+| Tag                | Meaning                                  |
+| ------------------ | ---------------------------------------- |
+| `vX.Y.0`           | released — announced as a GitHub Release |
+| `vX.Y.Z` (`Z` > 0) | a routine deploy                         |
+
+The editorial call — "enough has accumulated to be worth announcing" — is made at deploy time, by
+running `./deploy.sh --minor` instead of a plain `./deploy.sh`. Everything after that is mechanical.
+Version numbers therefore mark release boundaries rather than change size: a large feature that is
+not being announced still ships as a patch, and patch numbers can run high between releases.
+
+Pushing a `vX.Y.0` tag fires `.github/workflows/release-draft.yml`, which scaffolds the notes and
+opens a **draft** GitHub Release. Review the wording and publish it — the prose is the part worth
+writing by hand. The workflow triggers on the tag push, so it runs from the tagged commit and needs
+no merge to `main` first; it uses the built-in `GITHUB_TOKEN` and no secrets.
+
+Since the release boundary is a tag, the range for the next set of notes is exact:
+
+```bash
+git log $(git describe --tags --match 'v*.0' --abbrev=0 HEAD^)..HEAD
+```
+
+(`HEAD^`, not `HEAD`: `git describe` returns a ref's own tag, so resolving from the release tag
+itself would yield an empty range.)
+
+`./release-notes-draft.sh` does that and scaffolds the notes, grouping commits by
+conventional-commit type into the section headings the published notes use. The workflow runs it for
+you; run it by hand to preview, or to write notes for a tag that was pushed before the workflow
+existed:
+
+```bash
+./release-notes-draft.sh                        # draft for the package.json version
+./release-notes-draft.sh -v 2.30.0 --to v2.30.0 # explicit version and range end
+```
+
+The output is a **draft** — bullets are raw commit subjects and need rewriting into user-facing
+prose, and the appended raw log is there to write from, not to publish. `RELEASE-NOTES-v*.md` is
+gitignored; the published release is the record.
+
+**Note:** releases before `v2.27.0` predate this convention — minors were bumped for change size,
+and 13 of the 26 releases published then were patch versions. The `v*.0` boundary query is accurate
+going forward, not for archaeology.
 
 ## License
 

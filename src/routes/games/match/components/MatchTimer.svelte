@@ -30,20 +30,21 @@
     let statusLabel = $derived(matchTimer.isLastPlay ? 'Last Play' : finished ? 'Full Time' : '');
 
     // One source of truth for the primary action, so the collapsed icon and the
-    // labelled button can never drift apart on what the control does.
+    // labelled button can never drift apart on what the control does. It means
+    // the same thing in every phase - last play gets its own button rather than
+    // taking this one over, so nothing changes meaning under the referee's thumb
+    // mid-match, and a game paused during last play can still be resumed.
     let primaryLabel = $derived(
-        matchTimer.isLastPlay
-            ? 'End Play'
-            : matchTimer.status === 'running'
-              ? 'Pause'
-              : matchTimer.status === 'paused'
-                ? 'Resume'
-                : 'Start'
+        matchTimer.status === 'running'
+            ? 'Pause'
+            : matchTimer.status === 'paused'
+              ? 'Resume'
+              : 'Start'
     );
-    let PrimaryIcon = $derived(
-        matchTimer.isLastPlay ? StopSolid : matchTimer.status === 'running' ? PauseSolid : PlaySolid
-    );
+    let PrimaryIcon = $derived(matchTimer.status === 'running' ? PauseSolid : PlaySolid);
     let primaryDisabled = $derived(disabled || counting || finished);
+
+    let showEndPlay = $derived(matchTimer.isLastPlay);
 
     // Announce at minute boundaries only - a per-second live region would flood
     // a screen reader for the whole match.
@@ -59,9 +60,7 @@
     );
 
     function handlePrimary() {
-        if (matchTimer.isLastPlay) {
-            matchTimer.endLastPlay();
-        } else if (matchTimer.status === 'idle') {
+        if (matchTimer.status === 'idle') {
             matchTimer.start();
             onKickOff?.();
         } else if (matchTimer.status === 'running') {
@@ -127,8 +126,20 @@
 
         {#if !matchTimer.expanded}
             {@render clockFace('text-base')}
-            <div class="flex flex-1 items-center justify-end gap-2">
+            <div class="flex flex-1 items-center justify-end gap-1.5">
                 {@render statusBadge()}
+                {#if showEndPlay}
+                    <Button
+                        size="xs"
+                        outline
+                        color="primary"
+                        class="p-1.5!"
+                        disabled={primaryDisabled}
+                        onclick={() => matchTimer.endLastPlay()}
+                        aria-label="End Play">
+                        <StopSolid class="h-4 w-4" />
+                    </Button>
+                {/if}
                 <Button
                     size="xs"
                     color="primary"
@@ -203,8 +214,20 @@
                 </div>
             </div>
 
-            <!-- Controls -->
+            <!-- Controls. End Play joins the row for last play rather than
+                 replacing the primary, which keeps pause reachable throughout. -->
             <div class="mt-2 flex items-center justify-around gap-2">
+                {#if showEndPlay}
+                    <Button
+                        size="xs"
+                        outline
+                        color="primary"
+                        disabled={primaryDisabled}
+                        onclick={() => matchTimer.endLastPlay()}>
+                        <StopSolid class="me-2 h-3 w-3" /> End Play
+                    </Button>
+                {/if}
+
                 <Button
                     size="xs"
                     color="primary"

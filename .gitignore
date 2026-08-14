@@ -41,3 +41,6 @@ vite.config.ts.timestamp-*
 /logs/
 app.log
 app.*.log
+
+# Release notes drafts - the published GitHub Release is the record
+RELEASE-NOTES-v*.md

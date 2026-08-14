@@ -24,19 +24,85 @@ Object.defineProperty(window, 'matchMedia', {
     }))
 });
 
-// Mock IntersectionObserver
-global.IntersectionObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-}));
+// jsdom has no Web Animations API, but Svelte transitions call element.animate().
+// Finish on the next tick so intro/outro transitions settle instead of hanging.
+if (!Element.prototype.animate) {
+    Element.prototype.animate = function () {
+        const animation = {
+            currentTime: 0,
+            startTime: 0,
+            playState: 'running',
+            effect: { getComputedTiming: () => ({ duration: 0 }) },
+            onfinish: null,
+            play: vi.fn(),
+            pause: vi.fn(),
+            reverse: vi.fn(),
+            addEventListener: vi.fn(),
+            removeEventListener: vi.fn(),
+            cancel() {
+                this.playState = 'idle';
+            },
+            finish() {
+                this.playState = 'finished';
+                this.onfinish?.();
+            }
+        };
+        setTimeout(() => {
+            if (animation.playState === 'running') animation.finish();
+        }, 0);
+        return animation;
+    };
+}
 
-// Mock ResizeObserver
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
-    observe: vi.fn(),
-    unobserve: vi.fn(),
-    disconnect: vi.fn()
-}));
+// jsdom timestamps requestAnimationFrame callbacks from when its window was created, while
+// performance.now() counts from process start, so the two clocks are skewed by however long the
+// environment took to boot (~700ms alone, >1s when the suite runs files in parallel). Flowbite's
+// popover debounce measures elapsed time as (rAF timestamp - performance.now()), which turns that
+// skew into extra open/close latency and makes popover tests time out under load. Browsers put
+// both on the same timeline, so align jsdom with that.
+if (typeof globalThis.requestAnimationFrame === 'function') {
+    const nativeRaf = globalThis.requestAnimationFrame.bind(globalThis);
+    const alignedRaf = (/** @type {FrameRequestCallback} */ callback) =>
+        nativeRaf(() => callback(performance.now()));
+    globalThis.requestAnimationFrame = alignedRaf;
+    window.requestAnimationFrame = alignedRaf;
+}
+
+// Mock IntersectionObserver / ResizeObserver. These must be constructible with `new`
+// (floating-ui does exactly that), so they are classes rather than arrow-function mocks.
+class ObserverStub {
+    observe = vi.fn();
+    unobserve = vi.fn();
+    disconnect = vi.fn();
+    takeRecords = vi.fn(() => []);
+}
+
+global.IntersectionObserver = ObserverStub;
+global.ResizeObserver = ObserverStub;
+
+// jsdom implements neither the Popover API nor ToggleEvent; Flowbite's dropdowns,
+// tooltips and popovers rely on both.
+if (typeof globalThis.ToggleEvent === 'undefined') {
+    globalThis.ToggleEvent = class ToggleEvent extends Event {
+        constructor(type, init = {}) {
+            super(type, init);
+            this.newState = init.newState ?? '';
+            this.oldState = init.oldState ?? '';
+        }
+    };
+}
+
+if (!HTMLElement.prototype.showPopover) {
+    HTMLElement.prototype.showPopover = function () {
+        this.dispatchEvent(new ToggleEvent('toggle', { newState: 'open', oldState: 'closed' }));
+    };
+    HTMLElement.prototype.hidePopover = function () {
+        this.dispatchEvent(new ToggleEvent('toggle', { newState: 'closed', oldState: 'open' }));
+    };
+    HTMLElement.prototype.togglePopover = function (force) {
+        return force ? this.showPopover() : this.hidePopover();
+    };
+}
 
 // Mock fetch if not available
 if (!global.fetch) {

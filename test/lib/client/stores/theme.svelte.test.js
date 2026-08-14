@@ -31,6 +31,8 @@ vi.stubGlobal('window', mockWindow);
 
 describe('Theme Store', () => {
     let theme;
+    let isDarkMode;
+    let toggleTheme;
 
     beforeEach(async () => {
         // Clear the module cache to get fresh instances
@@ -43,6 +45,8 @@ describe('Theme Store', () => {
 
         const themeModule = await import('$lib/client/stores/theme.js');
         theme = themeModule.theme;
+        isDarkMode = themeModule.isDarkMode;
+        toggleTheme = themeModule.toggleTheme;
     });
 
     afterEach(() => {
@@ -197,6 +201,63 @@ describe('Theme Store', () => {
             theme.set('system');
             expect(mockLocalStorage.setItem).toHaveBeenCalledWith('theme', 'system');
             expect(mockWindow.matchMedia).toHaveBeenCalledWith('(prefers-color-scheme: dark)');
+        });
+    });
+
+    describe('isDarkMode', () => {
+        it('should be true when the theme is dark', () => {
+            theme.set('dark');
+            expect(get(isDarkMode)).toBe(true);
+        });
+
+        it('should be false when the theme is light', () => {
+            theme.set('light');
+            expect(get(isDarkMode)).toBe(false);
+        });
+
+        it('should follow the system preference when the theme is system', () => {
+            mockWindow.matchMedia.mockReturnValue({ matches: true });
+            theme.set('system');
+            expect(get(isDarkMode)).toBe(true);
+
+            mockWindow.matchMedia.mockReturnValue({ matches: false });
+            theme.set('light');
+            theme.set('system');
+            expect(get(isDarkMode)).toBe(false);
+        });
+    });
+
+    describe('toggleTheme', () => {
+        it('should switch light to dark', () => {
+            theme.set('light');
+            toggleTheme();
+            expect(get(theme)).toBe('dark');
+        });
+
+        it('should switch dark to light', () => {
+            theme.set('dark');
+            toggleTheme();
+            expect(get(theme)).toBe('light');
+        });
+
+        it('should resolve system with a light preference to dark', () => {
+            mockWindow.matchMedia.mockReturnValue({ matches: false });
+            theme.set('system');
+            toggleTheme();
+            expect(get(theme)).toBe('dark');
+        });
+
+        it('should resolve system with a dark preference to light', () => {
+            mockWindow.matchMedia.mockReturnValue({ matches: true });
+            theme.set('system');
+            toggleTheme();
+            expect(get(theme)).toBe('light');
+        });
+
+        it('should persist the toggled theme so it survives a reload', () => {
+            theme.set('light');
+            toggleTheme();
+            expect(mockLocalStorage.setItem).toHaveBeenLastCalledWith('theme', 'dark');
         });
     });
 

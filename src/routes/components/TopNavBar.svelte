@@ -1,54 +1,17 @@
 <script>
-    import {
-        AdjustmentsHorizontalSolid,
-        ForwardOutline,
-        NewspaperOutline
-    } from 'flowbite-svelte-icons';
-    import { DarkMode, Navbar, NavBrand, Spinner, Tooltip } from 'flowbite-svelte';
-    import { scale } from 'svelte/transition';
+    import { Navbar, NavBrand, Spinner } from 'flowbite-svelte';
     import { isLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
     import { resolve } from '$app/paths';
-    import { getStoredAccessCode } from '$lib/client/services/auth.js';
-    import { shareContent } from '$lib/client/services/clipboard.js';
     import LeagueInfo from '$components/LeagueInfo.svelte';
+    import NavMenu from './NavMenu.svelte';
 
     let { date, leagueInfo } = $props();
-
-    async function shareCurrentPage() {
-        const url = new URL(window.location.href);
-
-        // Check if the user is authenticated (has access code in localStorage)
-        if (leagueInfo?.id) {
-            const accessCode = getStoredAccessCode(leagueInfo.id);
-            if (accessCode) {
-                url.searchParams.set('code', accessCode);
-            }
-        }
-
-        // Prepare a share data object
-        const shareData = {
-            title: leagueInfo?.name ? `Leagr - ${leagueInfo.name}` : 'Leagr',
-            text: `Join ${leagueInfo?.name || 'our league'} on Leagr`,
-            url: url.toString()
-        };
-
-        // Share using native API or fallback to clipboard
-        const result = await shareContent(shareData);
-
-        if (result.success) {
-            if (result.method === 'native') {
-                setNotification('Shared successfully!', 'success');
-            } else {
-                setNotification('Link copied to clipboard!', 'success');
-            }
-        } else {
-            setNotification('Failed to share link', 'error');
-        }
-    }
 </script>
 
-<Navbar class="z-10 shrink-0">
+<Navbar
+    fluid
+    class="z-10 shrink-0 px-0 sm:px-0"
+    navContainerClass="app-container px-2">
     <NavBrand
         href={resolve(`/?date=${date}`)}
         class="min-w-0 flex-1">
@@ -56,39 +19,8 @@
     </NavBrand>
     <div class="flex shrink-0 items-center gap-2">
         {#if $isLoading}<Spinner size="6" />{/if}
-        {#if leagueInfo}
-            <button
-                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
-                onclick={shareCurrentPage}
-                id="share-button"><ForwardOutline /></button>
-            <Tooltip
-                class="shadow-lg"
-                triggeredBy="#share-button"
-                transition={scale}>Share link</Tooltip>
-            <a
-                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
-                href={resolve(`/news?date=${date}`)}
-                id="news-link"><NewspaperOutline /></a>
-            <Tooltip
-                class="shadow-lg"
-                triggeredBy="#news-link"
-                transition={scale}>News</Tooltip>
-            <a
-                class="cursor-default rounded-lg p-2.5 whitespace-normal text-gray-600 hover:bg-gray-100 focus:ring-2 focus:ring-gray-400 focus:outline-hidden sm:inline-block dark:text-gray-300 dark:hover:bg-gray-700"
-                href={resolve(`/settings?date=${date}`)}
-                id="settings-link"><AdjustmentsHorizontalSolid /></a>
-            <Tooltip
-                class="shadow-lg"
-                triggeredBy="#settings-link"
-                transition={scale}>Settings</Tooltip>
-        {/if}
-        <DarkMode
-            color="alternative"
-            class="dark:text-gray-300"
-            id="theme-picker" />
-        <Tooltip
-            class="shadow-lg"
-            triggeredBy="#theme-picker"
-            transition={scale}>Toggle theme</Tooltip>
+        <NavMenu
+            {date}
+            {leagueInfo} />
     </div>
 </Navbar>

@@ -1,6 +1,8 @@
 <script>
     import { Alert, Button, Spinner } from 'flowbite-svelte';
     import { ExclamationCircleSolid, NewspaperOutline } from 'flowbite-svelte-icons';
+    import { onMount } from 'svelte';
+    import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { page } from '$app/state';
     import NewsCard from '$components/NewsCard.svelte';
     import PlayerModal from '$components/PlayerModal.svelte';
@@ -15,7 +17,12 @@
     /** @type {Array<any>|null} */
     let cards = $state(null);
     let error = $state(false);
-    let visibleCount = $state(PAGE_SIZE);
+    let hasMore = $state(false);
+    /** @type {string|null} */
+    let nextCursor = $state(null);
+    /** Viewing clock resolved by the server, pinned so later pages agree */
+    let asOf = $state('');
+    let loadingMore = $state(false);
 
     // News cards open these via pushState; the payload carries the card's date
     // so each modal shows that session's context.
@@ -54,15 +61,15 @@
         if (page.state.teamModal) history.back();
     }
 
-    let visibleCards = $derived((cards ?? []).slice(0, visibleCount));
-    let hasMore = $derived((cards ?? []).length > visibleCount);
-
     async function loadNews() {
         error = false;
         await withLoading(
             async () => {
-                const response = await api.get('news');
+                const response = await api.get(`news?limit=${PAGE_SIZE}`);
                 cards = response.cards;
+                hasMore = !!response.hasMore;
+                nextCursor = response.nextCursor ?? null;
+                asOf = response.asOf ?? '';
             },
             (err) => {
                 console.error('Error loading news feed:', err);
@@ -72,9 +79,40 @@
         );
     }
 
-    $effect(() => {
-        loadNews();
-    });
+    /**
+     * Fetch the next batch of recap cards and append them. Deliberately not
+     * wrapped in withLoading: that spinner replaces the whole feed, unmounting
+     * the cards the reader is already looking at.
+     */
+    async function loadMore() {
+        if (loadingMore || !hasMore || !nextCursor) return;
+        loadingMore = true;
+        try {
+            const params = new SvelteURLSearchParams({
+                limit: String(PAGE_SIZE),
+                before: nextCursor
+            });
+            if (asOf) params.set('asOf', asOf);
+            const response = await api.get(`news?${params}`);
+            const seen = new Set((cards ?? []).map((card) => card.date));
+            cards = [
+                ...(cards ?? []),
+                ...(response.cards ?? []).filter((card) => !seen.has(card.date))
+            ];
+            hasMore = !!response.hasMore;
+            nextCursor = response.nextCursor ?? null;
+        } catch (err) {
+            console.error('Error loading more news:', err);
+            setNotification(err.message || 'Failed to load more stories', 'error');
+        } finally {
+            loadingMore = false;
+        }
+    }
+
+    // Not an $effect: loadNews reads the api client's auth state synchronously,
+    // so an effect would re-run (and reset the feed to page 1) when the admin
+    // code lands after mount. The page has no reactive inputs.
+    onMount(loadNews);
 
     $effect(() => {
         titleParts.set(['News']);
@@ -109,7 +147,7 @@
     </div>
 {:else}
     <div class="flex flex-col gap-3">
-        {#each visibleCards as card (card.date)}
+        {#each cards as card (card.date)}
             <NewsCard {card} />
         {/each}
     </div>
@@ -118,7 +156,13 @@
             <Button
                 color="light"
                 size="sm"
-                onclick={() => (visibleCount += PAGE_SIZE)}>
+                disabled={loadingMore}
+                onclick={loadMore}>
+                {#if loadingMore}
+                    <Spinner
+                        size="4"
+                        class="me-2" />
+                {/if}
                 Load more
             </Button>
         </div>

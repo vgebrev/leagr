@@ -139,6 +139,34 @@ function collectPlayedDates(players, asOf) {
 }
 
 /**
+ * The dates a feed at this clock has recap cards for, newest first. Exported so
+ * a caller can page the feed without building every card.
+ * @param {PlayersWithHistory} players
+ * @param {string} asOf
+ * @returns {string[]}
+ */
+export function playedSessionDates(players, asOf) {
+    return [...collectPlayedDates(players, asOf)].sort((a, b) => b.localeCompare(a));
+}
+
+/**
+ * One page of recap dates. The cursor is a date rather than an offset because
+ * the only thing that changes between two page requests is a new session
+ * landing at the head - an offset would then re-serve a card the client
+ * already has.
+ * @param {string[]} datesDesc - recap dates, newest first
+ * @param {{before?: string|null, limit: number}} options - before: exclusive date cursor
+ * @returns {{dates: string[], hasMore: boolean, nextCursor: string|null}}
+ */
+export function pageRecapDates(datesDesc, { before, limit }) {
+    const start = before ? datesDesc.findIndex((date) => date < before) : 0;
+    if (start === -1) return { dates: [], hasMore: false, nextCursor: null };
+    const dates = datesDesc.slice(start, start + limit);
+    const hasMore = datesDesc.length > start + limit;
+    return { dates, hasMore, nextCursor: hasMore ? dates[dates.length - 1] : null };
+}
+
+/**
  * The upcoming session date the preview card will describe. Exported so a
  * caller can load that session's registration roster (which lives outside
  * the rankings history) before building the feed.
@@ -179,6 +207,21 @@ function boundHistories(players, before) {
         bounded[name] = { history: filtered };
     }
     return bounded;
+}
+
+/**
+ * Did the player feature in the session on this date? The rankings history has
+ * an entry for every ranked player every session - the non-appearance one is a
+ * rank/decay snapshot (see rankings.js) - so the entry's presence is not
+ * attendance. The appearance-only team/performance blocks are.
+ * @param {PlayersWithHistory} players
+ * @param {string|undefined} name
+ * @param {string|null} date
+ * @returns {boolean}
+ */
+function attended(players, name, date) {
+    const entry = name == null || date == null ? null : players[name]?.history?.[date];
+    return entry != null && (entry.team != null || entry.performance != null);
 }
 
 /**
@@ -372,7 +415,7 @@ function isInvincible(team, cupProgress, table) {
  * for notability and capped.
  * @param {PlayersWithHistory} players - rankings players with history
  * @param {{champions: object, ballers: object}} config - momentum board configs
- * @param {{asOf: string, competitionDays?: number[], maxThreads?: number, registeredPlayers?: string[]|null, previewDate?: string, standingsByDate?: Record<string, Array<{team: string, goalsFor: number, goalsAgainst: number}>>}} options
+ * @param {{asOf: string, competitionDays?: number[], maxThreads?: number, registeredPlayers?: string[]|null, previewDate?: string, standingsByDate?: Record<string, Array<{team: string, goalsFor: number, goalsAgainst: number}>>, recapDates?: string[], includePreview?: boolean}} options
  *   registeredPlayers: roster signed up for the upcoming session. When an
  *   array is given, the preview card is gated to it - only those players are
  *   mentioned, and an empty roster suppresses the preview card entirely.
@@ -383,6 +426,10 @@ function isInvincible(team, cupProgress, table) {
  *   standingsByDate: session standings keyed by date, used to report the
  *   goal-difference margin on a league title decided level on points (goal
  *   difference isn't in the rankings history). Only needed for tied dates.
+ *   recapDates: build recap cards for these dates only (a page of the feed).
+ *   Every other input is still derived from the full history, so a card is
+ *   identical whichever page it lands on. Defaults to every played date.
+ *   includePreview: set false to omit the preview card (pages after the first).
  * @returns {Card[]}
  */
 export function buildNewsFeed(players, config, options) {
@@ -392,11 +439,18 @@ export function buildNewsFeed(players, config, options) {
         maxThreads = MAX_THREADS,
         registeredPlayers,
         previewDate,
-        standingsByDate
+        standingsByDate,
+        recapDates,
+        includePreview = true
     } = options;
     const roster = Array.isArray(registeredPlayers) ? new Set(registeredPlayers) : null;
 
     const playedDates = collectPlayedDates(players, asOf);
+
+    // Session date -> the session before it. Always derived from the full set
+    // of played dates, so it stays correct when only a page of cards is built.
+    const playedAsc = [...playedDates].sort();
+    const previousPlayed = new Map(playedAsc.map((date, i) => [date, playedAsc[i - 1]]).slice(1));
 
     // Full-history per-date lookups for resolving session-day outcomes
     const teamCounts = deriveTeamCounts(players);
@@ -415,6 +469,18 @@ export function buildNewsFeed(players, config, options) {
         const bounded = boundHistories(players, date);
         const champBoard = buildChampionsMomentum(bounded, config.champions, date);
         const ballersBoard = buildBallersMomentum(bounded, config.ballers, date);
+        const prevDate = previousPlayed.get(date) ?? null;
+
+        // A run staying alive is news the first session its owner misses, not
+        // every session of a long absence - once they were already out last
+        // time, the line is just squatting on a slot.
+        /** @param {string|undefined} player */
+        const inAbsenceRun = (player) =>
+            state === 'recap' &&
+            player != null &&
+            !attended(players, player, date) &&
+            prevDate != null &&
+            !attended(players, player, prevDate);
 
         /** @type {Thread[]} */
         const threads = [];
@@ -585,9 +651,14 @@ export function buildNewsFeed(players, config, options) {
             b.notability - a.notability ||
             (a.player ?? a.team ?? '').localeCompare(b.player ?? b.team ?? '');
 
-        // Preview cards only mention players signed up for the upcoming session
-        const storyThreads =
-            state === 'preview' && roster ? threads.filter((t) => roster.has(t.player)) : threads;
+        // Preview cards only mention players signed up for the upcoming
+        // session; recaps drop runs carried through an ongoing absence. Both
+        // filter before selection, so a dropped story frees its slot.
+        const storyThreads = threads.filter(
+            (t) =>
+                !(t.outcome === 'carriedOver' && inAbsenceRun(t.player)) &&
+                (state !== 'preview' || !roster || roster.has(t.player))
+        );
 
         // Reserved fixtures (team league, team cup, stars of the day) are
         // anchored at the top of a recap in that order; the individual stories
@@ -603,11 +674,16 @@ export function buildNewsFeed(players, config, options) {
     /** @type {Card[]} */
     const cards = [];
     // Suppress the preview when a known roster is empty (nobody signed up yet)
-    if (roster == null || roster.size > 0) {
+    if (includePreview && (roster == null || roster.size > 0)) {
         const date = previewDate ?? nextCompetitionDate(asOf, competitionDays, playedDates);
         cards.push(buildCard(date, 'preview'));
     }
-    for (const date of [...playedDates].sort((a, b) => b.localeCompare(a))) {
+    // Unknown dates are dropped and the order is imposed here, so a caller
+    // can't make the feed emit a junk card or run out of sequence.
+    const selectedDates = (recapDates ?? [...playedDates])
+        .filter((date) => playedDates.has(date))
+        .sort((a, b) => b.localeCompare(a));
+    for (const date of selectedDates) {
         cards.push(buildCard(date, 'recap'));
     }
     return cards;
