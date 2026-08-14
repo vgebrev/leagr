@@ -1,12 +1,12 @@
 #!/bin/bash
 
-# Scaffold a release notes draft from the commits since the last GitHub release.
+# Scaffold a release notes draft from the commits since the last release.
 #
-# The range is resolved from the release/* tags maintained by
-# .github/workflows/release-tag.yml and ./sync-release-tags.sh, so "since the
-# last release" means the last release you actually published - not the last
-# deploy. Commits are grouped by conventional-commit type into the same section
-# headings the published notes use.
+# A minor bump is a release: vX.Y.0 was announced, vX.Y.Z (Z>0) was just a
+# deploy. So the range starts at the last vX.Y.0 tag, and "since the last
+# release" means the last release you actually published - not the last deploy.
+# Commits are grouped by conventional-commit type into the same section headings
+# the published notes use.
 #
 # The output is a draft: bullets are raw commit subjects and still need
 # rewriting into user-facing prose. The raw log is appended for reference and
@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [-v VERSION] [--from REF] [--to REF] [-o FILE] [-f]"
             echo
             echo "  -v, --version  version for the notes (default: package.json version)"
-            echo "      --from     start of the range, exclusive (default: last release/* tag)"
+            echo "      --from     start of the range, exclusive (default: last vX.Y.0 tag)"
             echo "      --to       end of the range, inclusive (default: HEAD)"
             echo "  -o, --output   output file (default: RELEASE-NOTES-v<version>.md)"
             echo "  -f, --force    overwrite an existing output file"
@@ -86,12 +86,15 @@ if [[ -z "$VERSION" ]]; then
 fi
 VERSION="${VERSION#v}"
 
-# Default start of range: the last published release reachable from --to.
+# Default start of range: the last release (vX.Y.0) reachable from --to.
+# Resolved from the parent of --to, not --to itself: git describe returns a ref's
+# own tag, so `--to v2.28.0` would otherwise resolve the start to v2.28.0 and
+# leave an empty range.
 if [[ -z "$FROM_REF" ]]; then
-    FROM_REF=$(git describe --tags --match 'release/v*' --abbrev=0 "$TO_REF" 2>/dev/null || true)
+    FROM_REF=$(git describe --tags --match 'v*.0' --abbrev=0 "${TO_REF}^" 2>/dev/null || true)
     if [[ -z "$FROM_REF" ]]; then
-        print_error "No release/* tag found - cannot determine the last release."
-        print_error "Run ./sync-release-tags.sh to create them, or pass --from explicitly."
+        print_error "No vX.Y.0 tag found before $TO_REF - cannot determine the last release."
+        print_error "Pass --from explicitly."
         exit 1
     fi
 fi

@@ -1,0 +1,64 @@
+name: Release Draft
+
+# A minor bump is a release: vX.Y.0 was announced, vX.Y.Z (Z>0) was just a
+# deploy. Pushing a vX.Y.0 tag opens a draft GitHub Release pre-filled with the
+# notes scaffold, which is then rewritten into player-facing prose and published
+# by hand - the wording is the editorial part, the range and grouping are not.
+#
+# This triggers on `push`, so it runs from the tagged commit rather than the
+# default branch: it takes effect on develop as soon as the file is in the tag.
+
+on:
+  push:
+    tags:
+      - 'v*.0'
+
+permissions:
+  contents: write
+
+jobs:
+  draft-release:
+    name: Draft a release for the pushed tag
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          # release-notes-draft.sh resolves the range with `git describe`, which
+          # needs the full history and every tag.
+          fetch-depth: 0
+
+      - name: Draft release ${{ github.ref_name }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          # The tag filter above is a glob; this is the exact rule.
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.0$ ]]; then
+            echo "::notice::'$TAG' is not a vX.Y.0 release tag - nothing to draft."
+            exit 0
+          fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "::notice::A release already exists for $TAG - nothing to do."
+            exit 0
+          fi
+
+          NOTES="$RUNNER_TEMP/notes.md"
+          ./release-notes-draft.sh -v "${TAG#v}" --to "$TAG" -o "$NOTES"
+
+          # The script exits 0 without writing anything when the range is empty.
+          if [[ ! -f "$NOTES" ]]; then
+            echo "::warning::No commits since the last release - drafting an empty release."
+            printf '# Release %s\n' "$TAG" > "$NOTES"
+          fi
+
+          gh release create "$TAG" \
+            --draft \
+            --title "$TAG" \
+            --notes-file "$NOTES"
+
+          echo "::notice::Drafted release $TAG - review the wording and publish it."

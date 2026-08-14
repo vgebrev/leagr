@@ -1,5 +1,10 @@
 # Release tagging: marking which deploys became GitHub Releases
 
+> **Superseded** by `202608141530-release-convention-implementation.md` (2026-08-14). The
+> `release/*` namespace, its workflow and its sync script have been removed: the release decision now
+> happens at deploy time as a minor bump, so there is nothing left to mirror. Kept for the reasoning
+> that led here.
+
 **Date:** 2026-07-29
 
 ## Overview
