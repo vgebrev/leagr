@@ -741,4 +741,78 @@ describe('TeamGenerator - calculateTraitBalance', () => {
         expect(metrics).toHaveProperty('traitsNorm');
         expect(typeof metrics.traitsNorm).toBe('number');
     });
+
+    // Traits are tiered for display (base / Elite) via `traitTiers`, but the team
+    // generator deliberately makes no distinction: it balances trait vs no-trait only.
+    // These lock that in so a future tier-aware change can't silently reach balancing.
+    describe('tier blindness', () => {
+        /** Same booleans, but every held trait promoted to Elite (tier 2). */
+        function withTiers(rankings, tier) {
+            const copy = structuredClone(rankings);
+            for (const p of Object.values(copy.players)) {
+                p.traitTiers = {};
+                for (const [k, held] of Object.entries(p.traits)) {
+                    p.traitTiers[k] = held ? tier : 0;
+                }
+            }
+            return copy;
+        }
+
+        const traitSetup = {
+            Alice: { isFinisher: true, isAttacker: true },
+            Bob: { isDefender: true },
+            Charlie: { isFinisher: true, isShotStopper: true },
+            David: { isDefender: true, isAttacker: true }
+        };
+        const teams = {
+            'Team A': ['Alice', 'Bob'],
+            'Team B': ['Charlie', 'David']
+        };
+
+        it('scores identically whether traits are base or Elite', () => {
+            const base = buildRankingsWithTraits(traitSetup);
+
+            tg.setRankings(withTiers(base, 1));
+            const asBase = tg.calculateTraitBalance(teams);
+
+            tg.setRankings(withTiers(base, 2));
+            const asElite = tg.calculateTraitBalance(teams);
+
+            tg.setRankings(base); // no traitTiers at all
+            const untiered = tg.calculateTraitBalance(teams);
+
+            expect(asElite).toBe(asBase);
+            expect(untiered).toBe(asBase);
+        });
+
+        it('produces an identical composite score regardless of tier', () => {
+            const base = buildRankingsWithTraits(traitSetup);
+            const score = (rk) => {
+                tg.setRankings(rk);
+                tg._provisionalAnchors = { elo: 1000, attack: 0.5, control: 0.5 };
+                return tg.calculateNormalizedScore(teams, 200, 60);
+            };
+            expect(score(withTiers(base, 2)).traitsNorm).toBe(score(withTiers(base, 1)).traitsNorm);
+            expect(score(withTiers(base, 2)).score).toBe(score(withTiers(base, 1)).score);
+        });
+
+        it('still distinguishes trait from no-trait', () => {
+            const withTrait = buildRankingsWithTraits({
+                Alice: { isFinisher: true },
+                Bob: { isFinisher: true },
+                Charlie: {},
+                David: {}
+            });
+            const without = buildRankingsWithTraits({
+                Alice: {},
+                Bob: {},
+                Charlie: {},
+                David: {}
+            });
+            tg.setRankings(withTiers(withTrait, 2));
+            const clustered = tg.calculateTraitBalance(teams);
+            tg.setRankings(without);
+            expect(clustered).toBeGreaterThan(tg.calculateTraitBalance(teams));
+        });
+    });
 });

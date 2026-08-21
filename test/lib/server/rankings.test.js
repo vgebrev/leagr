@@ -1989,78 +1989,185 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
     // -------------------------------------------------------------------------
     describe('calculatePlayerProfiles', () => {
         /**
-         * Build minimal enhancedRankings where each player has pre-computed
-         * latest normalised stats on their top-level data.
-         * Each player entry: { g, o, d, s, sg } — sg defaults to 35 (established, full confidence).
-         * Dynamic threshold = mean of established players' pulled norms + 0.1 per stat.
-         * Tests use a High/Low pair so the threshold is predictable:
-         *   mean = (high + low) / 2, threshold = mean + 0.1
+         * Build minimal enhancedRankings where each player carries the latest
+         * normalised stats on their top-level data.
+         *
+         * Entry shape: { g, o, d, s, sg, sessions }. Defaults are sg = 35 (established)
+         * and sessions = 5, so a player is eligible on every stat unless a test says
+         * otherwise.
          */
         function buildWithNorms(players) {
             const result = { players: {} };
-            for (const [name, norms] of Object.entries(players)) {
+            for (const [name, n] of Object.entries(players)) {
+                const sessions = n.sessions ?? 5;
                 result.players[name] = {
-                    goalsNorm: norms.g ?? 0,
-                    offActionsNorm: norms.o ?? 0,
-                    defActionsNorm: norms.d ?? 0,
-                    saveActionsNorm: norms.s ?? 0,
-                    seasonEloGames: norms.sg ?? 35,
+                    goalsNorm: n.g ?? 0,
+                    offActionsNorm: n.o ?? 0,
+                    defActionsNorm: n.d ?? 0,
+                    saveActionsNorm: n.s ?? 0,
+                    seasonEloGames: n.sg ?? 35,
+                    sessionsWithGoals: n.sessionsWithGoals ?? sessions,
+                    sessionsWithOffActions: n.sessionsWithOffActions ?? sessions,
+                    sessionsWithDefActions: n.sessionsWithDefActions ?? sessions,
+                    sessionsWithSaveActions: n.sessionsWithSaveActions ?? sessions,
                     history: {}
                 };
             }
             return result;
         }
 
-        // Alice=0.8, Bob=0.2 → mean=0.5, threshold=0.6 → Alice passes, Bob doesn't
-        it('assigns isFinisher when pulled goals norm is above dynamic threshold', () => {
-            const r = buildWithNorms({ Alice: { g: 0.8 }, Bob: { g: 0.2 } });
+        /**
+         * Nine filler players forming a 0.0 … 0.8 ladder on every stat, plus one subject
+         * in the tenth slot. With ten eligible players the nearest-rank bands land on
+         * sorted[4] (base, 50th percentile) and sorted[8] (Elite, 85th percentile) — so
+         * for a subject at 0.9 the bars are 0.4 and 0.8.
+         */
+        function ladderWith(name, stats, extra = {}) {
+            const players = {};
+            for (let i = 0; i < 9; i++) {
+                const v = i / 10;
+                players[`P${i}`] = { g: v, o: v, d: v, s: v };
+            }
+            players[name] = stats;
+            return buildWithNorms({ ...players, ...extra });
+        }
+
+        // -- bands ----------------------------------------------------------------
+
+        it('awards a base trait above the median and reports tier 1', () => {
+            // g pool sorted: 0,.1,.2,.3,.4,.5,.5,.6,.7,.8 → base 0.4, Elite 0.7
+            const r = ladderWith('Alice', { g: 0.5 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(true);
-            expect(r.players.Bob.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(1);
         });
 
-        it('assigns isAttacker when pulled off norm is above dynamic threshold', () => {
-            const r = buildWithNorms({ Alice: { o: 0.8 }, Bob: { o: 0.2 } });
+        it('awards Elite (tier 2) at or above the 85th percentile', () => {
+            const r = ladderWith('Alice', { g: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isAttacker).toBe(true);
-            expect(r.players.Bob.traits.isAttacker).toBe(false);
+            expect(r.players.Alice.traits.isFinisher).toBe(true);
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(2);
         });
 
-        it('assigns isDefender when pulled def norm is above dynamic threshold', () => {
-            const r = buildWithNorms({ Alice: { d: 0.8 }, Bob: { d: 0.2 } });
+        it('awards nothing below the median', () => {
+            const r = ladderWith('Alice', { g: 0.0 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isDefender).toBe(true);
-            expect(r.players.Bob.traits.isDefender).toBe(false);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(0);
         });
 
-        it('assigns isShotStopper when pulled save norm is above dynamic threshold', () => {
-            const r = buildWithNorms({ Alice: { s: 0.8 }, Bob: { s: 0.2 } });
+        it('bands each stat independently', () => {
+            const r = ladderWith('Alice', { g: 0.9, o: 0.5, d: 0.0 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isShotStopper).toBe(true);
-            expect(r.players.Bob.traits.isShotStopper).toBe(false);
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(2);
+            expect(r.players.Alice.traitTiers.isAttacker).toBe(1);
+            expect(r.players.Alice.traitTiers.isDefender).toBe(0);
         });
 
-        // Badge tests: Alice high, Low zeroed → threshold = Alice/2 + 0.1 < Alice → Alice passes
+        it('assigns each of the four traits from its own stat', () => {
+            const cases = [
+                ['g', 'isFinisher'],
+                ['o', 'isAttacker'],
+                ['d', 'isDefender'],
+                ['s', 'isShotStopper']
+            ];
+            for (const [stat, trait] of cases) {
+                const r = ladderWith('Alice', { [stat]: 0.9 });
+                rankingsManager.calculatePlayerProfiles(r);
+                expect(r.players.Alice.traits[trait]).toBe(true);
+                expect(r.players.P0.traits[trait]).toBe(false);
+            }
+        });
+
+        // -- eligibility gate -----------------------------------------------------
+
+        it('awards nothing below the season ELO games threshold, even at a perfect norm', () => {
+            const r = ladderWith('Alice', { g: 1.0, o: 1.0, d: 1.0, s: 1.0, sg: 34 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traits.isShotStopper).toBe(false);
+            expect(r.players.Alice.playerProfile).toEqual([]);
+        });
+
+        it('awards nothing with fewer than 5 tracked sessions of that stat', () => {
+            const r = ladderWith('Alice', { g: 1.0, o: 1.0, sessions: 4 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traits.isAttacker).toBe(false);
+        });
+
+        it('gates per stat — a stat measured often enough still awards', () => {
+            // Plenty of goals data, barely any defensive data.
+            const r = ladderWith('Alice', {
+                g: 0.9,
+                d: 0.9,
+                sessionsWithGoals: 12,
+                sessionsWithDefActions: 2
+            });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(true);
+            expect(r.players.Alice.traits.isDefender).toBe(false);
+        });
+
+        it('ineligible players do not move the bands', () => {
+            const baseline = ladderWith('Alice', { g: 0.5 });
+            rankingsManager.calculatePlayerProfiles(baseline);
+
+            // Same pool plus provisional and barely-measured players at extreme norms.
+            const withNoise = ladderWith(
+                'Alice',
+                { g: 0.5 },
+                {
+                    Rookie: { g: 1.0, sg: 7 },
+                    Cameo: { g: 1.0, sessions: 1 },
+                    Ghost: { g: 0.0, sg: 0 }
+                }
+            );
+            rankingsManager.calculatePlayerProfiles(withNoise);
+
+            expect(withNoise.players.Alice.traitTiers.isFinisher).toBe(
+                baseline.players.Alice.traitTiers.isFinisher
+            );
+            expect(withNoise.players.Rookie.traits.isFinisher).toBe(false);
+            expect(withNoise.players.Cameo.traits.isFinisher).toBe(false);
+        });
+
+        it('treats a null norm as no trait', () => {
+            const r = ladderWith('Alice', { g: 0.9 });
+            r.players.Alice.goalsNorm = null;
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isFinisher).toBe(false);
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(0);
+        });
+
+        // -- badges (lattice unchanged, reads base-or-better) ----------------------
+
         it('Finisher + Attacker = Danger Man', () => {
-            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8 }, Low: {} });
+            const r = ladderWith('Alice', { g: 0.9, o: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Danger Man');
         });
 
         it('Defender + Attacker = Engine', () => {
-            const r = buildWithNorms({ Alice: { d: 0.8, o: 0.8 }, Low: {} });
+            const r = ladderWith('Alice', { d: 0.9, o: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Engine');
         });
 
         it('Defender + Shot Stopper = Sentinel', () => {
-            const r = buildWithNorms({ Alice: { d: 0.8, s: 0.8 }, Low: {} });
+            const r = ladderWith('Alice', { d: 0.9, s: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Sentinel');
         });
 
+        it('Finisher + Shot Stopper = Utility Hero', () => {
+            const r = ladderWith('Alice', { g: 0.9, s: 0.9 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('Utility Hero');
+        });
+
         it('Attacker + Finisher + Defender = Complete Player (plus sub-badges)', () => {
-            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8, d: 0.8 }, Low: {} });
+            const r = ladderWith('Alice', { g: 0.9, o: 0.9, d: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toContain('Complete Player');
             expect(r.players.Alice.playerProfile).toContain('Danger Man');
@@ -2069,67 +2176,28 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
         });
 
         it('all 4 traits = G.O.A.T. plus all sub-badges', () => {
-            const r = buildWithNorms({ Alice: { g: 0.8, o: 0.8, d: 0.8, s: 0.8 }, Low: {} });
+            const r = ladderWith('Alice', { g: 0.9, o: 0.9, d: 0.9, s: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isFinisher).toBe(true);
-            expect(r.players.Alice.traits.isAttacker).toBe(true);
-            expect(r.players.Alice.traits.isDefender).toBe(true);
-            expect(r.players.Alice.traits.isShotStopper).toBe(true);
             expect(r.players.Alice.playerProfile).toContain('G.O.A.T.');
             expect(r.players.Alice.playerProfile).toContain('Complete Player');
             expect(r.players.Alice.playerProfile).toContain('Sentinel');
         });
 
-        it('no traits when all norms clearly below dynamic threshold', () => {
-            // Alice low, Bob high → threshold well above Alice
-            // g: mean=(0.1+0.9)/2=0.5, thresh=0.6 → Alice(0.1) fails
-            const r = buildWithNorms({
-                Alice: { g: 0.1, o: 0.05, d: 0.02, s: 0.0 },
-                Bob: { g: 0.9, o: 0.8, d: 0.7, s: 0.6 }
-            });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isFinisher).toBe(false);
-            expect(r.players.Alice.traits.isAttacker).toBe(false);
-            expect(r.players.Alice.traits.isDefender).toBe(false);
-            expect(r.players.Alice.traits.isShotStopper).toBe(false);
-            expect(r.players.Alice.playerProfile).toEqual([]);
+        it('a base-tier player earns the same combos as an Elite one', () => {
+            const elite = ladderWith('Alice', { g: 0.9, o: 0.9 });
+            rankingsManager.calculatePlayerProfiles(elite);
+            const base = ladderWith('Alice', { g: 0.5, o: 0.5 });
+            rankingsManager.calculatePlayerProfiles(base);
+
+            expect(elite.players.Alice.traitTiers.isFinisher).toBe(2);
+            expect(base.players.Alice.traitTiers.isFinisher).toBe(1);
+            expect(base.players.Alice.playerProfile).toEqual(elite.players.Alice.playerProfile);
         });
 
         it('no individual stats = empty badge array', () => {
-            const r = buildWithNorms({ Alice: {}, Bob: { g: 0.8, o: 0.8, d: 0.8, s: 0.8 } });
+            const r = ladderWith('Alice', { g: 0.0, o: 0.0, d: 0.0, s: 0.0 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.playerProfile).toEqual([]);
-        });
-
-        // Pull-factor tests — provisional players excluded from threshold calculation
-        it('pull factor: 0 season ELO games → pull=0, excluded from threshold pool, no trait', () => {
-            // Alice is provisional (sg=0): pull=0, not in threshold pool
-            // Bob is established (sg=35): pull=0.8, mean=0.8, threshold=0.9
-            // Alice pull (0) < 0.9 → no trait
-            const r = buildWithNorms({ Alice: { g: 1.0, sg: 0 }, Bob: { g: 0.8, sg: 35 } });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isFinisher).toBe(false);
-            expect(r.players.Alice.traits.isAttacker).toBe(false);
-            expect(r.players.Alice.traits.isDefender).toBe(false);
-            expect(r.players.Alice.traits.isShotStopper).toBe(false);
-            expect(r.players.Alice.playerProfile).toEqual([]);
-        });
-
-        it('pull factor: 7 season ELO games → aggressively suppressed by quadratic pull', () => {
-            // Alice sg=7: pull = 1.0 * (7/35)^2 = 0.04
-            // Bob sg=35: pull = 0.8 → only Bob in threshold pool → mean=0.8, threshold=0.9
-            // Alice pull (0.04) < 0.9 → no trait
-            const r = buildWithNorms({ Alice: { g: 1.0, sg: 7 }, Bob: { g: 0.8, sg: 35 } });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isFinisher).toBe(false);
-        });
-
-        it('pull factor: 35 season ELO games → full confidence, uses dynamic threshold', () => {
-            // Alice: g=0.8, sg=35 → pull=0.8; Bob: g=0.2, sg=35 → pull=0.2
-            // mean=0.5, threshold=0.6 → Alice (0.8) passes
-            const r = buildWithNorms({ Alice: { g: 0.8, sg: 35 }, Bob: { g: 0.2, sg: 35 } });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.traits.isFinisher).toBe(true);
         });
     });
 });

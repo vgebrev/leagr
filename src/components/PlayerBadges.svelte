@@ -11,10 +11,10 @@
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
 
-    /** @type {{ traits?: object, playerProfile?: string[] }} */
-    let { traits = {}, playerProfile = [] } = $props();
+    /** @type {{ traits?: object, traitTiers?: object, playerProfile?: string[] }} */
+    let { traits = {}, traitTiers = {}, playerProfile = [] } = $props();
 
-    // Individual trait badges — bronze (amber-600)
+    // Individual trait badges — bronze (amber-600) at base, gold at Elite (tier 2)
     const TRAIT_BADGES = [
         { key: 'isFinisher', label: 'Finisher', Icon: LeagueIcon, iconProps: { icon: 'soccer' } },
         { key: 'isAttacker', label: 'Attacker', Icon: BullseyeIcon, iconProps: {} },
@@ -39,7 +39,18 @@
     const goldClass =
         'border-yellow-500 bg-transparent text-yellow-600 dark:border-yellow-400 dark:text-yellow-300';
 
-    let activeTraits = $derived(TRAIT_BADGES.filter((t) => traits?.[t.key]));
+    // Tier 2 = Elite. Older persisted rankings have no traitTiers, so a held trait
+    // without a tier falls back to base and renders exactly as it always did.
+    let activeTraits = $derived(
+        TRAIT_BADGES.filter((t) => traits?.[t.key]).map((t) => {
+            const elite = traitTiers?.[t.key] === 2;
+            return {
+                ...t,
+                elite,
+                label: elite ? `Elite ${t.label}` : t.label
+            };
+        })
+    );
     let allCombos = $derived(
         playerProfile.map((name) => ({ name, ...COMBO_CONFIG[name] })).filter((b) => b.Icon)
     );
@@ -49,10 +60,10 @@
 
 {#if activeTraits.length > 0 || allCombos.length > 0}
     <div class="mt-1 flex flex-wrap gap-1">
-        {#each activeTraits as { label, Icon, iconProps } (label)}
+        {#each activeTraits as { label, Icon, iconProps, elite } (label)}
             <Badge
                 border
-                class="flex items-center gap-1 {bronzeClass}">
+                class="flex items-center gap-1 {elite ? goldClass : bronzeClass}">
                 <Icon
                     class="h-4 w-4"
                     {...iconProps} />

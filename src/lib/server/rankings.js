@@ -1098,67 +1098,107 @@ export class RankingsManager {
     }
 
     /**
-     * Assign player traits and a derived display profile label to each player.
-     * Traits are independent boolean flags derived from normalised individual stats.
+     * Assign player traits, trait tiers and the derived badge profile to each player.
+     *
+     * Eligibility is a hard gate, not a confidence ramp: a player must be established
+     * (35 season ELO games, ~5 sessions — the same bar the team generator uses for
+     * provisional ratings) AND have at least TRAIT_MIN_TRACKED_SESSIONS sessions of the
+     * specific stat being measured. The second condition matters because a league can
+     * start recording a stat mid-season: without it, attendance from before the stat
+     * existed would count toward "proving yourself" at it.
+     *
+     * Eligible players are then banded per stat against the live distribution:
+     * base at the 50th percentile (above the median), Elite at the 85th (top 15%).
+     * Bands recompute on every recalculation, so they never go stale as the league grows.
+     *
      * Called after calculateAttackControlRatings() so goalsNorm etc. are available.
      *
      * @param {Object} enhancedRankings - Rankings with normalised individual stats
      */
     calculatePlayerProfiles(enhancedRankings) {
-        // Season ELO games needed for full confidence in trait assignment.
-        // Uses current-season count so returning players don't carry over
-        // previous years' confidence. Quadratic curve suppresses aggressively
-        // at low counts (e.g. 7-8 season games → confidence ≈ 0.04).
+        // Season ELO games needed before any trait can be awarded. Uses the current-season
+        // count so returning players don't carry over previous years' confidence.
         const TRAIT_SEASON_GAMES_THRESHOLD = 35;
-        // Dynamic threshold bump above the established-player mean.
-        // Keeps the gate meaningful without being overly stingy.
-        const THRESHOLD_BUMP = 0;
+        // Sessions of the stat itself needed before it can award a trait.
+        const TRAIT_MIN_TRACKED_SESSIONS = 5;
+        // Band positions within the eligible pool, per stat.
+        const BASE_PERCENTILE = 0.5;
+        const ELITE_PERCENTILE = 0.85;
 
-        const pull = (rawNorm, seasonGames) => {
-            const linear = Math.min(1, seasonGames / TRAIT_SEASON_GAMES_THRESHOLD);
-            const confidence = linear * linear;
-            return rawNorm * confidence;
+        /** Stat key → the fields it reads and the trait it awards. */
+        const STAT_SOURCES = [
+            { key: 'g', trait: 'isFinisher', norm: 'goalsNorm', sessions: 'sessionsWithGoals' },
+            {
+                key: 'o',
+                trait: 'isAttacker',
+                norm: 'offActionsNorm',
+                sessions: 'sessionsWithOffActions'
+            },
+            {
+                key: 'd',
+                trait: 'isDefender',
+                norm: 'defActionsNorm',
+                sessions: 'sessionsWithDefActions'
+            },
+            {
+                key: 's',
+                trait: 'isShotStopper',
+                norm: 'saveActionsNorm',
+                sessions: 'sessionsWithSaveActions'
+            }
+        ];
+
+        // Nearest-rank percentile. Returns null for an empty pool so the caller can
+        // fall back to awarding nothing rather than to a meaningless bar of 0.
+        const percentileOf = (values, fraction) => {
+            if (!values.length) return null;
+            const sorted = [...values].sort((a, b) => a - b);
+            const index = Math.max(0, Math.ceil(fraction * sorted.length) - 1);
+            return sorted[index];
         };
 
-        // First pass: compute pulled norms for all players
         const allPlayers = Object.values(enhancedRankings.players);
-        const pullMap = allPlayers.map((p) => {
-            const sg = p.seasonEloGames ?? 0;
-            return {
-                g: p.goalsNorm != null ? pull(p.goalsNorm, sg) : null,
-                o: p.offActionsNorm != null ? pull(p.offActionsNorm, sg) : null,
-                d: p.defActionsNorm != null ? pull(p.defActionsNorm, sg) : null,
-                s: p.saveActionsNorm != null ? pull(p.saveActionsNorm, sg) : null,
-                established: sg >= TRAIT_SEASON_GAMES_THRESHOLD
+
+        // A player is eligible for a stat's trait only if established overall AND
+        // measured often enough on that specific stat.
+        const isEligible = (playerData, source) =>
+            (playerData.seasonEloGames ?? 0) >= TRAIT_SEASON_GAMES_THRESHOLD &&
+            (playerData[source.sessions] ?? 0) >= TRAIT_MIN_TRACKED_SESSIONS &&
+            playerData[source.norm] != null;
+
+        // Bands are set by the eligible pool only, so newcomers and players who have
+        // barely been measured on a stat cannot drag the bar around.
+        const bands = {};
+        for (const source of STAT_SOURCES) {
+            const pool = allPlayers.filter((p) => isEligible(p, source)).map((p) => p[source.norm]);
+            bands[source.key] = {
+                base: percentileOf(pool, BASE_PERCENTILE),
+                elite: percentileOf(pool, ELITE_PERCENTILE)
             };
-        });
+        }
 
-        // Dynamic threshold: mean pulled norm of established players + bump, per stat
-        const estPulls = pullMap.filter((p) => p.established);
-        const meanOf = (arr) => {
-            const valid = arr.filter((v) => v !== null);
-            return valid.length ? valid.reduce((a, b) => a + b, 0) / valid.length : null;
-        };
-        const thresholds = {
-            g: (meanOf(estPulls.map((p) => p.g)) ?? 0) + THRESHOLD_BUMP,
-            o: (meanOf(estPulls.map((p) => p.o)) ?? 0) + THRESHOLD_BUMP,
-            d: (meanOf(estPulls.map((p) => p.d)) ?? 0) + THRESHOLD_BUMP,
-            s: (meanOf(estPulls.map((p) => p.s)) ?? 0) + THRESHOLD_BUMP
-        };
+        allPlayers.forEach((playerData) => {
+            /** @type {Record<string, 0|1|2>} */
+            const traitTiers = {};
+            /** @type {Record<string, boolean>} */
+            const traits = {};
 
-        // Second pass: assign traits using dynamic thresholds
-        allPlayers.forEach((playerData, i) => {
-            const { g, o, d, s } = pullMap[i];
-
-            const traits = {
-                isFinisher: g !== null && g > thresholds.g,
-                isAttacker: o !== null && o > thresholds.o,
-                isDefender: d !== null && d > thresholds.d,
-                isShotStopper: s !== null && s > thresholds.s
-            };
+            for (const source of STAT_SOURCES) {
+                const band = bands[source.key];
+                let tier = 0;
+                if (isEligible(playerData, source) && band.base != null) {
+                    const norm = playerData[source.norm];
+                    tier = norm >= band.elite ? 2 : norm >= band.base ? 1 : 0;
+                }
+                traitTiers[source.trait] = tier;
+                traits[source.trait] = tier > 0;
+            }
 
             playerData.traits = traits;
+            playerData.traitTiers = traitTiers;
 
+            // Badge lattice is unchanged and reads base-or-better, so a tier upgrade
+            // never changes which combos a player holds.
             const {
                 isFinisher: fin,
                 isAttacker: att,
@@ -1742,22 +1782,25 @@ export class RankingsManager {
                 const teamGFNorm = norm(r.teamGF.perSession, mm.minGF, mm.maxGF);
                 const teamGAInvNorm = invNorm(r.teamGA.perSession, mm.minGA, mm.maxGA);
 
-                // Normalise individual stats — null when bounds aren't available for that type yet
+                // Normalise individual stats — null when bounds aren't available for that
+                // type yet, or when this player has never had it tracked. The second case
+                // matters: treating "never measured" as a rate of 0 would otherwise put a
+                // phantom zero into the trait bands and understate every bar.
                 const goalsN =
-                    mm.minGoals != null
-                        ? norm(r.goals?.perSession ?? 0, mm.minGoals, mm.maxGoals)
+                    mm.minGoals != null && r.goals?.perSession != null
+                        ? norm(r.goals.perSession, mm.minGoals, mm.maxGoals)
                         : null;
                 const offN =
-                    mm.minOff != null
-                        ? norm(r.offActions?.perSession ?? 0, mm.minOff, mm.maxOff)
+                    mm.minOff != null && r.offActions?.perSession != null
+                        ? norm(r.offActions.perSession, mm.minOff, mm.maxOff)
                         : null;
                 const defN =
-                    mm.minDef != null
-                        ? norm(r.defActions?.perSession ?? 0, mm.minDef, mm.maxDef)
+                    mm.minDef != null && r.defActions?.perSession != null
+                        ? norm(r.defActions.perSession, mm.minDef, mm.maxDef)
                         : null;
                 const saveN =
-                    mm.minSave != null
-                        ? norm(r.saveActions?.perSession ?? 0, mm.minSave, mm.maxSave)
+                    mm.minSave != null && r.saveActions?.perSession != null
+                        ? norm(r.saveActions.perSession, mm.minSave, mm.maxSave)
                         : null;
 
                 // Determine whether meaningful individual data exists
