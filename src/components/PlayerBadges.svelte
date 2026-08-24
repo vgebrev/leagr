@@ -140,7 +140,7 @@
 </script>
 
 {#if badges.length > 0}
-    <div class="mt-1 flex flex-wrap gap-1">
+    <div class="mt-1 flex flex-wrap gap-0.5 sm:gap-1">
         {#each badges as badge (badge.id)}
             {@const { Icon, iconProps } = ICONS[badge.id]}
             {@const shape = SHAPES[badge.shape]}
@@ -151,7 +151,7 @@
                 role="button"
                 class="inline-flex cursor-help p-px {shape.outer} {EDGES[badge.tier]}">
                 <span
-                    class="flex items-center justify-center gap-1 py-0.5 text-sm font-medium
+                    class="flex items-center justify-center gap-0.5 sm:gap-1 py-0.5 sm:text-sm text-xs font-medium
                         {shape.inner} {SURFACE} {INKS[badge.tier]}">
                     <Icon
                         class="h-4 w-4 shrink-0"
