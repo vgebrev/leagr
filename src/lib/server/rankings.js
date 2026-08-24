@@ -5,6 +5,7 @@ import { getLeagueDataPath } from './league.js';
 import { createStandingsManager } from './standings.js';
 import { createDisciplineManager } from './discipline.js';
 import * as fuzzball from 'fuzzball';
+import { qualifiedBadges, BASE_PERCENTILE, ELITE_PERCENTILE } from '../shared/badges.js';
 
 /** @typedef {import('../shared/types.js').Match} Match */
 /** @typedef {import('../shared/types.js').Round} Round */
@@ -895,11 +896,12 @@ export class RankingsManager {
                 defActions: data.defActions ?? 0,
                 saveActions: data.saveActions ?? 0,
 
-                // Per-stat session counters (for accurate total calculations)
+                // Per-stat session counters (for accurate total calculations). sessionsInGoal
+                // is the odd one out: sessions the player kept goal, not sessions measured.
                 sessionsWithGoals: data.sessionsWithGoals ?? 0,
                 sessionsWithOffActions: data.sessionsWithOffActions ?? 0,
                 sessionsWithDefActions: data.sessionsWithDefActions ?? 0,
-                sessionsWithSaveActions: data.sessionsWithSaveActions ?? 0,
+                sessionsInGoal: data.sessionsInGoal ?? 0,
 
                 // Activity tracking
                 lastAppearance: lastAppearance,
@@ -1119,13 +1121,18 @@ export class RankingsManager {
         // Season ELO games needed before any trait can be awarded. Uses the current-season
         // count so returning players don't carry over previous years' confidence.
         const TRAIT_SEASON_GAMES_THRESHOLD = 35;
-        // Sessions of the stat itself needed before it can award a trait.
+        // Sessions of the stat itself needed before it can award a trait. For saves that
+        // reads as five sessions in goal, since sessionsInGoal counts only those.
         const TRAIT_MIN_TRACKED_SESSIONS = 5;
-        // Band positions within the eligible pool, per stat.
-        const BASE_PERCENTILE = 0.5;
-        const ELITE_PERCENTILE = 0.85;
+        // Band positions come from shared/badges.js — see the note there.
 
-        /** Stat key → the fields it reads and the trait it awards. */
+        /**
+         * Stat key → the fields it reads and the trait it awards.
+         *
+         * The three outfield stats measure per session attended-with-tracking. Saves measure
+         * per session in goal — a different denominator, because only the keeper can record
+         * one (see the note where sessionsInGoal is incremented).
+         */
         const STAT_SOURCES = [
             { key: 'g', trait: 'isFinisher', norm: 'goalsNorm', sessions: 'sessionsWithGoals' },
             {
@@ -1144,7 +1151,7 @@ export class RankingsManager {
                 key: 's',
                 trait: 'isShotStopper',
                 norm: 'saveActionsNorm',
-                sessions: 'sessionsWithSaveActions'
+                sessions: 'sessionsInGoal'
             }
         ];
 
@@ -1197,22 +1204,14 @@ export class RankingsManager {
             playerData.traits = traits;
             playerData.traitTiers = traitTiers;
 
-            // Badge lattice is unchanged and reads base-or-better, so a tier upgrade
-            // never changes which combos a player holds.
-            const {
-                isFinisher: fin,
-                isAttacker: att,
-                isDefender: def,
-                isShotStopper: sht
-            } = traits;
-            const badges = [];
-            if (sht && def && att && fin) badges.push('G.O.A.T.');
-            if (att && fin && def) badges.push('Complete Player');
-            if (fin && att) badges.push('Danger Man');
-            if (def && att) badges.push('Engine');
-            if (def && sht) badges.push('Sentinel');
-            if (fin && sht) badges.push('Utility Hero');
-            playerData.playerProfile = badges;
+            // The badge lattice reads tiers, not booleans, so Elite qualification earns
+            // its own badges (see shared/badges.js and the ADR it implements). Stored as
+            // ids, and as the FULL qualification set: supersession is a presentation
+            // concern and must not destroy the underlying facts. Trait badges are omitted
+            // because traitTiers already describes them exactly.
+            playerData.playerProfile = qualifiedBadges(traitTiers)
+                .filter((badge) => badge.category !== 'trait')
+                .map((badge) => badge.id);
         });
     }
 
@@ -1334,7 +1333,8 @@ export class RankingsManager {
 
                         // Accumulate individual stats — only for session types that were actually tracked.
                         // Each stat type has its own session counter so averages aren't diluted
-                        // by sessions that predate tracking for that stat type.
+                        // by sessions that predate tracking for that stat type. Saves count a
+                        // narrower denominator still — see below.
                         const ind = sessionIndStats[player] ?? {
                             goals: 0,
                             offensiveActions: 0,
@@ -1350,8 +1350,7 @@ export class RankingsManager {
                         if (!playerData.sessionsWithDefActions)
                             playerData.sessionsWithDefActions = 0;
                         if (!playerData.saveActions) playerData.saveActions = 0;
-                        if (!playerData.sessionsWithSaveActions)
-                            playerData.sessionsWithSaveActions = 0;
+                        if (!playerData.sessionsInGoal) playerData.sessionsInGoal = 0;
 
                         if (sessionTracked.goals) {
                             playerData.indGoals += ind.goals;
@@ -1365,9 +1364,18 @@ export class RankingsManager {
                             playerData.defActions += ind.defensiveActions;
                             playerData.sessionsWithDefActions += 1;
                         }
-                        if (sessionTracked.saveActions) {
+                        // Saves are the one stat that only a keeper can record, so the
+                        // denominator is sessions spent in goal rather than sessions attended.
+                        // Counting attendance diluted every keeper who ever played outfield —
+                        // on 2026-08-22 it cost the league's runaway save leader his Elite tier
+                        // for turning up and playing on the pitch.
+                        //
+                        // Session files carry no keeper field, so "in goal" is proxied by
+                        // "recorded at least one save". A keeper who faced nothing is therefore
+                        // invisible; see docs/traits.md for what that costs in practice.
+                        if (sessionTracked.saveActions && ind.saveActions > 0) {
                             playerData.saveActions += ind.saveActions;
-                            playerData.sessionsWithSaveActions += 1;
+                            playerData.sessionsInGoal += 1;
                         }
 
                         // Calculate running averages — null when no tracked sessions yet for that type
@@ -1387,8 +1395,8 @@ export class RankingsManager {
                                 ? playerData.defActions / playerData.sessionsWithDefActions
                                 : null;
                         const saveActionsPerSession =
-                            playerData.sessionsWithSaveActions > 0
-                                ? playerData.saveActions / playerData.sessionsWithSaveActions
+                            playerData.sessionsInGoal > 0
+                                ? playerData.saveActions / playerData.sessionsInGoal
                                 : null;
 
                         // Store appearance data for this date (grouped structure)

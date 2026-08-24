@@ -72,8 +72,7 @@
                         tooltipIdPrefix={`player-header-${playerName ?? 'unknown'}`} />
                     <PlayerBadges
                         traits={playerData.traits}
-                        traitTiers={playerData.traitTiers}
-                        playerProfile={playerData.playerProfile} />
+                        traitTiers={playerData.traitTiers} />
                 </div>
             {:else}
                 <h6 class="text-gray-400">Player Profile</h6>

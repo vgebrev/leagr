@@ -125,6 +125,78 @@ body {
         overflow-anchor: none;
     }
 
+    /* === BADGE SILHOUETTES ===
+       Badges encode silhouette and material as independent channels (see docs/traits.md).
+       Each badge is two nested elements: the outer carries the shape plus a gradient edge,
+       the inner carries the same shape inset by 2px plus the fill. That nesting is required
+       because clip-path clips borders, rings, outlines and shadows alike, so a clipped shape
+       cannot carry a real border.
+
+       The *-inner corner values are tuned, not copied: insetting the outer polygon by the
+       edge width while keeping its corner would leave the 45deg diagonal a different weight
+       from the straight edges. The compensating corner is `outer + d*sqrt(2) - 2d`, which at
+       the current 1px edge gives 8.4px against an outer 9px. Retune these if the edge width
+       changes. */
+    .badge-pill {
+        border-radius: 9999px;
+    }
+
+    .badge-pill-inner {
+        border-radius: 9999px;
+    }
+
+    .badge-rounded {
+        border-radius: 0.375rem;
+    }
+
+    .badge-rounded-inner {
+        border-radius: 0.25rem;
+    }
+
+    .badge-notched {
+        clip-path: polygon(
+            9px 0,
+            100% 0,
+            100% calc(100% - 9px),
+            calc(100% - 9px) 100%,
+            0 100%,
+            0 9px
+        );
+    }
+
+    .badge-notched-inner {
+        clip-path: polygon(
+            8.4px 0,
+            100% 0,
+            100% calc(100% - 8.4px),
+            calc(100% - 8.4px) 100%,
+            0 100%,
+            0 8.4px
+        );
+    }
+
+    .badge-faceted {
+        clip-path: polygon(
+            10px 0,
+            calc(100% - 10px) 0,
+            100% 50%,
+            calc(100% - 10px) 100%,
+            10px 100%,
+            0 50%
+        );
+    }
+
+    .badge-faceted-inner {
+        clip-path: polygon(
+            9.2px 0,
+            calc(100% - 9.2px) 0,
+            100% 50%,
+            calc(100% - 9.2px) 100%,
+            9.2px 100%,
+            0 50%
+        );
+    }
+
     /* Keep hidden toggle inputs in-flow to prevent focus scroll jumps */
     label:has(input.leagr-toggle-input) {
         position: relative;

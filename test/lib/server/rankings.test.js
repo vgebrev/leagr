@@ -2009,7 +2009,7 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
                     sessionsWithGoals: n.sessionsWithGoals ?? sessions,
                     sessionsWithOffActions: n.sessionsWithOffActions ?? sessions,
                     sessionsWithDefActions: n.sessionsWithDefActions ?? sessions,
-                    sessionsWithSaveActions: n.sessionsWithSaveActions ?? sessions,
+                    sessionsInGoal: n.sessionsInGoal ?? sessions,
                     history: {}
                 };
             }
@@ -2096,6 +2096,18 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             expect(r.players.Alice.traits.isAttacker).toBe(false);
         });
 
+        it('gates shot stopper on sessions in goal, not sessions attended', () => {
+            // sessionsInGoal is the saves denominator: a regular who kept goal four times
+            // is not measured often enough, however good those four were.
+            const r = ladderWith('Alice', { s: 0.9, sessionsInGoal: 4 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.traits.isShotStopper).toBe(false);
+
+            const enough = ladderWith('Alice', { s: 0.9, sessionsInGoal: 5 });
+            rankingsManager.calculatePlayerProfiles(enough);
+            expect(enough.players.Alice.traitTiers.isShotStopper).toBe(2);
+        });
+
         it('gates per stat — a stat measured often enough still awards', () => {
             // Plenty of goals data, barely any defensive data.
             const r = ladderWith('Alice', {
@@ -2140,50 +2152,90 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             expect(r.players.Alice.traitTiers.isFinisher).toBe(0);
         });
 
-        // -- badges (lattice unchanged, reads base-or-better) ----------------------
+        // -- badges (ids, tier-aware, full qualification set) ----------------------
+        // The lattice itself is exercised exhaustively in test/lib/shared/badges.test.js.
+        // These tests cover the wiring: that awarding runs off the tiers this method
+        // computes, and that what lands in playerProfile is the full qualification set.
 
-        it('Finisher + Attacker = Danger Man', () => {
+        it('Finisher + Attacker = danger-man', () => {
+            const r = ladderWith('Alice', { g: 0.5, o: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('danger-man');
+        });
+
+        it('Defender + Attacker = engine', () => {
+            const r = ladderWith('Alice', { d: 0.5, o: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('engine');
+        });
+
+        it('Defender + Shot Stopper = sentinel', () => {
+            const r = ladderWith('Alice', { d: 0.5, s: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('sentinel');
+        });
+
+        it('Finisher + Shot Stopper = utility-hero', () => {
+            const r = ladderWith('Alice', { g: 0.5, s: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            expect(r.players.Alice.playerProfile).toContain('utility-hero');
+        });
+
+        it('three base traits = all-rounder, and no mastery badge', () => {
+            const r = ladderWith('Alice', { g: 0.5, o: 0.5, d: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            const badges = r.players.Alice.playerProfile;
+            expect(badges).toContain('all-rounder');
+            expect(badges).toContain('danger-man');
+            expect(badges).toContain('engine');
+            expect(badges).not.toContain('complete-player');
+            expect(badges).not.toContain('true-baller');
+        });
+
+        it('four base traits = true-baller, not G.O.A.T.', () => {
+            const r = ladderWith('Alice', { g: 0.5, o: 0.5, d: 0.5, s: 0.5 });
+            rankingsManager.calculatePlayerProfiles(r);
+            const badges = r.players.Alice.playerProfile;
+            expect(r.players.Alice.traitTiers).toEqual({
+                isFinisher: 1,
+                isAttacker: 1,
+                isDefender: 1,
+                isShotStopper: 1
+            });
+            expect(badges).toContain('true-baller');
+            expect(badges).toContain('all-rounder');
+            expect(badges).not.toContain('goat');
+            expect(badges).not.toContain('complete-player');
+        });
+
+        it('two Elite traits upgrade the archetype', () => {
             const r = ladderWith('Alice', { g: 0.9, o: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('Danger Man');
+            expect(r.players.Alice.traitTiers.isFinisher).toBe(2);
+            expect(r.players.Alice.traitTiers.isAttacker).toBe(2);
+            // Both the Gold upgrade and the Silver qualification it supersedes are stored.
+            expect(r.players.Alice.playerProfile).toContain('sniper');
+            expect(r.players.Alice.playerProfile).toContain('danger-man');
         });
 
-        it('Defender + Attacker = Engine', () => {
-            const r = ladderWith('Alice', { d: 0.9, o: 0.9 });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('Engine');
-        });
-
-        it('Defender + Shot Stopper = Sentinel', () => {
-            const r = ladderWith('Alice', { d: 0.9, s: 0.9 });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('Sentinel');
-        });
-
-        it('Finisher + Shot Stopper = Utility Hero', () => {
-            const r = ladderWith('Alice', { g: 0.9, s: 0.9 });
-            rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('Utility Hero');
-        });
-
-        it('Attacker + Finisher + Defender = Complete Player (plus sub-badges)', () => {
+        it('three Elite traits = complete-player', () => {
             const r = ladderWith('Alice', { g: 0.9, o: 0.9, d: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('Complete Player');
-            expect(r.players.Alice.playerProfile).toContain('Danger Man');
-            expect(r.players.Alice.playerProfile).toContain('Engine');
-            expect(r.players.Alice.playerProfile).not.toContain('Goal-Scoring Defender');
+            expect(r.players.Alice.playerProfile).toContain('complete-player');
+            expect(r.players.Alice.playerProfile).not.toContain('goat');
         });
 
-        it('all 4 traits = G.O.A.T. plus all sub-badges', () => {
+        it('four Elite traits = goat', () => {
             const r = ladderWith('Alice', { g: 0.9, o: 0.9, d: 0.9, s: 0.9 });
             rankingsManager.calculatePlayerProfiles(r);
-            expect(r.players.Alice.playerProfile).toContain('G.O.A.T.');
-            expect(r.players.Alice.playerProfile).toContain('Complete Player');
-            expect(r.players.Alice.playerProfile).toContain('Sentinel');
+            expect(r.players.Alice.playerProfile).toContain('goat');
+            expect(r.players.Alice.playerProfile).toContain('complete-player');
+            expect(r.players.Alice.playerProfile).toContain('true-baller');
         });
 
-        it('a base-tier player earns the same combos as an Elite one', () => {
+        // Inverts the pre-ADR guarantee. Excellence is now its own route through the
+        // lattice, so tier changes what a player earns rather than only how it renders.
+        it('an Elite player earns strictly more than a base one', () => {
             const elite = ladderWith('Alice', { g: 0.9, o: 0.9 });
             rankingsManager.calculatePlayerProfiles(elite);
             const base = ladderWith('Alice', { g: 0.5, o: 0.5 });
@@ -2191,7 +2243,21 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
 
             expect(elite.players.Alice.traitTiers.isFinisher).toBe(2);
             expect(base.players.Alice.traitTiers.isFinisher).toBe(1);
-            expect(base.players.Alice.playerProfile).toEqual(elite.players.Alice.playerProfile);
+
+            const baseBadges = base.players.Alice.playerProfile;
+            const eliteBadges = elite.players.Alice.playerProfile;
+            expect(baseBadges).not.toEqual(eliteBadges);
+            expect(baseBadges.every((id) => eliteBadges.includes(id))).toBe(true);
+            expect(eliteBadges).toContain('sniper');
+            expect(baseBadges).not.toContain('sniper');
+        });
+
+        it('stores trait badges nowhere — traitTiers already describes them', () => {
+            const r = ladderWith('Alice', { g: 0.9, o: 0.9, d: 0.9, s: 0.9 });
+            rankingsManager.calculatePlayerProfiles(r);
+            for (const id of ['finisher', 'elite-finisher', 'attacker', 'shot-stopper']) {
+                expect(r.players.Alice.playerProfile).not.toContain(id);
+            }
         });
 
         it('no individual stats = empty badge array', () => {

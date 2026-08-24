@@ -30,7 +30,7 @@ function shuffle(arr) {
  * @property {string | null} avatar
  * @property {number} appearances
  * @property {{ isFinisher: boolean, isAttacker: boolean, isDefender: boolean, isShotStopper: boolean }} traits
- * @property {string} playerProfile
+ * @property {string[]} playerProfile
  */
 
 /** @typedef {{ name: string, players: ProvisionalPlayerData[] }} Pot */

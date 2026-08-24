@@ -1,10 +1,14 @@
 # Player Traits & Badges — As-Built
 
-Documents the trait and badge awarding mechanism on player profiles, as implemented in
-`src/lib/server/rankings.js`. Originally reconstructed from the code on 2026-08-21 (the feature
-shipped undocumented — see `tasks/202608211227-traits-badges-documentation.md` for the audit
-trail), then updated for the tiering change in
-`tasks/202608211530-traits-tiering-implementation.md`.
+Documents the trait and badge awarding mechanism on player profiles. Trait qualification and
+tiering live in `src/lib/server/rankings.js`; the badge lattice and its visual grammar live in
+`src/lib/shared/badges.js`.
+
+Originally reconstructed from the code on 2026-08-21 (the feature shipped undocumented — see
+`tasks/202608211227-traits-badges-documentation.md` for the audit trail), then updated for the
+tiering change in `tasks/202608211530-traits-tiering-implementation.md`, and again for the
+badge-lattice expansion in `tasks/202608241055-adr-badge-lattice-and-elite-badge-tiers.md`
+(the accepted ADR) and its implementation note.
 
 The pre-implementation design in `tasks/202603141200-enhanced-ratings-player-profiles-plan.md`
 does **not** describe current behaviour and should not be read as a spec.
@@ -45,13 +49,42 @@ only when that stat type was tracked in that session:
 goalsPerSession      = indGoals    / sessionsWithGoals
 offActionsPerSession = offActions  / sessionsWithOffActions
 defActionsPerSession = defActions  / sessionsWithDefActions
-saveActionsPerSession= saveActions / sessionsWithSaveActions        // null when the counter is 0
+saveActionsPerSession= saveActions / sessionsInGoal                 // null when the counter is 0
 ```
 
 Separate counters exist so a change in what the league records doesn't dilute the averages of
 stats that were always recorded. In pirates 2026 this is load-bearing: goals were tracked from
 2026-01-03 but offensive/defensive/save actions only from **2026-03-07**, so the first nine
 sessions of the season count toward `sessionsWithGoals` and toward nothing else.
+
+### Saves divide by sessions in goal
+
+`sessionsInGoal` is the odd counter out. The other three increment for every session the stat was
+tracked league-wide; this one increments only when **the player themselves recorded a save**.
+
+Saves are the only stat that a single position monopolises, so an attendance denominator
+measures a mix of two different things — how well you keep, and how often you are put in goal. It
+also punishes turning up: on **2026-08-22** the league's runaway save leader (142 saves against 84
+for second place) played outfield, his numerator held at 142 while his denominator went 23 → 24,
+and he lost Elite Shot Stopper by 0.023. Staying home would have carried the average forward and
+kept the badge.
+
+Session files carry **no keeper field**, so "in goal" is proxied by "recorded at least one save
+this session". Consequences worth knowing:
+
+- A keeper who faced nothing at all is invisible, and that session is dropped rather than counted
+  as a zero. Measured over pirates 2026: at match level 89 of 720 team-sides (12.4%) conceded
+  without recording a save, and another 45 (6.3%) kept a clean sheet without one — but rolled up
+  to the whole session, which is the granularity this counter works at, **0 of 96 team-sessions**
+  recorded no save at all. The proxy never actually loses a keeper in the data that exists.
+- The league rotates the gloves within a session, so the proxy is generous rather than strict:
+  2–6 different players record saves for one team in one session (median 3; only 3 of 96
+  team-sessions had a single save-recorder). "A session in goal" therefore means _some_ time in
+  goal, not a full shift, and an outfielder credited with one goal-line block picks up a session
+  at a rate of 1.
+
+An explicit keeper flag on the session data would replace the proxy; the counter is named for the
+quantity it means rather than the way it is currently derived, so that change is a one-line swap.
 
 Team-level `teamGF`/`teamGA` use plain `appearances` as the denominator instead
 (`rankings.js:1374-1376`), since they are always available.
@@ -92,6 +125,7 @@ of which must hold before a stat can award anything:
 ```
 seasonEloGames        >= 35      TRAIT_SEASON_GAMES_THRESHOLD
 sessionsWith<Stat>    >= 5       TRAIT_MIN_TRACKED_SESSIONS
+                                 (for saves this reads sessionsInGoal >= 5)
 ```
 
 The first is the league-wide "established" bar — the same 35 games the team generator uses for
@@ -99,7 +133,8 @@ provisional ratings (`teamGenerator.js:39`, "~5 sessions"). It reads the **curre
 count, so a returning player does not import last year's standing. A session is roughly 7–8 ELO
 games, so it lands at about five sessions.
 
-The second requires five sessions of **the stat itself**. This matters whenever a league starts
+The second requires five sessions of **the stat itself** — and for Shot Stopper, five sessions
+**in goal**, since that is what `sessionsInGoal` counts. This matters whenever a league starts
 recording a stat mid-season: without it, attendance from before the stat existed would count
 toward "proving yourself" at it. Pirates began recording offensive/defensive/save actions on
 2026-03-07 while goals ran from January, so the two counts genuinely diverge.
@@ -146,33 +181,223 @@ playerData.traitTiers = { isFinisher: 0 | 1 | 2, ... }; // 0 none, 1 base, 2 Eli
 
 ## Badge lattice
 
-Combo badges are computed from `traits`, i.e. from **base-or-better** — a tier upgrade never
-changes which combos a player holds. They are pushed in this order and are **non-exclusive and
-additive**, so the sets overlap rather than collapsing to the best one.
+The lattice lives in **`src/lib/shared/badges.js`**, imported by the server (awarding), the
+component (presentation) and `scripts/traits-report.mjs` (verification), so it cannot drift
+between them. It implements
+[`tasks/202608241055-adr-badge-lattice-and-elite-badge-tiers.md`](../tasks/202608241055-adr-badge-lattice-and-elite-badge-tiers.md).
 
-| Badge           | Requires                       | Tier   |
-| --------------- | ------------------------------ | ------ |
-| G.O.A.T.        | all four                       | gold   |
-| Complete Player | Attacker + Finisher + Defender | gold   |
-| Danger Man      | Finisher + Attacker            | silver |
-| Engine          | Defender + Attacker            | silver |
-| Sentinel        | Defender + Shot Stopper        | silver |
-| Utility Hero    | Finisher + Shot Stopper        | silver |
+Badges read **tiers**, not the `traits` booleans, so Elite qualification earns badges of its
+own. Two independent axes are encoded:
 
-Two of the six two-trait pairs have **no** badge: Finisher+Defender and Attacker+Shot Stopper.
-`test/lib/server/rankings.test.js:2175` asserts the absence of the first as deliberate.
+- **Breadth** — how many areas a player is strong in.
+- **Excellence** — base threshold or Elite.
 
-A player holding all four traits therefore renders **ten** badges at once — four bronze trait
-badges plus all six combos, since G.O.A.T. does not suppress the others.
+Each badge declares its shape and tier as independent facts. Neither is derived from the
+other, and neither is derived from the awarding logic:
+
+```js
+{ id: 'powerhouse', label: 'Powerhouse', category: 'archetype', shape: 'rounded',
+  tier: 'gold', requires: { isAttacker: 'elite', isDefender: 'elite' },
+  supersedes: 'engine' }
+```
+
+`category` survives as the grouping and render-order key; `shape` is what presentation reads.
+
+A requirement of `'base'` is satisfied by tier ≥ 1 and `'elite'` by tier 2 — Elite satisfies
+base, never the reverse.
+
+### Catalogue
+
+| Badge              | Category  | Tier    | Shape   | Requires             | Supersedes   |
+| ------------------ | --------- | ------- | ------- | -------------------- | ------------ |
+| Finisher           | Trait     | Bronze  | pill    | Finisher base        | —            |
+| Attacker           | Trait     | Bronze  | pill    | Attacker base        | —            |
+| Defender           | Trait     | Bronze  | pill    | Defender base        | —            |
+| Shot Stopper       | Trait     | Bronze  | pill    | Shot Stopper base    | —            |
+| Elite Finisher     | Trait     | Gold    | pill    | Finisher Elite       | Finisher     |
+| Elite Attacker     | Trait     | Gold    | pill    | Attacker Elite       | Attacker     |
+| Elite Defender     | Trait     | Gold    | pill    | Defender Elite       | Defender     |
+| Elite Shot Stopper | Trait     | Gold    | pill    | Shot Stopper Elite   | Shot Stopper |
+| Danger Man         | Archetype | Silver  | rounded | Attacker + Finisher  | —            |
+| Engine             | Archetype | Silver  | rounded | Attacker + Defender  | —            |
+| Sentinel           | Archetype | Silver  | rounded | Defender + Shot Stop | —            |
+| Utility Hero       | Archetype | Silver  | rounded | Finisher + Shot Stop | —            |
+| Sniper             | Archetype | Gold    | rounded | both Elite           | Danger Man   |
+| Powerhouse         | Archetype | Gold    | rounded | both Elite           | Engine       |
+| Guardian           | Archetype | Gold    | rounded | both Elite           | Sentinel     |
+| Maverick           | Archetype | Gold    | rounded | both Elite           | Utility Hero |
+| All-Rounder        | Breadth   | Gold    | notched | any 3+ base traits   | —            |
+| True Baller        | Breadth   | Gold    | faceted | all 4 base traits    | —            |
+| Complete Player    | Mastery   | Diamond | notched | any 3+ Elite traits  | All-Rounder  |
+| G.O.A.T.           | Mastery   | Diamond | faceted | all 4 Elite traits   | True Baller  |
+
+Two of the six two-trait pairs still have **no** archetype: Finisher + Defender and
+Attacker + Shot Stopper. The lattice is deliberately curated rather than exhaustive — badge
+scarcity and recognisable player identities take precedence over mathematical completeness.
+`test/lib/shared/badges.test.js` asserts both absences.
+
+### Supersession is presentation-only
+
+`qualifiedBadges(tiers)` returns everything a player qualifies for. `displayBadges(tiers)`
+drops anything a held badge supersedes. **Only the second is used for rendering** — a
+G.O.A.T. genuinely still qualifies for four Elite traits, four Gold archetypes, All-Rounder,
+True Baller and Complete Player, and those facts stay available for stats and future badge
+families.
+
+**Supersession runs within a shape family**, i.e. between badges that answer the same
+question at different levels — never across families:
+
+```text
+Finisher     → Elite Finisher        (pill)
+Danger Man   → Sniper                (rounded)
+All-Rounder  → Complete Player       (notched, "any 3+")
+True Baller  → G.O.A.T.              (faceted, "all four")
+```
+
+So a Diamond badge hides its Gold equivalent, but the "3+" and "all four" badges never hide
+each other — they are different achievements and keep different silhouettes. Each of the four
+shape families contributes at most one badge, which puts the ceiling at **ten**: four traits,
+four archetypes, one "3+" and one "all four".
+
+### Two routes to Gold
+
+Breadth and excellence are separate paths, and they converge at Diamond:
+
+```text
+Elite Attacker   → Gold Pill               excellence, one dimension
+Powerhouse       → Gold Rounded Rectangle  excellence, one archetype
+True Baller      → Gold Notched            breadth, four dimensions
+G.O.A.T.         → Diamond Faceted         breadth AT Elite level
+```
+
+## Visual grammar
+
+```text
+shape    = badge.shape
+material = badge.tier
+```
+
+**Shape is declared per badge, not derived.** Traits and archetypes take the shape of their
+category, but the four multi-trait badges take the shape of their **requirement**: "any 3+" is
+notched and "all four" is faceted, at either tier.
+
+| Shape             | Meaning               | Badges                       | Utility          |
+| ----------------- | --------------------- | ---------------------------- | ---------------- |
+| Pill              | one strength          | the eight trait badges       | `.badge-pill`    |
+| Rounded rectangle | a two-trait archetype | the eight archetypes         | `.badge-rounded` |
+| Notched           | strong in 3+ areas    | All-Rounder, Complete Player | `.badge-notched` |
+| Faceted           | strong in all 4 areas | True Baller, G.O.A.T.        | `.badge-faceted` |
+
+So Diamond spans two silhouettes and notched spans two tiers — which is the point. The two
+channels answer different questions: the shape says _how broad_, the material says _at what
+level_. All-Rounder and Complete Player are the same achievement in Gold and Diamond, as are
+True Baller and G.O.A.T.
+
+Within a category the silhouette is inherited as prestige rises: Attacker → Elite Attacker
+stays a pill, Engine → Powerhouse stays a rounded rectangle.
+
+### Material and the edge
+
+Badges are **outlined, not filled**: a 1px gradient rim carries the tier colour and the
+interior is the page surface.
+
+Each badge renders as **two nested elements** — the outer carries the shape plus the gradient
+edge, the inner carries the same shape inset by the edge width plus the surface colour. The
+nesting is required because `clip-path` clips borders, rings, outlines and shadows alike, so a
+clipped shape cannot carry a real border.
+
+**The inner layer paints the surface rather than being transparent.** It has to: the edge
+gradient sits directly behind it, so a transparent interior would show the gradient across the
+whole badge instead of only as a rim. The consequence is that the surface is _assumed_
+(`bg-gray-50 dark:bg-gray-800`) rather than inherited — see Limitations #10.
+
+The `*-inner` clip-path corners are **tuned, not copied**. Insetting the outer polygon by the
+edge width while keeping its corner value leaves the 45° diagonal a different weight from the
+straight edges; the compensating corner is `outer + d√2 − 2d`, which at 1px gives 8.4px
+against an outer 9px. **Retune these if the edge width changes.**
+
+**Both gradient stops sit on the same Tailwind step, varying only in hue.** Tailwind 4's
+scales are oklch-based, so a shared step means shared lightness — and that is the requirement,
+not a nicety. A light-to-dark ramp reads as a bevel: on a wide badge the top edge sits at the
+light end and the bottom at the dark end, where it recedes into the background, so the outline
+looks thicker on top even though the geometry is symmetric to the pixel. Measured as the ratio
+between each stop's contrast against the surface, the stops are within 0.89–1.09 of each other
+in both themes. Orange reads slightly darker than amber at the same step, so bronze's dark
+pair is deliberately offset by one to compensate. **Keep any replacement pair luminance-matched
+and re-measure.**
+
+**Bronze sits on the orange ramp and gold on the yellow one.** They were previously amber and
+yellow — about 15° of hue apart, which read as the same colour at badge size. Orange to yellow
+is roughly 30°. Silver is slate, diamond is a cyan→violet gradient.
+
+Measured text contrast against the surface: 8.6–11.1 in dark, 4.7–7.3 in light. All clear of
+WCAG AA, but the light-theme margin is thin — gold is 4.72 against a 4.5 floor, so darkening
+any ink further needs re-measuring.
+
+Badges **inherit their family's icon**: the silhouette says which family a badge belongs to,
+the material says how prestigious it is.
+
+| Icon              | Shared by                                 |
+| ----------------- | ----------------------------------------- |
+| `DangerManIcon`   | Danger Man → Sniper                       |
+| `EngineIcon`      | Engine → Powerhouse                       |
+| `TowerIcon`       | Sentinel → Guardian                       |
+| `UtilityHeroIcon` | Utility Hero → Maverick                   |
+| `CrownIcon`       | All-Rounder → Complete Player (both "3+") |
+| `TrophyIcon`      | True Baller → G.O.A.T. (both "all 4")     |
+
+The breadth/mastery pairing is by **requirement**, not by tier: All-Rounder and Complete
+Player are the same achievement at base and Elite level, as are True Baller and G.O.A.T.
+Their shared icon makes the Diamond version read as the Elite upgrade of the Gold one.
 
 ## Consumers
 
-- **`src/components/PlayerBadges.svelte`** — renders traits, then silver (2-trait) combos,
-  then gold (3+) combos, regardless of the push order above. A trait at tier 2 renders in gold
-  with its label prefixed `Elite ` (e.g. "Elite Attacker"); base traits stay bronze. A held
-  trait with no tier present falls back to base, so rankings files written before tiering
-  still render correctly. Reached from `PlayerHeader.svelte:73` (used by
-  `PlayerModal.svelte:112`) and `src/routes/rankings/[player]/+page.svelte:223`.
+- **`src/components/PlayerBadges.svelte`** — renders the lattice, grouped by category then
+  tier. It derives badges from `traits`/`traitTiers` via the shared module and **ignores the
+  persisted `playerProfile`**, deliberately: rankings files written before this change hold
+  badge names whose meaning has since moved (their `"G.O.A.T."` meant four _base_ traits, now
+  True Baller), so deriving from tiers renders every file under today's rules with no
+  migration. Reached from `PlayerHeader.svelte:73` (used by `PlayerModal.svelte:112`) and
+  `src/routes/rankings/[player]/+page.svelte:223`.
+
+    Each badge is a focusable `<span role="button">` wired to a Flowbite `Popover` by element
+    id, following the repo's `triggeredBy="#id"` convention. The popover names the badge, its
+    grade, and what it takes to earn it.
+
+    **The grade is `[Elite] <breadth noun>`** — "Trait", "Elite Archetype", "Versatility",
+    "Elite Mastery" — built by `gradeLabel()`, and it names the two badge axes directly:
+
+    - the **noun** is breadth, following the number of traits required (`BREADTH_NOUNS`, indexed
+      by `requiredTraitCount()`) and **not** `category`, for the same reason `shape` does: each
+      multi-trait family spans two categories, so All-Rounder (breadth) and Complete Player
+      (mastery) are both "any 3+" and both grade as Versatility;
+    - the **"Elite" marker** is excellence, set by `requiresEliteTraits()` — true for exactly
+      the ten badges whose requirement names the Elite level.
+
+    **The material is deliberately not named.** `tier` is a function of those same two facts
+    (Trait+base → bronze, Trait+Elite → gold, Versatility+Elite → diamond, …), so the colour was
+    redundant with the wording while colliding across families — gold is worn by Elite traits,
+    Elite archetypes and base Versatility alike, so "Gold" said three different things. The badge
+    still carries the material visually.
+
+    A catalogue test asserts shape and grade noun stay in step, and another asserts no grade ever
+    contains its own tier name.
+
+    **A trait badge's requirement is its own label**, so the popover explains the band and the
+    underlying stat instead — "Top 15% for saves per session". Those percentages are derived
+    from `BASE_PERCENTILE` / `ELITE_PERCENTILE`, which now live in `shared/badges.js` and are
+    imported by `rankings.js`, so the explanation cannot drift from the awarding rule. Combination
+    badges state their requirement directly, and count-based badges additionally list which
+    traits earned them — an archetype's requirement already names its two, but "any 3+" does not
+    say which three.
+
+    Popover trigger ids are namespaced with a per-instance uid, so two `PlayerBadges` on one page
+    do not collide.
+
+- **`src/lib/server/rankings.js`** — `calculatePlayerProfiles()` persists `playerProfile` as
+  the **full qualification set, as ids, without supersession**, minus trait badges (which
+  `traitTiers` already describes exactly).
+
 - **`src/lib/server/teamGenerator.js`** — `calculateTraitBalance()` (`teamGenerator.js:917`)
   spreads trait-holders across teams, weighted `W_TRAITS = 0.8` (`teamGenerator.js:829`).
   Provisional players are forced to zero traits for balancing (`teamGenerator.js:325`),
@@ -181,9 +406,8 @@ badges plus all six combos, since G.O.A.T. does not suppress the others.
     **The team generator is deliberately tier-blind.** It reads the `traits` booleans at
     `teamGenerator.js:936` and never touches `traitTiers`, so balancing sees only trait vs
     no-trait and an even spread of holders — an Elite Finisher and a base Finisher are the same
-    player to it. This keeps tiering a display concern. `test/lib/server/teamGenerator.test.js`
-    (`describe('tier blindness')`) locks it in: identical booleans with different tiers must
-    produce an identical `traitsNorm` and an identical composite score.
+    player to it. This keeps tiering a display concern, and is unaffected by the badge change.
+    `test/lib/server/teamGenerator.test.js` (`describe('tier blindness')`) locks it in.
 
 - The **Ballers Board does not render trait badges.** Its rows link to `/rankings/{player}`,
   where the badges appear.
@@ -194,8 +418,8 @@ badges plus all six combos, since G.O.A.T. does not suppress the others.
 | ---------------------------------- | ----- | ---------------------- |
 | `TRAIT_SEASON_GAMES_THRESHOLD`     | 35    | `rankings.js:1121`     |
 | `TRAIT_MIN_TRACKED_SESSIONS`       | 5     | `rankings.js:1123`     |
-| `BASE_PERCENTILE`                  | 0.5   | `rankings.js:1125`     |
-| `ELITE_PERCENTILE`                 | 0.85  | `rankings.js:1126`     |
+| `BASE_PERCENTILE`                  | 0.5   | `shared/badges.js`     |
+| `ELITE_PERCENTILE`                 | 0.85  | `shared/badges.js`     |
 | `MIN_GAMES_FOR_NORMALIZATION_POOL` | 35    | `rankings.js:1636`     |
 | `W_TRAITS`                         | 0.8   | `teamGenerator.js:829` |
 
@@ -215,8 +439,30 @@ season progresses.
 | Def actions  | 37       | 0.452    | 0.683     | 13   | 6     | 19    |
 | Save actions | 37       | 0.162    | 0.626     | 13   | 6     | 19    |
 
-Badges in issue: Danger Man 16, Engine 11, Complete Player 10, Sentinel 7, Utility Hero 7,
-G.O.A.T. 3.
+Badges **as displayed** under the current lattice (supersession applied), measured
+2026-08-24 against the same file:
+
+| Badge           | Held | Badge        | Held |
+| --------------- | ---- | ------------ | ---- |
+| Finisher        | 14   | Danger Man   | 11   |
+| Attacker        | 13   | Engine       | 8    |
+| Defender        | 13   | Sentinel     | 7    |
+| Shot Stopper    | 13   | Utility Hero | 6    |
+| Elite (each)    | 6    | Sniper       | 5    |
+|                 |      | Powerhouse   | 3    |
+| All-Rounder     | 10   | Guardian     | 0    |
+| True Baller     | 3    | Maverick     | 0    |
+| Complete Player | 2    | G.O.A.T.     | 0    |
+
+Nobody currently holds G.O.A.T., Guardian or Maverick. That is the lattice working as
+designed: the pinnacle now requires four Elite traits rather than four base ones, and the
+two keeper-side Elite archetypes need two simultaneous Elite tiers that no one has yet.
+Before the change the same file issued G.O.A.T. to 3 players and Complete Player to 10.
+
+The **qualification** counts persisted in `playerProfile` are higher, since they include
+superseded badges: Danger Man 16 (11 shown + 5 Snipers), Engine 11, All-Rounder 12 (10 shown
+
+- 2 Complete Players).
 
 ## Characteristics and limitations
 
@@ -229,32 +475,54 @@ Properties of the current rule, recorded neutrally.
 2. **Carry-forward keeps departed players in the pool.** A player who stopped attending months
    ago retains their last norms and continues to sit inside the eligible pool that sets the
    bands.
-3. **Breadth still outranks excellence at the top.** The combo lattice reads base-or-better, so
-   four median-level traits earn G.O.A.T. while a single perfect norm earns a tier-2 trait and
-   whatever pairs it happens to complete. The Elite tier makes excellence _visible_ without
-   making it _outrank_ breadth. The smallest available change would be to require at least one
-   Elite trait for `Complete Player` and `G.O.A.T.`
-4. **A four-trait player still renders ten badges** — four trait badges plus all six combos,
-   because G.O.A.T. does not suppress the others.
-5. **Save actions are a role stat.** Keeper duty rotates, so the per-session average measures
-   how often a player kept goal as much as how well.
+3. **Breadth and excellence are now separate routes.** Four median-level traits earn Gold via
+   True Baller; Elite specialisation earns Gold via Elite traits and Elite archetypes. Diamond
+   is reserved for their convergence — breadth _at_ Elite level. This resolves the earlier
+   imbalance where four median traits outranked a single perfect norm.
+4. **Badge count is still high for broad players** — ten is the ceiling, reached by four base
+   traits and by four Elite ones alike. Supersession collapses each shape family to its
+   highest tier but never merges families, which is what keeps the tap-to-highlight
+   interaction meaningful: the contributing badges have to be on screen to be lit. Bounded by
+   `test/lib/shared/badges.test.js`.
+5. **Save actions are a role stat, now measured per session in goal.** The denominator is
+   `sessionsInGoal`, not attendance, so playing outfield no longer dilutes a keeper's rate. Two
+   residual effects remain, both from the missing keeper field: a keeper who faced nothing is
+   dropped rather than counted, and rotation within a session credits every player who made a
+   save with a full session in goal. See "Saves divide by sessions in goal" above.
 6. **The Ballers Board ranks by season totals**, while traits use per-session averages — the
    board and the badges it links to are ordered by different quantities, so a high-attendance
    player near the top of the board may hold fewer badges than a low-attendance player far
    below them.
-7. **Two of the six two-trait pairs have no combo badge**, so some trait pairs display as two
-   trait badges and nothing else.
-8. **The 35-game bar reads season ELO games, while the team generator's identical bar reads
-   all-time `elo.gamesPlayed`.** This is deliberate — traits describe current-season form — but
-   it means a returning veteran can be non-provisional for the draw and hold no traits.
+7. **Two of the six two-trait pairs have no archetype**, so some trait pairs display as two
+   trait badges and nothing else. This is deliberate (see Catalogue above).
+8. **Percentile bands fix the holder count, not the standard.** With a fixed eligible pool
+   there are always exactly as many Elite players as the 85th percentile admits, so a player
+   can change tier — and therefore change badges — without playing, because the bar moved
+   under them. See `tasks/202608240958-traits-transparency-report.md`.
+9. **Badges assume the page surface behind them.** The outlined style needs an opaque inner
+   layer painted the same colour as whatever sits behind the badge. It is hardcoded to the page
+   background, so a badge rendered on a panel of a different colour shows a visible
+   badge-shaped patch — currently the case inside `PlayerModal`, whose header sits on a
+   translucent dialog surface. Fixing it properly means either exposing the surface as a custom
+   property the container sets, or rendering the rim as a stroked SVG so the interior can be
+   genuinely transparent.
+10. **The 35-game bar reads season ELO games, while the team generator's identical bar reads
+    all-time `elo.gamesPlayed`.** This is deliberate — traits describe current-season form — but
+    it means a returning veteran can be non-provisional for the draw and hold no traits.
 
 ## Files
 
-| File                                                                                                      | Role                                                     |
-| --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `src/lib/server/rankings.js`                                                                              | capture, averages, normalisation, trait/badge assignment |
-| `src/lib/server/teamGenerator.js`                                                                         | `calculateTraitBalance()`, `W_TRAITS`                    |
-| `src/components/PlayerBadges.svelte`                                                                      | badge rendering and tiering                              |
-| `src/components/Icons/{DangerMan,Engine,Tower,UtilityHero,Crown,Trophy,Bullseye,Shield,Glove}Icon.svelte` | badge icons                                              |
-| `test/lib/server/rankings.test.js:1990-2202`                                                              | `calculatePlayerProfiles` unit tests                     |
-| `test/lib/server/teamGenerator.test.js:599-745`                                                           | trait-balance tests                                      |
+| File                                           | Role                                                    |
+| ---------------------------------------------- | ------------------------------------------------------- |
+| `src/lib/shared/badges.js`                     | the lattice: catalogue, qualification, supersession     |
+| `src/lib/server/rankings.js`                   | capture, averages, normalisation, trait tiers, awarding |
+| `src/lib/server/teamGenerator.js`              | `calculateTraitBalance()`, `W_TRAITS` (tier-blind)      |
+| `src/components/PlayerBadges.svelte`           | badge rendering, visual grammar, tap-to-highlight       |
+| `src/app.css`                                  | `.badge-*` shape utilities, outer and inset variants    |
+| `src/components/Icons/*Icon.svelte`            | badge icons (each family shares one icon across tiers)  |
+| `test/lib/shared/badges.test.js`               | lattice, exhaustive over all 81 tier combinations       |
+| `test/lib/server/rankings.test.js`             | `calculatePlayerProfiles` unit tests                    |
+| `test/lib/server/rankings.shotStopper.test.js` | `sessionsInGoal` semantics through `updateRankings()`   |
+| `test/components/PlayerBadges.svelte.test.js`  | grammar and highlight-interaction tests                 |
+| `test/lib/server/teamGenerator.test.js`        | trait-balance and tier-blindness tests                  |
+| `scripts/traits-report.mjs`                    | offline transparency report; imports the shared lattice |
