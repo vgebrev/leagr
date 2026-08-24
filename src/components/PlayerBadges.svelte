@@ -140,7 +140,7 @@
 </script>
 
 {#if badges.length > 0}
-    <div class="mt-1 flex flex-wrap gap-0.5 sm:gap-1">
+    <div class="mt-1 flex flex-wrap justify-center gap-1 space-x-1 space-y-1">
         {#each badges as badge (badge.id)}
             {@const { Icon, iconProps } = ICONS[badge.id]}
             {@const shape = SHAPES[badge.shape]}
