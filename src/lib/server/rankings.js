@@ -1110,7 +1110,7 @@ export class RankingsManager {
      * existed would count toward "proving yourself" at it.
      *
      * Eligible players are then banded per stat against the live distribution:
-     * base at the 50th percentile (above the median), Elite at the 85th (top 15%).
+     * base at the 45th percentile, Elite at the 85th (top 15%).
      * Bands recompute on every recalculation, so they never go stale as the league grows.
      *
      * Called after calculateAttackControlRatings() so goalsNorm etc. are available.

@@ -161,7 +161,7 @@ describe('trait metadata', () => {
     // The UI explains trait badges in terms of these bands, so they have to be the same
     // numbers the server awards on.
     it('exposes the band positions the server uses', () => {
-        expect(BASE_PERCENTILE).toBe(0.5);
+        expect(BASE_PERCENTILE).toBe(0.45);
         expect(ELITE_PERCENTILE).toBe(0.85);
     });
 });

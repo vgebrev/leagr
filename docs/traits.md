@@ -150,16 +150,35 @@ Eligible players are banded per stat against the **live distribution** of that s
 nearest-rank percentiles over the eligible pool (`rankings.js:1153-1179`):
 
 ```
-baseBar  = 50th percentile of eligible norms      BASE_PERCENTILE  = 0.5
+baseBar  = 45th percentile of eligible norms      BASE_PERCENTILE  = 0.45
 eliteBar = 85th percentile of eligible norms      ELITE_PERCENTILE = 0.85
 tier     = norm >= eliteBar ? 2 : norm >= baseBar ? 1 : 0
 ```
 
-Base therefore means "above the median at this", and Elite means "top 15%". Because only
-eligible players set the bands, newcomers and barely-measured players cannot drag them around;
-and because the bands recompute on every recalculation, they cannot go stale as the league
-grows. Scarcity is now consistent across the four traits by construction, where the previous
+Base therefore means "top 55% at this", and Elite means "top 15%". Because only eligible
+players set the bands, newcomers and barely-measured players cannot drag them around; and
+because the bands recompute on every recalculation, they cannot go stale as the league grows.
+Scarcity is now consistent across the four traits by construction, where the previous
 mean-based bar left them ranging from 15 to 22 holders.
+
+### Why the base bar sits below the median
+
+It started on the median, which made a base badge a claim about being above average. Once
+Elite tiers landed that claim became redundant — Elite is where excellence is asserted, so
+base is free to mean "this is a real part of your game" instead.
+
+Measured on pirates 2026, the median bar left three of the 39 eligible players with no badge
+at all. Two of them (Pat, Maestro) sat just under it on a single stat; moving the bar to 0.45
+admits exactly those two and nobody else. **Loosening further buys no additional players**:
+at 0.4, 0.35 and 0.3 the badged population is still the same 38, and the only effect is more
+badges on players who already had some — total badges 118 → 136 → 153 → 171, with All-Rounder
+(gold) going from 21% to 36% to 44% of the eligible pool. The third badgeless player, Caesar,
+is unreachable at any bar: he sits at the bottom of the pool on all three outfield stats, and
+his one strong stat (saves) is held back by `sessionsInGoal: 4` against a gate of 5.
+
+0.45 is therefore the last setting where relaxing the bar still includes someone. Its wording
+matters too — the badge popover renders the constant directly, and "Top 55%" is about as far
+as a band label can go before it stops reading as an achievement.
 
 Each player receives both a boolean map and a tier map:
 
@@ -418,7 +437,7 @@ Their shared icon makes the Diamond version read as the Elite upgrade of the Gol
 | ---------------------------------- | ----- | ---------------------- |
 | `TRAIT_SEASON_GAMES_THRESHOLD`     | 35    | `rankings.js:1121`     |
 | `TRAIT_MIN_TRACKED_SESSIONS`       | 5     | `rankings.js:1123`     |
-| `BASE_PERCENTILE`                  | 0.5   | `shared/badges.js`     |
+| `BASE_PERCENTILE`                  | 0.45  | `shared/badges.js`     |
 | `ELITE_PERCENTILE`                 | 0.85  | `shared/badges.js`     |
 | `MIN_GAMES_FOR_NORMALIZATION_POOL` | 35    | `rankings.js:1636`     |
 | `W_TRAITS`                         | 0.8   | `teamGenerator.js:829` |
@@ -426,43 +445,49 @@ Their shared icon makes the Diamond version read as the Elite upgrade of the Gol
 None of these are operator-tunable — unlike momentum, traits have no `info.json → settings`
 block.
 
-## Observed behaviour (pirates, 2026 season, 32 sessions)
+## Observed behaviour (pirates, 2026 season, 33 sessions)
 
-Measured 2026-08-21 against `data/pirates/rankings-2026.json` (recalculated
-2026-08-15T10:07:38Z, 32 sessions); 72 players, 39 established. These figures move as the
-season progresses.
+Measured 2026-08-24 against `data/pirates/rankings-2026.json`, recalculated the same day at
+`BASE_PERCENTILE = 0.45`; 73 players, 39 established. These figures move as the season
+progresses.
 
 | Stat         | Eligible | Base bar | Elite bar | Base | Elite | Total |
 | ------------ | -------- | -------- | --------- | ---- | ----- | ----- |
-| Goals        | 39       | 0.216    | 0.619     | 14   | 6     | 20    |
-| Off actions  | 37       | 0.299    | 0.743     | 13   | 6     | 19    |
-| Def actions  | 37       | 0.452    | 0.683     | 13   | 6     | 19    |
-| Save actions | 37       | 0.162    | 0.626     | 13   | 6     | 19    |
+| Goals        | 39       | 0.181    | 0.609     | 17   | 6     | 23    |
+| Off actions  | 37       | 0.268    | 0.767     | 15   | 6     | 21    |
+| Def actions  | 37       | 0.416    | 0.658     | 15   | 6     | 21    |
+| Save actions | 24       | 0.294    | 0.580     | 10   | 4     | 14    |
 
-Badges **as displayed** under the current lattice (supersession applied), measured
-2026-08-24 against the same file:
+Saves have the smallest pool and the fewest holders because its denominator is
+`sessionsInGoal` — see [Saves divide by sessions in goal](#saves-divide-by-sessions-in-goal).
 
-| Badge           | Held | Badge        | Held |
-| --------------- | ---- | ------------ | ---- |
-| Finisher        | 14   | Danger Man   | 11   |
-| Attacker        | 13   | Engine       | 8    |
-| Defender        | 13   | Sentinel     | 7    |
-| Shot Stopper    | 13   | Utility Hero | 6    |
-| Elite (each)    | 6    | Sniper       | 5    |
-|                 |      | Powerhouse   | 3    |
-| All-Rounder     | 10   | Guardian     | 0    |
-| True Baller     | 3    | Maverick     | 0    |
-| Complete Player | 2    | G.O.A.T.     | 0    |
+Badges **as displayed** under the current lattice (supersession applied):
 
-Nobody currently holds G.O.A.T., Guardian or Maverick. That is the lattice working as
-designed: the pinnacle now requires four Elite traits rather than four base ones, and the
-two keeper-side Elite archetypes need two simultaneous Elite tiers that no one has yet.
-Before the change the same file issued G.O.A.T. to 3 players and Complete Player to 10.
+| Badge              | Held | Badge           | Held |
+| ------------------ | ---- | --------------- | ---- |
+| Finisher           | 17   | Danger Man      | 11   |
+| Attacker           | 15   | Engine          | 11   |
+| Defender           | 15   | Sentinel        | 5    |
+| Shot Stopper       | 10   | Utility Hero    | 5    |
+| Elite Finisher     | 6    | Sniper          | 5    |
+| Elite Attacker     | 6    | Powerhouse      | 3    |
+| Elite Defender     | 6    | Guardian        | 1    |
+| Elite Shot Stopper | 4    | Maverick        | 0    |
+| All-Rounder        | 12   | Complete Player | 2    |
+| True Baller        | 2    | G.O.A.T.        | 0    |
+
+Nobody currently holds G.O.A.T. or Maverick. That is the lattice working as designed: the
+pinnacle now requires four Elite traits rather than four base ones, and Maverick needs
+simultaneous Elite tiers on finishing and saves, which no one has. Before the lattice change
+the same file issued G.O.A.T. to 3 players and Complete Player to 10.
 
 The **qualification** counts persisted in `playerProfile` are higher, since they include
-superseded badges: Danger Man 16 (11 shown + 5 Snipers), Engine 11, All-Rounder 12 (10 shown
+superseded badges: Danger Man 16 (11 shown + 5 Snipers), Engine 14, Sentinel 6, All-Rounder
+14 (12 shown + 2 Complete Players).
 
-- 2 Complete Players).
+Total displayed badges across the league is 136, up from 118 at the previous
+`BASE_PERCENTILE = 0.5`. That move added base traits to 8 players and brought Pat and Maestro
+in from zero badges; see [Why the base bar sits below the median](#why-the-base-bar-sits-below-the-median).
 
 ## Characteristics and limitations
 
@@ -475,10 +500,12 @@ Properties of the current rule, recorded neutrally.
 2. **Carry-forward keeps departed players in the pool.** A player who stopped attending months
    ago retains their last norms and continues to sit inside the eligible pool that sets the
    bands.
-3. **Breadth and excellence are now separate routes.** Four median-level traits earn Gold via
+3. **Breadth and excellence are now separate routes.** Four base-level traits earn Gold via
    True Baller; Elite specialisation earns Gold via Elite traits and Elite archetypes. Diamond
    is reserved for their convergence — breadth _at_ Elite level. This resolves the earlier
-   imbalance where four median traits outranked a single perfect norm.
+   imbalance where four median traits outranked a single perfect norm. Note that the base bar
+   at 0.45 makes the breadth route slightly cheaper than it was, so Gold is now a little more
+   often earned by breadth than by excellence — 14 of 45 Gold badges on pirates 2026.
 4. **Badge count is still high for broad players** — ten is the ceiling, reached by four base
    traits and by four Elite ones alike. Supersession collapses each shape family to its
    highest tier but never merges families, which is what keeps the tap-to-highlight

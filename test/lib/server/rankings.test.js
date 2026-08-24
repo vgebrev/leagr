@@ -2019,8 +2019,10 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
         /**
          * Nine filler players forming a 0.0 … 0.8 ladder on every stat, plus one subject
          * in the tenth slot. With ten eligible players the nearest-rank bands land on
-         * sorted[4] (base, 50th percentile) and sorted[8] (Elite, 85th percentile) — so
-         * for a subject at 0.9 the bars are 0.4 and 0.8.
+         * sorted[4] (base, 45th percentile) and sorted[8] (Elite, 85th percentile) — so
+         * for a subject at 0.9 the bars are 0.4 and 0.8. A ten-player pool cannot tell
+         * a 0.45 base bar from a 0.5 one (both round to the same rank); the twenty-player
+         * case below exists to pin that difference.
          */
         function ladderWith(name, stats, extra = {}) {
             const players = {};
@@ -2034,7 +2036,7 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
 
         // -- bands ----------------------------------------------------------------
 
-        it('awards a base trait above the median and reports tier 1', () => {
+        it('awards a base trait above the base bar and reports tier 1', () => {
             // g pool sorted: 0,.1,.2,.3,.4,.5,.5,.6,.7,.8 → base 0.4, Elite 0.7
             const r = ladderWith('Alice', { g: 0.5 });
             rankingsManager.calculatePlayerProfiles(r);
@@ -2049,11 +2051,27 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             expect(r.players.Alice.traitTiers.isFinisher).toBe(2);
         });
 
-        it('awards nothing below the median', () => {
+        it('awards nothing below the base bar', () => {
             const r = ladderWith('Alice', { g: 0.0 });
             rankingsManager.calculatePlayerProfiles(r);
             expect(r.players.Alice.traits.isFinisher).toBe(false);
             expect(r.players.Alice.traitTiers.isFinisher).toBe(0);
+        });
+
+        // Pins BASE_PERCENTILE at 0.45 rather than 0.5 in awarding behaviour, not just as a
+        // constant. Twenty eligible players on a 0.00 … 0.95 ladder put the nearest-rank base
+        // bar on sorted[8] = 0.40 at 0.45, and on sorted[9] = 0.45 at 0.5 — so the player
+        // sitting on 0.40 is exactly the one the two settings disagree about.
+        it('places the base bar just below the median of the eligible pool', () => {
+            const players = {};
+            for (let i = 0; i < 20; i++) players[`P${i}`] = { g: i / 20 };
+            const r = buildWithNorms(players);
+            rankingsManager.calculatePlayerProfiles(r);
+
+            expect(r.players.P8.goalsNorm).toBe(0.4);
+            expect(r.players.P8.traitTiers.isFinisher).toBe(1);
+            // The rank below stays out, so the bar has moved one place and not collapsed.
+            expect(r.players.P7.traitTiers.isFinisher).toBe(0);
         });
 
         it('bands each stat independently', () => {

@@ -32,8 +32,15 @@ export const TRAIT_DEFS = [
  * Band positions within the eligible pool, per stat. These live here rather than in
  * rankings.js so the awarding rule and anything that explains it to a user cannot drift
  * apart — the badge popover derives its wording from these exact numbers.
+ *
+ * The base bar sits just below the median rather than on it. Once Elite tiers existed the
+ * base badge stopped having to carry any claim of excellence — it marks "this is a real
+ * part of your game", and Elite marks being good at it. Measured on pirates 2026, the
+ * median bar left two established players with nothing at all; 0.45 admits exactly those
+ * two, and going further (0.4 and below) adds no new badged players at all, only more
+ * badges for players who already had some. See docs/traits.md.
  */
-export const BASE_PERCENTILE = 0.5;
+export const BASE_PERCENTILE = 0.45;
 export const ELITE_PERCENTILE = 0.85;
 
 export const TRAIT_KEYS = TRAIT_DEFS.map((t) => t.key);

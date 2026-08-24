@@ -237,7 +237,7 @@ describe('PlayerBadges — requirement popover', () => {
         const { baseElement, container } = renderTiers([1, 0, 0, 0]);
         await openPopover(badge(container, 'Finisher'));
         const text = baseElement.textContent ?? '';
-        expect(text).toContain('Top 50%');
+        expect(text).toContain('Top 55%');
         expect(text).toContain('goals per session');
     });
 
