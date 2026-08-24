@@ -263,20 +263,47 @@ G.O.A.T. genuinely still qualifies for four Elite traits, four Gold archetypes, 
 True Baller and Complete Player, and those facts stay available for stats and future badge
 families.
 
-**Supersession runs within a shape family**, i.e. between badges that answer the same
-question at different levels — never across families:
+**Supersession is strict implication.** A badge is hidden when another badge the player holds
+guarantees it — that badge then carries no information, and the one that says more is shown:
 
 ```text
-Finisher     → Elite Finisher        (pill)
-Danger Man   → Sniper                (rounded)
-All-Rounder  → Complete Player       (notched, "any 3+")
-True Baller  → G.O.A.T.              (faceted, "all four")
+Finisher        → Elite Finisher                    (pill)
+Danger Man      → Sniper                            (rounded)
+All-Rounder     → Complete Player, True Baller      ("any 3+" is implied by both)
+True Baller     → G.O.A.T.
+Complete Player → G.O.A.T.
 ```
 
-So a Diamond badge hides its Gold equivalent, but the "3+" and "all four" badges never hide
-each other — they are different achievements and keep different silhouettes. Each of the four
-shape families contributes at most one badge, which puts the ceiling at **ten**: four traits,
-four archetypes, one "3+" and one "all four".
+The rule is **scoped to the trait, archetype and breadth/mastery families separately**.
+Implication across families is deliberate and must not collapse: Sniper implies Elite
+Finisher, and both are meant to show — the layering of traits under archetypes under breadth
+badges is the readable part of the lattice. Applying implication globally would reduce a
+four-trait player to a single badge.
+
+Within the breadth/mastery block the four badges form a 2×2 grid — `{3+, all four}` ×
+`{base, Elite}` — and the rule leaves exactly the informative ones:
+
+| Base traits | Elite traits | Qualifies for            | Displayed                         |
+| ----------- | ------------ | ------------------------ | --------------------------------- |
+| 3           | ≤2           | All-Rounder              | All-Rounder                       |
+| 4           | ≤2           | All-Rounder, True Baller | True Baller                       |
+| 3           | 3            | +Complete Player         | Complete Player                   |
+| **4**       | **3**        | +True Baller             | **True Baller + Complete Player** |
+| 4           | 4            | all four                 | G.O.A.T.                          |
+
+The bolded row is why this is an implication rule rather than a shape rule. Complete Player
+("Elite at three") and True Baller ("solid at all four") imply each other in **neither**
+direction, so both stay — they are genuinely different claims, and a player holding both has
+earned two distinct things. Every other row collapses to one badge.
+
+The ceiling is still **ten** badges (four traits + four archetypes + two from the block), but
+it is now reached only by that one shape of player, rather than by every four-trait player.
+
+Both directions are enforced by brute force over all 81 tier combinations in
+`test/lib/shared/badges.test.js`: every declared `supersedes` link must be a genuine
+implication, and no two displayed breadth/mastery badges may imply one another. An incomplete
+supersession relation is invisible until someone reaches the combination that exposes it —
+which is exactly how All-Rounder rendered beside True Baller for as long as it did.
 
 ### Two routes to Gold
 
@@ -285,7 +312,7 @@ Breadth and excellence are separate paths, and they converge at Diamond:
 ```text
 Elite Attacker   → Gold Pill               excellence, one dimension
 Powerhouse       → Gold Rounded Rectangle  excellence, one archetype
-True Baller      → Gold Notched            breadth, four dimensions
+True Baller      → Gold Faceted            breadth, four dimensions
 G.O.A.T.         → Diamond Faceted         breadth AT Elite level
 ```
 
@@ -473,7 +500,7 @@ Badges **as displayed** under the current lattice (supersession applied):
 | Elite Attacker     | 6    | Powerhouse      | 3    |
 | Elite Defender     | 6    | Guardian        | 1    |
 | Elite Shot Stopper | 4    | Maverick        | 0    |
-| All-Rounder        | 12   | Complete Player | 2    |
+| All-Rounder        | 10   | Complete Player | 2    |
 | True Baller        | 2    | G.O.A.T.        | 0    |
 
 Nobody currently holds G.O.A.T. or Maverick. That is the lattice working as designed: the
@@ -483,11 +510,13 @@ the same file issued G.O.A.T. to 3 players and Complete Player to 10.
 
 The **qualification** counts persisted in `playerProfile` are higher, since they include
 superseded badges: Danger Man 16 (11 shown + 5 Snipers), Engine 14, Sentinel 6, All-Rounder
-14 (12 shown + 2 Complete Players).
+14 (10 shown, 2 hidden under Complete Player and 2 under True Baller).
 
-Total displayed badges across the league is 136, up from 118 at the previous
-`BASE_PERCENTILE = 0.5`. That move added base traits to 8 players and brought Pat and Maestro
-in from zero badges; see [Why the base bar sits below the median](#why-the-base-bar-sits-below-the-median).
+Total displayed badges across the league is 134, and the most any one player shows is 9
+(Lunathi and Morena, both at four base traits). Two recent changes moved these figures: the
+base bar dropping to 0.45 added base traits to 8 players and brought Pat and Maestro in from
+zero (see [Why the base bar sits below the median](#why-the-base-bar-sits-below-the-median)),
+and True Baller superseding All-Rounder took one badge back off Lunathi and Morena.
 
 ## Characteristics and limitations
 

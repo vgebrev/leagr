@@ -37,6 +37,8 @@ const cls = (el) => el.getAttribute('class') ?? '';
 const innerCls = (el) => el.querySelector('span')?.getAttribute('class') ?? '';
 
 const FOUR_BASE = [1, 1, 1, 1];
+/** All four traits supersedes All-Rounder, so anything about it needs a three-trait player. */
+const THREE_BASE = [1, 1, 1, 0];
 
 /**
  * Open a badge's popover. Flowbite listens for the bubbling `focusin`, not `focus`, and
@@ -65,9 +67,15 @@ describe('PlayerBadges — rendering', () => {
             'Engine',
             'Sentinel',
             'Utility Hero',
-            'All-Rounder',
             'True Baller'
         ]);
+    });
+
+    // True Baller implies All-Rounder, so only the badge that says more is rendered. The
+    // qualification is still persisted; see badges.test.js.
+    it('supersedes All-Rounder with True Baller', () => {
+        expect(labels(renderTiers(THREE_BASE).container)).toContain('All-Rounder');
+        expect(labels(renderTiers(FOUR_BASE).container)).not.toContain('All-Rounder');
     });
 
     it('renders Elite trait labels and upgraded archetypes', () => {
@@ -105,12 +113,12 @@ describe('PlayerBadges — rendering', () => {
 describe('PlayerBadges — visual grammar', () => {
     // shape = category
     it.each([
-        ['Finisher', 'badge-pill'],
-        ['Danger Man', 'badge-rounded'],
-        ['All-Rounder', 'badge-notched'],
-        ['True Baller', 'badge-faceted']
-    ])('gives %s the %s silhouette', (label, shape) => {
-        const { container } = renderTiers(FOUR_BASE);
+        ['Finisher', 'badge-pill', FOUR_BASE],
+        ['Danger Man', 'badge-rounded', FOUR_BASE],
+        ['All-Rounder', 'badge-notched', THREE_BASE],
+        ['True Baller', 'badge-faceted', FOUR_BASE]
+    ])('gives %s the %s silhouette', (label, shape, tiers) => {
+        const { container } = renderTiers(tiers);
         expect(cls(badge(container, label))).toContain(shape);
     });
 
@@ -128,7 +136,9 @@ describe('PlayerBadges — visual grammar', () => {
     it('gives a badge and its Elite counterpart the same silhouette', () => {
         const base = renderTiers(FOUR_BASE).container;
         const elite = renderTiers([2, 2, 2, 2]).container;
-        expect(cls(badge(base, 'All-Rounder'))).toContain('badge-notched');
+        expect(cls(badge(renderTiers(THREE_BASE).container, 'All-Rounder'))).toContain(
+            'badge-notched'
+        );
         expect(cls(badge(elite, 'G.O.A.T.'))).toContain('badge-faceted');
         expect(cls(badge(base, 'True Baller'))).toContain('badge-faceted');
         expect(cls(badge(renderTiers([2, 2, 2, 0]).container, 'Complete Player'))).toContain(
@@ -178,7 +188,9 @@ describe('PlayerBadges — visual grammar', () => {
 
     it('insets the fill layer with the matching inner silhouette', () => {
         const { container } = renderTiers(FOUR_BASE);
-        expect(innerCls(badge(container, 'All-Rounder'))).toContain('badge-notched-inner');
+        expect(innerCls(badge(renderTiers(THREE_BASE).container, 'All-Rounder'))).toContain(
+            'badge-notched-inner'
+        );
         expect(innerCls(badge(container, 'True Baller'))).toContain('badge-faceted-inner');
         expect(innerCls(badge(container, 'Finisher'))).toContain('badge-pill-inner');
         expect(innerCls(badge(container, 'Engine'))).toContain('badge-rounded-inner');
@@ -186,11 +198,15 @@ describe('PlayerBadges — visual grammar', () => {
 
     // The two channels are independent: three Gold badges, three different silhouettes.
     it('keeps shape and material independent across Gold badges', () => {
-        const { container } = renderTiers([1, 2, 2, 1]);
-        expect(cls(badge(container, 'Elite Attacker'))).toContain('badge-pill');
-        expect(cls(badge(container, 'Powerhouse'))).toContain('badge-rounded');
-        expect(cls(badge(container, 'All-Rounder'))).toContain('badge-notched');
-        expect(cls(badge(container, 'True Baller'))).toContain('badge-faceted');
+        // Gold spans all four silhouettes. All-Rounder and True Baller can no longer appear
+        // on the same player, so the notched Gold comes from a three-trait player instead.
+        const three = renderTiers([1, 2, 2, 0]).container;
+        expect(cls(badge(three, 'Elite Attacker'))).toContain('badge-pill');
+        expect(cls(badge(three, 'Powerhouse'))).toContain('badge-rounded');
+        expect(cls(badge(three, 'All-Rounder'))).toContain('badge-notched');
+
+        const four = renderTiers([1, 2, 2, 1]).container;
+        expect(cls(badge(four, 'True Baller'))).toContain('badge-faceted');
     });
 
     // All-Rounder/Complete Player and True Baller/G.O.A.T. are the same achievement at
@@ -200,7 +216,7 @@ describe('PlayerBadges — visual grammar', () => {
         const elite = renderTiers([2, 2, 2, 2]);
         const svgOf = (c, label) => badge(c, label).querySelector('svg')?.innerHTML;
 
-        expect(svgOf(base.container, 'All-Rounder')).toBe(
+        expect(svgOf(renderTiers(THREE_BASE).container, 'All-Rounder')).toBe(
             svgOf(renderTiers([2, 2, 2, 0]).container, 'Complete Player')
         );
         expect(svgOf(base.container, 'True Baller')).toBe(svgOf(elite.container, 'G.O.A.T.'));
@@ -259,11 +275,11 @@ describe('PlayerBadges — requirement popover', () => {
     });
 
     it('lists the traits a count-based badge was earned with', async () => {
-        const { baseElement, container } = renderTiers(FOUR_BASE);
+        const { baseElement, container } = renderTiers(THREE_BASE);
         await openPopover(badge(container, 'All-Rounder'));
         const text = baseElement.textContent ?? '';
         expect(text).toContain('Requires Any 3+ traits');
-        expect(text).toContain('Finisher, Attacker, Defender, Shot Stopper');
+        expect(text).toContain('Finisher, Attacker, Defender');
     });
 
     it('grades a base badge by its trait count alone', async () => {

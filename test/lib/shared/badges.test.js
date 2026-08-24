@@ -131,7 +131,8 @@ describe('badge catalogue', () => {
 
     it('names a real badge in every supersedes link', () => {
         for (const badge of BADGE_DEFS) {
-            if (badge.supersedes) expect(BADGES_BY_ID[badge.supersedes]).toBeDefined();
+            for (const id of badge.supersedes ? [badge.supersedes].flat() : [])
+                expect(BADGES_BY_ID[id]).toBeDefined();
         }
     });
 
@@ -297,16 +298,13 @@ describe('breadth and mastery', () => {
         expect(displayIds(tiers([1, 1, 0, 0]))).not.toContain('all-rounder');
     });
 
-    // Deliberately NOT superseded: both breadth badges show, so the step from "strong in
-    // three areas" to "strong in all four" stays visible on the profile.
-    it('shows All-Rounder alongside True Baller at four traits', () => {
+    // All four traits guarantees three, so All-Rounder carries no information next to
+    // True Baller and is hidden. Qualification survives in qualifiedBadges regardless.
+    it('supersedes All-Rounder with True Baller at four traits', () => {
         const shown = displayIds(tiers([1, 1, 1, 1]));
-        expect(shown).toContain('all-rounder');
         expect(shown).toContain('true-baller');
-    });
-
-    it('gives True Baller no supersedes link', () => {
-        expect(BADGES_BY_ID['true-baller'].supersedes).toBeUndefined();
+        expect(shown).not.toContain('all-rounder');
+        expect(idsOf(qualifiedBadges(tiers([1, 1, 1, 1])))).toContain('all-rounder');
     });
 
     it('reaches breadth Gold without any Elite trait', () => {
@@ -321,10 +319,18 @@ describe('breadth and mastery', () => {
         expect(displayIds(tiers([0, 2, 2, 2]))).toContain('complete-player');
     });
 
-    // Supersession follows the SHAPE family — the requirement — not the category. The
-    // "3+" family is All-Rounder → Complete Player; the "all four" family is True Baller →
-    // G.O.A.T. So a Diamond badge hides its Gold equivalent, but the 3+ and all-4 badges
-    // never hide each other.
+    // The pairing that must survive: Complete Player (3+ Elite) and True Baller (all four
+    // base) imply each other in neither direction — being Elite at three does not give you
+    // a fourth base trait, and being base-good at four does not make you Elite at three.
+    // This is the case that makes supersession an implication rule rather than a shape rule.
+    it('keeps Complete Player and True Baller side by side', () => {
+        const shown = displayIds(tiers([2, 2, 2, 1]));
+        expect(shown).toContain('complete-player');
+        expect(shown).toContain('true-baller');
+        expect(shown).not.toContain('all-rounder');
+        expect(shown).not.toContain('goat');
+    });
+
     it('supersedes All-Rounder with Complete Player at three Elite traits', () => {
         const shown = displayIds(tiers([2, 2, 2, 0]));
         expect(shown).toContain('complete-player');
@@ -332,10 +338,11 @@ describe('breadth and mastery', () => {
         expect(idsOf(qualifiedBadges(tiers([2, 2, 2, 0])))).toContain('all-rounder');
     });
 
-    it('supersedes True Baller with G.O.A.T. at four Elite traits', () => {
+    it('supersedes True Baller and Complete Player with G.O.A.T.', () => {
         const shown = displayIds(tiers([2, 2, 2, 2]));
         expect(shown).toContain('goat');
         expect(shown).not.toContain('true-baller');
+        expect(shown).not.toContain('complete-player');
         expect(shown).not.toContain('all-rounder');
     });
 
@@ -348,16 +355,56 @@ describe('breadth and mastery', () => {
         }
     });
 
+    // --- the invariant behind every supersedes link ---------------------------------
+    //
+    // "X implies Y" means every tier map that qualifies for X also qualifies for Y, so Y
+    // adds no information wherever X is held. Derived by brute force over all 81 maps
+    // rather than declared, so it cannot fall out of step with the catalogue.
+    const QUALIFIED_SETS = ALL_COMBINATIONS.map((t) => new Set(idsOf(qualifiedBadges(t))));
+    const implies = (x, y) => x !== y && QUALIFIED_SETS.every((q) => !q.has(x) || q.has(y));
+
+    it('declares only genuine implications in supersedes links', () => {
+        for (const badge of BADGE_DEFS) {
+            for (const target of badge.supersedes ? [badge.supersedes].flat() : []) {
+                expect(
+                    implies(badge.id, target),
+                    `${badge.id} supersedes ${target} but does not imply it`
+                ).toBe(true);
+            }
+        }
+    });
+
+    // The complement, and the reason this pair of tests exists: an incomplete supersedes
+    // relation is invisible until someone reaches the combination that exposes it — which
+    // is how All-Rounder rendered next to True Baller, and Complete Player next to
+    // G.O.A.T., for as long as it did. Scoped to breadth/mastery because implication ACROSS
+    // families is deliberate: Sniper implies Elite Finisher and both are meant to show.
+    it('shows no breadth or mastery badge implied by another shown badge', () => {
+        for (const t of ALL_COMBINATIONS) {
+            const shown = displayBadges(t).filter(
+                (b) => b.category === 'breadth' || b.category === 'mastery'
+            );
+            for (const a of shown) {
+                for (const b of shown) {
+                    expect(
+                        implies(a.id, b.id),
+                        `${a.id} and ${b.id} both shown, but the first implies the second`
+                    ).toBe(false);
+                }
+            }
+        }
+    });
+
     // The whole point of the change: breadth alone no longer reaches the pinnacle.
     it('does not award G.O.A.T. for four base traits', () => {
         expect(displayIds(tiers([1, 1, 1, 1]))).not.toContain('goat');
         expect(displayIds(tiers([2, 2, 2, 1]))).not.toContain('goat');
     });
 
-    it('keeps the 3+ and all-four badges side by side', () => {
-        const shown = displayIds(tiers([2, 2, 2, 2]));
-        expect(shown).toContain('complete-player');
-        expect(shown).toContain('goat');
+    it('shows one breadth-or-mastery badge at four Elite traits', () => {
+        const shown = displayBadges(tiers([2, 2, 2, 2]));
+        const block = shown.filter((b) => b.category === 'breadth' || b.category === 'mastery');
+        expect(idsOf(block)).toEqual(['goat']);
     });
 });
 
@@ -373,7 +420,6 @@ describe('displayBadges', () => {
             'powerhouse',
             'guardian',
             'maverick',
-            'complete-player',
             'goat'
         ]);
     });
@@ -385,20 +431,32 @@ describe('displayBadges', () => {
         expect(shown).toContain('attacker');
     });
 
-    // Each of the four shape families contributes at most one badge, so the ceiling is
-    // four traits + four archetypes + one "3+" + one "all four" = ten.
+    // Four trait pills + four archetypes + the breadth/mastery block. The block contributes
+    // one badge everywhere except at (all four base, three Elite), where True Baller and
+    // Complete Player imply each other in neither direction — so ten is still the ceiling,
+    // but it is now reached by exactly that one shape of player instead of by every
+    // four-trait player.
     it('never shows more than ten badges', () => {
         for (const t of ALL_COMBINATIONS) {
             expect(displayBadges(t).length).toBeLessThanOrEqual(10);
         }
     });
 
-    it('shows ten badges for four base traits', () => {
-        expect(displayBadges(tiers([1, 1, 1, 1]))).toHaveLength(10);
+    it('reaches ten badges only at four base traits with three Elite', () => {
+        const ten = ALL_COMBINATIONS.filter((t) => displayBadges(t).length === 10);
+        expect(ten.length).toBeGreaterThan(0);
+        for (const t of ten) {
+            expect(TRAIT_KEYS.filter((k) => t[k] >= TIER_BASE)).toHaveLength(4);
+            expect(TRAIT_KEYS.filter((k) => t[k] === TIER_ELITE)).toHaveLength(3);
+        }
     });
 
-    it('shows ten badges for four Elite traits', () => {
-        expect(displayBadges(tiers([2, 2, 2, 2]))).toHaveLength(10);
+    it('shows nine badges for four base traits', () => {
+        expect(displayBadges(tiers([1, 1, 1, 1]))).toHaveLength(9);
+    });
+
+    it('shows nine badges for four Elite traits', () => {
+        expect(displayBadges(tiers([2, 2, 2, 2]))).toHaveLength(9);
     });
 
     it('shows nothing for a player with no traits', () => {

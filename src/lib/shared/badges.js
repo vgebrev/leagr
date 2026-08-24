@@ -74,7 +74,8 @@ export const BREADTH_NOUNS = ['Trait', 'Archetype', 'Versatility', 'Mastery'];
  * @property {'bronze'|'silver'|'gold'|'diamond'} tier           Drives material.
  * @property {Record<string, 'base'|'elite'>} [requires]         Named trait requirements.
  * @property {{ level: 'base'|'elite', min: number }} [requiresCount] Count-based requirement.
- * @property {string} [supersedes] Badge this one replaces for presentation only.
+ * @property {string|string[]} [supersedes] Badge(s) this one replaces for presentation only.
+ *   Every link is a strict implication: holding this badge guarantees the ones it names.
  */
 
 /**
@@ -240,16 +241,19 @@ export const BADGE_DEFS = [
         tier: 'gold',
         requiresCount: { level: 'base', min: 3 }
     },
-    // True Baller deliberately does NOT supersede All-Rounder: they are different
-    // requirements ("3+" vs "all four"), so both show. Supersession runs within a shape
-    // family instead — see Complete Player and G.O.A.T. below.
+    // Supersession here is strict implication, not shape family: having all four traits
+    // guarantees having three, so All-Rounder adds no information next to True Baller and
+    // is hidden. What is NOT hidden is the pairing across excellence levels — Complete
+    // Player (3+ Elite) and True Baller (all four base) imply each other in neither
+    // direction, so a player holding both keeps both. See "Supersession" in docs/traits.md.
     {
         id: 'true-baller',
         label: 'True Baller',
         category: 'breadth',
         shape: 'faceted',
         tier: 'gold',
-        requiresCount: { level: 'base', min: 4 }
+        requiresCount: { level: 'base', min: 4 },
+        supersedes: 'all-rounder'
     },
 
     // --- Mastery: faceted -----------------------------------------------------------
@@ -269,7 +273,9 @@ export const BADGE_DEFS = [
         shape: 'faceted',
         tier: 'diamond',
         requiresCount: { level: 'elite', min: 4 },
-        supersedes: 'true-baller'
+        // Four Elite traits imply three, so Complete Player goes the same way All-Rounder
+        // does under True Baller. G.O.A.T. is the only badge that hides two.
+        supersedes: ['true-baller', 'complete-player']
     }
 ];
 
@@ -372,7 +378,9 @@ const displayRank = (badge) =>
  */
 export function displayBadges(tiers) {
     const qualified = qualifiedBadges(tiers);
-    const superseded = new Set(qualified.map((b) => b.supersedes).filter(Boolean));
+    const superseded = new Set(
+        qualified.flatMap((b) => (b.supersedes ? [b.supersedes].flat() : []))
+    );
     return qualified
         .filter((badge) => !superseded.has(badge.id))
         .map((badge) => ({ ...badge, contributingTraits: contributingTraits(badge, tiers) }))
