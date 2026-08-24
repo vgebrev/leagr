@@ -62,10 +62,10 @@ team, while all existing hard constraints (pairing limit, hard ELO delta cap) st
 
 - `test/manual/analyze-teammate-history.js` — rewritten: per-session hard-constraint
   pressure (rebuilds history with `beforeDate` as the generator saw it) + HTML report
-  (`teammate-pairing-report.html`).
+  (`../reports/teammate-pairing-report.html`).
 - `test/manual/analyze-pairing-bias.js` — ELO/pot bias detection: actual pairings vs
   fully-random and pot-respecting null models, rank-gap fingerprint, HTML report
-  (`pairing-bias-report.html`).
+  (`../reports/pairing-bias-report.html`).
 
 ## Refinement (2026-07-03)
 

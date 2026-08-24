@@ -171,7 +171,7 @@ Suite: **1158 backend + 212 frontend, all passing** (from 937 + 186). `npm run l
   attended rather than sessions in goal (see `202608240958`). Worth revisiting if that report's
   Option D is ever adopted.
 - **`scripts/` is gitignored**, so the generator change is untracked by repo convention.
-- `goals-for-against-2026.html` was already failing `npm run lint` before this work and still
+- `../reports/goals-for-against-2026.html` was already failing `npm run lint` before this work and still
   is — untouched.
 
 ## Revisions after first implementation

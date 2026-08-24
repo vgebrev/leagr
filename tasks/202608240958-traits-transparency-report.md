@@ -101,7 +101,7 @@ hold them. That is why the report compares options by who moves, not by counts.
 - **`scripts/traits-report.mjs`** (new) — rebuilds the rule, self-verifies, simulates the options
   and counterfactuals, writes the HTML. Read-only.
 - **`scripts/traits-report-template.mjs`** (new) — renders the model as a self-contained page.
-- **`traits-full-report.html`** (new, untracked) — the generated report.
+- **`../reports/traits-full-report.html`** (new, untracked) — the generated report.
 - `scripts/show-player-stats.mjs` — **left alone**. It is stale: `pull`, `THRESHOLD_BUMP` and
   `STATIC_THRESHOLD` no longer exist in `rankings.js` after `ae2803e`.
 
@@ -127,7 +127,7 @@ Published as an Artifact: <https://claude.ai/code/artifact/cb3b4bb5-dfe9-4e11-8e
   untracked by convention, as `show-player-stats.mjs` already was. `.prettierignore` exempts the
   same directory, so the generators are not prettier-checked either. The
   generated HTML **is**, so the output is run through `npx prettier --write` after generation to
-  match the other report files in the repo root. Note `goals-for-against-2026.html` was already
+  match the other report files in the repo root. Note `../reports/goals-for-against-2026.html` was already
   failing `npm run lint` before this work and still is — untouched.
 - "Sessions in goal" is inferred from "recorded ≥1 save action" because the data has no keeper
   field. A keeper who conceded nothing and saved nothing is invisible. Option A inherits this.

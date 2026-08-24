@@ -40,7 +40,7 @@ observed behaviour, not just a reading of the source.
 
 Evidence from `data/pirates/rankings-2026.json` (recalculated 2026-08-15T10:07:38Z; 32 sessions,
 72 players, 39 established; thresholds `g 0.278 / o 0.362 / d 0.446 / s 0.280`). Full detail and
-per-player tables in `traits-audit-report.html`.
+per-player tables in `../reports/traits-audit-report.html`.
 
 1. **The confidence cliff is arbitrary and sits inside the small-sample zone.** Confidence is
    `min(1, seasonEloGames/35)²`, so it is steepest exactly where most fringe players sit.
@@ -103,7 +103,7 @@ per-player tables in `traits-audit-report.html`.
   normalisation, the confidence pull, the dynamic threshold, the badge lattice, consumers, a
   constants table with source lines, and the characteristics above stated neutrally.
 - **`tasks/202608211227-traits-badges-documentation.md`** (new) — this audit.
-- **`traits-audit-report.html`** (new, repo root) — the data report: live thresholds,
+- **`../reports/traits-audit-report.html`** (new, repo root) — the data report: live thresholds,
   reachability floors, norm distributions, a sortable 72-player table, flagged anomalies, and
   a comparison of the current rule against three candidate replacements.
 - **`test/lib/server/rankings.test.js`** — comment-only fix. Four comments claimed

@@ -77,7 +77,7 @@ not skew the group average. The bar was never the problem; where it was measured
   pass `traitTiers` through.
 - **`docs/traits.md`** — Eligibility and Bands-and-tiers sections replace Confidence-pull and
   Threshold; constants table, observed figures and limitations updated.
-- **`traits-audit-report.html`** — regenerated with a before/after section.
+- **`../reports/traits-audit-report.html`** — regenerated with a before/after section.
 
 ## Results (pirates 2026, 32 sessions, 72 players)
 
