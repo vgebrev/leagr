@@ -380,21 +380,37 @@ Measured text contrast against the surface: 8.6–11.1 in dark, 4.7–7.3 in lig
 WCAG AA, but the light-theme margin is thin — gold is 4.72 against a 4.5 floor, so darkening
 any ink further needs re-measuring.
 
-Badges **inherit their family's icon**: the silhouette says which family a badge belongs to,
-the material says how prestigious it is.
+**Icon = badge identity, and identity is shared exactly where the _name_ is shared.**
 
 | Icon              | Shared by                                 |
 | ----------------- | ----------------------------------------- |
-| `DangerManIcon`   | Danger Man → Sniper                       |
+| `LeagueIcon`      | Finisher → Elite Finisher                 |
+| `BullseyeIcon`    | Attacker → Elite Attacker                 |
+| `ShieldIcon`      | Defender → Elite Defender                 |
+| `GloveIcon`       | Shot Stopper → Elite Shot Stopper         |
 | `EngineIcon`      | Engine → Powerhouse                       |
 | `TowerIcon`       | Sentinel → Guardian                       |
 | `UtilityHeroIcon` | Utility Hero → Maverick                   |
 | `CrownIcon`       | All-Rounder → Complete Player (both "3+") |
 | `TrophyIcon`      | True Baller → G.O.A.T. (both "all 4")     |
+| `DangerManIcon`   | Danger Man only                           |
+| `CrosshairIcon`   | Sniper only                               |
 
-The breadth/mastery pairing is by **requirement**, not by tier: All-Rounder and Complete
-Player are the same achievement at base and Elite level, as are True Baller and G.O.A.T.
-Their shared icon makes the Diamond version read as the Elite upgrade of the Gold one.
+A trait pill is "Finisher" and "Elite Finisher" — one identity at two levels — so the shared
+glyph makes the Gold version read as the upgrade of the Bronze one. Same for the
+breadth/mastery pairs, which pair by **requirement** rather than by tier.
+
+Archetype upgrades are different: they are named as separate identities (Danger Man → Sniper,
+not "Elite Danger Man"), and [supersession](#supersession-is-presentation-only) means a player
+never displays both members of a pair at once. A shared glyph there buys a side-by-side
+reading the UI never renders, while spending a channel that helps scan a row of nine badges.
+Sniper is the first archetype to take its own icon; Powerhouse, Guardian and Maverick still
+inherit, so the archetype block is mid-migration.
+
+> **Watch the Attacker collision.** Sniper requires Elite Attacker, so the crosshair and the
+> `BullseyeIcon` dart-and-target are always co-present and always both Gold. They are the two
+> most similar glyphs in the set at 16px. If a third target-like icon is ever added, this is
+> the constraint to check first.
 
 ## Consumers
 
@@ -568,17 +584,17 @@ Properties of the current rule, recorded neutrally.
 
 ## Files
 
-| File                                           | Role                                                    |
-| ---------------------------------------------- | ------------------------------------------------------- |
-| `src/lib/shared/badges.js`                     | the lattice: catalogue, qualification, supersession     |
-| `src/lib/server/rankings.js`                   | capture, averages, normalisation, trait tiers, awarding |
-| `src/lib/server/teamGenerator.js`              | `calculateTraitBalance()`, `W_TRAITS` (tier-blind)      |
-| `src/components/PlayerBadges.svelte`           | badge rendering, visual grammar, tap-to-highlight       |
-| `src/app.css`                                  | `.badge-*` shape utilities, outer and inset variants    |
-| `src/components/Icons/*Icon.svelte`            | badge icons (each family shares one icon across tiers)  |
-| `test/lib/shared/badges.test.js`               | lattice, exhaustive over all 81 tier combinations       |
-| `test/lib/server/rankings.test.js`             | `calculatePlayerProfiles` unit tests                    |
-| `test/lib/server/rankings.shotStopper.test.js` | `sessionsInGoal` semantics through `updateRankings()`   |
-| `test/components/PlayerBadges.svelte.test.js`  | grammar and highlight-interaction tests                 |
-| `test/lib/server/teamGenerator.test.js`        | trait-balance and tier-blindness tests                  |
-| `scripts/traits-report.mjs`                    | offline transparency report; imports the shared lattice |
+| File                                           | Role                                                       |
+| ---------------------------------------------- | ---------------------------------------------------------- |
+| `src/lib/shared/badges.js`                     | the lattice: catalogue, qualification, supersession        |
+| `src/lib/server/rankings.js`                   | capture, averages, normalisation, trait tiers, awarding    |
+| `src/lib/server/teamGenerator.js`              | `calculateTraitBalance()`, `W_TRAITS` (tier-blind)         |
+| `src/components/PlayerBadges.svelte`           | badge rendering, visual grammar, tap-to-highlight          |
+| `src/app.css`                                  | `.badge-*` shape utilities, outer and inset variants       |
+| `src/components/Icons/*Icon.svelte`            | badge icons (shared across tiers where the name is shared) |
+| `test/lib/shared/badges.test.js`               | lattice, exhaustive over all 81 tier combinations          |
+| `test/lib/server/rankings.test.js`             | `calculatePlayerProfiles` unit tests                       |
+| `test/lib/server/rankings.shotStopper.test.js` | `sessionsInGoal` semantics through `updateRankings()`      |
+| `test/components/PlayerBadges.svelte.test.js`  | grammar and highlight-interaction tests                    |
+| `test/lib/server/teamGenerator.test.js`        | trait-balance and tier-blindness tests                     |
+| `scripts/traits-report.mjs`                    | offline transparency report; imports the shared lattice    |

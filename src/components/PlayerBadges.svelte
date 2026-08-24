@@ -4,6 +4,7 @@
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
     import DangerManIcon from '$components/Icons/DangerManIcon.svelte';
+    import CrosshairIcon from '$components/Icons/CrosshairIcon.svelte';
     import EngineIcon from '$components/Icons/EngineIcon.svelte';
     import TowerIcon from '$components/Icons/TowerIcon.svelte';
     import UtilityHeroIcon from '$components/Icons/UtilityHeroIcon.svelte';
@@ -32,10 +33,13 @@
     // today's rules instead of under its own stale vocabulary.
     let badges = $derived(displayBadges(normaliseTraitTiers(traits, traitTiers)));
 
-    // Badges inherit their family's icon: Elite archetypes take their base archetype's,
-    // and the Breadth badges take their Mastery counterparts' (All-Rounder/Complete Player
-    // are both "3+", True Baller/G.O.A.T. are both "all 4"). The silhouette says which
-    // family a badge belongs to, the material says how prestigious it is.
+    // Icon = badge identity, which is shared only where the NAME is shared. Trait pills are
+    // "Finisher"/"Elite Finisher" — one identity at two levels — so they share a glyph, as do
+    // the Breadth/Mastery pairs that answer the same question ("3+" and "all 4"). Archetype
+    // upgrades are named as separate identities (Danger Man → Sniper), and supersession means
+    // a player never displays both, so a shared glyph buys a side-by-side reading the UI
+    // never renders while costing a channel that helps scan a row. Sniper is the first to
+    // take its own; the other three still inherit.
     /** @type {Record<string, { Icon: import('svelte').Component<any>, iconProps: object }>} */
     const ICONS = {
         finisher: { Icon: LeagueIcon, iconProps: { icon: 'soccer' } },
@@ -47,7 +51,7 @@
         'shot-stopper': { Icon: GloveIcon, iconProps: {} },
         'elite-shot-stopper': { Icon: GloveIcon, iconProps: {} },
         'danger-man': { Icon: DangerManIcon, iconProps: {} },
-        sniper: { Icon: DangerManIcon, iconProps: {} },
+        sniper: { Icon: CrosshairIcon, iconProps: {} },
         engine: { Icon: EngineIcon, iconProps: {} },
         powerhouse: { Icon: EngineIcon, iconProps: {} },
         sentinel: { Icon: TowerIcon, iconProps: {} },

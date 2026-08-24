@@ -209,6 +209,24 @@ describe('PlayerBadges — visual grammar', () => {
         expect(cls(badge(four, 'True Baller'))).toContain('badge-faceted');
     });
 
+    // A shared icon means a shared identity, which follows the LABEL: "Finisher" and "Elite
+    // Finisher" are one badge at two levels, so they share a glyph.
+    it('shares an icon between a trait and its Elite counterpart', () => {
+        const svgOf = (c, label) => badge(c, label).querySelector('svg')?.innerHTML;
+        expect(svgOf(renderTiers([1, 0, 0, 0]).container, 'Finisher')).toBe(
+            svgOf(renderTiers([2, 0, 0, 0]).container, 'Elite Finisher')
+        );
+    });
+
+    // Archetype upgrades are named as separate identities and never render together, so they
+    // are free to take separate glyphs. Sniper is the first; see docs/traits.md.
+    it('gives Sniper its own icon rather than inheriting Danger Man', () => {
+        const svgOf = (c, label) => badge(c, label).querySelector('svg')?.innerHTML;
+        expect(svgOf(renderTiers([1, 1, 0, 0]).container, 'Danger Man')).not.toBe(
+            svgOf(renderTiers([2, 2, 0, 0]).container, 'Sniper')
+        );
+    });
+
     // All-Rounder/Complete Player and True Baller/G.O.A.T. are the same achievement at
     // two levels, so they share both an icon and a silhouette, differing only in material.
     it('shares an icon between a breadth badge and its mastery counterpart', () => {
