@@ -5,7 +5,13 @@ import { getLeagueDataPath } from './league.js';
 import { createStandingsManager } from './standings.js';
 import { createDisciplineManager } from './discipline.js';
 import * as fuzzball from 'fuzzball';
-import { qualifiedBadges, BASE_PERCENTILE, ELITE_PERCENTILE } from '../shared/badges.js';
+import {
+    qualifiedBadges,
+    BASE_PERCENTILE,
+    ELITE_PERCENTILE,
+    TRAIT_SEASON_GAMES_THRESHOLD,
+    TRAIT_MIN_TRACKED_SESSIONS
+} from '../shared/badges.js';
 
 /** @typedef {import('../shared/types.js').Match} Match */
 /** @typedef {import('../shared/types.js').Round} Round */
@@ -1118,13 +1124,8 @@ export class RankingsManager {
      * @param {Object} enhancedRankings - Rankings with normalised individual stats
      */
     calculatePlayerProfiles(enhancedRankings) {
-        // Season ELO games needed before any trait can be awarded. Uses the current-season
-        // count so returning players don't carry over previous years' confidence.
-        const TRAIT_SEASON_GAMES_THRESHOLD = 35;
-        // Sessions of the stat itself needed before it can award a trait. For saves that
-        // reads as five sessions in goal, since sessionsInGoal counts only those.
-        const TRAIT_MIN_TRACKED_SESSIONS = 5;
-        // Band positions come from shared/badges.js — see the note there.
+        // Eligibility gates and band positions both come from shared/badges.js, so the
+        // rule that awards a trait and the page that explains it read the same numbers.
 
         /**
          * Stat key → the fields it reads and the trait it awards.

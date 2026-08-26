@@ -43,6 +43,22 @@ export const TRAIT_DEFS = [
 export const BASE_PERCENTILE = 0.45;
 export const ELITE_PERCENTILE = 0.85;
 
+/**
+ * Eligibility gates a player must clear before any trait can be awarded, shared with
+ * `rankings.js` for the same reason the band positions are: the help page states these
+ * numbers to a reader, and a restated constant is a constant that drifts.
+ *
+ * The first is the league-wide "established" bar — the same 35 games the team generator
+ * uses for provisional ratings, about five sessions. It reads the current season's count,
+ * so a returning player does not import last year's standing.
+ *
+ * The second requires five sessions of the stat itself (for Shot Stopper, five sessions in
+ * goal), so that attendance from before a league started recording a stat cannot count
+ * toward proving yourself at it. See docs/traits.md.
+ */
+export const TRAIT_SEASON_GAMES_THRESHOLD = 35;
+export const TRAIT_MIN_TRACKED_SESSIONS = 5;
+
 export const TRAIT_KEYS = TRAIT_DEFS.map((t) => t.key);
 
 /** Render order: simple silhouettes first, most distinctive last. */
@@ -456,4 +472,37 @@ export function gradeLabel(badge) {
     const noun = BREADTH_NOUNS[requiredTraitCount(badge) - 1];
     if (!noun) return '';
     return requiresEliteTraits(badge) ? `Rare ${noun}` : noun;
+}
+
+/**
+ * The fraction of the eligible pool a band admits, as a percentage — 0.45 reads "Top 55%".
+ *
+ * @param {number} fraction
+ * @returns {number}
+ */
+export const bandPercent = (fraction) => Math.round((1 - fraction) * 100);
+
+/**
+ * What a badge asks for, in a player's words rather than the lattice's.
+ *
+ * A trait badge's `requirementLabel` is just its own name, so restating it says nothing;
+ * the band and the stat behind it are the actual answer, and the percentages come from the
+ * same constants the server bands on. Everything else names its component traits.
+ *
+ * Lives here rather than in the component so the badge popover and the badges help page
+ * cannot describe the same badge differently.
+ *
+ * @param {BadgeDef} badge
+ * @returns {string}
+ */
+export function explainBadge(badge) {
+    if (badge.category === 'trait') {
+        const key = Object.keys(badge.requires ?? {})[0];
+        const stat = TRAIT_DEFS.find((t) => t.key === key)?.stat ?? '';
+        const band = requiresEliteTraits(badge)
+            ? `Top ${bandPercent(ELITE_PERCENTILE)}%`
+            : `Top ${bandPercent(BASE_PERCENTILE)}%`;
+        return `${band} for ${stat}`;
+    }
+    return `Requires ${requirementLabel(badge)}`;
 }
