@@ -52,6 +52,10 @@ equivalent for every badge in the catalogue, but it asks the question it actuall
 Asked and answered at plan time: route only. Nothing links to `/help/badges` — no nav item, no
 link from the badge popovers. It sits under the standard league auth like every other page.
 
+> **Superseded 2026-08-27.** A `/help` index and a nav entry were added the next day; see
+> `202608271005-help-index-and-archetype-icons-implementation.md`. The badge popovers still do
+> not link out.
+
 ## Files modified
 
 | File                                     | Change                                                                                             |
@@ -61,7 +65,7 @@ link from the badge popovers. It sits under the standard league auth like every 
 | `src/lib/shared/badges.js`               | Added the two eligibility constants, `bandPercent()` and `explainBadge()`.                         |
 | `src/lib/server/rankings.js`             | Imports the eligibility constants instead of declaring them.                                       |
 | `src/routes/help/badges/+page.svelte`    | **New.** The page.                                                                                 |
-| `test/routes/help/badges.svelte.test.js` | **New.** 8 tests.                                                                                  |
+| `test/routes/help/badges.svelte.test.js` | **New.** 10 tests.                                                                                 |
 
 ## Page structure
 

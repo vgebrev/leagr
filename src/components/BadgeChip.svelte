@@ -8,6 +8,9 @@
     import EngineIcon from '$components/Icons/EngineIcon.svelte';
     import TowerIcon from '$components/Icons/TowerIcon.svelte';
     import UtilityHeroIcon from '$components/Icons/UtilityHeroIcon.svelte';
+    import DumbbellIcon from '$components/Icons/DumbbellIcon.svelte';
+    import SpartanHelmetIcon from '$components/Icons/SpartanHelmetIcon.svelte';
+    import CowboyHatIcon from '$components/Icons/CowboyHatIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
 
@@ -33,8 +36,8 @@
     // the Breadth/Mastery pairs that answer the same question ("3+" and "all 4"). Archetype
     // upgrades are named as separate identities (Danger Man → Sniper), and supersession means
     // a player never displays both, so a shared glyph buys a side-by-side reading the UI
-    // never renders while costing a channel that helps scan a row. Sniper is the first to
-    // take its own; the other three still inherit.
+    // never renders while costing a channel that helps scan a row. All four archetype
+    // upgrades now carry their own glyph; the base four still name the pair.
     /** @type {Record<string, { Icon: import('svelte').Component<any>, iconProps: object }>} */
     const ICONS = {
         finisher: { Icon: LeagueIcon, iconProps: { icon: 'soccer' } },
@@ -48,11 +51,11 @@
         'danger-man': { Icon: DangerManIcon, iconProps: {} },
         sniper: { Icon: CrosshairIcon, iconProps: {} },
         engine: { Icon: EngineIcon, iconProps: {} },
-        powerhouse: { Icon: EngineIcon, iconProps: {} },
+        powerhouse: { Icon: DumbbellIcon, iconProps: {} },
         sentinel: { Icon: TowerIcon, iconProps: {} },
-        guardian: { Icon: TowerIcon, iconProps: {} },
+        guardian: { Icon: SpartanHelmetIcon, iconProps: {} },
         'utility-hero': { Icon: UtilityHeroIcon, iconProps: {} },
-        maverick: { Icon: UtilityHeroIcon, iconProps: {} },
+        maverick: { Icon: CowboyHatIcon, iconProps: {} },
         'all-rounder': { Icon: CrownIcon, iconProps: {} },
         'true-baller': { Icon: TrophyIcon, iconProps: {} },
         'complete-player': { Icon: CrownIcon, iconProps: {} },

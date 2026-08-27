@@ -4,6 +4,7 @@
         DotsVerticalOutline,
         MoonOutline,
         NewspaperOutline,
+        QuestionCircleOutline,
         ShareNodesSolid,
         SunOutline
     } from 'flowbite-svelte-icons';
@@ -113,6 +114,16 @@
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <AdjustmentsHorizontalSolid class="me-2 h-4 w-4" />Settings
+            </span>
+        </DropdownItem>
+        <!-- No date: help explains the rules, which do not vary by session. It sits inside
+             the league block anyway, since the pages it links to are behind league auth. -->
+        <DropdownItem
+            class={itemClass}
+            href={resolve('/help')}
+            onclick={() => (isOpen = false)}>
+            <span class="flex items-center">
+                <QuestionCircleOutline class="me-2 h-4 w-4" />Help
             </span>
         </DropdownItem>
     {/if}

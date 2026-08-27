@@ -219,12 +219,35 @@ describe('PlayerBadges — visual grammar', () => {
     });
 
     // Archetype upgrades are named as separate identities and never render together, so they
-    // are free to take separate glyphs. Sniper is the first; see docs/traits.md.
-    it('gives Sniper its own icon rather than inheriting Danger Man', () => {
+    // take separate glyphs rather than inheriting the base badge's; see docs/traits.md.
+    it.each([
+        ['Danger Man', [1, 1, 0, 0], 'Sniper', [2, 2, 0, 0]],
+        ['Engine', [0, 1, 1, 0], 'Powerhouse', [0, 2, 2, 0]],
+        ['Sentinel', [0, 0, 1, 1], 'Guardian', [0, 0, 2, 2]],
+        ['Utility Hero', [1, 0, 0, 1], 'Maverick', [2, 0, 0, 2]]
+    ])('gives %s its own icon rather than inheriting %s', (base, baseTiers, elite, eliteTiers) => {
         const svgOf = (c, label) => badge(c, label).querySelector('svg')?.innerHTML;
-        expect(svgOf(renderTiers([1, 1, 0, 0]).container, 'Danger Man')).not.toBe(
-            svgOf(renderTiers([2, 2, 0, 0]).container, 'Sniper')
+        expect(svgOf(renderTiers(baseTiers).container, base)).not.toBe(
+            svgOf(renderTiers(eliteTiers).container, elite)
         );
+    });
+
+    // Distinct from its own base badge is not enough: four archetype glyphs that collide with
+    // each other would be no more scannable than four inherited ones.
+    it('gives every archetype a glyph no other archetype uses', () => {
+        const svgOf = (c, label) => badge(c, label).querySelector('svg')?.innerHTML;
+        const glyphs = [
+            ['Danger Man', [1, 1, 0, 0]],
+            ['Sniper', [2, 2, 0, 0]],
+            ['Engine', [0, 1, 1, 0]],
+            ['Powerhouse', [0, 2, 2, 0]],
+            ['Sentinel', [0, 0, 1, 1]],
+            ['Guardian', [0, 0, 2, 2]],
+            ['Utility Hero', [1, 0, 0, 1]],
+            ['Maverick', [2, 0, 0, 2]]
+        ].map(([label, tuple]) => svgOf(renderTiers(tuple).container, label));
+
+        expect(new Set(glyphs).size).toBe(glyphs.length);
     });
 
     // All-Rounder/Complete Player and True Baller/G.O.A.T. are the same achievement at

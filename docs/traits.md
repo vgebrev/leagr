@@ -382,19 +382,22 @@ any ink further needs re-measuring.
 
 **Icon = badge identity, and identity is shared exactly where the _name_ is shared.**
 
-| Icon              | Shared by                                 |
-| ----------------- | ----------------------------------------- |
-| `LeagueIcon`      | Finisher → Elite Finisher                 |
-| `BullseyeIcon`    | Attacker → Elite Attacker                 |
-| `ShieldIcon`      | Defender → Elite Defender                 |
-| `GloveIcon`       | Shot Stopper → Elite Shot Stopper         |
-| `EngineIcon`      | Engine → Powerhouse                       |
-| `TowerIcon`       | Sentinel → Guardian                       |
-| `UtilityHeroIcon` | Utility Hero → Maverick                   |
-| `CrownIcon`       | All-Rounder → Complete Player (both "3+") |
-| `TrophyIcon`      | True Baller → G.O.A.T. (both "all 4")     |
-| `DangerManIcon`   | Danger Man only                           |
-| `CrosshairIcon`   | Sniper only                               |
+| Icon                | Shared by                                 |
+| ------------------- | ----------------------------------------- |
+| `LeagueIcon`        | Finisher → Elite Finisher                 |
+| `BullseyeIcon`      | Attacker → Elite Attacker                 |
+| `ShieldIcon`        | Defender → Elite Defender                 |
+| `GloveIcon`         | Shot Stopper → Elite Shot Stopper         |
+| `CrownIcon`         | All-Rounder → Complete Player (both "3+") |
+| `TrophyIcon`        | True Baller → G.O.A.T. (both "all 4")     |
+| `DangerManIcon`     | Danger Man only                           |
+| `CrosshairIcon`     | Sniper only                               |
+| `EngineIcon`        | Engine only                               |
+| `DumbbellIcon`      | Powerhouse only                           |
+| `TowerIcon`         | Sentinel only                             |
+| `SpartanHelmetIcon` | Guardian only                             |
+| `UtilityHeroIcon`   | Utility Hero only                         |
+| `CowboyHatIcon`     | Maverick only                             |
 
 A trait pill is "Finisher" and "Elite Finisher" — one identity at two levels — so the shared
 glyph makes the Gold version read as the upgrade of the Bronze one. Same for the
@@ -404,8 +407,8 @@ Archetype upgrades are different: they are named as separate identities (Danger 
 not "Elite Danger Man"), and [supersession](#supersession-is-presentation-only) means a player
 never displays both members of a pair at once. A shared glyph there buys a side-by-side
 reading the UI never renders, while spending a channel that helps scan a row of nine badges.
-Sniper is the first archetype to take its own icon; Powerhouse, Guardian and Maverick still
-inherit, so the archetype block is mid-migration.
+Sniper went first; Powerhouse, Guardian and Maverick followed, so all eight archetypes now
+carry their own glyph and the migration is complete.
 
 > **Watch the Attacker collision.** Sniper requires Elite Attacker, so the crosshair and the
 > `BullseyeIcon` dart-and-target are always co-present and always both Gold. They are the two
