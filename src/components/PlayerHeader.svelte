@@ -44,58 +44,65 @@
     );
 </script>
 
-<div class="mb-2 flex w-full items-start justify-between gap-3">
-    <div class="flex min-w-0 flex-1 items-center gap-3">
-        <Avatar
-            {avatarUrl}
-            {hasPendingAvatar}
-            size="lg" />
-        <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-2">
-                <h1 class="text-2xl font-bold">{playerName}</h1>
-                {#if asOfDate}
-                    <span class="text-sm text-gray-400">(as at {asOfDate})</span>
+<!-- The badges get their own full-width row under the header rather than the column beside
+     the avatar. That column is narrow, so a growing lattice wrapped into a tall stack while
+     the space under the avatar sat empty; a wide, short row uses the same footprint. -->
+<div class="mb-2 w-full">
+    <div class="flex w-full items-start justify-between gap-3">
+        <div class="flex min-w-0 flex-1 items-center gap-3">
+            <Avatar
+                {avatarUrl}
+                {hasPendingAvatar}
+                size="lg" />
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-2">
+                    <h1 class="text-2xl font-bold">{playerName}</h1>
+                    {#if asOfDate}
+                        <span class="text-sm text-gray-400">(as at {asOfDate})</span>
+                    {/if}
+                </div>
+                {#if playerData && (playerData.attackingRating !== null || playerData.controlRating !== null)}
+                    <div class="mt-1">
+                        <PlayerRatings
+                            attackingRating={playerData.attackingRating}
+                            controlRating={playerData.controlRating}
+                            goalsNorm={playerData.goalsNorm ?? null}
+                            offActionsNorm={playerData.offActionsNorm ?? null}
+                            teamGFNorm={playerData.teamGFNorm ?? null}
+                            saveActionsNorm={playerData.saveActionsNorm ?? null}
+                            defActionsNorm={playerData.defActionsNorm ?? null}
+                            teamGANorm={playerData.teamGANorm ?? null}
+                            gamma={0.45}
+                            tooltipIdPrefix={`player-header-${playerName ?? 'unknown'}`} />
+                    </div>
+                {:else}
+                    <h6 class="text-gray-400">Player Profile</h6>
                 {/if}
             </div>
-            {#if playerData && (playerData.attackingRating !== null || playerData.controlRating !== null)}
-                <div class="mt-1">
-                    <PlayerRatings
-                        attackingRating={playerData.attackingRating}
-                        controlRating={playerData.controlRating}
-                        goalsNorm={playerData.goalsNorm ?? null}
-                        offActionsNorm={playerData.offActionsNorm ?? null}
-                        teamGFNorm={playerData.teamGFNorm ?? null}
-                        saveActionsNorm={playerData.saveActionsNorm ?? null}
-                        defActionsNorm={playerData.defActionsNorm ?? null}
-                        teamGANorm={playerData.teamGANorm ?? null}
-                        gamma={0.45}
-                        tooltipIdPrefix={`player-header-${playerName ?? 'unknown'}`} />
-                    <PlayerBadges
-                        traits={playerData.traits}
-                        playerProfile={playerData.playerProfile} />
-                </div>
-            {:else}
-                <h6 class="text-gray-400">Player Profile</h6>
-            {/if}
         </div>
-    </div>
-    <!-- Player Status Badge -->
-    {#if showStatus}
-        {#if status === 'inactive'}
-            <Badge
-                border
-                class="flex items-center">
-                <ExclamationCircleOutline class="me-2 h-4 w-4" />
-                Inactive Player
-            </Badge>
-        {:else if status === 'provisional'}
-            <Badge
-                border
-                color="gray"
-                class="flex items-center">
-                <HourglassOutline class="me-2 h-4 w-4" />
-                Provisional Player
-            </Badge>
+        <!-- Player Status Badge -->
+        {#if showStatus}
+            {#if status === 'inactive'}
+                <Badge
+                    border
+                    class="flex items-center">
+                    <ExclamationCircleOutline class="me-2 h-4 w-4" />
+                    Inactive Player
+                </Badge>
+            {:else if status === 'provisional'}
+                <Badge
+                    border
+                    color="gray"
+                    class="flex items-center">
+                    <HourglassOutline class="me-2 h-4 w-4" />
+                    Provisional Player
+                </Badge>
+            {/if}
         {/if}
+    </div>
+    {#if playerData}
+        <PlayerBadges
+            traits={playerData.traits}
+            traitTiers={playerData.traitTiers} />
     {/if}
 </div>

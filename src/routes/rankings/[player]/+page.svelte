@@ -195,88 +195,95 @@
 </script>
 
 <div class="container mx-auto">
-    <!-- Header -->
-    <div class="relative mb-2 flex items-start justify-between">
-        <div class="ms-2 flex min-w-0 flex-1 items-center gap-4">
-            {#if playerData}
-                <AvatarUploadButton
-                    {avatarUrl}
-                    {hasPendingAvatar}
-                    size="lg"
-                    onUpload={handleAvatarUpload} />
-            {/if}
-            <div class="min-w-0 flex-1">
-                <h1 class="text-2xl font-bold">{player || 'Loading...'}</h1>
-                {#if playerData && (playerData.attackingRating !== null || playerData.controlRating !== null)}
-                    <div class="mt-1">
-                        <PlayerRatings
-                            attackingRating={playerData.attackingRating}
-                            controlRating={playerData.controlRating}
-                            goalsNorm={playerData.goalsNorm ?? null}
-                            offActionsNorm={playerData.offActionsNorm ?? null}
-                            teamGFNorm={playerData.teamGFNorm ?? null}
-                            saveActionsNorm={playerData.saveActionsNorm ?? null}
-                            defActionsNorm={playerData.defActionsNorm ?? null}
-                            teamGANorm={playerData.teamGANorm ?? null}
-                            gamma={0.45}
-                            tooltipIdPrefix={`player-profile-${player ?? 'unknown'}`} />
-                        <PlayerBadges
-                            traits={playerData.traits}
-                            playerProfile={playerData.playerProfile} />
-                    </div>
+    <!-- Header. The badges sit in their own full-width row beneath it rather than in the
+         column beside the avatar, which is too narrow for a growing lattice — see
+         PlayerHeader.svelte, which does the same. The year selector still positions against
+         the header row, so `relative` stays there and not on the wrapper. -->
+    <div class="mb-2">
+        <div class="relative flex items-start justify-between">
+            <div class="ms-2 flex min-w-0 flex-1 items-center gap-4">
+                {#if playerData}
+                    <AvatarUploadButton
+                        {avatarUrl}
+                        {hasPendingAvatar}
+                        size="lg"
+                        onUpload={handleAvatarUpload} />
                 {/if}
+                <div class="min-w-0 flex-1">
+                    <h1 class="text-2xl font-bold">{player || 'Loading...'}</h1>
+                    {#if playerData && (playerData.attackingRating !== null || playerData.controlRating !== null)}
+                        <div class="mt-1">
+                            <PlayerRatings
+                                attackingRating={playerData.attackingRating}
+                                controlRating={playerData.controlRating}
+                                goalsNorm={playerData.goalsNorm ?? null}
+                                offActionsNorm={playerData.offActionsNorm ?? null}
+                                teamGFNorm={playerData.teamGFNorm ?? null}
+                                saveActionsNorm={playerData.saveActionsNorm ?? null}
+                                defActionsNorm={playerData.defActionsNorm ?? null}
+                                teamGANorm={playerData.teamGANorm ?? null}
+                                gamma={0.45}
+                                tooltipIdPrefix={`player-profile-${player ?? 'unknown'}`} />
+                        </div>
+                    {/if}
+                </div>
+            </div>
+            <div class="flex flex-col items-center gap-2">
+                <!-- Year Selector -->
+                <div
+                    class="absolute top-0 right-0 flex items-center gap-1 rounded bg-inherit px-2 py-1">
+                    <span class="text-xs">Year</span>
+                    <Button
+                        color="light"
+                        size="xs"
+                        class="flex items-center gap-1">
+                        {selectedYear}
+                        <ChevronDownOutline class="h-4 w-4" />
+                    </Button>
+                    <Dropdown
+                        simple
+                        class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
+                        bind:isOpen={yearDropdownOpen}>
+                        {#each yearOptions as option, i (i)}
+                            <DropdownItem
+                                onclick={() => handleYearChange(option.value)}
+                                class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
+                                    selectedYear === option.value
+                                        ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
+                                        : ''
+                                }`}>
+                                {option.name}
+                            </DropdownItem>
+                        {/each}
+                    </Dropdown>
+                </div>
+                <!-- Player Status Badge -->
+                <!--{#if playerData}-->
+                <!--    {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}-->
+                <!--    {#if status === 'inactive'}-->
+                <!--        <Badge-->
+                <!--            border-->
+                <!--            class="flex items-center">-->
+                <!--            <ExclamationCircleOutline class="me-2 h-4 w-4" />-->
+                <!--            Inactive Player-->
+                <!--        </Badge>-->
+                <!--    {:else if status === 'provisional'}-->
+                <!--        <Badge-->
+                <!--            border-->
+                <!--            color="gray"-->
+                <!--            class="flex items-center">-->
+                <!--            <HourglassOutline class="me-2 h-4 w-4" />-->
+                <!--            Provisional Player-->
+                <!--        </Badge>-->
+                <!--    {/if}-->
+                <!--{/if}-->
             </div>
         </div>
-        <div class="flex flex-col items-center gap-2">
-            <!-- Year Selector -->
-            <div
-                class="absolute top-0 right-0 flex items-center gap-1 rounded bg-inherit px-2 py-1">
-                <span class="text-xs">Year</span>
-                <Button
-                    color="light"
-                    size="xs"
-                    class="flex items-center gap-1">
-                    {selectedYear}
-                    <ChevronDownOutline class="h-4 w-4" />
-                </Button>
-                <Dropdown
-                    simple
-                    class="w-20 border border-gray-200 dark:border-gray-700 dark:bg-gray-800"
-                    bind:isOpen={yearDropdownOpen}>
-                    {#each yearOptions as option, i (i)}
-                        <DropdownItem
-                            onclick={() => handleYearChange(option.value)}
-                            class={`w-full py-1 text-sm dark:bg-gray-800 dark:hover:bg-gray-700 ${
-                                selectedYear === option.value
-                                    ? 'text-primary-600 w-full bg-gray-100 dark:bg-gray-700'
-                                    : ''
-                            }`}>
-                            {option.name}
-                        </DropdownItem>
-                    {/each}
-                </Dropdown>
-            </div>
-            <!-- Player Status Badge -->
-            <!--{#if playerData}-->
-            <!--    {@const status = getPlayerStatus(playerData.lastAppearance, playerData.appearances)}-->
-            <!--    {#if status === 'inactive'}-->
-            <!--        <Badge-->
-            <!--            border-->
-            <!--            class="flex items-center">-->
-            <!--            <ExclamationCircleOutline class="me-2 h-4 w-4" />-->
-            <!--            Inactive Player-->
-            <!--        </Badge>-->
-            <!--    {:else if status === 'provisional'}-->
-            <!--        <Badge-->
-            <!--            border-->
-            <!--            color="gray"-->
-            <!--            class="flex items-center">-->
-            <!--            <HourglassOutline class="me-2 h-4 w-4" />-->
-            <!--            Provisional Player-->
-            <!--        </Badge>-->
-            <!--    {/if}-->
-            <!--{/if}-->
-        </div>
+        {#if playerData}
+            <PlayerBadges
+                traits={playerData.traits}
+                traitTiers={playerData.traitTiers} />
+        {/if}
     </div>
 
     {#if playerData}

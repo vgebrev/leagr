@@ -100,6 +100,38 @@ describe('TeammateHistoryTracker overdue pairs', () => {
             expect(cleared.find((p) => p.player1 === 'A' && p.player2 === 'B')).toBeUndefined();
         });
 
+        it('tracks the uncapped drought alongside the capped qualification evidence', () => {
+            // 20 never-paired co-attendances, evidence capped at 15. The capped track
+            // saturates; the drought track keeps counting so the reunion norm can tell
+            // this pair apart from one that only just crossed alpha.
+            const sessions = Array.from({ length: 20 }, () => session(['A', 'X'], ['B', 'Y']));
+            const pair = tracker
+                .computeOverduePairs(sessions, { alpha: 0.05, coAttendanceLimit: 15 })
+                .find((p) => p.player1 === 'A' && p.player2 === 'B');
+            expect(pair.coAttendance).toBe(15);
+            expect(pair.droughtCoAttendance).toBe(20);
+            expect(pair.probNone).toBeCloseTo((2 / 3) ** 15, 10);
+            expect(pair.droughtProbNone).toBeCloseTo((2 / 3) ** 20, 10);
+            expect(pair.droughtProbNone).toBeLessThan(pair.probNone);
+        });
+
+        it('closes the drought at a pairing beyond the cap without clearing the debt', () => {
+            // Newest first: 10 starved co-attendances, then a pairing outside the
+            // 5-co-attendance window. The pair must stay flagged (the old pairing does not
+            // clear the debt) while the drought correctly stops at that pairing.
+            const sessions = [
+                ...Array.from({ length: 10 }, () => session(['A', 'X'], ['B', 'Y'])),
+                session(['A', 'B'], ['X', 'Y']),
+                ...Array.from({ length: 5 }, () => session(['A', 'X'], ['B', 'Y']))
+            ];
+            const pair = tracker
+                .computeOverduePairs(sessions, { alpha: 0.2, coAttendanceLimit: 5 })
+                .find((p) => p.player1 === 'A' && p.player2 === 'B');
+            expect(pair).toBeDefined();
+            expect(pair.coAttendance).toBe(5);
+            expect(pair.droughtCoAttendance).toBe(10);
+        });
+
         it('sorts results by probNone ascending (most starved first)', () => {
             // A&B starved for 14 sessions; C&D only appear (and are starved) in the last 12.
             // 4-team sessions have null P = 1/7, so C&D: (6/7)^12 ≈ 0.157 and

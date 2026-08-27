@@ -54,6 +54,7 @@ describe('NavMenu', () => {
         expect(screen.getByText('Share link')).toBeInTheDocument();
         expect(screen.getByText('News')).toBeInTheDocument();
         expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(screen.getByText('Help')).toBeInTheDocument();
         expect(screen.getByText('Dark mode')).toBeInTheDocument();
     });
 
@@ -68,6 +69,14 @@ describe('NavMenu', () => {
         );
     });
 
+    // Help explains rules that do not vary by session, so it deliberately carries no date.
+    it('links Help to the help index without a date', async () => {
+        render(NavMenu, { date, leagueInfo });
+        await openMenu();
+
+        expect(screen.getByText('Help').closest('a')).toHaveAttribute('href', '/help');
+    });
+
     it('offers only the theme item without a league (root domain)', async () => {
         render(NavMenu, { date, leagueInfo: null });
         await fireEvent.mouseDown(screen.getByRole('button', { name: 'Menu' }));
@@ -76,6 +85,7 @@ describe('NavMenu', () => {
         expect(screen.queryByText('Share link')).not.toBeInTheDocument();
         expect(screen.queryByText('News')).not.toBeInTheDocument();
         expect(screen.queryByText('Settings')).not.toBeInTheDocument();
+        expect(screen.queryByText('Help')).not.toBeInTheDocument();
     });
 
     it('toggles the theme and closes the menu', async () => {

@@ -171,12 +171,20 @@ export class TeammateHistoryTracker {
      * capped at coAttendanceLimit), so sessions a player misses neither add nor
      * erode the pair's debt.
      *
+     * Alongside that capped qualification track, each pair also carries an uncapped
+     * "drought" track (`droughtCoAttendance` / `droughtProbNone`) measuring how long
+     * they have actually gone without pairing, bounded only by the session lookback.
+     * Because the cap floors `probNone` at roughly alpha, every qualifying pair looks
+     * equally starved; the drought track is what lets the reunion norm tell a 25
+     * co-attendance drought apart from one that just crossed the threshold.
+     *
      * @param {Array<Array<Array<string>>>} sessions - Per-session list of teams
      *   (arrays of player names), ordered newest first
      * @param {{ alpha?: number, coAttendanceLimit?: number | null }} options -
      *   Significance threshold (default: 0.05) and per-pair cap on co-attendances
      *   considered (default: null = unlimited)
-     * @returns {Array<{player1: string, player2: string, coAttendance: number, probNone: number}>}
+     * @returns {Array<{player1: string, player2: string, coAttendance: number, probNone: number,
+     *   droughtCoAttendance: number, droughtProbNone: number}>}
      *   Overdue pairs sorted most-starved first
      */
     computeOverduePairs(sessions, { alpha = 0.05, coAttendanceLimit = null } = {}) {
@@ -214,18 +222,38 @@ export class TeammateHistoryTracker {
                     const entry = pairStats.get(key) || {
                         coAttendance: 0,
                         probNone: 1,
-                        paired: false
+                        paired: false,
+                        droughtCoAttendance: 0,
+                        droughtProbNone: 1,
+                        droughtClosed: false
                     };
-                    // Only the pair's own most recent co-attendances count as evidence
-                    if (
-                        entry.paired ||
-                        (coAttendanceLimit != null && entry.coAttendance >= coAttendanceLimit)
-                    ) {
-                        continue;
+                    const together = sameTeamKeys.has(key);
+
+                    // Drought track: uncapped, bounded only by the session lookback, so a
+                    // pair 25 co-attendances into a drought stays distinguishable from one
+                    // that merely just cleared alpha. Feeds the reunion norm's per-pair
+                    // weighting; it never decides whether the pair qualifies.
+                    if (!entry.droughtClosed) {
+                        if (together) {
+                            entry.droughtClosed = true;
+                        } else {
+                            entry.droughtCoAttendance++;
+                            entry.droughtProbNone *= 1 - sameTeamProbability;
+                        }
                     }
-                    entry.coAttendance++;
-                    entry.probNone *= 1 - sameTeamProbability;
-                    if (sameTeamKeys.has(key)) entry.paired = true;
+
+                    // Qualification track: only the pair's own most recent co-attendances
+                    // count as evidence. A pairing beyond coAttendanceLimit closes the
+                    // drought above but must NOT clear the debt here, or chronically
+                    // starved pairs silently drop out of the overdue set.
+                    if (
+                        !entry.paired &&
+                        !(coAttendanceLimit != null && entry.coAttendance >= coAttendanceLimit)
+                    ) {
+                        entry.coAttendance++;
+                        entry.probNone *= 1 - sameTeamProbability;
+                        if (together) entry.paired = true;
+                    }
                     pairStats.set(key, entry);
                 }
             }
@@ -239,7 +267,9 @@ export class TeammateHistoryTracker {
                 player1,
                 player2,
                 coAttendance: entry.coAttendance,
-                probNone: entry.probNone
+                probNone: entry.probNone,
+                droughtCoAttendance: entry.droughtCoAttendance,
+                droughtProbNone: entry.droughtProbNone
             });
         }
         return overdue.sort((a, b) => a.probNone - b.probNone);
@@ -252,7 +282,8 @@ export class TeammateHistoryTracker {
      * so absences (injury, holiday) don't erode a pair's accumulated debt.
      * @param {string} leagueId - League identifier
      * @param {{ sessionLimit?: number, coAttendanceLimit?: number, alpha?: number, beforeDate?: string | null }} options
-     * @returns {Promise<Array<{player1: string, player2: string, coAttendance: number, probNone: number}>>}
+     * @returns {Promise<Array<{player1: string, player2: string, coAttendance: number, probNone: number,
+     *   droughtCoAttendance: number, droughtProbNone: number}>>}
      */
     async findOverduePairs(
         leagueId,

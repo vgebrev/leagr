@@ -51,9 +51,26 @@ publishing" belongs.
 
 ### 4. Triggered by the tag push, not by the release
 
-`on: push: tags: ['v*.0']`. Because this is a `push` event, the workflow runs from the **tagged
-commit** rather than the default branch — unlike the `release: published` workflow it replaces, which
-was inert until merged to `main`. It takes effect on `develop` as soon as the file is in the tag.
+`on: push: tags: ['v*.0']`. The workflow runs from the **tagged commit**, so it takes effect on
+`develop` as soon as the file is in the tag — no merge to `main` required.
+
+The same is true of the `release: published` workflow it replaces, contrary to what
+`202607291032-release-tagging-implementation.md` decision 3 assumed. That doc generalised
+"workflows for non-`push` events run from the default branch", which holds for `schedule`,
+`workflow_dispatch` and `repository_dispatch` but not for `release`: a release event sets
+`GITHUB_REF` to `refs/tags/<tag_name>`, and Actions loads the workflow definitions from that ref.
+
+Publishing the `v2.27.0` release by hand on 2026-08-14 proved it. PR #22 merged the deletion to
+`main` at 09:35 UTC; the workflow ran at 09:37 UTC — two minutes later, from the copy in the
+`v2.27.0` tag's own tree. `main` never carried the file in its tree at any tip either: PR #21 did
+not include the commit that added it, and PR #22 brought the add and the delete across together, so
+they cancelled. The real difference between the two triggers is **when** they fire (tag push vs.
+manual publish), not which ref they resolve from.
+
+Worth knowing for the next time this is traced: `git log main -- <path>` reports **nothing** here.
+Default history simplification follows only the first parent of a merge when the merge result is
+TREESAME to it, and PR #22's result was — the file is absent on both sides. `git log --full-history`
+shows both commits; `git merge-base --is-ancestor` answers the question directly.
 
 The glob is exact enough on its own (`v*.0` matches `v2.28.0` and `v2.100.0` but not `v2.28.10`,
 which ends in `.10`), but the job re-checks with `^v[0-9]+\.[0-9]+\.0$` anyway.
@@ -113,6 +130,10 @@ and the conventional-commit scaffold is the better input. The promotion PR is un
   minor version math, the push-on-success block, the `GIT_PUSHED` rollback guard, and updated
   usage/header/final messages.
 - **`.github/workflows/release-tag.yml`**, **`sync-release-tags.sh`** (deleted) — the mirror.
+  Deleting a workflow on a branch does not remove it from tags already cut: `v2.26.1` and `v2.27.0`
+  sit between the commit that added `release-tag.yml` and the one that deleted it, so both still
+  carry it and a release published against either still runs it. `v2.26.0` and everything older are
+  clean, and every future tag is cut after the deletion.
 - **`.gitignore`** — `RELEASE-NOTES-v*.md`; the published release is the record.
 - **`README.md`** — "Releases" rewritten around the convention; `--minor` added to the deploy
   examples.
@@ -157,6 +178,12 @@ application code; nothing in the repo tests shell). Application code is untouche
 - **A release cut from `develop` points at a commit not yet on `main`.** The tag is pushed on deploy
   and the promotion PR follows, so the release briefly references a commit that reaches `main` only
   later. Harmless — the tag is what the release resolves against.
+- **The deleted mirror fired once more, from the tag.** Publishing `v2.27.0` by hand ran
+  `release-tag.yml` out of that tag's tree (see decision 4), and it failed 403 creating
+  `refs/tags/release/v2.27.0`. Harmless, and arguably the right outcome — that namespace is
+  intentionally gone, so the failure protected the cleanup rather than breaking anything. It says
+  nothing about `release-draft.yml`, whose identical `contents: write` `GITHUB_TOKEN` was proven
+  end-to-end by the `v9.9.0` smoke test.
 - **Deleting the draft is the only undo.** If a `v*.0` tag is pushed by mistake, delete the draft
   release; re-pushing the same tag will not re-draft it, since the workflow skips tags that already
   have a release.
