@@ -207,8 +207,8 @@ prior-dominated, and the prior is weak; that is the model being honest about wha
 rather than a defect.
 
 Both numbers sit where a game wants them. ρ near 0.9 would mean the week is solved before
-it starts; ρ near 0 would mean price is decoration and the game is a raffle. 71% capture
-says picking well matters and still leaves most of the variance to the day.
+it starts; ρ near 0 would mean price is decoration and the game is a raffle. 79% capture
+says picking well matters and still leaves real variance to the day.
 
 ## The mini-game
 
@@ -231,15 +231,63 @@ scoring.
 | `src/lib/server/fantasyPricing.js`  | `buildWeeklyPrices`, `priceInPool`, `bestSquad`, `sessionActuals`; `expectedPointsSnapshot` split out of `priceSnapshot` so both modes share the μ computation. |
 | `scripts/fantasy-weekly-report.mjs` | **New.** One week's prices, the optimal squad, the settlement, and a `all` mode running the full backtest.                                                      |
 
+## Budget: the only knob worth tuning
+
+Budget was originally `size × median price × 1.15`. That is the wrong quantity — the
+question a manager faces is "how much of the best available squad can I afford?", and the
+median says nothing about it. On 2026-08-15 it produced a budget of 31.5 against a top-five
+cost of 46.5, which priced Dan out of the optimal squad entirely: the model's most
+expensive player was never worth buying.
+
+It is now a fraction of what the `size` most expensive players in the pool cost
+(`deriveBudget`), which sets that fraction directly and holds it steady whether the week's
+pool is strong or weak.
+
+### Where the value comes from
+
+Swept over the 23 backtest sessions. `edge` is how much the expected-points-optimal squad
+beats a random affordable one; `distinct` counts players appearing in any squad within 3%
+of optimal, out of a ~24 pool.
+
+| affordability | budget   | top-5 bought | capture | edge      | distinct | optimum _is_ the top 5 |
+| ------------- | -------- | ------------ | ------- | --------- | -------- | ---------------------- |
+| 0.70          | 34.0     | 1.39         | 73%     | 1.146     | 23.1     | 0%                     |
+| 0.85          | 41.3     | 2.61         | 76%     | 1.199     | 23.2     | 0%                     |
+| **0.90**      | **43.7** | **3.04**     | **79%** | **1.251** | **23.1** | **0%**                 |
+| 0.95          | 46.1     | 3.65         | 80%     | 1.253     | 22.1     | 0%                     |
+| 1.00          | 48.6     | 5.00         | 82%     | 1.285     | 14.9     | **100%**               |
+
+**There is a cliff at 1.00.** The optimal squad becomes the top five _every single week_
+and the near-optimal pool collapses from 23 players to 15 — every manager picks the same
+team and the game is over. Below it the cliff is nowhere near: at 0.90 every player in the
+pool still appears in some defensible squad, you buy three of the top five and choose the
+rest, and picking well beats picking at random by 25%. 0.95 is the last setting before the
+edge of the cliff and already costs a point of `distinct`, so **0.90** is the pick.
+
+### Raising the ceiling does not help
+
+The obvious lever — widen the band from 4–12 to 4–15 so the stars cost more — was measured
+and is **worse at every affordability**:
+
+| band | afford 0.85          | afford 0.90    | afford 0.95 |
+| ---- | -------------------- | -------------- | ----------- |
+| 4–12 | edge 1.199           | edge **1.251** | edge 1.253  |
+| 4–15 | edge 1.113           | edge 1.210     | edge 1.248  |
+| 4–18 | edge 1.149 (at 0.80) | edge 1.226     | —           |
+
+Prices are mapped pool-relative, so raising the ceiling only stretches the star-to-floor
+_ratio_. That makes premium players disproportionately expensive, pushes the optimum toward
+cheap players, and leaves price _less_ informative about who to pick — while the shape of
+the game (`distinct`, "optimum is the top 5") does not move at all. It is a rescale, and a
+mildly harmful one. Dropping the floor to 3.0 is a wash (edge 1.265 vs 1.251, inside noise).
+
+**The band is cosmetic; affordability is the game.**
+
 ## Open questions for the weekly game
 
-1. **Budget scales with the pool.** It is derived as `size × median price × 1.15`, so a
-   weak week has a cheap budget. That is self-correcting but means budgets are not
-   comparable across weeks — fine for a per-session mini-game, wrong if scores are ever
-   accumulated into a season table.
-2. **True debutants price at the pool mean.** With no history their μ is the prior, which
+1. **True debutants price at the pool mean.** With no history their μ is the prior, which
    lands them mid-table (Mike M, 2026-08-22, priced 6.0 having never played). Correct
    Bayesian behaviour, and they are flagged, but it makes unknowns lottery tickets. Whether
    that is a feature is a game-design call.
-3. **The pool is the signup list**, which can change up to the registration deadline. Prices
+2. **The pool is the signup list**, which can change up to the registration deadline. Prices
    would need locking at the same moment the team draw locks.

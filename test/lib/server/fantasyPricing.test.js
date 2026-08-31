@@ -4,6 +4,7 @@ import {
     buildWeeklyPrices,
     priceInPool,
     bestSquad,
+    deriveBudget,
     sessionActuals,
     resolveFantasyConfig,
     sessionFantasyPoints,
@@ -492,5 +493,43 @@ describe('sessionActuals', () => {
         // Absentee has a carried-forward ratings entry but no points block that week.
         expect(actuals.has('Absentee')).toBe(false);
         expect(actuals.get('Regular').total).toBeGreaterThan(0);
+    });
+});
+
+describe('deriveBudget', () => {
+    const squad = { size: 3, affordability: 0.9 };
+    const prices = [
+        { playerName: 'A', price: 12 },
+        { playerName: 'B', price: 10 },
+        { playerName: 'C', price: 8 },
+        { playerName: 'D', price: 4 }
+    ];
+
+    it('is a fraction of what the most expensive squad costs', () => {
+        // (12 + 10 + 8) * 0.9 = 27
+        expect(deriveBudget(prices, squad)).toBe(27);
+    });
+
+    it('reads the top of the market regardless of input order', () => {
+        const shuffled = [prices[3], prices[1], prices[0], prices[2]];
+        expect(deriveBudget(shuffled, squad)).toBe(deriveBudget(prices, squad));
+    });
+
+    it('buys the whole dream team at affordability 1 - which is the degenerate case', () => {
+        // Measured on real data: at 1.0 the optimal squad is the top N every week and
+        // the game stops having a decision in it. The guard is the default, not a throw.
+        expect(deriveBudget(prices, { size: 3, affordability: 1 })).toBe(30);
+        expect(DEFAULT_FANTASY_CONFIG.squad.affordability).toBeLessThan(1);
+    });
+
+    it('copes with a pool smaller than the squad', () => {
+        expect(deriveBudget([{ price: 10 }], { size: 5, affordability: 1 })).toBe(10);
+        expect(deriveBudget([], squad)).toBe(0);
+    });
+
+    it('rounds to the half unit prices move in', () => {
+        expect(deriveBudget([{ price: 5 }, { price: 5 }], { size: 2, affordability: 0.85 })).toBe(
+            8.5
+        );
     });
 });
