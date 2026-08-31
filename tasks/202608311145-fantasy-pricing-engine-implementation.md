@@ -192,34 +192,32 @@ Because prices use only data from _before_ the session, any past session can be 
 exactly as a manager would have seen it that morning. That is what makes the mode
 backtestable rather than merely plausible.
 
-## Squad size mirrors a real team
+## Squad size is 5, deliberately one short of a drawn team
 
-A fantasy squad should be a team you could actually field. Measured over 265 pirates
-draws: **219 were six a side, 43 were five**, one four and two seven — mean 5.84. So
-`squad.size` is **6**, not the 5 it started at. A league that draws differently should set
-it; it is not derived per week, because the pool is known before the draw is.
+Pirates draws **six a side** — measured over 265 draws: 219 six, 43 five, one four, two
+seven, mean 5.84. So the obvious choice is a squad of 6, and it was tried.
 
-The larger squad costs some discrimination, unavoidably: picking 6 of a ~24 pool forces
-more of the pool into your squad than picking 5 does, so there is less room for a good pick
-to separate from a bad one. Edge falls from 1.251 to 1.167 and capture from 79% to 77%.
-That is the price of the squad matching reality, and it is worth paying.
+It measures worse. Picking 6 from a ~24 pool forces a quarter of the pool into every
+squad, which leaves less room for a good pick to separate from a bad one:
 
-Affordability stays at **0.90** because it preserves the _shape_ of the game across the
-size change rather than chasing the edge number: at size 5 it bought 3.04 of the top 5
-(61% of the squad), at size 6 it buys 3.67 of the top 6 (61%). Half the squad premium, half
-your call, either way. The re-sweep at size 6 confirms the cliff is still exactly at 1.00 —
-where the top six become exactly affordable, the optimum is the top six 100% of weeks, and
-the near-optimal pool collapses from 23 players to 18.
+| squad | budget | premium bought      | capture | edge      |
+| ----- | ------ | ------------------- | ------- | --------- |
+| **5** | 43.7   | 3.04 of top 5 (61%) | **79%** | **1.251** |
+| 6     | 50.6   | 3.67 of top 6 (61%) | 77%     | 1.167     |
 
-| affordability (size 6) | budget   | top-6 bought | capture | edge      | distinct | optimum _is_ the top 6 |
-| ---------------------- | -------- | ------------ | ------- | --------- | -------- | ---------------------- |
-| 0.85                   | 47.7     | 3.17         | 77%     | 1.174     | 23.3     | 0%                     |
-| **0.90**               | **50.6** | **3.67**     | **77%** | **1.167** | **23.3** | **0%**                 |
-| 0.95                   | 53.2     | 4.46         | 80%     | 1.223     | 23.1     | 0%                     |
-| 1.00                   | 56.1     | 6.00         | 83%     | 1.270     | 18.3     | **100%**               |
+A fantasy squad is a selection, not a team sheet — nobody expects the five they picked to
+line up together — so the sharper game wins and `squad.size` stays **5**. A league that
+wants the squad to mirror its draw can set it; the model does not care, and affordability
+holds the game's shape either way (61% of the squad is premium at 0.90 at both sizes).
 
-Note that edge rises monotonically toward the degenerate end — maximising it walks you off
-the cliff. It is a sanity check, not an objective function.
+The size-6 re-sweep also confirmed the affordability cliff does not move with squad size:
+still exactly at 1.00, where the top N become exactly affordable, the optimum is the top N
+in 100% of weeks, and the near-optimal pool collapses (23 players to 18 at size 6, 23 to 15
+at size 5).
+
+Worth recording, because it is the trap in the tuning: **edge rises monotonically toward
+that cliff** — 1.167, 1.223, 1.270 at 0.90/0.95/1.00. Maximising it walks you straight off.
+It is a sanity check, not an objective function.
 
 ## Backtest (24 sessions, pirates 2026)
 
