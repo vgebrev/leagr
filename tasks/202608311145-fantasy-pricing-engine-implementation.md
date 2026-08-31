@@ -268,11 +268,11 @@ It is a sanity check, not an objective function.
 
 | Metric                                | Value     | Reading                                                              |
 | ------------------------------------- | --------- | -------------------------------------------------------------------- |
-| Mean Spearman ρ(price, actual points) | **0.346** | price predicts a week, but loosely                                   |
-| Mean capture                          | **71%**   | the expected-points-optimal squad takes 71% of the hindsight maximum |
+| Mean Spearman ρ(price, actual points) | **0.353** | price predicts a week, but loosely                                   |
+| Mean capture                          | **76%**   | the expected-points-optimal squad takes 76% of the hindsight maximum |
 
 ρ climbs through the season as evidence accumulates — −0.08, 0.12, 0.21 over the first
-three sessions of the regime against 0.54, 0.66 for the last two. Early prices are
+three sessions of the regime against 0.54, 0.66, 0.51 for the last three. Early prices are
 prior-dominated, and the prior is weak; that is the model being honest about what it knows
 rather than a defect.
 
