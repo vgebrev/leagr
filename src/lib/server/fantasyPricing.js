@@ -82,6 +82,12 @@ export const DEFAULT_FANTASY_CONFIG = {
         // compresses everyone else, the same failure min-max normalisation has in the
         // attack/control ratings. A few players clamping at the ceiling is intended.
         anchorPercentile: 0.9,
+        // Weekly mode prices relative to the pool that actually signed up, so the
+        // band stretches across whoever is playing. The bottom anchor is the 10th
+        // percentile rather than the minimum, so one very weak signup cannot drag
+        // the whole scale; the top anchor is the max, so the best available player
+        // is always exactly at the ceiling and never shares it.
+        poolFloorPercentile: 0.1,
         maxWeeklyMove: 0.5,
         halfLifeWeeks: 6, // recency weighting on points/session
         credibilityK: 5, // sessions at which own evidence outweighs the prior
@@ -349,11 +355,13 @@ function meanBreakdown(timeline, halfLifeWeeks) {
 }
 
 /**
- * Price every player as of one date, using only data up to and including it.
- * @returns {Map<string, Object>}
+ * Expected fantasy points per session for every player, as of one date, using only
+ * data up to and including it. This is `E[points | plays]` - the half of the model
+ * that both the season and the weekly game share.
+ * @returns {{entries: Map<string, Object>, leagueRate: number}}
  */
-function priceSnapshot(timelines, asOf, honours, config, overrides) {
-    const { pricing, availability, scoring } = config;
+function expectedPointsSnapshot(timelines, asOf, honours, config) {
+    const { pricing } = config;
 
     /** @type {Map<string, Object>} */
     const draft = new Map();
@@ -408,7 +416,7 @@ function priceSnapshot(timelines, asOf, honours, config, overrides) {
     const leagueRate = sessionsTotal > 0 ? attendedTotal / sessionsTotal : 0.5;
 
     /** @type {Map<string, Object>} */
-    const priced = new Map();
+    const entries = new Map();
     for (const d of draft.values()) {
         const n = d.observations.length;
 
@@ -424,46 +432,65 @@ function priceSnapshot(timelines, asOf, honours, config, overrides) {
         const credibility = n / (n + pricing.credibilityK);
         const mu = credibility * (d.emaMean ?? prior) + (1 - credibility) * prior;
 
-        const override = overrides[d.playerName] ?? {};
-        const availabilityResult = computeAvailability({
-            sessionDates: d.sessionDates,
+        entries.set(d.playerName, {
+            playerName: d.playerName,
+            expectedPointsPerSession: mu,
+            sessions: n,
+            provisional: n < pricing.minSessions,
+            elo: d.elo,
+            credibility,
+            prior,
+            lastSession: n ? d.observations[n - 1].date : null,
+            observedMean: d.emaMean,
+            breakdown: d.breakdown,
             attendedDates: d.attendedDates,
+            sessionDates: d.sessionDates
+        });
+    }
+
+    return { entries, leagueRate };
+}
+
+/**
+ * Season-mode snapshot: expected points scaled by availability, then mapped onto the
+ * price band. Used by the continuous league, where whether a player turns up at all is
+ * the manager's risk to carry.
+ * @returns {Map<string, Object>}
+ */
+function priceSnapshot(timelines, asOf, honours, config, overrides) {
+    const { pricing, availability, scoring } = config;
+    const { entries, leagueRate } = expectedPointsSnapshot(timelines, asOf, honours, config);
+
+    for (const entry of entries.values()) {
+        const override = overrides[entry.playerName] ?? {};
+        const result = computeAvailability({
+            sessionDates: entry.sessionDates,
+            attendedDates: entry.attendedDates,
             asOf,
             leagueRate,
             config: availability,
             activeNoShows: override.activeNoShows ?? 0,
             suspended: override.suspended ?? false
         });
-
-        priced.set(d.playerName, {
-            playerName: d.playerName,
-            expectedPointsPerSession: mu,
-            expectedWeeklyPoints: mu * availabilityResult.value,
-            availability: availabilityResult.value,
-            attendanceRate: availabilityResult.rawRate,
-            sessions: n,
-            provisional: n < pricing.minSessions,
-            suspended: !!override.suspended,
-            elo: d.elo,
-            credibility,
-            prior,
-            lastSession: d.observations.length
-                ? d.observations[d.observations.length - 1].date
-                : null,
-            observedMean: d.emaMean,
-            breakdown: d.breakdown,
-            scoringWeights: scoring
-        });
+        entry.availability = result.value;
+        entry.attendanceRate = result.rawRate;
+        entry.expectedWeeklyPoints = entry.expectedPointsPerSession * result.value;
+        entry.suspended = !!override.suspended;
+        entry.scoringWeights = scoring;
     }
 
     const anchor = percentileOf(
-        [...priced.values()].filter((p) => !p.provisional).map((p) => p.expectedWeeklyPoints),
+        [...entries.values()].filter((p) => !p.provisional).map((p) => p.expectedWeeklyPoints),
         pricing.anchorPercentile
     );
-    for (const p of priced.values()) {
-        p.targetPrice = priceFromExpectedPoints(p.expectedWeeklyPoints, anchor ?? 0, pricing);
+    for (const entry of entries.values()) {
+        entry.targetPrice = priceFromExpectedPoints(
+            entry.expectedWeeklyPoints,
+            anchor ?? 0,
+            pricing
+        );
     }
-    return priced;
+    return entries;
 }
 
 /**
@@ -574,4 +601,191 @@ export function buildPrices({
         squadSize: config.squad.size,
         prices
     };
+}
+
+/* ----------------------------------------------------------- weekly pool mode */
+
+/**
+ * Map expected points onto the price band *relative to this week's pool*.
+ *
+ * Weekly mode has no availability term - everyone in the pool signed up, so they are
+ * available by construction - which means expected points per session is the whole
+ * signal and the price band has to carry its full spread. Anchoring the top on the
+ * pool maximum rather than a high percentile is the point: a genuine outlier must
+ * price clear of the field instead of sharing a clamped ceiling with four other
+ * players and losing exactly the information a manager is picking on.
+ *
+ * @param {number} mu - expected points per session
+ * @param {number} low - the expected points that map to the floor
+ * @param {number} high - the expected points that map to the ceiling
+ * @param {Record<string, number>} pricing - config.pricing
+ */
+export function priceInPool(mu, low, high, pricing) {
+    const { floor, ceiling, step } = pricing;
+    const span = high - low;
+    const raw = span > EPS ? floor + ((ceiling - floor) * (mu - low)) / span : floor;
+    return Math.round(Math.min(Math.max(raw, floor), ceiling) / step) * step;
+}
+
+/**
+ * Price the players who signed up for one session, from data strictly before it.
+ *
+ * The pool is what makes this leak-free and backtestable: pass a past session's
+ * signup list and the prices are exactly what a manager would have seen that morning.
+ *
+ * @param {Object} params
+ * @param {Record<string, Object>} params.players - rankings-YYYY.json players
+ * @param {string[]} params.calculatedDates - session dates that produced rankings
+ * @param {string[]} params.pool - player names registered for `date`
+ * @param {string} params.date - the session being priced
+ * @param {Record<string, Object>} [params.previousYearPlayers]
+ * @param {FantasyConfig} [params.config]
+ */
+export function buildWeeklyPrices({
+    players,
+    calculatedDates,
+    pool,
+    date,
+    previousYearPlayers = {},
+    config = DEFAULT_FANTASY_CONFIG
+}) {
+    const regime = trackedStatRegime(players);
+    const allDates = [...(calculatedDates ?? [])].sort();
+    // Strictly before the session: pricing on a session's own result would be a leak.
+    const asOf = allDates.filter((d) => d < date && regime.isInRegime(d)).pop() ?? null;
+
+    const empty = {
+        date,
+        asOf,
+        regime: regime.types,
+        budget: 0,
+        squadSize: config.squad.size,
+        prices: []
+    };
+    if (!asOf) return empty;
+
+    const timelines = new Map(
+        Object.entries(players).map(([name, data]) => [
+            name,
+            buildTimeline(data, allDates, regime, config.scoring)
+        ])
+    );
+    const honours = Object.fromEntries(
+        Object.entries(previousYearPlayers).map(([name, data]) => [
+            name,
+            (data.leagueWins ?? 0) + (data.cupWins ?? 0)
+        ])
+    );
+
+    const { entries } = expectedPointsSnapshot(timelines, asOf, honours, config);
+    const inPool = pool.map((name) => entries.get(name)).filter(Boolean);
+    if (inPool.length === 0) return empty;
+
+    const mus = inPool.map((e) => e.expectedPointsPerSession);
+    const low = percentileOf(mus, config.pricing.poolFloorPercentile) ?? Math.min(...mus);
+    const high = Math.max(...mus);
+
+    const prices = inPool
+        .map((entry) => ({
+            playerName: entry.playerName,
+            price: priceInPool(entry.expectedPointsPerSession, low, high, config.pricing),
+            expectedPoints: entry.expectedPointsPerSession,
+            observedMean: entry.observedMean,
+            breakdown: entry.breakdown,
+            sessions: entry.sessions,
+            provisional: entry.provisional,
+            credibility: entry.credibility,
+            prior: entry.prior,
+            elo: entry.elo
+        }))
+        .sort((a, b) => b.price - a.price || b.expectedPoints - a.expectedPoints);
+
+    const median = percentileOf(
+        prices.map((p) => p.price),
+        0.5
+    );
+    const budget =
+        Math.round(
+            config.squad.size * (median ?? config.pricing.floor) * config.squad.budgetMultiplier * 2
+        ) / 2;
+
+    return {
+        date,
+        asOf,
+        regime: regime.types,
+        poolSize: prices.length,
+        budget,
+        squadSize: config.squad.size,
+        priceRange: { low, high },
+        prices
+    };
+}
+
+/**
+ * The highest-scoring squad of exactly `size` players affordable within `budget`.
+ *
+ * Exact, not greedy: an integer knapsack over half-unit prices. The pool is one
+ * session's signups (~24) and squads are small, so the table is tiny.
+ *
+ * @param {Array<{playerName: string, price: number}>} candidates
+ * @param {number} budget
+ * @param {number} size
+ * @param {(candidate: Object) => number} [valueOf] - defaults to expected points
+ * @returns {{picks: Array<Object>, total: number, cost: number}|null}
+ */
+export function bestSquad(candidates, budget, size, valueOf = (c) => c.expectedPoints ?? 0) {
+    const UNIT = 2; // prices move in halves
+    const capacity = Math.round(budget * UNIT);
+    const costOf = (c) => Math.round(c.price * UNIT);
+
+    // best[k][b] = highest total value using exactly k players costing exactly b.
+    const NEG = -Infinity;
+    let best = Array.from({ length: size + 1 }, () => new Float64Array(capacity + 1).fill(NEG));
+    let picks = Array.from({ length: size + 1 }, () => new Array(capacity + 1).fill(null));
+    best[0][0] = 0;
+    picks[0][0] = [];
+
+    for (const candidate of candidates) {
+        const cost = costOf(candidate);
+        const value = valueOf(candidate);
+        if (cost > capacity) continue;
+        for (let k = size - 1; k >= 0; k--) {
+            for (let b = capacity - cost; b >= 0; b--) {
+                if (best[k][b] === NEG) continue;
+                const total = best[k][b] + value;
+                if (total > best[k + 1][b + cost]) {
+                    best[k + 1][b + cost] = total;
+                    picks[k + 1][b + cost] = [...picks[k][b], candidate];
+                }
+            }
+        }
+    }
+
+    let bestValue = NEG;
+    let bestAt = -1;
+    for (let b = 0; b <= capacity; b++) {
+        if (best[size][b] > bestValue) {
+            bestValue = best[size][b];
+            bestAt = b;
+        }
+    }
+    if (bestAt < 0) return null;
+    return { picks: picks[size][bestAt], total: bestValue, cost: bestAt / UNIT };
+}
+
+/**
+ * What every player in a session actually scored, for settling the week's game.
+ * @param {Record<string, Object>} players - rankings-YYYY.json players
+ * @param {string} date
+ * @param {Record<string, number>} weights - config.scoring
+ * @param {(keyof import('./momentum.js').SessionStats)[]} [regimeTypes]
+ * @returns {Map<string, {total: number, breakdown: Record<string, number>}>}
+ */
+export function sessionActuals(players, date, weights, regimeTypes = STAT_TYPES) {
+    const actuals = new Map();
+    for (const [playerName, data] of Object.entries(players)) {
+        const scored = sessionFantasyPoints(data.history?.[date], weights, regimeTypes);
+        if (scored) actuals.set(playerName, scored);
+    }
+    return actuals;
 }

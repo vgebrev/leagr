@@ -1,6 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import {
     DEFAULT_FANTASY_CONFIG,
+    buildWeeklyPrices,
+    priceInPool,
+    bestSquad,
+    sessionActuals,
     resolveFantasyConfig,
     sessionFantasyPoints,
     recencyWeightedMean,
@@ -248,23 +252,41 @@ const DATES = [
     '2026-04-11'
 ];
 
+/** A standout session: heavy scoring and silverware. */
+const star = (overrides = {}) =>
+    entry({
+        points: { appearance: 1, match: 9, knockout: 4, total: 14, ...overrides.points },
+        performance: { leagueWinner: true, cupWinner: true, ...overrides.performance },
+        stats: { goals: 6, offActions: 9, defActions: 5, saveActions: 1, ...overrides.stats },
+        ratings: { elo: 1200, ...overrides.ratings }
+    });
+
 /** Goals-only session, from before the league tracked the other three stat types. */
 const preRegimeEntry = () =>
     entry({ stats: { goals: 5, offActions: null, defActions: null, saveActions: null } });
 
 const fixture = () => ({
     players: {
+        // Clearly the best player in the league: scores heavily and wins.
         Regular: {
             elo: { rating: 1200, gamesPlayed: 100 },
             history: {
                 [PRE_REGIME]: preRegimeEntry(),
-                '2026-03-07': entry(),
-                '2026-03-14': entry({ stats: { goals: 3 } }),
-                '2026-03-21': entry(),
-                '2026-03-28': entry({ stats: { goals: 2 } }),
-                '2026-04-04': entry(),
-                '2026-04-11': entry({ stats: { goals: 4 } })
+                '2026-03-07': star(),
+                '2026-03-14': star({ stats: { goals: 8 } }),
+                '2026-03-21': star(),
+                '2026-03-28': star({ stats: { goals: 7 } }),
+                '2026-04-04': star(),
+                '2026-04-11': star({ stats: { goals: 9 } })
             }
+        },
+        // A second established player, so the pool has a spread for the prior to
+        // scale against - with only one, its standard deviation is zero.
+        Journeyman: {
+            elo: { rating: 950, gamesPlayed: 90 },
+            history: Object.fromEntries(
+                DATES.slice(1).map((d) => [d, entry({ ratings: { elo: 950 } })])
+            )
         },
         Absentee: {
             elo: { rating: 1000, gamesPlayed: 20 },
@@ -355,5 +377,120 @@ describe('buildPrices', () => {
         });
         expect(result.prices).toEqual([]);
         expect(result.asOf).toBeNull();
+    });
+});
+
+/* --------------------------------------------------------------- weekly mode */
+
+describe('priceInPool', () => {
+    const pricing = DEFAULT_FANTASY_CONFIG.pricing;
+
+    it('puts the pool best exactly at the ceiling and the bottom anchor at the floor', () => {
+        expect(priceInPool(60, 20, 60, pricing)).toBe(pricing.ceiling);
+        expect(priceInPool(20, 20, 60, pricing)).toBe(pricing.floor);
+    });
+
+    it('spreads the middle across the band rather than clamping it', () => {
+        expect(priceInPool(40, 20, 60, pricing)).toBe(8);
+        expect(priceInPool(50, 20, 60, pricing)).toBe(10);
+    });
+
+    it('clamps below the bottom anchor without going under the floor', () => {
+        expect(priceInPool(5, 20, 60, pricing)).toBe(pricing.floor);
+    });
+
+    it('falls back to the floor when every player is identical', () => {
+        expect(priceInPool(30, 30, 30, pricing)).toBe(pricing.floor);
+    });
+});
+
+describe('buildWeeklyPrices', () => {
+    const POOL = ['Regular', 'Journeyman', 'Absentee', 'Newcomer'];
+    const WEEK = '2026-04-11';
+    const weekly = (overrides = {}) =>
+        buildWeeklyPrices({ ...fixture(), pool: POOL, date: WEEK, ...overrides });
+
+    it('prices only from sessions strictly before the one being played', () => {
+        // Pricing on a session's own result would be a leak: the manager picks first.
+        expect(weekly().asOf).toBe('2026-04-04');
+    });
+
+    it('prices only the players who signed up', () => {
+        const result = buildWeeklyPrices({ ...fixture(), pool: ['Regular'], date: WEEK });
+        expect(result.prices.map((p) => p.playerName)).toEqual(['Regular']);
+        expect(result.poolSize).toBe(1);
+    });
+
+    it('carries no availability term - signing up is what makes you available', () => {
+        const result = weekly();
+        for (const entry of result.prices) {
+            expect(entry.availability).toBeUndefined();
+            expect(entry.expectedWeeklyPoints).toBeUndefined();
+            expect(entry.expectedPoints).toBeGreaterThan(0);
+        }
+    });
+
+    it('lets the pool best price clear of the field instead of sharing a clamped ceiling', () => {
+        const result = weekly();
+        const top = result.prices[0];
+        expect(top.playerName).toBe('Regular');
+        expect(top.price).toBe(DEFAULT_FANTASY_CONFIG.pricing.ceiling);
+        // Exactly one player at the ceiling: the anchor is the pool max, not a percentile.
+        expect(result.prices.filter((p) => p.price === top.price)).toHaveLength(1);
+    });
+
+    it('returns an empty market when nothing precedes the session', () => {
+        const result = buildWeeklyPrices({ ...fixture(), pool: POOL, date: '2026-01-01' });
+        expect(result.prices).toEqual([]);
+        expect(result.asOf).toBeNull();
+    });
+});
+
+describe('bestSquad', () => {
+    const candidates = [
+        { playerName: 'Star', price: 12, expectedPoints: 60 },
+        { playerName: 'Good', price: 8, expectedPoints: 45 },
+        { playerName: 'Fair', price: 6, expectedPoints: 35 },
+        { playerName: 'Cheap', price: 4, expectedPoints: 30 },
+        { playerName: 'Dud', price: 4, expectedPoints: 10 }
+    ];
+
+    it('finds the exact optimum, not a greedy approximation', () => {
+        const squad = bestSquad(candidates, 20, 2);
+        // Greedy on points-per-price would take Cheap first; the optimum is Star+Good.
+        expect(squad.picks.map((p) => p.playerName).sort()).toEqual(['Good', 'Star']);
+        expect(squad.total).toBe(105);
+        expect(squad.cost).toBe(20);
+    });
+
+    it('respects the budget and the squad size', () => {
+        const squad = bestSquad(candidates, 18, 2);
+        expect(squad.picks).toHaveLength(2);
+        expect(squad.cost).toBeLessThanOrEqual(18);
+        // Star + Good is 20 and unaffordable; Star + Fair is the best pair at 18.
+        expect(squad.picks.map((p) => p.playerName).sort()).toEqual(['Fair', 'Star']);
+        expect(squad.total).toBe(95);
+    });
+
+    it('scores against any value function, so a week can be settled in hindsight', () => {
+        const actual = { Star: 5, Good: 5, Fair: 5, Cheap: 90, Dud: 5 };
+        const squad = bestSquad(candidates, 10, 1, (c) => actual[c.playerName]);
+        expect(squad.picks[0].playerName).toBe('Cheap');
+        expect(squad.total).toBe(90);
+    });
+
+    it('returns null when no squad of that size is affordable', () => {
+        expect(bestSquad(candidates, 5, 3)).toBeNull();
+    });
+});
+
+describe('sessionActuals', () => {
+    it('scores only the players who turned out', () => {
+        const { players } = fixture();
+        const actuals = sessionActuals(players, '2026-04-04', DEFAULT_FANTASY_CONFIG.scoring);
+        expect(actuals.has('Regular')).toBe(true);
+        // Absentee has a carried-forward ratings entry but no points block that week.
+        expect(actuals.has('Absentee')).toBe(false);
+        expect(actuals.get('Regular').total).toBeGreaterThan(0);
     });
 });

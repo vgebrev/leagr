@@ -3,6 +3,10 @@
 Status: **engine only**. No API, no page, no settings UI, no game. This step exists so the
 prices can be argued with on real data before anything is built on top of them.
 
+Two modes share one model: **season** (continuous league, availability is the manager's
+risk) and **weekly** (pick from this week's signups, availability falls away). The weekly
+mode is the one that backtests well — see "Weekly pool mode" below.
+
 ## What it does
 
 Prices every player in a league from `rankings-YYYY.json`, denominated in **expected
@@ -144,3 +148,98 @@ node scripts/fantasy-pricing-report.mjs pirates 2026
   `matchPoint`/`leagueWin` are team-derived, so part of every price is luck of the draw.
   Keeping team-derived weights low relative to individual ones is the mitigation — the same
   argument the ratings audit made about team GF/GA.
+
+---
+
+# Weekly pool mode
+
+Added after the season mode's prices were reviewed. Two problems showed up, and they turn
+out to be the same problem.
+
+**The ceiling clamp was destroying the information managers pick on.** Season mode anchors
+on the 90th percentile of expected weekly points and clamps, which put five players at
+12.0 — Dan among them. Dan is 315 ELO clear of the next player, has 24 trophies to
+Lunathi's 17, and beats him 3.42 to 1.18 on goals/session and 13.47 to 5.79 on offensive
+actions. He is not the same price as Lunathi, and a game that says he is has thrown away
+its most important distinction.
+
+**Availability was doing the compressing.** Dan's 57.5 points/session is the best in the
+league, but 0.67 availability drags his expected _weekly_ points down to where the clamp
+catches him alongside players who score less and turn up more.
+
+In a weekly game the second problem dissolves and takes the first with it: **everyone in
+the pool signed up, so they are available by construction.** Expected points per session
+becomes the whole signal, and the price band has to carry its full spread.
+
+## What changes
+
+|               | Season                   | Weekly                                 |
+| ------------- | ------------------------ | -------------------------------------- |
+| Price         | `f(μ × P(plays))`        | `f(μ)`                                 |
+| Pool          | every ranked player      | the session's signups                  |
+| Top anchor    | 90th percentile, clamped | the pool **maximum**                   |
+| Bottom anchor | fixed floor              | 10th percentile of the pool            |
+| Data cutoff   | latest session           | strictly **before** the session priced |
+
+Anchoring the top on the pool maximum is the fix: the best available player is always
+exactly at the ceiling and never shares it. Anchoring the bottom on the 10th percentile
+rather than the minimum stops one very weak signup dragging the whole scale.
+
+On 2026-08-15 (a pool that included Dan) this gives Dan 12.0 and Veli 10.0 — two full
+points clear, where season mode had them level.
+
+Because prices use only data from _before_ the session, any past session can be replayed
+exactly as a manager would have seen it that morning. That is what makes the mode
+backtestable rather than merely plausible.
+
+## Backtest (23 sessions, pirates 2026)
+
+`node scripts/fantasy-weekly-report.mjs pirates all`
+
+| Metric                                | Value     | Reading                                                              |
+| ------------------------------------- | --------- | -------------------------------------------------------------------- |
+| Mean Spearman ρ(price, actual points) | **0.346** | price predicts a week, but loosely                                   |
+| Mean capture                          | **71%**   | the expected-points-optimal squad takes 71% of the hindsight maximum |
+
+ρ climbs through the season as evidence accumulates — −0.08, 0.12, 0.21 over the first
+three sessions of the regime against 0.54, 0.66 for the last two. Early prices are
+prior-dominated, and the prior is weak; that is the model being honest about what it knows
+rather than a defect.
+
+Both numbers sit where a game wants them. ρ near 0.9 would mean the week is solved before
+it starts; ρ near 0 would mean price is decoration and the game is a raffle. 71% capture
+says picking well matters and still leaves most of the variance to the day.
+
+## The mini-game
+
+`bestSquad(candidates, budget, size, valueOf)` is an exact integer knapsack over half-unit
+prices — not greedy, which would misprice on points-per-pound. Pools are ~24 and squads
+are ~5, so the table is trivial. It serves both ends of the week:
+
+- before the session, `valueOf = expectedPoints` → the squad to beat;
+- after it, `valueOf = actual points` → the hindsight-best team, which is what "best picked
+  team of the week" is measured against.
+
+`sessionActuals(players, date, weights, regimeTypes)` settles a completed session from the
+same scoring rules used to price it, so the currency never changes between picking and
+scoring.
+
+## Files added
+
+| File                                | Role                                                                                                                                                            |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/lib/server/fantasyPricing.js`  | `buildWeeklyPrices`, `priceInPool`, `bestSquad`, `sessionActuals`; `expectedPointsSnapshot` split out of `priceSnapshot` so both modes share the μ computation. |
+| `scripts/fantasy-weekly-report.mjs` | **New.** One week's prices, the optimal squad, the settlement, and a `all` mode running the full backtest.                                                      |
+
+## Open questions for the weekly game
+
+1. **Budget scales with the pool.** It is derived as `size × median price × 1.15`, so a
+   weak week has a cheap budget. That is self-correcting but means budgets are not
+   comparable across weeks — fine for a per-session mini-game, wrong if scores are ever
+   accumulated into a season table.
+2. **True debutants price at the pool mean.** With no history their μ is the prior, which
+   lands them mid-table (Mike M, 2026-08-22, priced 6.0 having never played). Correct
+   Bayesian behaviour, and they are flagged, but it makes unknowns lottery tickets. Whether
+   that is a feature is a game-design call.
+3. **The pool is the signup list**, which can change up to the registration deadline. Prices
+   would need locking at the same moment the team draw locks.
