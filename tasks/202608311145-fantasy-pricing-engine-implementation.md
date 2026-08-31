@@ -45,6 +45,49 @@ rankings-YYYY.json history[date]
                       └─ priceFromExpectedPoints() + dampPrice()        → price
 ```
 
+## Scoring: what a point is
+
+Everything downstream is denominated in these, so this is the table to read first. Points
+for **one player-session**, all of them in `DEFAULT_FANTASY_CONFIG.scoring`:
+
+| Source           | Weight  | Applied to                                           |
+| ---------------- | ------- | ---------------------------------------------------- |
+| Appearance       | **2.0** | flat, for turning out                                |
+| Goal             | **4.0** | × goals scored                                       |
+| Offensive action | **1.5** | × offensive actions (the closest thing to an assist) |
+| Defensive action | **1.5** | × defensive actions                                  |
+| Save             | **0.7** | × save actions                                       |
+| Match point      | **0.5** | × `points.match`, already 3/1/0 per league game      |
+| Knockout         | **0.5** | × `points.knockout`, already 4 per knockout win      |
+| League win       | **5.0** | once, if their team won the league that session      |
+| Cup win          | **4.0** | once, if their team won the cup                      |
+
+```
+FP = 2
+   + 4·goals + 1.5·offActions + 1.5·defActions + 0.7·saveActions
+   + 0.5·points.match + 0.5·points.knockout
+   + 5·leagueWinner + 4·cupWinner
+```
+
+Only stat types in the current tracking regime are paid for — a goals-only session from
+before March 2026 is a non-observation, not a session where a player recorded zero
+tackles.
+
+Two weights carry an argument rather than a guess:
+
+- **Save is 0.7**, far below its raw volume, because saves are a role stat with a rotating
+  keeper (`docs/traits.md`). A full shift in goal can out-count a striker's hat-trick
+  several times over, and paying per save at goal rates would make the keeper the
+  automatic first pick every week.
+- **Match point and knockout are 0.5**, deliberately low. They are team-derived, and the
+  balancer decides who plays with whom, so they are the part of a score that is luck of the
+  draw. Keeping them small is the same argument the ratings audit made about team GF/GA.
+
+`sessionFantasyPoints()` returns the total _and_ the per-source split, and both report
+scripts print it — the `app / goal / off / def / save / res / tro` columns. A price is
+meant to be arguable: "you cost 12.0 because you're expected to score 57.5, a third of it
+from offensive actions".
+
 ## Architecture decisions
 
 **No new data store.** Prices are rebuilt by deterministic replay from the season's first
