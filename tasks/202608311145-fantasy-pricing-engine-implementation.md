@@ -192,7 +192,36 @@ Because prices use only data from _before_ the session, any past session can be 
 exactly as a manager would have seen it that morning. That is what makes the mode
 backtestable rather than merely plausible.
 
-## Backtest (23 sessions, pirates 2026)
+## Squad size mirrors a real team
+
+A fantasy squad should be a team you could actually field. Measured over 265 pirates
+draws: **219 were six a side, 43 were five**, one four and two seven — mean 5.84. So
+`squad.size` is **6**, not the 5 it started at. A league that draws differently should set
+it; it is not derived per week, because the pool is known before the draw is.
+
+The larger squad costs some discrimination, unavoidably: picking 6 of a ~24 pool forces
+more of the pool into your squad than picking 5 does, so there is less room for a good pick
+to separate from a bad one. Edge falls from 1.251 to 1.167 and capture from 79% to 77%.
+That is the price of the squad matching reality, and it is worth paying.
+
+Affordability stays at **0.90** because it preserves the _shape_ of the game across the
+size change rather than chasing the edge number: at size 5 it bought 3.04 of the top 5
+(61% of the squad), at size 6 it buys 3.67 of the top 6 (61%). Half the squad premium, half
+your call, either way. The re-sweep at size 6 confirms the cliff is still exactly at 1.00 —
+where the top six become exactly affordable, the optimum is the top six 100% of weeks, and
+the near-optimal pool collapses from 23 players to 18.
+
+| affordability (size 6) | budget   | top-6 bought | capture | edge      | distinct | optimum _is_ the top 6 |
+| ---------------------- | -------- | ------------ | ------- | --------- | -------- | ---------------------- |
+| 0.85                   | 47.7     | 3.17         | 77%     | 1.174     | 23.3     | 0%                     |
+| **0.90**               | **50.6** | **3.67**     | **77%** | **1.167** | **23.3** | **0%**                 |
+| 0.95                   | 53.2     | 4.46         | 80%     | 1.223     | 23.1     | 0%                     |
+| 1.00                   | 56.1     | 6.00         | 83%     | 1.270     | 18.3     | **100%**               |
+
+Note that edge rises monotonically toward the degenerate end — maximising it walks you off
+the cliff. It is a sanity check, not an objective function.
+
+## Backtest (24 sessions, pirates 2026)
 
 `node scripts/fantasy-weekly-report.mjs pirates all`
 
@@ -207,7 +236,7 @@ prior-dominated, and the prior is weak; that is the model being honest about wha
 rather than a defect.
 
 Both numbers sit where a game wants them. ρ near 0.9 would mean the week is solved before
-it starts; ρ near 0 would mean price is decoration and the game is a raffle. 79% capture
+it starts; ρ near 0 would mean price is decoration and the game is a raffle. 77% capture
 says picking well matters and still leaves real variance to the day.
 
 ## The mini-game
@@ -245,7 +274,8 @@ pool is strong or weak.
 
 ### Where the value comes from
 
-Swept over the 23 backtest sessions. `edge` is how much the expected-points-optimal squad
+Swept over the backtest sessions at squad size 5 (see "Squad size" above for the size-6
+re-sweep, which moves the numbers but not the conclusion). `edge` is how much the expected-points-optimal squad
 beats a random affordable one; `distinct` counts players appearing in any squad within 3%
 of optimal, out of a ~24 pool.
 

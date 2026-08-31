@@ -100,7 +100,10 @@ export const DEFAULT_FANTASY_CONFIG = {
         floor: 0.5 // ...but no-shows alone never take availability below this
     },
     squad: {
-        size: 5,
+        // Mirror the size of a real drawn team, so a fantasy squad is a team you
+        // could actually field. Measured over 265 pirates draws: 219 were six a side,
+        // 43 were five, mean 5.84. A league that draws differently should set this.
+        size: 6,
         // Budget as a fraction of what the N most expensive players in the pool cost.
         // This is the game's real knob - it sets how much of the dream team you can
         // afford - and it is the only one worth tuning. Measured over 23 pirates
