@@ -109,13 +109,27 @@ export const DEFAULT_FANTASY_CONFIG = {
         size: 5,
         // Budget as a fraction of what the N most expensive players in the pool cost.
         // This is the game's real knob - it sets how much of the dream team you can
-        // afford - and it is the only one worth tuning. Measured over 23 pirates
-        // sessions: at 1.00 the optimal squad IS the top five every single week and
-        // the pool of players appearing in near-optimal squads collapses from 23 to
-        // 15, so the game dies. At 0.90 you take three of the top five and choose the
-        // rest, every player in the pool still appears in some defensible squad, and
-        // picking well beats picking at random by 25%.
-        affordability: 0.9
+        // afford - and it is the only one worth tuning.
+        //
+        // Measured over 24 pirates sessions (squad of 5):
+        //
+        //   afford  budget  top5 bought  capture  edge   optimum IS the top 5
+        //   0.85     41.3      2.63       76%    1.187          0%
+        //   0.90     43.7      3.08       79%    1.256          0%
+        //   1.00     48.6      5.00       82%    1.296        100%
+        //
+        // There is a cliff at 1.00, and it is structural: the top N becomes exactly
+        // affordable, so it is always the answer, and the pool of players appearing in
+        // near-optimal squads collapses from 23 to 15. Every manager picks the same
+        // team and the game is over.
+        //
+        // 0.85 sits deliberately below the measured optimum. 0.90 scores better on
+        // both capture (79% vs 76%) and discrimination (edge 1.256 vs 1.187), but it
+        // hands you 3.08 of the top five - 60% of the squad picked for you. At 0.85
+        // you buy 2.63, so roughly half the squad is genuinely your call. That is a
+        // preference for a more open game over a more predictable one, and it costs
+        // about three points of capture. Raise it to 0.90 to buy that back.
+        affordability: 0.85
     }
 };
 

@@ -277,7 +277,7 @@ prior-dominated, and the prior is weak; that is the model being honest about wha
 rather than a defect.
 
 Both numbers sit where a game wants them. ρ near 0.9 would mean the week is solved before
-it starts; ρ near 0 would mean price is decoration and the game is a raffle. 77% capture
+it starts; ρ near 0 would mean price is decoration and the game is a raffle. 76% capture
 says picking well matters and still leaves real variance to the day.
 
 ## The mini-game
@@ -315,25 +315,38 @@ pool is strong or weak.
 
 ### Where the value comes from
 
-Swept over the backtest sessions at squad size 5 (see "Squad size" above for the size-6
-re-sweep, which moves the numbers but not the conclusion). `edge` is how much the expected-points-optimal squad
-beats a random affordable one; `distinct` counts players appearing in any squad within 3%
-of optimal, out of a ~24 pool.
+Swept over all 24 backtest sessions at squad size 5 (see "Squad size" above for the size-6
+re-sweep, which moves the numbers but not the conclusion). `edge` is how much the
+expected-points-optimal squad beats a random affordable one; `distinct` counts players
+appearing in any squad within 3% of optimal, out of a ~24 pool.
 
 | affordability | budget   | top-5 bought | capture | edge      | distinct | optimum _is_ the top 5 |
 | ------------- | -------- | ------------ | ------- | --------- | -------- | ---------------------- |
-| 0.70          | 34.0     | 1.39         | 73%     | 1.146     | 23.1     | 0%                     |
-| 0.85          | 41.3     | 2.61         | 76%     | 1.199     | 23.2     | 0%                     |
-| **0.90**      | **43.7** | **3.04**     | **79%** | **1.251** | **23.1** | **0%**                 |
-| 0.95          | 46.1     | 3.65         | 80%     | 1.253     | 22.1     | 0%                     |
-| 1.00          | 48.6     | 5.00         | 82%     | 1.285     | 14.9     | **100%**               |
+| 0.80          | 38.9     | 2.04         | 72%     | 1.136     | 23.2     | 0%                     |
+| **0.85**      | **41.3** | **2.63**     | **76%** | **1.187** | **23.2** | **0%**                 |
+| 0.90          | 43.7     | 3.08         | 79%     | 1.256     | 23.2     | 0%                     |
+| 0.95          | 46.1     | 3.63         | 79%     | 1.258     | 22.2     | 0%                     |
+| 1.00          | 48.6     | 5.00         | 82%     | 1.296     | 14.8     | **100%**               |
 
-**There is a cliff at 1.00.** The optimal squad becomes the top five _every single week_
-and the near-optimal pool collapses from 23 players to 15 — every manager picks the same
-team and the game is over. Below it the cliff is nowhere near: at 0.90 every player in the
-pool still appears in some defensible squad, you buy three of the top five and choose the
-rest, and picking well beats picking at random by 25%. 0.95 is the last setting before the
-edge of the cliff and already costs a point of `distinct`, so **0.90** is the pick.
+**There is a cliff at 1.00**, and it is structural rather than empirical: the top five
+becomes exactly affordable, so it is always the answer. The optimum is the top five _every
+single week_ and the near-optimal pool collapses from 23 players to 15 — every manager
+picks the same team and the game is over.
+
+**The setting is 0.85, deliberately below the measured optimum.** 0.90 scores better on
+both capture (79% vs 76%) and discrimination (edge 1.256 vs 1.187), and on the numbers
+alone it is the better setting. But it hands you 3.08 of the top five — 60% of the squad
+picked for you before you start. At 0.85 you buy 2.63, so roughly half the squad is
+genuinely your call.
+
+That is a preference for a more open game over a more predictable one, and a taste call
+rather than a measurement. It costs about three points of capture; raising it back to 0.90
+buys that back. Both sit clear of the cliff with an identical `distinct` of 23.2, so
+neither risks the degenerate game.
+
+Worth recording, because it is the trap in the tuning: **`edge` rises monotonically toward
+the cliff** — 1.187, 1.256, 1.258, 1.296 at 0.85/0.90/0.95/1.00. Maximising it walks you
+straight off. It is a sanity check, not an objective function.
 
 ### Raising the ceiling does not help
 
