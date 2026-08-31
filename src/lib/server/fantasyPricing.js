@@ -109,27 +109,35 @@ export const DEFAULT_FANTASY_CONFIG = {
         size: 5,
         // Budget as a fraction of what the N most expensive players in the pool cost.
         // This is the game's real knob - it sets how much of the dream team you can
-        // afford - and it is the only one worth tuning.
+        // afford - and it is the only one worth tuning. Budgets land on the half unit
+        // prices move in, so a real week reads 40.0 or 38.5, never 40.1.
         //
-        // Measured over 24 pirates sessions (squad of 5):
+        // Measured over 24 pirates sessions (squad of 5). `floor` is how many of the
+        // five picks sit at the 4.0 price floor; `edge` is how much the optimal squad
+        // beats a random affordable one:
         //
-        //   afford  budget  top5 bought  capture  edge   optimum IS the top 5
-        //   0.85     41.3      2.63       76%    1.187          0%
-        //   0.90     43.7      3.08       79%    1.256          0%
-        //   1.00     48.6      5.00       82%    1.296        100%
+        //   afford  budget  top5 bought  floor  capture  edge   optimum IS the top 5
+        //   0.800    38.9      2.04      0.13     72%   1.138          0%
+        //   0.825    40.1      2.42      0.08     76%   1.198          0%
+        //   0.850    41.3      2.63      0.08     76%   1.190          0%
+        //   0.900    43.7      3.08      0.04     79%   1.256          0%
+        //   1.000    48.6      5.00      0.00     82%   1.296        100%
         //
         // There is a cliff at 1.00, and it is structural: the top N becomes exactly
         // affordable, so it is always the answer, and the pool of players appearing in
         // near-optimal squads collapses from 23 to 15. Every manager picks the same
         // team and the game is over.
         //
-        // 0.85 sits deliberately below the measured optimum. 0.90 scores better on
-        // both capture (79% vs 76%) and discrimination (edge 1.256 vs 1.187), but it
-        // hands you 3.08 of the top five - 60% of the squad picked for you. At 0.85
-        // you buy 2.63, so roughly half the squad is genuinely your call. That is a
-        // preference for a more open game over a more predictable one, and it costs
-        // about three points of capture. Raise it to 0.90 to buy that back.
-        affordability: 0.85
+        // 0.825 sits deliberately below the measured optimum. 0.90 scores better on
+        // capture (79% vs 76%) and discrimination, but hands you 3.08 of the top five
+        // - 60% of the squad picked for you. At 0.825 you buy 2.42, so half the squad
+        // is genuinely your call, and it costs nothing against 0.85 on either metric.
+        //
+        // Squads do NOT degenerate into "two stars and three floor players" as the
+        // budget tightens: price is linear in expected points, so a floor player is
+        // honestly poor value and the optimiser avoids them at every setting above
+        // 0.80. Measured across the last eight sessions, one 4.5 pick and no 4.0s.
+        affordability: 0.825
     }
 };
 

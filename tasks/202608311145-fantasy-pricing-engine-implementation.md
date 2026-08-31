@@ -320,32 +320,57 @@ re-sweep, which moves the numbers but not the conclusion). `edge` is how much th
 expected-points-optimal squad beats a random affordable one; `distinct` counts players
 appearing in any squad within 3% of optimal, out of a ~24 pool.
 
-| affordability | budget   | top-5 bought | capture | edge      | distinct | optimum _is_ the top 5 |
-| ------------- | -------- | ------------ | ------- | --------- | -------- | ---------------------- |
-| 0.80          | 38.9     | 2.04         | 72%     | 1.136     | 23.2     | 0%                     |
-| **0.85**      | **41.3** | **2.63**     | **76%** | **1.187** | **23.2** | **0%**                 |
-| 0.90          | 43.7     | 3.08         | 79%     | 1.256     | 23.2     | 0%                     |
-| 0.95          | 46.1     | 3.63         | 79%     | 1.258     | 22.2     | 0%                     |
-| 1.00          | 48.6     | 5.00         | 82%     | 1.296     | 14.8     | **100%**               |
+| affordability | budget (mean) | top-5 bought | at price floor | capture | edge      | distinct | optimum _is_ the top 5 |
+| ------------- | ------------- | ------------ | -------------- | ------- | --------- | -------- | ---------------------- |
+| 0.750         | 36.5          | 1.79         | 0.25           | 73%     | 1.145     | 23.2     | 0%                     |
+| 0.800         | 38.9          | 2.04         | 0.13           | 72%     | 1.138     | 23.2     | 0%                     |
+| **0.825**     | **40.1**      | **2.42**     | **0.08**       | **76%** | **1.198** | **23.2** | **0%**                 |
+| 0.850         | 41.3          | 2.63         | 0.08           | 76%     | 1.190     | 23.2     | 0%                     |
+| 0.900         | 43.7          | 3.08         | 0.04           | 79%     | 1.256     | 23.2     | 0%                     |
+| 0.950         | 46.1          | 3.63         | 0.00           | 79%     | 1.255     | 22.2     | 0%                     |
+| 1.000         | 48.6          | 5.00         | 0.00           | 82%     | 1.296     | 14.8     | **100%**               |
+
+Budgets are rounded to the half unit prices move in, so a real week reads 40.0 or 38.5 —
+the means above are averages across 24 sessions, not numbers anyone sees. At 0.825 actual
+budgets ran 37.0 to 46.0, clustering around 40.
 
 **There is a cliff at 1.00**, and it is structural rather than empirical: the top five
 becomes exactly affordable, so it is always the answer. The optimum is the top five _every
 single week_ and the near-optimal pool collapses from 23 players to 15 — every manager
 picks the same team and the game is over.
 
-**The setting is 0.85, deliberately below the measured optimum.** 0.90 scores better on
-both capture (79% vs 76%) and discrimination (edge 1.256 vs 1.187), and on the numbers
-alone it is the better setting. But it hands you 3.08 of the top five — 60% of the squad
-picked for you before you start. At 0.85 you buy 2.63, so roughly half the squad is
-genuinely your call.
+**The setting is 0.825, deliberately below the measured optimum.** 0.90 scores better on
+capture (79% vs 76%) and discrimination (edge 1.256 vs 1.198), and on those numbers alone
+it is the better setting. But it hands you 3.08 of the top five — 60% of the squad picked
+for you before you start. At 0.825 you buy 2.42, so half the squad is genuinely your call,
+and it costs nothing at all against 0.85 on either metric while landing the budget near 40.
 
-That is a preference for a more open game over a more predictable one, and a taste call
-rather than a measurement. It costs about three points of capture; raising it back to 0.90
-buys that back. Both sit clear of the cliff with an identical `distinct` of 23.2, so
-neither risks the degenerate game.
+That is a preference for a more open game over a more predictable one: a taste call, made
+knowingly, at a measured price of three points of capture against 0.90.
+
+### Tightening the budget does not cause floor-filling
+
+The obvious worry about a tighter budget is that squads degenerate into "two stars and
+three 4.0 fillers". Measured, they do not — the `at price floor` column above is the mean
+number of the five picks sitting at the 4.0 floor, and it is **0.08 at 0.825** and never
+above 0.25 even at 0.75.
+
+The reason is structural: price is linear in expected points, so a floor-priced player is
+honestly poor value rather than a bargain, and the optimiser has no reason to reach for
+one. Across the last eight sessions the optimal squads contained exactly one 4.5 pick and
+no 4.0s — they are consistently one or two premiums plus genuine mid-tier players:
+
+```
+2026-08-08  budget 40.5  ->  Veli 12.0, Lindo 9.0, Morena 8.0, Ricci 6.0, Brian 5.5
+2026-08-22  budget 40.5  ->  Jay 12.0, Morena 8.5, Mike W 7.0, Xavier 7.0, Denzo 6.0
+2026-08-29  budget 40.0  ->  Dan 12.0, Veli 10.5, Lunathi 6.5, Mufasa 6.0, Hayden 5.0
+```
+
+This is the property that would break first if the price mapping ever stopped being linear
+in expected points — worth re-measuring if that changes.
 
 Worth recording, because it is the trap in the tuning: **`edge` rises monotonically toward
-the cliff** — 1.187, 1.256, 1.258, 1.296 at 0.85/0.90/0.95/1.00. Maximising it walks you
+the cliff** — 1.198, 1.190, 1.256, 1.255, 1.296 across the range. Maximising it walks you
 straight off. It is a sanity check, not an objective function.
 
 ### Raising the ceiling does not help
