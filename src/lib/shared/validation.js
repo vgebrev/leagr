@@ -199,6 +199,62 @@ export function validateAndSanitizePlayerName(playerName) {
     };
 }
 
+/** Longest fantasy team name. Short enough to fit a leaderboard row on a phone. */
+const FANTASY_TEAM_NAME_MAX_LENGTH = 40;
+
+/**
+ * Validates and sanitises a fantasy team name.
+ *
+ * Shares `PLAYER_NAME_CONFIG`'s blocklist so there is one definition of "unsafe text"
+ * in the app; only the length limit and the wording of the errors differ. Patterns are
+ * applied with `replace` rather than `test` because they carry the `g` flag, which makes
+ * `test` stateful across calls.
+ * @param {string} teamName - The raw team name input
+ * @returns {{isValid: boolean, sanitizedName: string, errors: string[]}}
+ */
+export function validateFantasyTeamName(teamName) {
+    if (typeof teamName !== 'string') {
+        return { isValid: false, sanitizedName: '', errors: ['Team name must be text'] };
+    }
+
+    const errors = [];
+    let sanitized = teamName.trim();
+
+    if (sanitized.length === 0) {
+        return { isValid: false, sanitizedName: '', errors: ['Team name cannot be empty'] };
+    }
+
+    if (sanitized.length > FANTASY_TEAM_NAME_MAX_LENGTH) {
+        errors.push(`Team name cannot exceed ${FANTASY_TEAM_NAME_MAX_LENGTH} characters`);
+        sanitized = sanitized.substring(0, FANTASY_TEAM_NAME_MAX_LENGTH);
+    }
+
+    for (const char of PLAYER_NAME_CONFIG.forbiddenChars) {
+        if (sanitized.includes(char)) {
+            errors.push('Team name contains invalid characters');
+            sanitized = sanitized.replaceAll(char, '');
+        }
+    }
+
+    for (const pattern of PLAYER_NAME_CONFIG.forbiddenPatterns) {
+        const stripped = sanitized.replace(pattern, '');
+        if (stripped !== sanitized) {
+            errors.push('Team name contains potentially unsafe content');
+            sanitized = stripped;
+        }
+    }
+
+    sanitized = sanitized.replace(/\s+/g, ' ').trim();
+
+    if (sanitized.length === 0) {
+        errors.push('Team name contains only invalid characters');
+    } else if (sanitized.replace(/[\s\-_.]/g, '').length === 0) {
+        errors.push('Team name must contain letters, numbers, or meaningful characters');
+    }
+
+    return { isValid: errors.length === 0, sanitizedName: sanitized, errors };
+}
+
 /**
  * Client-friendly validation that returns first error for immediate feedback
  * @param {string} playerName - The player name to validate

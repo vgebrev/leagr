@@ -76,7 +76,9 @@
         '/games/match',
         '/knockout',
         '/table',
-        '/settings'
+        '/settings',
+        '/fantasy',
+        '/fantasy/team'
     ];
     let showDateSelector = $derived(datePages.includes(page.url.pathname));
 

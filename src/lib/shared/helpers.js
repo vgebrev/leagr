@@ -107,6 +107,30 @@ export function isTeamDrawOpen(dateString, settings) {
 }
 
 /**
+ * Whether the session's first match has a recorded score.
+ *
+ * This is the moment a fantasy squad locks: once the opening whistle has produced a
+ * result there is no more picking. Byes carry no score and can never start, so the
+ * first *playable* match in the opening round is the one that counts.
+ * @param {{rounds?: Array<Array<Record<string, any>>>}|null|undefined} games
+ * @returns {boolean}
+ */
+export function hasFirstMatchStarted(games) {
+    const firstRound = games?.rounds?.[0];
+    if (!Array.isArray(firstRound)) return false;
+
+    const firstMatch = firstRound.find((match) => match && !match.bye);
+    if (!firstMatch) return false;
+
+    return (
+        firstMatch.homeScore !== null &&
+        firstMatch.homeScore !== undefined &&
+        firstMatch.awayScore !== null &&
+        firstMatch.awayScore !== undefined
+    );
+}
+
+/**
  * @param {unknown} val
  * @returns {val is Record<string, unknown>}
  */

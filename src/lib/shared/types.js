@@ -75,6 +75,17 @@
  */
 
 /**
+ * Per-league overrides for the weekly fantasy game. Every sub-object is partial: only the
+ * keys a league actually sets need to be present, and resolveFantasyConfig() supplies the
+ * rest from DEFAULT_FANTASY_CONFIG.
+ * @typedef {Object} FantasySettings
+ * @property {Record<string, number>} [scoring]
+ * @property {Record<string, number>} [pricing]
+ * @property {Record<string, number>} [availability]
+ * @property {Record<string, number>} [squad]
+ */
+
+/**
  * @typedef {Object} LeagueSettings
  * @property {number[]} competitionDays
  * @property {RegistrationWindow} registrationWindow
@@ -90,6 +101,7 @@
  * @property {DisciplineSettings} discipline
  * @property {TeamLogosSettings} [teamLogos]
  * @property {MomentumSettings} [momentum]
+ * @property {FantasySettings} [fantasy]
  */
 
 /**

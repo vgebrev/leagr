@@ -6,7 +6,8 @@
         NewspaperOutline,
         QuestionCircleOutline,
         ShareNodesSolid,
-        SunOutline
+        SunOutline,
+        WalletOutline
     } from 'flowbite-svelte-icons';
     import { Dropdown, DropdownItem } from 'flowbite-svelte';
     import { get } from 'svelte/store';
@@ -106,6 +107,14 @@
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <NewspaperOutline class="me-2 h-4 w-4" />News
+            </span>
+        </DropdownItem>
+        <DropdownItem
+            class={itemClass}
+            href={resolve(`/fantasy?date=${date}`)}
+            onclick={() => (isOpen = false)}>
+            <span class="flex items-center">
+                <WalletOutline class="me-2 h-4 w-4" />Fantasy
             </span>
         </DropdownItem>
         <DropdownItem

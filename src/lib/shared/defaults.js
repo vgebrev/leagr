@@ -28,7 +28,10 @@ export const LEAGUE_ONLY_SETTINGS = [
     'momentum',
     'gameDurationMinutes',
     'lastPlayEnabled',
-    'lastPlaySeconds'
+    'lastPlaySeconds',
+    // Weekly fantasy overrides. Deliberately absent from `defaultSettings`: the top-level
+    // merge is shallow, and resolveFantasyConfig() already deep-merges every nested default.
+    'fantasy'
 ];
 
 /**

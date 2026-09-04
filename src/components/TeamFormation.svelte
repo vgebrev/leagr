@@ -9,15 +9,35 @@
     import { resolve } from '$app/paths';
 
     /**
+     * The contributions panel: the four raw counters plus a derived total. This is the
+     * default; a caller showing something else about a squad (fantasy price and points,
+     * say) supplies its own `statDefs` and the matching keys on `playerStats`.
+     */
+    const CONTRIBUTION_STAT_DEFS = [
+        { key: 'goals', label: 'goals', Icon: LeagueIcon },
+        { key: 'attack', label: 'attack', Icon: BullseyeIcon },
+        { key: 'defence', label: 'defence', Icon: ShieldIcon },
+        { key: 'saves', label: 'saves', Icon: GloveIcon },
+        { key: 'total', label: 'total', Icon: StarSolid, divider: true }
+    ];
+
+    /**
      * Callers supply the four raw counters; the contributions total is derived here.
      * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
+     * @typedef {{ key: string, label: string, Icon?: any, divider?: boolean }} StatDef
      * @type {{
      *   players: Array<{name: string, avatar?: string | null, elo?: number}>,
      *   teamColor?: string,
-     *   playerStats?: Record<string, PlayerStat>
+     *   playerStats?: Record<string, PlayerStat | Record<string, number>>,
+     *   statDefs?: StatDef[]
      * }}
      */
-    let { players = [], teamColor = 'default', playerStats = {} } = $props();
+    let {
+        players = [],
+        teamColor = 'default',
+        playerStats = {},
+        statDefs = CONTRIBUTION_STAT_DEFS
+    } = $props();
 
     // Get team color styles
     const colorStyles = $derived(teamStyles[teamColor] || teamStyles.default);
@@ -62,14 +82,6 @@
         ];
     });
 
-    const statDefs = [
-        { key: 'goals', label: 'goals', Icon: LeagueIcon },
-        { key: 'attack', label: 'attack', Icon: BullseyeIcon },
-        { key: 'defence', label: 'defence', Icon: ShieldIcon },
-        { key: 'saves', label: 'saves', Icon: GloveIcon },
-        { key: 'total', label: 'total', Icon: StarSolid, divider: true }
-    ];
-
     // Per-player stats augmented with the contributions total
     const statsWithTotal = $derived.by(() => {
         /** @type {Record<string, Record<string, number>>} */
@@ -82,6 +94,9 @@
             const defence = stat.defence ?? 0;
             const saves = stat.saves ?? 0;
             out[player.name] = {
+                // Caller-supplied keys pass through untouched, so a custom statDefs set
+                // reads its own values; the contribution keys stay derived either way.
+                ...stat,
                 goals,
                 attack,
                 defence,
@@ -235,10 +250,12 @@
                                         class="flex items-center gap-1 {divider
                                             ? 'mt-0.5 border-t border-white/25 pt-1'
                                             : ''}">
-                                        <Icon
-                                            class="h-3 w-3 shrink-0 {isLeader
-                                                ? 'text-yellow-400'
-                                                : 'text-gray-300'}" />
+                                        {#if Icon}
+                                            <Icon
+                                                class="h-3 w-3 shrink-0 {isLeader
+                                                    ? 'text-yellow-400'
+                                                    : 'text-gray-300'}" />
+                                        {/if}
                                         <span
                                             class="text-[10px] {isLeader
                                                 ? 'text-yellow-400'

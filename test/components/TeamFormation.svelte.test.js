@@ -43,6 +43,56 @@ const players = [
     { name: 'Bob', avatar: null, elo: 1100 }
 ];
 
+describe('TeamFormation custom stat defs', () => {
+    it('renders caller-supplied keys instead of the contributions panel', () => {
+        const { container } = render(TeamFormation, {
+            props: {
+                players,
+                playerStats: {
+                    Alice: { price: 12, points: 24.5 },
+                    Bob: { price: 5.5, points: 9 }
+                },
+                statDefs: [
+                    { key: 'price', label: 'price' },
+                    { key: 'points', label: 'pts', divider: true }
+                ]
+            }
+        });
+
+        const panel = getPanel(container, 'Alice');
+        expect(rowValue(getRow(panel, 'price'))).toBe('12');
+        expect(rowValue(getRow(panel, 'pts'))).toBe('24.5');
+        expect(() => getRow(panel, 'goals')).toThrow();
+    });
+
+    it('renders a stat def with no icon', () => {
+        const { container } = render(TeamFormation, {
+            props: {
+                players,
+                playerStats: { Alice: { price: 12 }, Bob: { price: 5.5 } },
+                statDefs: [{ key: 'price', label: 'price' }]
+            }
+        });
+
+        const row = getRow(getPanel(container, 'Alice'), 'price');
+        expect(row.querySelector('svg')).toBeNull();
+        expect(rowValue(row)).toBe('12');
+    });
+
+    it('still highlights the leader on a custom stat', () => {
+        const { container } = render(TeamFormation, {
+            props: {
+                players,
+                playerStats: { Alice: { price: 12 }, Bob: { price: 5.5 } },
+                statDefs: [{ key: 'price', label: 'price' }]
+            }
+        });
+
+        expect(isGold(getRow(getPanel(container, 'Alice'), 'price'))).toBe(true);
+        expect(isGold(getRow(getPanel(container, 'Bob'), 'price'))).toBe(false);
+    });
+});
+
 describe('TeamFormation stats panel', () => {
     it('shows a total row summing goals, attack, defence and saves', () => {
         const { container } = render(TeamFormation, {
