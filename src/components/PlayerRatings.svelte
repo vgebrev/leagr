@@ -1,6 +1,7 @@
 <script>
     import { Tooltip } from 'flowbite-svelte';
     import { scale } from 'svelte/transition';
+    import { displayOverall, displayRatingRounded } from '$lib/shared/ratingDisplay.js';
 
     const uid = Math.random().toString(36).slice(2, 8);
 
@@ -13,32 +14,16 @@
         saveActionsNorm = null,
         defActionsNorm = null,
         teamGANorm = null,
-        gamma = 0.45,
         tooltipIdPrefix = 'player-rating'
     } = $props();
 
-    const pct = (v) => (v !== null && v !== undefined ? Math.round(v * 100) : null);
+    // Bars, the overall badge and the component tooltip all read the same scale, so the
+    // components a rating is built from average to the rating shown next to them.
+    const pct = displayRatingRounded;
 
-    function applyGammaSpread(value, spread = gamma, minClamp = 0.1) {
-        if (value === null || value === undefined) return null;
-        const normalized = Math.min(1, Math.max(0, value));
-        // Map [0, 1] to [minClamp, 1]
-        const clamped = minClamp + normalized * (1 - minClamp);
-        return Math.pow(clamped, spread);
-    }
-
-    function formatDisplayPercent(value) {
-        const spread = applyGammaSpread(value);
-        return spread === null ? null : Math.floor(spread * 100);
-    }
-
-    // Calculate overall as the average of the displayed percentages (not raw values)
-    // This ensures the overall matches what users see: (Attack% + Defense%) / 2
-    const overall = $derived(
-        attackingRating !== null && controlRating !== null
-            ? (formatDisplayPercent(attackingRating) + formatDisplayPercent(controlRating)) / 2
-            : null
-    );
+    // Overall blends the two displayed percentages, leaning toward the player's stronger
+    // side so a specialist is not marked down for the half of the game they don't play.
+    const overall = $derived(displayOverall(attackingRating, controlRating));
 
     const baseId = $derived(
         `${(tooltipIdPrefix || 'player-rating').replace(/[^a-zA-Z0-9_-]/g, '-')}-${uid}`
@@ -60,11 +45,11 @@
                         class="relative h-3 w-full overflow-hidden rounded-full bg-gray-200/70 shadow-sm shadow-gray-800 dark:bg-gray-700 dark:shadow-gray-950">
                         <div
                             class="bg-primary-500 absolute inset-0 rounded-full transition-all"
-                            style={`width: ${(applyGammaSpread(attackingRating) * 100).toFixed(1)}%`}>
+                            style={`width: ${pct(attackingRating)}%`}>
                         </div>
                     </div>
                     <span class="w-9 text-right text-sm text-gray-500 dark:text-gray-300">
-                        {formatDisplayPercent(attackingRating) ?? ''}
+                        {pct(attackingRating) ?? ''}
                     </span>
                     {#if goalsNorm !== null || offActionsNorm !== null || teamGFNorm !== null}
                         <Tooltip
@@ -89,11 +74,11 @@
                         class="relative h-3 w-full overflow-hidden rounded-full bg-gray-200/70 shadow-sm shadow-gray-800 dark:bg-gray-700 dark:shadow-gray-950">
                         <div
                             class="bg-primary-500 absolute inset-0 rounded-full transition-all"
-                            style={`width: ${(applyGammaSpread(controlRating) * 100).toFixed(1)}%`}>
+                            style={`width: ${pct(controlRating)}%`}>
                         </div>
                     </div>
                     <span class="w-9 text-right text-sm text-gray-500 dark:text-gray-300">
-                        {formatDisplayPercent(controlRating) ?? ''}
+                        {pct(controlRating) ?? ''}
                     </span>
                     {#if saveActionsNorm !== null || defActionsNorm !== null || teamGANorm !== null}
                         <Tooltip
@@ -111,7 +96,7 @@
         {#if overall !== null}
             <div
                 class="m-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-gray-200/80 text-2xl font-bold text-gray-500 dark:bg-gray-700 dark:text-gray-200">
-                {Math.floor(overall)}
+                {overall}
             </div>
         {/if}
     </div>

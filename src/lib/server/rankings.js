@@ -1629,27 +1629,59 @@ export class RankingsManager {
     }
 
     /**
-     * Calculate normalized attack/control ratings using min-max normalization.
+     * Calculate normalized attack/control ratings using percentile normalization.
      * Composite formula blends individual stats (goals, offensive/defensive/save actions)
-     * with team-level goals for/against. All six metrics are normalised per date using
-     * established players (35+ ELO games) as bounds.
+     * with team-level goals for/against. All six metrics are normalised per date against
+     * the distribution of established players (35+ season ELO games).
      *
-     * attacking = (3×goalsNorm + 2×offActionsNorm + 1×teamGFNorm) / 6
-     * control   = (0.5×saveActionsNorm + 3.5×defActionsNorm + 1.5×teamGAInvNorm) / 5.5
+     * attacking = (3×goalsNorm + 2×offActionsNorm + 0.6×teamGFNorm) / 5.6
+     * control   = (1×saveActionsNorm + 3.5×defActionsNorm + 0.75×teamGAInvNorm) / 5.25
      *
-     * Falls back to team-GF/GA only when individual stats are all zero (legacy data).
+     * A component that was never measured for a player drops out of both the numerator
+     * and the denominator, so the rating is a weighted mean of what is actually known.
+     *
+     * Falls back to team-GF/GA only when no individual stat was ever recorded (legacy data).
      *
      * @param {Object} enhancedRankings - Enhanced rankings with complete history
      */
     calculateAttackControlRatings(enhancedRankings) {
         const MIN_GAMES_FOR_NORMALIZATION_POOL = 35;
 
-        // Helper: min-max normalise a value within a range, clamped to [0,1]
-        const norm = (value, min, max) => {
-            if (max === min) return 0.5;
-            return Math.max(0, Math.min(1, (value - min) / (max - min)));
+        // Midrank percentile of a value within the established pool. This replaced
+        // min-max, which let a single outlier own most of the scale: on right-skewed
+        // individual stats the median player normalised to ~0.2 while near-symmetric
+        // team stats spread across the full range, so a component's nominal weight
+        // stopped predicting its influence on the rating. Percentile rank is monotone,
+        // so trait bands — percentiles over these same norms — are unaffected.
+        const norm = (value, pool) => {
+            if (!pool || pool.length === 0) return 0.5;
+            let below = 0;
+            let equal = 0;
+            for (const v of pool) {
+                if (v < value) below++;
+                else if (v === value) equal++;
+            }
+            return (below + equal / 2) / pool.length;
         };
-        const invNorm = (value, min, max) => 1 - norm(value, min, max);
+        const invNorm = (value, pool) => 1 - norm(value, pool);
+
+        /**
+         * Weighted mean over the components that exist. A null component is one that
+         * was never measured, not a zero: leaving its weight in the denominator scored
+         * the player down for a gap in the data rather than for their play.
+         * @param {Array<[number, number|null]>} terms - [weight, normalised value] pairs
+         * @returns {number|null}
+         */
+        const blend = (terms) => {
+            let num = 0;
+            let den = 0;
+            for (const [weight, value] of terms) {
+                if (value === null || value === undefined) continue;
+                num += weight * value;
+                den += weight;
+            }
+            return den > 0 ? num / den : null;
+        };
 
         // Get all unique dates sorted
         const allDates = new Set();
@@ -1689,8 +1721,9 @@ export class RankingsManager {
             });
         });
 
-        // Second pass: per date, build min/max bounds from established players
-        const dateMinMax = {};
+        // Second pass: per date, collect the established players' values as the
+        // normalisation pool for that date.
+        const datePools = {};
 
         sortedDates.forEach((date) => {
             const established = { gf: [], ga: [], goals: [], off: [], def: [], save: [] };
@@ -1717,26 +1750,7 @@ export class RankingsManager {
             });
 
             if (established.gf.length > 0) {
-                const safeMinMax = (arr) =>
-                    arr.length > 0 ? { min: Math.min(...arr), max: Math.max(...arr) } : null;
-                const goalsMM = safeMinMax(established.goals);
-                const offMM = safeMinMax(established.off);
-                const defMM = safeMinMax(established.def);
-                const saveMM = safeMinMax(established.save);
-                dateMinMax[date] = {
-                    minGF: Math.min(...established.gf),
-                    maxGF: Math.max(...established.gf),
-                    minGA: Math.min(...established.ga),
-                    maxGA: Math.max(...established.ga),
-                    minGoals: goalsMM?.min ?? null,
-                    maxGoals: goalsMM?.max ?? null,
-                    minOff: offMM?.min ?? null,
-                    maxOff: offMM?.max ?? null,
-                    minDef: defMM?.min ?? null,
-                    maxDef: defMM?.max ?? null,
-                    minSave: saveMM?.min ?? null,
-                    maxSave: saveMM?.max ?? null
-                };
+                datePools[date] = established;
             }
         });
 
@@ -1757,7 +1771,7 @@ export class RankingsManager {
             dates.forEach((date) => {
                 const entry = playerData.history[date];
                 const r = entry.ratings;
-                const mm = dateMinMax[date];
+                const pools = datePools[date];
 
                 const hasTeamData = r.teamGF?.perSession != null && r.teamGA?.perSession != null;
 
@@ -1766,7 +1780,7 @@ export class RankingsManager {
                     return;
                 }
 
-                if (!mm) {
+                if (!pools) {
                     // No established pool yet — use neutral 0.5
                     r.attacking = 0.5;
                     r.control = 0.5;
@@ -1788,29 +1802,19 @@ export class RankingsManager {
                 }
 
                 // Normalise team-level GF/GA
-                const teamGFNorm = norm(r.teamGF.perSession, mm.minGF, mm.maxGF);
-                const teamGAInvNorm = invNorm(r.teamGA.perSession, mm.minGA, mm.maxGA);
+                const teamGFNorm = norm(r.teamGF.perSession, pools.gf);
+                const teamGAInvNorm = invNorm(r.teamGA.perSession, pools.ga);
 
-                // Normalise individual stats — null when bounds aren't available for that
-                // type yet, or when this player has never had it tracked. The second case
+                // Normalise individual stats — null when no established player has that
+                // stat yet, or when this player has never had it tracked. The second case
                 // matters: treating "never measured" as a rate of 0 would otherwise put a
                 // phantom zero into the trait bands and understate every bar.
-                const goalsN =
-                    mm.minGoals != null && r.goals?.perSession != null
-                        ? norm(r.goals.perSession, mm.minGoals, mm.maxGoals)
-                        : null;
-                const offN =
-                    mm.minOff != null && r.offActions?.perSession != null
-                        ? norm(r.offActions.perSession, mm.minOff, mm.maxOff)
-                        : null;
-                const defN =
-                    mm.minDef != null && r.defActions?.perSession != null
-                        ? norm(r.defActions.perSession, mm.minDef, mm.maxDef)
-                        : null;
-                const saveN =
-                    mm.minSave != null && r.saveActions?.perSession != null
-                        ? norm(r.saveActions.perSession, mm.minSave, mm.maxSave)
-                        : null;
+                const statNorm = (pool, value) =>
+                    pool.length > 0 && value != null ? norm(value, pool) : null;
+                const goalsN = statNorm(pools.goals, r.goals?.perSession);
+                const offN = statNorm(pools.off, r.offActions?.perSession);
+                const defN = statNorm(pools.def, r.defActions?.perSession);
+                const saveN = statNorm(pools.save, r.saveActions?.perSession);
 
                 // Determine whether meaningful individual data exists
                 const hasIndividualData =
@@ -1821,10 +1825,20 @@ export class RankingsManager {
 
                 let attacking, control;
                 if (hasIndividualData) {
-                    // Composite weighted formula — use available norms, fall back to 0 for missing ones
-                    // so the weight is effectively redistributed toward what we do have
-                    attacking = (3 * (goalsN ?? 0) + 2 * (offN ?? 0) + 1 * teamGFNorm) / 6;
-                    control = (0.5 * (saveN ?? 0) + 3.5 * (defN ?? 0) + 1.5 * teamGAInvNorm) / 5.5;
+                    // Composite weighted mean over the components this player actually has.
+                    // Team GF/GA are deliberately minor: measured over the season they
+                    // explain far less of a player than their own recorded actions do,
+                    // and their spread comes mostly from low-appearance players.
+                    attacking = blend([
+                        [3, goalsN],
+                        [2, offN],
+                        [0.6, teamGFNorm]
+                    ]);
+                    control = blend([
+                        [1, saveN],
+                        [3.5, defN],
+                        [0.75, teamGAInvNorm]
+                    ]);
                 } else {
                     // Fallback: team-level only (preserves legacy behaviour)
                     attacking = teamGFNorm;

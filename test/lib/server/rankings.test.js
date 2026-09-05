@@ -1982,6 +1982,112 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
                 }
             }
         });
+
+        /**
+         * Build a single-date pool of established players from
+         * `{ name: { gf, ga, goals, off, def, save } }`. A stat set to null means
+         * "never measured" — it stays out of both the normalisation pool and the
+         * composite, rather than being treated as a rate of zero.
+         */
+        function buildPool(spec, date = '2026-01-10') {
+            const players = {};
+            for (const [name, s] of Object.entries(spec)) {
+                players[name] = {
+                    history: {
+                        [date]: {
+                            team: 'X',
+                            points: { total: 5 },
+                            ratings: {
+                                elo: 1000,
+                                eloGames: { allTime: 40, season: 40 },
+                                attacking: null,
+                                control: null,
+                                teamGF: { perSession: s.gf },
+                                teamGA: { perSession: s.ga },
+                                goals: { perSession: s.goals },
+                                offActions: { perSession: s.off },
+                                defActions: { perSession: s.def },
+                                saveActions: { perSession: s.save }
+                            },
+                            ranking: { rank: 1, totalPlayers: 4, rankingPoints: 10 }
+                        }
+                    },
+                    elo: { gamesPlayed: 40 }
+                };
+            }
+            return { players };
+        }
+
+        const spread = {
+            Ann: { gf: 9, ga: 6, goals: 3, off: 4, def: 2, save: 1 },
+            Ben: { gf: 8, ga: 7, goals: 2, off: 3, def: 3, save: 2 },
+            Cid: { gf: 7, ga: 8, goals: 1, off: 2, def: 4, save: 3 }
+        };
+
+        it('drops a never-measured component from the denominator instead of scoring it zero', () => {
+            // Dot has goals recorded but no offensive actions. Scoring the missing
+            // component as 0 against a fixed denominator of 6 penalised her for never
+            // having been measured; the weight should leave the denominator with it.
+            const rankings = buildPool({
+                ...spread,
+                Dot: { gf: 8, ga: 7, goals: 2, off: null, def: 3, save: 2 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            const r = rankings.players.Dot.history['2026-01-10'].ratings;
+            expect(r.offActions.norm).toBeNull();
+            expect(rankings.players.Dot.attackingRating).toBeCloseTo(
+                (3 * r.goals.norm + 0.6 * r.teamGF.norm) / 3.6,
+                2
+            );
+        });
+
+        it('normalises by percentile rank, so a single outlier no longer owns the scale', () => {
+            // Goals per session 1, 2, 3, 4, 50. Min-max put the median player at 0.04
+            // because the outlier stretched the range; the midrank percentile puts
+            // them at 0.5, where the distribution says they belong.
+            const rankings = buildPool({
+                A: { gf: 8, ga: 8, goals: 1, off: 1, def: 1, save: 1 },
+                B: { gf: 8, ga: 8, goals: 2, off: 1, def: 1, save: 1 },
+                C: { gf: 8, ga: 8, goals: 3, off: 1, def: 1, save: 1 },
+                D: { gf: 8, ga: 8, goals: 4, off: 1, def: 1, save: 1 },
+                E: { gf: 8, ga: 8, goals: 50, off: 1, def: 1, save: 1 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            const normOf = (name) =>
+                rankings.players[name].history['2026-01-10'].ratings.goals.norm;
+            expect(normOf('C')).toBeCloseTo(0.5, 3);
+            expect(normOf('E')).toBeCloseTo(0.9, 3);
+            // Every player ties on a stat with no variation, so all sit mid-scale.
+            expect(rankings.players.C.history['2026-01-10'].ratings.offActions.norm).toBeCloseTo(
+                0.5,
+                3
+            );
+        });
+
+        it('weights Attack as goals 3, offensive actions 2, team GF 0.6', () => {
+            const rankings = buildPool(spread);
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            const r = rankings.players.Ben.history['2026-01-10'].ratings;
+            expect(rankings.players.Ben.attackingRating).toBeCloseTo(
+                (3 * r.goals.norm + 2 * r.offActions.norm + 0.6 * r.teamGF.norm) / 5.6,
+                2
+            );
+        });
+
+        it('weights Defence as saves 1, defensive actions 3.5, team GA 0.75', () => {
+            const rankings = buildPool(spread);
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            // teamGA.norm is stored already inverted (low goals against = high value).
+            const r = rankings.players.Ben.history['2026-01-10'].ratings;
+            expect(rankings.players.Ben.controlRating).toBeCloseTo(
+                (1 * r.saveActions.norm + 3.5 * r.defActions.norm + 0.75 * r.teamGA.norm) / 5.25,
+                2
+            );
+        });
     });
 
     // -------------------------------------------------------------------------

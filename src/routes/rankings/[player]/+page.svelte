@@ -222,7 +222,6 @@
                                 saveActionsNorm={playerData.saveActionsNorm ?? null}
                                 defActionsNorm={playerData.defActionsNorm ?? null}
                                 teamGANorm={playerData.teamGANorm ?? null}
-                                gamma={0.45}
                                 tooltipIdPrefix={`player-profile-${player ?? 'unknown'}`} />
                         </div>
                     {/if}

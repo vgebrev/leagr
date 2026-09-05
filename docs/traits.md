@@ -21,7 +21,7 @@ Traits are **computed once and persisted** into `rankings-YYYY.json`, not derive
 session JSON (games.rounds[][], knockout bracket)
   └─ collectIndividualStatsForSession()      raw per-session counts + `tracked` flags
       └─ per-stat cumulative averages         indGoals / sessionsWithGoals, …
-          └─ calculateAttackControlRatings()  min-max norms against the established pool
+          └─ calculateAttackControlRatings()  percentile norms against the established pool
               └─ calculatePlayerProfiles()    confidence pull → dynamic threshold → traits → badges
                   └─ saveRankingsUnsafe()     persisted as `traits` and `playerProfile`
 ```
@@ -93,29 +93,42 @@ Team-level `teamGF`/`teamGA` use plain `appearances` as the denominator instead
 
 `calculateAttackControlRatings()` (`rankings.js:1635-1876`) runs three passes over the history.
 
-1. **Carry-forward** (`1652-1681`) — a player's last known per-session averages are copied into
+1. **Carry-forward** (`1693-1722`) — a player's last known per-session averages are copied into
    history entries for sessions they missed, so an absent player keeps a norm rather than
    dropping out.
-2. **Bounds** (`1683-1732`) — per session date, min and max of each stat are taken across the
+2. **Pool** (`1724-1755`) — per session date, the values of each stat are collected across the
    **established pool**: players with `eloGames.season >= MIN_GAMES_FOR_NORMALIZATION_POOL` (35)
-   on that date. A stat with no established values that date gets `null` bounds.
-3. **Normalise** (`1734-1875`) — min-max, clamped to `[0,1]`:
+   on that date. A stat with no established values that date gets an empty pool and a `null` norm.
+3. **Normalise** (`1757-1899`) — midrank percentile within that pool:
 
 ```
-norm(v, min, max) = clamp01((v − min) / (max − min))      // 0.5 when max === min
+norm(v, pool) = (count(pool < v) + count(pool === v) / 2) / pool.length     // 0.5 on an empty pool
 ```
+
+This replaced min-max normalisation, which divided by the pool's full range and so let one
+outlier own most of the scale: the individual stats are right-skewed, and their median player
+was landing near 0.2 while the near-symmetric team stats spread across the whole `[0,1]`
+interval. Percentile rank is monotone, so **trait bands are unaffected by the change** — they
+are themselves percentiles over these norms.
 
 The value the trait system consumes is the **latest date's** norm, lifted to player level as
-`goalsNorm` / `offActionsNorm` / `defActionsNorm` / `saveActionsNorm` (`rankings.js:1871-1874`).
+`goalsNorm` / `offActionsNorm` / `defActionsNorm` / `saveActionsNorm` (`rankings.js:1894-1897`).
 Because every player who has ever appeared receives a history entry on every subsequent date,
 "latest" is the same date for everyone, so the four norms are mutually comparable.
 
-The same norms feed the composite balancing ratings (`rankings.js:1817-1818`):
+The same norms feed the composite balancing ratings (`rankings.js:1832-1841`):
 
 ```
-attacking = (3·goalsNorm + 2·offActionsNorm + 1·teamGFNorm) / 6
-control   = (0.5·saveActionsNorm + 3.5·defActionsNorm + 1.5·teamGAInvNorm) / 5.5
+attacking = (3·goalsNorm + 2·offActionsNorm + 0.6·teamGFNorm)      / 5.6
+control   = (1·saveActionsNorm + 3.5·defActionsNorm + 0.75·teamGAInvNorm) / 5.25
 ```
+
+Both are weighted means over the components a player **has**. A stat that was never measured
+for them drops out of the denominator too, rather than scoring zero against a fixed one — the
+latter penalised a player for a gap in the data instead of for their play. The team terms are
+deliberately minor: measured over a season they explain far less of a player than their own
+recorded actions do, and most of their spread comes from low-appearance players whose team
+averages have not yet regressed to the mean.
 
 ## Eligibility
 
