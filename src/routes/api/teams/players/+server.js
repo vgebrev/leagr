@@ -1,5 +1,6 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { toApiError } from '$lib/server/apiError.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { createDisciplineManager } from '$lib/server/discipline.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
@@ -101,11 +102,7 @@ export const DELETE = async ({ request, url, locals }) => {
         const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
         return json({ ...enhancedData, ownedByMe });
     } catch (err) {
-        console.error('Error removing player from team:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to remove player from team');
+        return toApiError(err, 'Failed to remove player from team');
     }
 };
 
@@ -178,10 +175,6 @@ export const POST = async ({ request, url, locals }) => {
         const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
         return json({ ...enhancedData, ownedByMe });
     } catch (err) {
-        console.error('Error assigning player to team:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to assign player to team');
+        return toApiError(err, 'Failed to assign player to team');
     }
 };

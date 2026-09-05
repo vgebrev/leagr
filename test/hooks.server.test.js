@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 /**
  * Unit tests for rate limiting with query parameters
@@ -139,5 +139,140 @@ describe('Rate Limiting with Query Parameters', () => {
 
         // Verify that 3 separate keys were created
         expect(rateLimitMap.size).toBe(3);
+    });
+});
+
+/**
+ * The DEBUG body logger previously wrote league and admin codes to app.log in
+ * plaintext, and a 500 left no trace of its cause beyond the status line.
+ */
+describe('Request logging', () => {
+    /** @type {typeof import('../src/hooks.server.js')} */
+    let hooks;
+    /** @type {{ error: ReturnType<typeof vi.fn> }} */
+    let logger;
+
+    beforeEach(async () => {
+        vi.resetModules();
+        logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+        vi.doMock('$lib/server/logger.js', () => ({ logger, initializeLogger: vi.fn() }));
+        vi.doMock('$lib/server/email.js', () => ({ initializeEmailService: vi.fn() }));
+        vi.doMock('$lib/server/league.js', () => ({ getLeagueInfo: vi.fn(() => null) }));
+        hooks = await import('../src/hooks.server.js');
+    });
+
+    describe('sanitizeBodyForLog', () => {
+        it('redacts a league access code', () => {
+            const out = hooks.sanitizeBodyForLog(JSON.stringify({ accessCode: '24VJ-DI1S-DMY8' }));
+
+            expect(out).not.toContain('24VJ-DI1S-DMY8');
+            expect(JSON.parse(out).accessCode).toBe('[redacted]');
+        });
+
+        it('redacts admin codes, passwords and tokens regardless of casing', () => {
+            const out = JSON.parse(
+                hooks.sanitizeBodyForLog(
+                    JSON.stringify({
+                        adminCode: 'AAAA-BBBB-CCCC',
+                        Password: 'hunter2',
+                        token: 'abc123',
+                        resetCode: 'zzz'
+                    })
+                )
+            );
+
+            expect(Object.values(out)).toEqual([
+                '[redacted]',
+                '[redacted]',
+                '[redacted]',
+                '[redacted]'
+            ]);
+        });
+
+        it('redacts nested credentials while keeping ordinary fields', () => {
+            const out = JSON.parse(
+                hooks.sanitizeBodyForLog(
+                    JSON.stringify({ league: { name: 'pirates', accessCode: 'secret-code' } })
+                )
+            );
+
+            expect(out.league.name).toBe('pirates');
+            expect(out.league.accessCode).toBe('[redacted]');
+        });
+
+        it('leaves a body with no credentials intact', () => {
+            const body = { operation: 'updateScores', bracket: [{ round: 'semi', homeScore: 2 }] };
+
+            expect(JSON.parse(hooks.sanitizeBodyForLog(JSON.stringify(body)))).toEqual(body);
+        });
+
+        it('omits a body it cannot parse rather than logging it raw', () => {
+            expect(hooks.sanitizeBodyForLog('accessCode=24VJ-DI1S-DMY8')).toBe(
+                '[unparseable body omitted]'
+            );
+        });
+    });
+
+    describe('handleError', () => {
+        const event = {
+            request: { method: 'POST' },
+            url: new URL('http://pirates.leagr.co.za/api/games/knockout?date=2026-09-05'),
+            locals: { leagueId: 'pirates', clientId: 'client-1' }
+        };
+
+        it('returns a correlation id the client can quote back', () => {
+            const result = hooks.handleError({
+                error: new Error('boom'),
+                event,
+                status: 500,
+                message: 'Internal Error'
+            });
+
+            expect(result.errorId).toMatch(/^[0-9a-f-]{36}$/);
+        });
+
+        it('logs the failure with its stack and context', () => {
+            const err = new Error('boom');
+
+            const result = hooks.handleError({
+                error: err,
+                event,
+                status: 500,
+                message: 'Internal Error'
+            });
+
+            expect(logger.error).toHaveBeenCalledTimes(1);
+            const [line, context, cause] = logger.error.mock.calls[0];
+            expect(line).toContain('POST /api/games/knockout?date=2026-09-05');
+            expect(line).toContain(result.errorId);
+            expect(context).toMatchObject({ league: 'pirates', clientId: 'client-1' });
+            expect(cause).toBe(err);
+        });
+
+        it('prefers the route fallback message attached by toApiError', () => {
+            const err = Object.assign(new Error('ENOENT'), {
+                apiFallbackMessage: 'Failed to update knockout scores'
+            });
+
+            const result = hooks.handleError({
+                error: err,
+                event,
+                status: 500,
+                message: 'Internal Error'
+            });
+
+            expect(result.message).toBe('Failed to update knockout scores');
+        });
+
+        it('falls back to SvelteKit’s message when no route message was attached', () => {
+            const result = hooks.handleError({
+                error: new Error('boom'),
+                event,
+                status: 500,
+                message: 'Internal Error'
+            });
+
+            expect(result.message).toBe('Internal Error');
+        });
     });
 });

@@ -1,4 +1,5 @@
 import { json, error } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 
 /**
@@ -61,7 +62,6 @@ export async function GET({ params, locals, url }) {
 
         return json(response);
     } catch (err) {
-        console.error('Error loading player trophy data:', err);
-        return error(500, 'Failed to load player trophy data');
+        return toApiError(err, 'Failed to load player trophy data');
     }
 }

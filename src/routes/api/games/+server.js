@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { data } from '$lib/server/data.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createGameScheduler, GameSchedulerError } from '$lib/server/gameScheduler.js';
+import { createGameScheduler } from '$lib/server/gameScheduler.js';
 import {
     validateDateParameter,
     parseRequestBody,
@@ -34,8 +35,7 @@ export const GET = async ({ url, locals }) => {
             teamCount
         });
     } catch (err) {
-        console.error('Error fetching games:', err);
-        return error(500, 'Failed to fetch games data');
+        return toApiError(err, 'Failed to fetch games data');
     }
 };
 
@@ -174,13 +174,7 @@ export const POST = async ({ request, url, locals }) => {
             return result ? json(result) : error(500, 'Failed to save games');
         }
     } catch (err) {
-        console.error('Error processing games request:', err);
-
-        if (err instanceof GameSchedulerError) {
-            return error(err.statusCode, err.message);
-        }
-
-        return error(500, 'Internal server error processing games');
+        return toApiError(err, 'Internal server error processing games');
     }
 };
 

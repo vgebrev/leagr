@@ -396,6 +396,12 @@ class GamesService {
                 awayScore,
                 [scorersKey]: newScorers
             };
+
+            // A goal edit moves the score, so a recorded shootout may no longer apply.
+            if (homeScore === null || awayScore === null || homeScore !== awayScore) {
+                updatedMatch.homePenalties = null;
+                updatedMatch.awayPenalties = null;
+            }
         } else {
             const actionsKey =
                 team === 'home'
