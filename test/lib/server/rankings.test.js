@@ -2007,7 +2007,7 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
                                 goals: { perSession: s.goals },
                                 offActions: { perSession: s.off },
                                 defActions: { perSession: s.def },
-                                saveActions: { perSession: s.save }
+                                saveActions: { perSession: s.save, total: s.saveTotal ?? null }
                             },
                             ranking: { rank: 1, totalPlayers: 4, rankingPoints: 10 }
                         }
@@ -2075,6 +2075,46 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
                 (3 * r.goals.norm + 2 * r.offActions.norm + 0.6 * r.teamGF.norm) / 5.6,
                 2
             );
+        });
+
+        it('averages the save rate and save volume percentiles into one norm', () => {
+            // Per-match save rate carries no player signal in real data, so a save rate on
+            // its own mostly measures time in goal. The norm therefore scores the rate and
+            // the season total together. Here Ann has the best rate on the least keeping
+            // and Cid the reverse, so neither half decides it alone.
+            const rankings = buildPool({
+                Ann: { gf: 8, ga: 8, goals: 1, off: 1, def: 1, save: 6, saveTotal: 12 },
+                Ben: { gf: 8, ga: 8, goals: 1, off: 1, def: 1, save: 4, saveTotal: 40 },
+                Cid: { gf: 8, ga: 8, goals: 1, off: 1, def: 1, save: 2, saveTotal: 60 }
+            });
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            const r = (name) => rankings.players[name].history['2026-01-10'].ratings.saveActions;
+
+            // Rate ladder 2/4/6 and volume ladder 12/40/60 both run bottom to top, so the
+            // midrank percentiles are 1/6, 1/2, 5/6 on each half.
+            expect(r('Ann').rateNorm).toBeCloseTo(5 / 6, 3);
+            expect(r('Ann').volumeNorm).toBeCloseTo(1 / 6, 3);
+            expect(r('Ann').norm).toBeCloseTo(0.5, 3);
+
+            expect(r('Cid').rateNorm).toBeCloseTo(1 / 6, 3);
+            expect(r('Cid').volumeNorm).toBeCloseTo(5 / 6, 3);
+            expect(r('Cid').norm).toBeCloseTo(0.5, 3);
+
+            // Ben is mid on both, so the two halves cannot separate the three of them —
+            // which is the point: volume alone would have ranked them exactly backwards.
+            expect(r('Ben').norm).toBeCloseTo(0.5, 3);
+        });
+
+        it('falls back to the rate half alone when no volume was recorded', () => {
+            // Legacy history entries predate the volume half. A missing total must not
+            // pull the norm toward the middle; the rate is simply the whole of it.
+            const rankings = buildPool(spread);
+            rankingsManager.calculateAttackControlRatings(rankings);
+
+            const r = rankings.players.Ann.history['2026-01-10'].ratings.saveActions;
+            expect(r.volumeNorm).toBeNull();
+            expect(r.norm).toBe(r.rateNorm);
         });
 
         it('weights Defence as saves 1, defensive actions 3.5, team GA 0.75', () => {
@@ -2230,6 +2270,28 @@ describe('RankingsManager - Individual stats & composite ratings', () => {
             const enough = ladderWith('Alice', { s: 0.9, sessionsInGoal: 5 });
             rankingsManager.calculatePlayerProfiles(enough);
             expect(enough.players.Alice.traitTiers.isShotStopper).toBe(2);
+        });
+
+        // Shot Stopper bands at 0.75 where the other three band at 0.85, because its
+        // eligible pool is roughly half the size and a flat bar made it the scarcest
+        // trait for a reason unrelated to the standard. Twenty players on an identical
+        // ladder for both stats isolate the band: nearest-rank puts Elite on sorted[16]
+        // at 0.85 (four holders) and sorted[14] at 0.75 (six).
+        it('bands Shot Stopper Elite wider than the outfield traits', () => {
+            const players = {};
+            for (let i = 0; i < 20; i++) players[`P${i}`] = { g: i / 20, s: i / 20 };
+            const r = buildWithNorms(players);
+            rankingsManager.calculatePlayerProfiles(r);
+
+            const elite = (trait) =>
+                Object.values(r.players).filter((p) => p.traitTiers[trait] === 2).length;
+
+            expect(elite('isFinisher')).toBe(4);
+            expect(elite('isShotStopper')).toBe(6);
+
+            // The two players the bands disagree about are the ones on 0.70 and 0.75.
+            expect(r.players.P14.traitTiers.isFinisher).toBe(1);
+            expect(r.players.P14.traitTiers.isShotStopper).toBe(2);
         });
 
         it('gates per stat — a stat measured often enough still awards', () => {
