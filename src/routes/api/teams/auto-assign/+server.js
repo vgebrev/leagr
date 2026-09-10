@@ -1,6 +1,7 @@
-import { error, isHttpError, json } from '@sveltejs/kit';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
-import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
+import { error, json } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createTeamGenerator } from '$lib/server/teamGenerator.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
 import { buildTeamGenerationContext } from '$lib/server/teamGenerationContext.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
@@ -167,13 +168,6 @@ export const POST = async ({ request, url, locals }) => {
         const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
         return json({ ...enhancedData, ownedByMe });
     } catch (err) {
-        console.error('Error auto-assigning players:', err);
-        if (isHttpError(err)) {
-            throw err;
-        }
-        if (err instanceof TeamError || err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to auto-assign players.');
+        return toApiError(err, 'Failed to auto-assign players.');
     }
 };

@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { toApiError } from '$lib/server/apiError.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
+import { createDisciplineManager } from '$lib/server/discipline.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import {
     validateAndSanitizePlayerName,
@@ -34,8 +35,7 @@ export const GET = async ({ url, locals }) => {
         const ownedByMe = await manager.getOwnedPlayersForCurrentClient();
         return json({ ...data.players, ownedByMe });
     } catch (err) {
-        console.error('Error fetching players:', err);
-        return error(500, 'Failed to fetch players');
+        return toApiError(err, 'Failed to fetch players');
     }
 };
 
@@ -90,11 +90,7 @@ export const POST = async ({ request, url, locals }) => {
             settings: true
         });
     } catch (err) {
-        console.error('Error fetching game data:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to fetch game data');
+        return toApiError(err, 'Failed to fetch game data');
     }
 
     // Validate if operations are allowed based on competition end state
@@ -118,11 +114,7 @@ export const POST = async ({ request, url, locals }) => {
                 gameData.settings
             );
     } catch (err) {
-        console.error('Error checking suspension:', err);
-        if (err instanceof DisciplineError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to check suspension status');
+        return toApiError(err, 'Failed to check suspension status');
     }
 
     if (suspension.suspended) {
@@ -164,11 +156,7 @@ export const POST = async ({ request, url, locals }) => {
             ...(similarPlayer && { similarPlayer })
         });
     } catch (err) {
-        console.error('Error adding player:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to add player');
+        return toApiError(err, 'Failed to add player');
     }
 };
 
@@ -229,11 +217,7 @@ export const DELETE = async ({ request, url, locals }) => {
         const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
         return json({ ...result.players, ownedByMe });
     } catch (err) {
-        console.error('Error removing player:', err);
-        if (err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to remove player');
+        return toApiError(err, 'Failed to remove player');
     }
 };
 
@@ -307,11 +291,7 @@ export const PATCH = async ({ request, url, locals }) => {
             const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
             return json({ ...result, ownedByMe });
         } catch (err) {
-            console.error('Error renaming player:', err);
-            if (err instanceof PlayerError) {
-                return error(err.statusCode, err.message);
-            }
-            return error(500, 'Failed to rename player');
+            return toApiError(err, 'Failed to rename player');
         }
     } else {
         // Validate request body structure for move
@@ -383,11 +363,7 @@ export const PATCH = async ({ request, url, locals }) => {
             const ownedByMe = await playerManager.getOwnedPlayersForCurrentClient();
             return json({ ...result, ownedByMe });
         } catch (err) {
-            console.error('Error moving player:', err);
-            if (err instanceof PlayerError) {
-                return error(err.statusCode, err.message);
-            }
-            return error(500, 'Failed to move player');
+            return toApiError(err, 'Failed to move player');
         }
     }
 };

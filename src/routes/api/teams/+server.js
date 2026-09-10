@@ -1,4 +1,5 @@
 import { error, isHttpError, json } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
 import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
 import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
@@ -59,8 +60,7 @@ export const GET = async ({ url, locals }) => {
 
         return json({ ...enhancedData, ownedByMe });
     } catch (err) {
-        console.error('Error fetching teams:', err);
-        return error(500, 'Failed to fetch teams');
+        return toApiError(err, 'Failed to fetch teams');
     }
 };
 

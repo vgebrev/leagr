@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
-import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { toApiError } from '$lib/server/apiError.js';
+import { createDisciplineManager } from '$lib/server/discipline.js';
+import { createPlayerManager } from '$lib/server/playerManager.js';
 import { validateDateParameter, validateAndSanitizePlayerName } from '$lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
@@ -94,11 +95,7 @@ export const GET = async ({ url, locals }) => {
             enabled: gameData.settings.discipline?.enabled !== false
         });
     } catch (err) {
-        console.error('Error fetching discipline data:', err);
-        if (err instanceof DisciplineError || err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to fetch discipline data');
+        return toApiError(err, 'Failed to fetch discipline data');
     }
 };
 
@@ -142,10 +139,6 @@ export const DELETE = async ({ request, url, locals }) => {
 
         return json({ success: true });
     } catch (err) {
-        console.error('Error clearing discipline data:', err);
-        if (err instanceof DisciplineError || err instanceof PlayerError) {
-            return error(err.statusCode, err.message);
-        }
-        return error(500, 'Failed to clear discipline data');
+        return toApiError(err, 'Failed to clear discipline data');
     }
 };

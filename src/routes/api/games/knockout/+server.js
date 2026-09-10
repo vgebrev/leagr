@@ -1,6 +1,7 @@
 import { error, json } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createKnockoutManager, KnockoutError } from '$lib/server/knockoutManager.js';
+import { createKnockoutManager } from '$lib/server/knockoutManager.js';
 import {
     validateDateParameter,
     parseRequestBody,
@@ -29,13 +30,10 @@ export const GET = async ({ url, locals }) => {
 
         return json({ knockoutGames });
     } catch (err) {
-        console.error('Error fetching knockout games:', err);
-
-        if (err instanceof KnockoutError) {
-            return error(err.statusCode, err.message);
-        }
-
-        return error(500, 'Failed to fetch knockout games data');
+        return toApiError(err, 'Failed to fetch knockout games data', {
+            date: dateValidation.date,
+            leagueId
+        });
     }
 };
 
@@ -86,38 +84,37 @@ export const POST = async ({ request, url, locals }) => {
                 return error(400, 'Bracket data is required for score updates');
             }
 
-            // Validate scorer data if present
             const teams = await data.get('teams', dateValidation.date, leagueId);
-            if (teams && requestData.bracket) {
-                for (const match of requestData.bracket) {
-                    if (match.homeScorers || match.awayScorers) {
-                        const scorerValidation = validateMatchScorers(match, teams);
-                        if (!scorerValidation.isValid) {
-                            return error(
-                                400,
-                                `Scorer validation failed: ${scorerValidation.errors.join(', ')}`
-                            );
-                        }
+
+            for (const match of requestData.bracket) {
+                // Scorer checks need the team rosters; skip them if teams aren't set yet.
+                if (teams && (match.homeScorers || match.awayScorers)) {
+                    const scorerValidation = validateMatchScorers(match, teams);
+                    if (!scorerValidation.isValid) {
+                        return error(
+                            400,
+                            `Scorer validation failed: ${scorerValidation.errors.join(', ')}`
+                        );
                     }
-                    // Validate penalty scores if present
-                    if (match.homePenalties != null || match.awayPenalties != null) {
-                        if ((match.homePenalties == null) !== (match.awayPenalties == null)) {
-                            return error(
-                                400,
-                                'Both home and away penalty scores must be set together'
-                            );
-                        }
-                        const hv = validateGameScore(match.homePenalties, 'Home penalties');
-                        const av = validateGameScore(match.awayPenalties, 'Away penalties');
-                        if (!hv.isValid || !av.isValid) {
-                            return error(400, [...hv.errors, ...av.errors].join(', '));
-                        }
-                        if (match.homeScore !== match.awayScore) {
-                            return error(
-                                400,
-                                'Penalty scores can only be set when main score is a draw'
-                            );
-                        }
+                }
+
+                // Penalty checks don't depend on rosters, so they run either way.
+                if (match.homePenalties != null || match.awayPenalties != null) {
+                    if ((match.homePenalties == null) !== (match.awayPenalties == null)) {
+                        return error(400, 'Both home and away penalty scores must be set together');
+                    }
+                    const hv = validateGameScore(match.homePenalties, 'Home penalties');
+                    const av = validateGameScore(match.awayPenalties, 'Away penalties');
+                    if (!hv.isValid || !av.isValid) {
+                        return error(400, [...hv.errors, ...av.errors].join(', '));
+                    }
+                    // A shootout only means anything on a draw. Editing a goalscorer shifts
+                    // the score, so rejecting here would strand the edit — every order of
+                    // "swap one scorer for another" passes through a non-draw state. Drop the
+                    // stale shootout instead.
+                    if (match.homeScore !== match.awayScore) {
+                        match.homePenalties = null;
+                        match.awayPenalties = null;
                     }
                 }
             }
@@ -133,12 +130,10 @@ export const POST = async ({ request, url, locals }) => {
             return error(400, 'Invalid operation. Supported operations: generate, updateScores');
         }
     } catch (err) {
-        console.error('Error processing knockout request:', err);
-
-        if (err instanceof KnockoutError) {
-            return error(err.statusCode, err.message);
-        }
-
-        return error(500, 'Internal server error processing knockout tournament');
+        return toApiError(err, 'Internal server error processing knockout tournament', {
+            date: dateValidation.date,
+            leagueId,
+            operation: bodyValidation.data?.operation
+        });
     }
 };

@@ -21,7 +21,7 @@ Traits are **computed once and persisted** into `rankings-YYYY.json`, not derive
 session JSON (games.rounds[][], knockout bracket)
   └─ collectIndividualStatsForSession()      raw per-session counts + `tracked` flags
       └─ per-stat cumulative averages         indGoals / sessionsWithGoals, …
-          └─ calculateAttackControlRatings()  min-max norms against the established pool
+          └─ calculateAttackControlRatings()  percentile norms against the established pool
               └─ calculatePlayerProfiles()    confidence pull → dynamic threshold → traits → badges
                   └─ saveRankingsUnsafe()     persisted as `traits` and `playerProfile`
 ```
@@ -49,7 +49,7 @@ only when that stat type was tracked in that session:
 goalsPerSession      = indGoals    / sessionsWithGoals
 offActionsPerSession = offActions  / sessionsWithOffActions
 defActionsPerSession = defActions  / sessionsWithDefActions
-saveActionsPerSession= saveActions / sessionsInGoal                 // null when the counter is 0
+saveActionsPerSession= saveActions / sessionsWithSaveActions        // null unless sessionsInGoal > 0
 ```
 
 Separate counters exist so a change in what the league records doesn't dilute the averages of
@@ -57,34 +57,79 @@ stats that were always recorded. In pirates 2026 this is load-bearing: goals wer
 2026-01-03 but offensive/defensive/save actions only from **2026-03-07**, so the first nine
 sessions of the season count toward `sessionsWithGoals` and toward nothing else.
 
-### Saves divide by sessions in goal
+### Saves carry a volume half, and a second counter
 
-`sessionsInGoal` is the odd counter out. The other three increment for every session the stat was
-tracked league-wide; this one increments only when **the player themselves recorded a save**.
+Saves keep **two** counters. `sessionsWithSaveActions` is the ordinary one — sessions attended
+while the league was recording saves — and it is the divisor. `sessionsInGoal` increments only
+when the player themselves recorded a save, and it is the **eligibility gate**, not the
+denominator. Attendance proves you were measured; only time in goal proves the role.
 
-Saves are the only stat that a single position monopolises, so an attendance denominator
-measures a mix of two different things — how well you keep, and how often you are put in goal. It
-also punishes turning up: on **2026-08-22** the league's runaway save leader (142 saves against 84
-for second place) played outfield, his numerator held at 142 while his denominator went 23 → 24,
-and he lost Elite Shot Stopper by 0.023. Staying home would have carried the average forward and
-kept the badge.
+Saves are also the only stat whose norm has two halves:
+
+```
+saveActionsNorm = mean( percentile(saveActionsPerSession), percentile(saveActions) )
+                         └─ rate half ─┘                   └─ volume half ─┘
+```
+
+#### Why not a plain rate
+
+Because there is no per-match keeper skill in the data to normalise. Measured on pirates 2026:
+
+| test                                                       | result                                                               |
+| ---------------------------------------------------------- | -------------------------------------------------------------------- |
+| variance decomposition, 24 keepers with ≥8 matches in goal | ICC **0.05** — true between-player sd 0.074 against an observed 0.33 |
+| 400 random half-splits, ≥8 matches in goal per half        | r_half **−0.10** (saves per session: **+0.53**)                      |
+| permutation test, 458 unambiguous keeper-matches           | **p = 0.17**                                                         |
+
+Every established keeper makes ≈2.4 saves per match kept, and the visible spread around that is
+sampling noise. Save% (70.8% league-wide) is likewise indistinguishable from chance (p = 0.13).
+The only per-match quantity with real spread is goals conceded (p = 0.046), which is team quality
+rather than keeper skill.
+
+The consequence is that any saves-per-something rate is mostly a measure of **time in goal**:
+`corr(saves per session in goal, matches in goal per session) = 0.964`. Kat's 12.14 saves per
+session in goal was 4.86 matches × 2.50 saves; Lunathi's 7.19 was 2.48 × 2.90. Dividing by matches
+in goal — the obvious fix — would have handed Elite to whoever got the luckiest week.
+
+So the metric is built from the two things that do carry signal: how often a player takes the
+gloves, and how much keeping they have done over the season.
+
+#### Why the divisor went back to sessions attended
+
+The August 2026 rule divided by `sessionsInGoal`. That fixed a real bug — on **2026-08-22** the
+league's runaway save leader played outfield, his numerator held at 142 while an attendance
+denominator went 23 → 24, and he lost Elite Shot Stopper by 0.023 for turning up — but it cost
+signal doing it. Across 400 random half-splits:
+
+| denominator                   | reliability (Spearman-Brown corrected) |
+| ----------------------------- | -------------------------------------- |
+| saves ÷ sessions **attended** | **0.877**                              |
+| saves ÷ sessions **in goal**  | 0.746                                  |
+
+Dividing by sessions in goal discards how often a player takes the gloves at all and keeps only
+intensity-when-keeping, which is the noisier half. The volume term is what lets the better
+divisor back in: an outfield week now moves half the norm rather than all of it, so it costs a
+place rather than a badge.
+
+#### The keeper proxy
 
 Session files carry **no keeper field**, so "in goal" is proxied by "recorded at least one save
 this session". Consequences worth knowing:
 
-- A keeper who faced nothing at all is invisible, and that session is dropped rather than counted
-  as a zero. Measured over pirates 2026: at match level 89 of 720 team-sides (12.4%) conceded
-  without recording a save, and another 45 (6.3%) kept a clean sheet without one — but rolled up
-  to the whole session, which is the granularity this counter works at, **0 of 96 team-sessions**
-  recorded no save at all. The proxy never actually loses a keeper in the data that exists.
+- A keeper who faced nothing at all is invisible. Measured over pirates 2026: at match level 89
+  of 720 team-sides (12.4%) conceded without recording a save, and another 45 (6.3%) kept a clean
+  sheet without one — but rolled up to the whole session, which is the granularity the gate works
+  at, **0 of 96 team-sessions** recorded no save at all. The proxy never actually loses a keeper
+  in the data that exists.
 - The league rotates the gloves within a session, so the proxy is generous rather than strict:
   2–6 different players record saves for one team in one session (median 3; only 3 of 96
   team-sessions had a single save-recorder). "A session in goal" therefore means _some_ time in
-  goal, not a full shift, and an outfielder credited with one goal-line block picks up a session
-  at a rate of 1.
+  goal, not a full shift, and an outfielder credited with one goal-line block picks up one.
 
-An explicit keeper flag on the session data would replace the proxy; the counter is named for the
-quantity it means rather than the way it is currently derived, so that change is a one-line swap.
+An explicit keeper flag on the session data would replace the proxy. `sessionsInGoal` is named
+for the quantity it means rather than the way it is derived, so that change is a one-line swap —
+and it would also make the matches-in-goal form of this metric available, which ranks the same
+players (Spearman 0.965) on cleaner inputs.
 
 Team-level `teamGF`/`teamGA` use plain `appearances` as the denominator instead
 (`rankings.js:1374-1376`), since they are always available.
@@ -93,29 +138,49 @@ Team-level `teamGF`/`teamGA` use plain `appearances` as the denominator instead
 
 `calculateAttackControlRatings()` (`rankings.js:1635-1876`) runs three passes over the history.
 
-1. **Carry-forward** (`1652-1681`) — a player's last known per-session averages are copied into
+1. **Carry-forward** (`1693-1722`) — a player's last known per-session averages are copied into
    history entries for sessions they missed, so an absent player keeps a norm rather than
    dropping out.
-2. **Bounds** (`1683-1732`) — per session date, min and max of each stat are taken across the
+2. **Pool** (`1724-1755`) — per session date, the values of each stat are collected across the
    **established pool**: players with `eloGames.season >= MIN_GAMES_FOR_NORMALIZATION_POOL` (35)
-   on that date. A stat with no established values that date gets `null` bounds.
-3. **Normalise** (`1734-1875`) — min-max, clamped to `[0,1]`:
+   on that date. A stat with no established values that date gets an empty pool and a `null` norm.
+3. **Normalise** (`1757-1899`) — midrank percentile within that pool:
 
 ```
-norm(v, min, max) = clamp01((v − min) / (max − min))      // 0.5 when max === min
+norm(v, pool) = (count(pool < v) + count(pool === v) / 2) / pool.length     // 0.5 on an empty pool
 ```
+
+This replaced min-max normalisation, which divided by the pool's full range and so let one
+outlier own most of the scale: the individual stats are right-skewed, and their median player
+was landing near 0.2 while the near-symmetric team stats spread across the whole `[0,1]`
+interval. Percentile rank is monotone, so **trait bands are unaffected by the change** — they
+are themselves percentiles over these norms.
+
+`saveActionsNorm` is the one two-part norm: percentile the rate, percentile the season save
+total, average the two. Both halves go through the same `norm()` above, against pools drawn from
+the same established players, and both are persisted per date as `rateNorm` and `volumeNorm`
+beside the combined value. A history entry with no volume recorded (anything written before this)
+falls back to the rate half alone rather than being pulled toward the middle. See
+[Saves carry a volume half](#saves-carry-a-volume-half-and-a-second-counter).
 
 The value the trait system consumes is the **latest date's** norm, lifted to player level as
-`goalsNorm` / `offActionsNorm` / `defActionsNorm` / `saveActionsNorm` (`rankings.js:1871-1874`).
+`goalsNorm` / `offActionsNorm` / `defActionsNorm` / `saveActionsNorm` (`rankings.js:1894-1897`).
 Because every player who has ever appeared receives a history entry on every subsequent date,
 "latest" is the same date for everyone, so the four norms are mutually comparable.
 
-The same norms feed the composite balancing ratings (`rankings.js:1817-1818`):
+The same norms feed the composite balancing ratings (`rankings.js:1832-1841`):
 
 ```
-attacking = (3·goalsNorm + 2·offActionsNorm + 1·teamGFNorm) / 6
-control   = (0.5·saveActionsNorm + 3.5·defActionsNorm + 1.5·teamGAInvNorm) / 5.5
+attacking = (3·goalsNorm + 2·offActionsNorm + 0.6·teamGFNorm)      / 5.6
+control   = (1·saveActionsNorm + 3.5·defActionsNorm + 0.75·teamGAInvNorm) / 5.25
 ```
+
+Both are weighted means over the components a player **has**. A stat that was never measured
+for them drops out of the denominator too, rather than scoring zero against a fixed one — the
+latter penalised a player for a gap in the data instead of for their play. The team terms are
+deliberately minor: measured over a season they explain far less of a player than their own
+recorded actions do, and most of their spread comes from low-appearance players whose team
+averages have not yet regressed to the mean.
 
 ## Eligibility
 
@@ -125,7 +190,8 @@ of which must hold before a stat can award anything:
 ```
 seasonEloGames        >= 35      TRAIT_SEASON_GAMES_THRESHOLD
 sessionsWith<Stat>    >= 5       TRAIT_MIN_TRACKED_SESSIONS
-                                 (for saves this reads sessionsInGoal >= 5)
+                                 (for saves this reads sessionsInGoal >= 5,
+                                  which is NOT the saves denominator)
 ```
 
 The first is the league-wide "established" bar — the same 35 games the team generator uses for
@@ -134,7 +200,9 @@ count, so a returning player does not import last year's standing. A session is 
 games, so it lands at about five sessions.
 
 The second requires five sessions of **the stat itself** — and for Shot Stopper, five sessions
-**in goal**, since that is what `sessionsInGoal` counts. This matters whenever a league starts
+**in goal**. Note the asymmetry with the divisor: saves are averaged over sessions attended but
+gated on sessions in goal, because attendance proves you were measured while only time in goal
+proves the role. This matters whenever a league starts
 recording a stat mid-season: without it, attendance from before the stat existed would count
 toward "proving yourself" at it. Pirates began recording offensive/defensive/save actions on
 2026-03-07 while goals ran from January, so the two counts genuinely diverge.
@@ -152,6 +220,7 @@ nearest-rank percentiles over the eligible pool (`rankings.js:1153-1179`):
 ```
 baseBar  = 45th percentile of eligible norms      BASE_PERCENTILE  = 0.45
 eliteBar = 85th percentile of eligible norms      ELITE_PERCENTILE = 0.85
+                                                  (Shot Stopper: 0.75 — see below)
 tier     = norm >= eliteBar ? 2 : norm >= baseBar ? 1 : 0
 ```
 
@@ -160,6 +229,22 @@ players set the bands, newcomers and barely-measured players cannot drag them ar
 because the bands recompute on every recalculation, they cannot go stale as the league grows.
 Scarcity is now consistent across the four traits by construction, where the previous
 mean-based bar left them ranging from 15 to 22 holders.
+
+The comparison is `>=`, so players tied on the bar all clear it — a band can hold more players
+than its nominal share.
+
+### Shot Stopper bands Elite wider
+
+`TRAIT_DEFS` in `shared/badges.js` lets a trait carry its own `elitePercentile`, resolved through
+`eliteBandFor(traitKey)`. Only Shot Stopper sets one, at **0.75**, and the reason is pool size
+rather than generosity. Far fewer players ever keep goal, so its eligible pool is about 25 where
+the outfield pools are 39–41 — and a flat 85th percentile awarded 4 Elite Shot Stoppers against
+7 Finishers, 6 Attackers and 6 Defenders. The trait was structurally scarcer than its neighbours
+for a reason with nothing to do with the standard. At 0.75 it awards 8 (seven slots, plus a tie
+on the bar), level with the rest.
+
+Both the awarding rule and every surface that explains a badge read `eliteBandFor()`, so a
+per-trait band cannot be stated one way and applied another.
 
 ### Why the base bar sits below the median
 
@@ -182,12 +267,12 @@ as a band label can go before it stops reading as an achievement.
 
 Each player receives both a boolean map and a tier map:
 
-| Trait        | Flag            | Source stat                   |
-| ------------ | --------------- | ----------------------------- |
-| Finisher     | `isFinisher`    | goals per session             |
-| Attacker     | `isAttacker`    | offensive actions per session |
-| Defender     | `isDefender`    | defensive actions per session |
-| Shot Stopper | `isShotStopper` | save actions per session      |
+| Trait        | Flag            | Source stat                                        |
+| ------------ | --------------- | -------------------------------------------------- |
+| Finisher     | `isFinisher`    | goals per session                                  |
+| Attacker     | `isAttacker`    | offensive actions per session                      |
+| Defender     | `isDefender`    | defensive actions per session                      |
+| Shot Stopper | `isShotStopper` | save actions per session **and** season save total |
 
 ```js
 playerData.traits     = { isFinisher: bool, ... };      // true at base-or-better
@@ -449,9 +534,10 @@ carry their own glyph and the migration is complete.
     contains its own tier name.
 
     **A trait badge's requirement is its own label**, so the popover explains the band and the
-    underlying stat instead — "Top 15% for saves per session". Those percentages are derived
-    from `BASE_PERCENTILE` / `ELITE_PERCENTILE`, which now live in `shared/badges.js` and are
-    imported by `rankings.js`, so the explanation cannot drift from the awarding rule. Combination
+    underlying stat instead — "Top 25% for saves per session and season save total". Those
+    percentages are derived from `BASE_PERCENTILE` and `eliteBandFor(traitKey)`, which live in
+    `shared/badges.js` and are imported by `rankings.js`, so the explanation cannot drift from
+    the awarding rule — including where a trait sets its own Elite band. Combination
     badges state their requirement directly, and count-based badges additionally list which
     traits earned them — an archetype's requirement already names its two, but "any 3+" does not
     say which three.
@@ -485,41 +571,45 @@ carry their own glyph and the migration is complete.
 | `TRAIT_MIN_TRACKED_SESSIONS`       | 5     | `rankings.js:1123`     |
 | `BASE_PERCENTILE`                  | 0.45  | `shared/badges.js`     |
 | `ELITE_PERCENTILE`                 | 0.85  | `shared/badges.js`     |
+| Shot Stopper `elitePercentile`     | 0.75  | `shared/badges.js`     |
 | `MIN_GAMES_FOR_NORMALIZATION_POOL` | 35    | `rankings.js:1636`     |
 | `W_TRAITS`                         | 0.8   | `teamGenerator.js:829` |
 
 None of these are operator-tunable — unlike momentum, traits have no `info.json → settings`
 block.
 
-## Observed behaviour (pirates, 2026 season, 33 sessions)
+## Observed behaviour (pirates, 2026 season, 35 sessions)
 
-Measured 2026-08-24 against `data/pirates/rankings-2026.json`, recalculated the same day at
-`BASE_PERCENTILE = 0.45`; 73 players, 39 established. These figures move as the season
-progresses.
+Measured 2026-09-05 against `data/pirates/rankings-2026.json`, recalculated the same day;
+74 players, 41 established. These figures move as the season progresses.
 
 | Stat         | Eligible | Base bar | Elite bar | Base | Elite | Total |
 | ------------ | -------- | -------- | --------- | ---- | ----- | ----- |
-| Goals        | 39       | 0.181    | 0.609     | 17   | 6     | 23    |
-| Off actions  | 37       | 0.268    | 0.767     | 15   | 6     | 21    |
-| Def actions  | 37       | 0.416    | 0.658     | 15   | 6     | 21    |
-| Save actions | 24       | 0.294    | 0.580     | 10   | 4     | 14    |
+| Goals        | 41       | 0.451    | 0.841     | 16   | 7     | 23    |
+| Off actions  | 39       | 0.438    | 0.863     | 16   | 6     | 22    |
+| Def actions  | 39       | 0.438    | 0.863     | 16   | 6     | 22    |
+| Save actions | 25       | 0.700    | 0.800     | 6    | 8     | 14    |
 
-Saves have the smallest pool and the fewest holders because its denominator is
-`sessionsInGoal` — see [Saves divide by sessions in goal](#saves-divide-by-sessions-in-goal).
+Saves still have much the smallest **pool** — only 25 players clear five sessions in goal —
+which is why the trait bands Elite at 0.75 rather than 0.85; see
+[Shot Stopper bands Elite wider](#shot-stopper-bands-elite-wider). Its total holders (14) match
+the pre-change count exactly; four players moved from base to Elite rather than any being added
+or dropped. The Elite eight are Tinashe, Kat, Lunathi, Chris, Prosper, Dave, Elvis and Irry, the
+last two tied on the bar at 0.800.
 
 Badges **as displayed** under the current lattice (supersession applied):
 
 | Badge              | Held | Badge           | Held |
 | ------------------ | ---- | --------------- | ---- |
-| Finisher           | 17   | Danger Man      | 11   |
-| Attacker           | 15   | Engine          | 11   |
-| Defender           | 15   | Sentinel        | 5    |
-| Shot Stopper       | 10   | Utility Hero    | 5    |
-| Elite Finisher     | 6    | Sniper          | 5    |
+| Finisher           | 16   | Danger Man      | 12   |
+| Attacker           | 16   | Engine          | 12   |
+| Defender           | 16   | Sentinel        | 5    |
+| Shot Stopper       | 6    | Utility Hero    | 5    |
+| Elite Finisher     | 7    | Sniper          | 5    |
 | Elite Attacker     | 6    | Powerhouse      | 3    |
 | Elite Defender     | 6    | Guardian        | 1    |
-| Elite Shot Stopper | 4    | Maverick        | 0    |
-| All-Rounder        | 10   | Complete Player | 2    |
+| Elite Shot Stopper | 8    | Maverick        | 0    |
+| All-Rounder        | 12   | Complete Player | 2    |
 | True Baller        | 2    | G.O.A.T.        | 0    |
 
 Nobody currently holds G.O.A.T. or Maverick. That is the lattice working as designed: the
@@ -528,23 +618,23 @@ simultaneous Elite tiers on finishing and saves, which no one has. Before the la
 the same file issued G.O.A.T. to 3 players and Complete Player to 10.
 
 The **qualification** counts persisted in `playerProfile` are higher, since they include
-superseded badges: Danger Man 16 (11 shown + 5 Snipers), Engine 14, Sentinel 6, All-Rounder
-14 (10 shown, 2 hidden under Complete Player and 2 under True Baller).
+superseded badges: Danger Man 17 (12 shown + 5 Snipers), Engine 15, Sentinel 6, All-Rounder
+16 (12 shown, 2 hidden under Complete Player and 2 under True Baller). Shot Stopper is the
+widest gap — 14 qualified against 6 shown, because 8 of them are superseded by the Elite badge.
 
-Total displayed badges across the league is 134, and the most any one player shows is 9
-(Lunathi and Morena, both at four base traits). Two recent changes moved these figures: the
-base bar dropping to 0.45 added base traits to 8 players and brought Pat and Maestro in from
-zero (see [Why the base bar sits below the median](#why-the-base-bar-sits-below-the-median)),
-and True Baller superseding All-Rounder took one badge back off Lunathi and Morena.
+Total displayed badges across the league is 140, and the most any one player shows is 9
+(Lunathi and Morena, both at four base traits). Guardian's single holder is Lunathi, who
+picked it up when Shot Stopper moved to a rate-and-volume norm — he was already an Elite
+Defender and the league's runaway save leader, and the previous rule had him at base.
 
 ## Characteristics and limitations
 
 Properties of the current rule, recorded neutrally.
 
-1. **Min-max makes a norm outlier-relative.** The minimum is almost always 0, so a norm is
-   effectively "fraction of the single best player's rate", and one player's exceptional run
-   compresses everyone else. Percentile bands blunt this — the bar is a rank, not a value — but
-   the underlying norm still moves when the league's best mover changes.
+1. **A norm is a rank, so it is relative to who else is playing.** Percentile normalisation
+   replaced min-max, which made a norm "fraction of the single best player's rate" and let one
+   exceptional run compress everyone else. The residue is that a player's norm still moves when
+   the pool around them changes, even in a week they did not play.
 2. **Carry-forward keeps departed players in the pool.** A player who stopped attending months
    ago retains their last norms and continues to sit inside the eligible pool that sets the
    bands.
@@ -559,11 +649,15 @@ Properties of the current rule, recorded neutrally.
    highest tier but never merges families, which is what keeps the tap-to-highlight
    interaction meaningful: the contributing badges have to be on screen to be lit. Bounded by
    `test/lib/shared/badges.test.js`.
-5. **Save actions are a role stat, now measured per session in goal.** The denominator is
-   `sessionsInGoal`, not attendance, so playing outfield no longer dilutes a keeper's rate. Two
-   residual effects remain, both from the missing keeper field: a keeper who faced nothing is
-   dropped rather than counted, and rotation within a session credits every player who made a
-   save with a full session in goal. See "Saves divide by sessions in goal" above.
+5. **Save actions are a role stat, and the volume half rewards attendance.** There is no
+   per-match keeper skill in the data to measure (ICC 0.05), so the norm scores how often a
+   player takes the gloves and how much keeping they have done. That is deliberate — it is what
+   makes the league's highest-volume keepers visible — but it means a keeper who joins mid-season
+   is behind on the volume half for the rest of that year. The season reset bounds it. Two
+   further effects come from the missing keeper field: a keeper who faced nothing is dropped
+   rather than counted, and rotation within a session credits every player who made a save with
+   a full session in goal. See
+   [Saves carry a volume half](#saves-carry-a-volume-half-and-a-second-counter).
 6. **The Ballers Board ranks by season totals**, while traits use per-session averages — the
    board and the badges it links to are ordered by different quantities, so a high-attendance
    player near the top of the board may hold fewer badges than a low-attendance player far
@@ -571,9 +665,9 @@ Properties of the current rule, recorded neutrally.
 7. **Two of the six two-trait pairs have no archetype**, so some trait pairs display as two
    trait badges and nothing else. This is deliberate (see Catalogue above).
 8. **Percentile bands fix the holder count, not the standard.** With a fixed eligible pool
-   there are always exactly as many Elite players as the 85th percentile admits, so a player
-   can change tier — and therefore change badges — without playing, because the bar moved
-   under them. See `tasks/202608240958-traits-transparency-report.md`.
+   there are always exactly as many Elite players as the band admits (plus any ties on the
+   bar), so a player can change tier — and therefore change badges — without playing, because
+   the bar moved under them. See `tasks/202608240958-traits-transparency-report.md`.
 9. **Badges assume the page surface behind them.** The outlined style needs an opaque inner
    layer painted the same colour as whatever sits behind the badge. It is hardcoded to the page
    background, so a badge rendered on a panel of a different colour shows a visible
@@ -587,17 +681,17 @@ Properties of the current rule, recorded neutrally.
 
 ## Files
 
-| File                                           | Role                                                       |
-| ---------------------------------------------- | ---------------------------------------------------------- |
-| `src/lib/shared/badges.js`                     | the lattice: catalogue, qualification, supersession        |
-| `src/lib/server/rankings.js`                   | capture, averages, normalisation, trait tiers, awarding    |
-| `src/lib/server/teamGenerator.js`              | `calculateTraitBalance()`, `W_TRAITS` (tier-blind)         |
-| `src/components/PlayerBadges.svelte`           | badge rendering, visual grammar, tap-to-highlight          |
-| `src/app.css`                                  | `.badge-*` shape utilities, outer and inset variants       |
-| `src/components/Icons/*Icon.svelte`            | badge icons (shared across tiers where the name is shared) |
-| `test/lib/shared/badges.test.js`               | lattice, exhaustive over all 81 tier combinations          |
-| `test/lib/server/rankings.test.js`             | `calculatePlayerProfiles` unit tests                       |
-| `test/lib/server/rankings.shotStopper.test.js` | `sessionsInGoal` semantics through `updateRankings()`      |
-| `test/components/PlayerBadges.svelte.test.js`  | grammar and highlight-interaction tests                    |
-| `test/lib/server/teamGenerator.test.js`        | trait-balance and tier-blindness tests                     |
-| `scripts/traits-report.mjs`                    | offline transparency report; imports the shared lattice    |
+| File                                           | Role                                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------------- |
+| `src/lib/shared/badges.js`                     | the lattice: catalogue, qualification, supersession                   |
+| `src/lib/server/rankings.js`                   | capture, averages, normalisation, trait tiers, awarding               |
+| `src/lib/server/teamGenerator.js`              | `calculateTraitBalance()`, `W_TRAITS` (tier-blind)                    |
+| `src/components/PlayerBadges.svelte`           | badge rendering, visual grammar, tap-to-highlight                     |
+| `src/app.css`                                  | `.badge-*` shape utilities, outer and inset variants                  |
+| `src/components/Icons/*Icon.svelte`            | badge icons (shared across tiers where the name is shared)            |
+| `test/lib/shared/badges.test.js`               | lattice, exhaustive over all 81 tier combinations                     |
+| `test/lib/server/rankings.test.js`             | `calculatePlayerProfiles` unit tests                                  |
+| `test/lib/server/rankings.shotStopper.test.js` | saves rate/volume semantics through `updateRankings()`                |
+| `test/components/PlayerBadges.svelte.test.js`  | grammar and highlight-interaction tests                               |
+| `test/lib/server/teamGenerator.test.js`        | trait-balance and tier-blindness tests                                |
+| `scripts/traits-report.mjs`                    | offline transparency report — **stale**, models the August saves rule |

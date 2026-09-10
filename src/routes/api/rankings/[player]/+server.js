@@ -1,4 +1,5 @@
 import { json, error } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { createAvatarManager } from '$lib/server/avatarManager.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
@@ -186,11 +187,6 @@ export async function GET({ params, locals, url }) {
             limit: limit
         });
     } catch (err) {
-        if (err.status) {
-            throw err;
-        }
-
-        console.error('Error loading player rankings:', err);
-        throw error(500, 'Failed to load player ranking details');
+        return toApiError(err, 'Failed to load player ranking details', { player, year });
     }
 }

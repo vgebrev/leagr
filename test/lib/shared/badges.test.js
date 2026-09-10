@@ -10,6 +10,8 @@ import {
     TIER_ELITE,
     BASE_PERCENTILE,
     ELITE_PERCENTILE,
+    eliteBandFor,
+    explainBadge,
     normaliseTraitTiers,
     qualifiedBadges,
     displayBadges,
@@ -164,6 +166,27 @@ describe('trait metadata', () => {
     it('exposes the band positions the server uses', () => {
         expect(BASE_PERCENTILE).toBe(0.45);
         expect(ELITE_PERCENTILE).toBe(0.85);
+    });
+
+    // Shot Stopper's eligible pool is roughly half the size of the outfield pools, so a
+    // flat Elite bar made it the scarcest trait for a reason unrelated to the standard.
+    it('gives Shot Stopper its own Elite band and leaves the rest on the default', () => {
+        expect(eliteBandFor('isShotStopper')).toBe(0.75);
+        for (const key of ['isFinisher', 'isAttacker', 'isDefender']) {
+            expect(eliteBandFor(key)).toBe(ELITE_PERCENTILE);
+        }
+    });
+
+    it('falls back to the default band for an unknown trait', () => {
+        expect(eliteBandFor('isNotATrait')).toBe(ELITE_PERCENTILE);
+    });
+
+    // The popover states the bar to a reader; a per-trait band that only the server knows
+    // about would have the page describing a rule the league does not run.
+    it('explains each Elite trait badge with its own band', () => {
+        expect(explainBadge(BADGES_BY_ID['elite-shot-stopper'])).toContain('Top 25%');
+        expect(explainBadge(BADGES_BY_ID['elite-finisher'])).toContain('Top 15%');
+        expect(explainBadge(BADGES_BY_ID['shot-stopper'])).toContain('Top 55%');
     });
 });
 

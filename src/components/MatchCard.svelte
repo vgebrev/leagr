@@ -207,6 +207,13 @@
                 Object.keys(newScorers).length > 0 ? newScorers : null
         };
 
+        // A goal edit moves the score, so a recorded shootout may no longer apply.
+        // Same rule the manual score inputs use in games/match/+page.svelte.
+        if (homeScore === null || awayScore === null || homeScore !== awayScore) {
+            updatedMatch.homePenalties = null;
+            updatedMatch.awayPenalties = null;
+        }
+
         if (onUpdate) {
             onUpdate(updatedMatch);
         }

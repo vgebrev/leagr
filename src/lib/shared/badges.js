@@ -20,12 +20,27 @@ export const TIER_NONE = 0;
 export const TIER_BASE = 1;
 export const TIER_ELITE = 2;
 
-/** The four base traits, in canonical display order, with the stat each is measured on. */
+/**
+ * The four base traits, in canonical display order, with the stat each is measured on.
+ *
+ * `elitePercentile` overrides ELITE_PERCENTILE for that trait alone. Only Shot Stopper
+ * sets it, and the reason is pool size rather than generosity: far fewer players ever keep
+ * goal, so its eligible pool is about 25 where the outfield pools are 39-41. A flat 85th
+ * percentile therefore awarded 4 Elite Shot Stoppers against 7 Finishers, 6 Attackers and
+ * 6 Defenders — the trait was structurally scarcer than its neighbours for a reason that
+ * has nothing to do with the standard. 0.75 puts it at 7, level with the rest.
+ */
 export const TRAIT_DEFS = [
     { key: 'isFinisher', id: 'finisher', label: 'Finisher', stat: 'goals per session' },
     { key: 'isAttacker', id: 'attacker', label: 'Attacker', stat: 'attacking actions per session' },
     { key: 'isDefender', id: 'defender', label: 'Defender', stat: 'defensive actions per session' },
-    { key: 'isShotStopper', id: 'shot-stopper', label: 'Shot Stopper', stat: 'saves per session' }
+    {
+        key: 'isShotStopper',
+        id: 'shot-stopper',
+        label: 'Shot Stopper',
+        stat: 'saves per session and season save total',
+        elitePercentile: 0.75
+    }
 ];
 
 /**
@@ -483,6 +498,17 @@ export function gradeLabel(badge) {
 export const bandPercent = (fraction) => Math.round((1 - fraction) * 100);
 
 /**
+ * The Elite band for one trait: its own `elitePercentile` when it sets one, otherwise the
+ * lattice default. Both the server's awarding rule and anything that explains a badge read
+ * this, so a per-trait band cannot be stated one way and applied another.
+ *
+ * @param {string} traitKey - e.g. 'isShotStopper'
+ * @returns {number}
+ */
+export const eliteBandFor = (traitKey) =>
+    TRAIT_DEFS.find((t) => t.key === traitKey)?.elitePercentile ?? ELITE_PERCENTILE;
+
+/**
  * What a badge asks for, in a player's words rather than the lattice's.
  *
  * A trait badge's `requirementLabel` is just its own name, so restating it says nothing;
@@ -500,7 +526,7 @@ export function explainBadge(badge) {
         const key = Object.keys(badge.requires ?? {})[0];
         const stat = TRAIT_DEFS.find((t) => t.key === key)?.stat ?? '';
         const band = requiresEliteTraits(badge)
-            ? `Top ${bandPercent(ELITE_PERCENTILE)}%`
+            ? `Top ${bandPercent(eliteBandFor(key))}%`
             : `Top ${bandPercent(BASE_PERCENTILE)}%`;
         return `${band} for ${stat}`;
     }
