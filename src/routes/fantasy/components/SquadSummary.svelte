@@ -1,41 +1,45 @@
 <script>
-    import { Button, Progressbar } from 'flowbite-svelte';
-    import { CloseOutline, TagOutline } from 'flowbite-svelte-icons';
+    import { Progressbar } from 'flowbite-svelte';
+    import FantasySquadPreview from '$components/FantasySquadPreview.svelte';
 
     /**
-     * The five slots and the budget meter above the market.
+     * The budget meter, and under it the squad itself — the same pitch view the leaderboard
+     * opens in a modal, inline here so a pick is visible the moment it is made. The pitch is
+     * also the controls: `slots` keeps an empty place on it for every pick still to make,
+     * `onselect` opens the market from one, `onremove` takes a pick back, and `oncaptain`
+     * moves the armband.
+     * @typedef {{name: string, avatar?: string | null, elo?: number | null}} SquadPlayer
      * @type {{
-     *   picks?: string[],
-     *   squadSize?: number,
      *   budget?: number,
      *   cost?: number,
-     *   priceOf?: Record<string, {price: number}>,
-     *   readOnly?: boolean,
+     *   points?: number | null,
+     *   players?: SquadPlayer[],
+     *   playerStats?: Record<string, {price: number, points: number}>,
+     *   withdrawnPlayers?: string[],
+     *   slots?: number,
+     *   captain?: string | null,
+     *   onselect?: (playerName: string | null) => void,
      *   onremove?: (playerName: string) => void,
-     *   onpreview?: () => void
+     *   oncaptain?: (playerName: string) => void
      * }}
      */
     let {
-        picks = [],
-        squadSize = 5,
         budget = 0,
         cost = 0,
-        priceOf = {},
-        readOnly = false,
+        points = null,
+        players = [],
+        playerStats = {},
+        withdrawnPlayers = [],
+        slots = 0,
+        captain = null,
+        onselect = undefined,
         onremove = undefined,
-        onpreview = undefined
+        oncaptain = undefined
     } = $props();
 
     let remaining = $derived(Math.round((budget - cost) * 2) / 2);
     let overBudget = $derived(remaining < 0);
     let spentPercent = $derived(budget > 0 ? Math.min(100, (cost / budget) * 100) : 0);
-
-    // Empty slots are rendered explicitly so the squad always reads as five decisions,
-    // four of which may still be open.
-    let slots = $derived([
-        ...picks,
-        ...Array.from({ length: Math.max(0, squadSize - picks.length) }, () => null)
-    ]);
 </script>
 
 <div class="glass mb-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
@@ -46,9 +50,9 @@
                 class="font-bold {overBudget
                     ? 'text-primary-600'
                     : 'text-gray-900 dark:text-white'}">
-                {cost}
+                ${cost}m
             </span>
-            / {budget}
+            / ${budget}m
         </span>
     </div>
 
@@ -58,49 +62,29 @@
         color={overBudget ? 'primary' : 'secondary'}
         class="mb-2" />
 
-    <div class="mb-2 flex flex-wrap gap-1">
-        {#each slots as playerName, index (index)}
-            {#if playerName}
-                <span
-                    class="bg-secondary-100 text-secondary-800 dark:bg-secondary-900 dark:text-secondary-200 flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs font-medium">
-                    {playerName}
-                    <span class="text-secondary-600 dark:text-secondary-400">
-                        {priceOf[playerName]?.price ?? '—'}
-                    </span>
-                    {#if !readOnly}
-                        <button
-                            type="button"
-                            class="cursor-pointer"
-                            aria-label="Remove {playerName}"
-                            onclick={() => onremove?.(playerName)}>
-                            <CloseOutline class="h-3 w-3" />
-                        </button>
-                    {/if}
-                </span>
-            {:else}
-                <span
-                    class="rounded-sm border border-dashed border-gray-300 px-2 py-0.5 text-xs italic opacity-50 dark:border-gray-600">
-                    Empty
-                </span>
-            {/if}
-        {/each}
-    </div>
-
-    <div class="flex items-center justify-between text-xs">
-        <span class="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-            <TagOutline class="h-4 w-4" />
+    <div class="mb-2 flex items-baseline justify-between text-xs">
+        <span class="text-gray-500 dark:text-gray-400">
             {#if overBudget}
-                <span class="text-primary-600 font-bold">{Math.abs(remaining)} over budget</span>
+                <span class="text-primary-600 font-bold">${Math.abs(remaining)}m over budget</span>
             {:else}
-                <span>{remaining} left</span>
+                <span>${remaining}m left</span>
             {/if}
         </span>
-        <Button
-            size="xs"
-            color="light"
-            disabled={picks.length === 0}
-            onclick={() => onpreview?.()}>
-            Preview
-        </Button>
+        {#if points !== null && points !== undefined}
+            <!-- Only once the session has been settled; the meter is the squad's totals
+                 line here, so the preview below does not repeat it. -->
+            <span class="font-bold text-gray-900 dark:text-white">{points}pts</span>
+        {/if}
     </div>
+
+    <FantasySquadPreview
+        {players}
+        {playerStats}
+        {withdrawnPlayers}
+        {slots}
+        {captain}
+        {onselect}
+        {onremove}
+        {oncaptain}
+        showTotals={false} />
 </div>

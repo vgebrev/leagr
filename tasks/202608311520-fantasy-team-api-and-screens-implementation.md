@@ -9,6 +9,11 @@ unchanged: `fantasyPricing.js` was not touched.
 
 ## The shape of a fantasy week
 
+> **Superseded** by `202609101740-fantasy-live-market-implementation.md`. The market now opens
+> with **registration**, the board stays live while the pool moves, and it freezes when the
+> window closes rather than on the first entry. This section records the original reasoning
+> and why it did not hold.
+
 ```
 team draw opens ──────────── first match scored ──────── rankings updated
       │                              │                          │
@@ -131,20 +136,20 @@ failure. There is a regression test pinning the status code with that reasoning 
 
 ## Files
 
-| File                                                               | Role                                                                                                                                                                                                  |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/lib/server/fantasyManager.js`                                 | **New.** Store, lock rules, validation, settlement, presentation. `FantasyError` carries status codes.                                                                                                |
-| `src/routes/api/fantasy/+server.js`                                | **New.** GET / POST / DELETE.                                                                                                                                                                         |
-| `src/lib/shared/helpers.js`                                        | `hasFirstMatchStarted(games)` — first non-`bye` match in round 1 with both scores.                                                                                                                    |
-| `src/lib/shared/validation.js`                                     | `validateFantasyTeamName()` — reuses `PLAYER_NAME_CONFIG`'s blocklist, 40 chars.                                                                                                                      |
-| `src/lib/shared/defaults.js` / `types.js`                          | `'fantasy'` in `LEAGUE_ONLY_SETTINGS`; `FantasySettings` typedef. No `defaultSettings.fantasy` — the top-level merge is shallow, and `resolveFantasyConfig` already deep-merges every nested default. |
-| `src/components/TeamFormation.svelte`                              | Optional `statDefs` prop (default = the contributions panel); `Icon` optional; caller keys pass through `playerStats`. Backwards compatible.                                                          |
-| `src/components/FantasyTeamModal.svelte`                           | **New.** Props-driven pitch view of a squad — no self-loading, since one `/api/fantasy` payload already holds everything.                                                                             |
-| `src/routes/fantasy/+page.svelte`                                  | **New.** Leaderboard; row opens the modal via `pushState`.                                                                                                                                            |
-| `src/routes/fantasy/team/+page.svelte`                             | **New.** Manage screen.                                                                                                                                                                               |
-| `src/routes/fantasy/components/{SquadSummary,PlayerMarket}.svelte` | **New.** Budget meter + slots; priced pool picker.                                                                                                                                                    |
-| `src/routes/components/NavMenu.svelte`                             | Fantasy item (the bottom bar is already 6 on a `grid-cols-6`).                                                                                                                                        |
-| `src/routes/+layout.svelte`                                        | `/fantasy` and `/fantasy/team` added to `datePages`.                                                                                                                                                  |
+| File                                                               | Role                                                                                                                                                                                                               |
+| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/lib/server/fantasyManager.js`                                 | **New.** Store, lock rules, validation, settlement, presentation. `FantasyError` carries status codes.                                                                                                             |
+| `src/routes/api/fantasy/+server.js`                                | **New.** GET / POST / DELETE.                                                                                                                                                                                      |
+| `src/lib/shared/helpers.js`                                        | `hasFirstMatchStarted(games)` — first non-`bye` match in round 1 with both scores. Now `hasSessionStarted(games)`, true for any scored match: see `202609111030-fantasy-info-and-hidden-squads-implementation.md`. |
+| `src/lib/shared/validation.js`                                     | `validateFantasyTeamName()` — reuses `PLAYER_NAME_CONFIG`'s blocklist, 40 chars.                                                                                                                                   |
+| `src/lib/shared/defaults.js` / `types.js`                          | `'fantasy'` in `LEAGUE_ONLY_SETTINGS`; `FantasySettings` typedef. No `defaultSettings.fantasy` — the top-level merge is shallow, and `resolveFantasyConfig` already deep-merges every nested default.              |
+| `src/components/TeamFormation.svelte`                              | Optional `statDefs` prop (default = the contributions panel); `Icon` optional; caller keys pass through `playerStats`. Backwards compatible.                                                                       |
+| `src/components/FantasyTeamModal.svelte`                           | **New.** Props-driven pitch view of a squad — no self-loading, since one `/api/fantasy` payload already holds everything.                                                                                          |
+| `src/routes/fantasy/+page.svelte`                                  | **New.** Leaderboard; row opens the modal via `pushState`.                                                                                                                                                         |
+| `src/routes/fantasy/team/+page.svelte`                             | **New.** Manage screen.                                                                                                                                                                                            |
+| `src/routes/fantasy/components/{SquadSummary,PlayerMarket}.svelte` | **New.** Budget meter + slots; priced pool picker.                                                                                                                                                                 |
+| `src/routes/components/NavMenu.svelte`                             | Fantasy item (the bottom bar is already 6 on a `grid-cols-6`).                                                                                                                                                     |
+| `src/routes/+layout.svelte`                                        | `/fantasy` and `/fantasy/team` added to `datePages`.                                                                                                                                                               |
 
 Icons are all fresh glyphs — `WalletOutline` (nav), `TagOutline` (price), `ChartMixedOutline`
 (fantasy points). In particular `StarSolid` stays "contribution total" and did not become
@@ -191,9 +196,10 @@ per-player points) plus five unit tests.
   `FantasySettings.svelte` panel beside `MomentumSettings.svelte` is the follow-up.
 - **Settlement waits on a manual rankings update**, the same as every other derived view in
   the app. The leaderboard says so rather than showing zeros.
-- **The market is only as good as the pool at freeze time.** A late signup is out for that
-  week. If that proves annoying, the alternative is per-entry purchase prices — which costs
-  the comparable leaderboard cost column.
+- ~~**The market is only as good as the pool at freeze time.** A late signup is out for that
+  week.~~ Fixed in `202609101740-fantasy-live-market-implementation.md`: the board stays live
+  until the window closes, and a squad that drifts over budget is warned and left unscored
+  rather than being protected by an early freeze.
 - **No "squad to beat".** `bestSquad` is already exported and would show the
   expected-points-optimal XI before the session and the hindsight-best after it; deliberately
   left out of v1.

@@ -70,9 +70,9 @@ export const POST = async ({ request, url, locals }) => {
     }
 
     try {
-        const { teamName, players } = bodyValidation.data ?? {};
+        const { teamName, players, captain } = bodyValidation.data ?? {};
         const state = await managerFor(leagueId, dateValidation.date, locals).saveEntry(
-            { teamName, players },
+            { teamName, players, captain },
             { adminUnlockDate: locals.adminUnlockDate }
         );
         return json(state);

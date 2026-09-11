@@ -88,6 +88,27 @@ export function isCompetitionEnded(dateString, settings) {
 }
 
 /**
+ * Whether the session's registration window has opened.
+ *
+ * The same gate the players page applies to signups, and now the moment the fantasy
+ * market opens too — the pool is what fantasy prices, so the two must agree.
+ * @param {string | null | undefined} dateString
+ * @param {LeagueSettings | null | undefined} settings
+ */
+export function isRegistrationOpen(dateString, settings) {
+    if (!dateString) return true;
+    if (!settings?.registrationWindow?.enabled) return true;
+
+    const [hours, minutes] = settings.registrationWindow.startTime.split(':').map(Number);
+
+    const openDate = new Date(dateString);
+    openDate.setDate(openDate.getDate() + settings.registrationWindow.startDayOffset);
+    openDate.setHours(hours, minutes, 0, 0);
+
+    return new Date() >= openDate;
+}
+
+/**
  * @param {string | null | undefined} dateString
  * @param {LeagueSettings | null | undefined} settings
  */
@@ -107,27 +128,31 @@ export function isTeamDrawOpen(dateString, settings) {
 }
 
 /**
- * Whether the session's first match has a recorded score.
+ * Whether any match in the session has a recorded score.
  *
- * This is the moment a fantasy squad locks: once the opening whistle has produced a
- * result there is no more picking. Byes carry no score and can never start, so the
- * first *playable* match in the opening round is the one that counts.
- * @param {{rounds?: Array<Array<Record<string, any>>>}|null|undefined} games
+ * This is the moment a fantasy squad locks: once football has been played there is no
+ * more picking. Any score counts, not just the opening fixture's — scores are entered
+ * from the match tracker in whatever order the admin opens them, and a squad edited
+ * after the second round was written down is no less late. Byes carry no score and can
+ * never be played, and a blank sheet of nulls is a schedule, not a result.
+ * @param {{rounds?: Array<Array<Record<string, any>>>, 'knockout-games'?: {bracket?: Array<Record<string, any>>}}|null|undefined} games
  * @returns {boolean}
  */
-export function hasFirstMatchStarted(games) {
-    const firstRound = games?.rounds?.[0];
-    if (!Array.isArray(firstRound)) return false;
+export function hasSessionStarted(games) {
+    /** @param {Record<string, any>|null|undefined} match */
+    const isPlayed = (match) =>
+        Boolean(match) &&
+        !match.bye &&
+        match.homeScore !== null &&
+        match.homeScore !== undefined &&
+        match.awayScore !== null &&
+        match.awayScore !== undefined;
 
-    const firstMatch = firstRound.find((match) => match && !match.bye);
-    if (!firstMatch) return false;
+    const rounds = Array.isArray(games?.rounds) ? games.rounds : [];
+    if (rounds.some((round) => Array.isArray(round) && round.some(isPlayed))) return true;
 
-    return (
-        firstMatch.homeScore !== null &&
-        firstMatch.homeScore !== undefined &&
-        firstMatch.awayScore !== null &&
-        firstMatch.awayScore !== undefined
-    );
+    const bracket = games?.['knockout-games']?.bracket;
+    return Array.isArray(bracket) && bracket.some(isPlayed);
 }
 
 /**

@@ -10,16 +10,17 @@
         TableHead,
         TableHeadCell
     } from 'flowbite-svelte';
-    import { ExclamationCircleSolid, WalletOutline } from 'flowbite-svelte-icons';
+    import { ExclamationCircleSolid, UsersGroupOutline } from 'flowbite-svelte-icons';
+    import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
     import FantasyTeamModal from '$components/FantasyTeamModal.svelte';
+    import FantasyInfoPanel from './components/FantasyInfoPanel.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
-    import { formatDisplayDate } from '$lib/shared/helpers.js';
 
     let { data } = $props();
     let date = $derived(data.date);
@@ -29,6 +30,11 @@
     let error = $state(false);
 
     let entries = $derived(fantasy?.entries ?? []);
+    // Until editing locks, the server sends every squad but your own without its picks —
+    // so a row that cannot be opened is a row there is nothing to open.
+    let squadsRevealed = $derived(fantasy?.squadsRevealed !== false);
+    /** @param {any} entry */
+    const canOpen = (entry) => squadsRevealed || entry.isMine;
     let priceOf = $derived(
         Object.fromEntries((fantasy?.market ?? []).map((entry) => [entry.playerName, entry]))
     );
@@ -39,10 +45,13 @@
 
     $effect(() => {
         const state = page.state.fantasyEntry;
-        showModal = !!state;
-        if (state?.teamName) {
-            selectedTeam = entries.find((entry) => entry.teamName === state.teamName) ?? null;
-        }
+        const entry = state?.teamName
+            ? (entries.find((candidate) => candidate.teamName === state.teamName) ?? null)
+            : null;
+        // A back-button history entry can outlive the reveal it was made under, so the
+        // guard lives here as well as on the row: no picks, no pitch.
+        showModal = !!state && (!entry || canOpen(entry));
+        if (state?.teamName) selectedTeam = entry;
     });
 
     /** The picked squad shaped for the pitch view. */
@@ -58,7 +67,7 @@
         Object.fromEntries(
             (selectedTeam?.players ?? []).map((name) => [
                 name,
-                { price: priceOf[name]?.price ?? 0, points: priceOf[name]?.points ?? 0 }
+                { price: priceOf[name]?.price ?? 0, points: priceOf[name]?.points ?? null }
             ])
         )
     );
@@ -87,24 +96,30 @@
     });
 </script>
 
-<div class="mb-2 flex items-start justify-between gap-2">
-    <div>
-        <h5 class="flex items-center text-lg font-bold">Fantasy League</h5>
+<div class="mb-2">
+    <h5 class="flex items-center text-lg font-bold">Weekly Fantasy League</h5>
+    {#if fantasy?.budget}
         <p class="text-sm text-gray-400">
-            {formatDisplayDate(date)}
-            {#if fantasy?.budget}
-                · {fantasy.squadSize} players for {fantasy.budget}
-            {/if}
+            <span>Pick {fantasy.squadSize} players for ${fantasy.budget}m</span>
         </p>
-    </div>
-    <Button
-        href={resolve(`/fantasy/team?date=${date}`)}
-        color="primary"
-        size="sm"
-        class="flex shrink-0 items-center gap-2">
-        <WalletOutline class="h-4 w-4" />
-        {fantasy?.myEntry ? 'My Squad' : 'Pick a Squad'}
-    </Button>
+    {/if}
+</div>
+
+<Button
+    href={resolve(`/fantasy/team?date=${date}`)}
+    color="primary"
+    size="sm"
+    class="mb-3 w-full">
+    <UsersGroupOutline class="me-2 h-4 w-4 shrink-0" />
+    {fantasy?.myEntry ? 'My Squad' : 'Pick a Squad'}
+</Button>
+
+<div class="mb-2">
+    <FantasyInfoPanel
+        squadSize={fantasy?.squadSize ?? 0}
+        budget={fantasy?.budget ?? 0}
+        scoring={fantasy?.scoring ?? {}}
+        statTypes={fantasy?.statTypes ?? []} />
 </div>
 
 {#if $isLoading}
@@ -127,11 +142,13 @@
 
     {#if entries.length === 0}
         <div class="py-8 text-center">
-            <WalletOutline class="mx-auto mb-4 h-16 w-16 text-gray-300" />
+            <WizardHatIcon class="mx-auto mb-4 h-16 w-16 text-gray-300" />
             <p class="text-gray-500">
                 {fantasy?.windowState === 'pending'
-                    ? 'The fantasy market opens when teams are drawn.'
-                    : 'No squads entered yet. Be the first.'}
+                    ? 'The fantasy market opens when registration does.'
+                    : !fantasy?.marketReady
+                      ? fantasy?.marketNotice
+                      : 'No squads entered yet. Be the first.'}
             </p>
         </div>
     {:else}
@@ -140,7 +157,7 @@
             class="w-full table-auto sm:table-fixed dark:text-gray-300"
             shadow>
             <TableHead class="dark:text-gray-300">
-                <TableHeadCell class="w-6 px-1 py-1.5 text-center">#</TableHeadCell>
+                <TableHeadCell class="w-6 px-2 py-1.5 text-center">#</TableHeadCell>
                 <TableHeadCell
                     class="w-full max-w-0 overflow-hidden px-0 py-1.5 font-bold text-ellipsis text-gray-900 dark:text-white">
                     Squad
@@ -151,12 +168,17 @@
             <TableBody>
                 {#each entries as entry (entry.teamName + entry.ownerName)}
                     <TableBodyRow
-                        class="cursor-pointer {entry.isMine
+                        class="{canOpen(entry) ? 'cursor-pointer' : ''} {entry.isMine
                             ? 'border-l-primary-500 border-l-2'
                             : ''}"
-                        onclick={() =>
-                            pushState('', { fantasyEntry: { teamName: entry.teamName } })}>
-                        <TableBodyCell class="px-1 py-1.5 text-center">{entry.rank}</TableBodyCell>
+                        onclick={() => {
+                            if (canOpen(entry)) {
+                                pushState('', { fantasyEntry: { teamName: entry.teamName } });
+                            }
+                        }}>
+                        <TableBodyCell class="px-2 py-1.5 text-center">
+                            {entry.rank ?? '—'}
+                        </TableBodyCell>
                         <TableBodyCell class="w-full max-w-0 px-0 py-1.5">
                             <span
                                 class="block min-w-0 overflow-hidden font-medium text-ellipsis whitespace-nowrap text-gray-900 dark:text-white">
@@ -164,10 +186,15 @@
                             </span>
                             <span
                                 class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-gray-500 dark:text-gray-400">
-                                {entry.ownerName}
+                                {entry.valid ? entry.ownerName : 'over budget — not scored'}
                             </span>
                         </TableBodyCell>
-                        <TableBodyCell class="px-1 py-1.5 text-center">{entry.cost}</TableBodyCell>
+                        <TableBodyCell
+                            class="px-1 py-1.5 text-center {entry.valid
+                                ? ''
+                                : 'text-primary-600 font-bold'}">
+                            ${entry.cost}m
+                        </TableBodyCell>
                         <TableBodyCell class="px-1 py-1.5 text-center font-bold">
                             {entry.points === null ? '—' : entry.points}
                         </TableBodyCell>
@@ -186,6 +213,8 @@
     playerStats={modalStats}
     cost={selectedTeam?.cost}
     points={selectedTeam?.points}
+    withdrawnPlayers={selectedTeam?.withdrawnPlayers ?? []}
+    captain={selectedTeam?.captain ?? null}
     onclose={() => {
         if (page.state.fantasyEntry) history.back();
     }} />

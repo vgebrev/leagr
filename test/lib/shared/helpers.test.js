@@ -1,5 +1,83 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { isTeamDrawOpen, isCompetitionEnded } from '$lib/shared/helpers.js';
+import {
+    isTeamDrawOpen,
+    isCompetitionEnded,
+    isRegistrationOpen,
+    hasSessionStarted
+} from '$lib/shared/helpers.js';
+
+describe('isRegistrationOpen', () => {
+    beforeEach(() => {
+        vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
+    });
+
+    /** Saturday 2025-04-12: registration opens Thursday 2025-04-10 at 07:30. */
+    const SATURDAY = '2025-04-12';
+
+    const makeSettings = (overrides = {}) => ({
+        registrationWindow: {
+            enabled: true,
+            startDayOffset: -2,
+            startTime: '07:30',
+            teamDrawDayOffset: -1,
+            teamDrawTime: '16:00',
+            endDayOffset: 0,
+            endTime: '12:00',
+            ...overrides
+        }
+    });
+
+    it('returns true when time controls are disabled', () => {
+        vi.setSystemTime(new Date('2025-01-01T00:00:00'));
+        expect(isRegistrationOpen(SATURDAY, makeSettings({ enabled: false }))).toBe(true);
+    });
+
+    it('returns true when settings are absent', () => {
+        vi.setSystemTime(new Date('2025-01-01T00:00:00'));
+        expect(isRegistrationOpen(SATURDAY, null)).toBe(true);
+        expect(isRegistrationOpen(SATURDAY, {})).toBe(true);
+    });
+
+    it('returns true without a date', () => {
+        expect(isRegistrationOpen(null, makeSettings())).toBe(true);
+    });
+
+    it('is closed a minute before the opening time', () => {
+        vi.setSystemTime(new Date('2025-04-10T07:29:00'));
+        expect(isRegistrationOpen(SATURDAY, makeSettings())).toBe(false);
+    });
+
+    it('is open exactly on the opening time', () => {
+        vi.setSystemTime(new Date('2025-04-10T07:30:00'));
+        expect(isRegistrationOpen(SATURDAY, makeSettings())).toBe(true);
+    });
+
+    it('stays open afterwards, including past the team draw', () => {
+        vi.setSystemTime(new Date('2025-04-11T18:00:00'));
+        expect(isRegistrationOpen(SATURDAY, makeSettings())).toBe(true);
+    });
+
+    it('honours a custom offset and time', () => {
+        const settings = makeSettings({ startDayOffset: -5, startTime: '20:00' });
+
+        vi.setSystemTime(new Date('2025-04-07T19:59:00'));
+        expect(isRegistrationOpen(SATURDAY, settings)).toBe(false);
+
+        vi.setSystemTime(new Date('2025-04-07T20:00:00'));
+        expect(isRegistrationOpen(SATURDAY, settings)).toBe(true);
+    });
+
+    it('opens before the team draw does', () => {
+        // The gap the fantasy market now lives in: signups are open, teams are not drawn.
+        vi.setSystemTime(new Date('2025-04-10T09:00:00'));
+        expect(isRegistrationOpen(SATURDAY, makeSettings())).toBe(true);
+        expect(isTeamDrawOpen(SATURDAY, makeSettings())).toBe(false);
+    });
+});
 
 describe('isTeamDrawOpen', () => {
     beforeEach(() => {
@@ -187,5 +265,59 @@ describe('isCompetitionEnded', () => {
             expect(isCompetitionEnded('2025-04-19', null)).toBe(true);
             expect(isCompetitionEnded('2025-04-20', null)).toBe(false);
         });
+    });
+});
+
+describe('hasSessionStarted', () => {
+    it('is false for a session with no games at all', () => {
+        expect(hasSessionStarted(null)).toBe(false);
+        expect(hasSessionStarted({})).toBe(false);
+        expect(hasSessionStarted({ rounds: [] })).toBe(false);
+    });
+
+    it('is false while the sheet is still blank', () => {
+        const games = {
+            rounds: [
+                [{ home: 'blue', away: 'white', homeScore: null, awayScore: null }],
+                [{ home: 'blue', away: 'green', homeScore: null, awayScore: null }]
+            ]
+        };
+        expect(hasSessionStarted(games)).toBe(false);
+    });
+
+    it('counts a goalless draw as a played match', () => {
+        const games = {
+            rounds: [[{ home: 'blue', away: 'white', homeScore: 0, awayScore: 0 }]]
+        };
+        expect(hasSessionStarted(games)).toBe(true);
+    });
+
+    it('ignores byes, which carry no score and can never be played', () => {
+        const games = {
+            rounds: [[{ bye: 'green' }, { home: 'blue', away: 'white', homeScore: null }]]
+        };
+        expect(hasSessionStarted(games)).toBe(false);
+    });
+
+    // Scores are entered from the match tracker in whatever order the admin opens them,
+    // so the opening fixture is not necessarily the first one written down.
+    it('counts a score recorded out of order', () => {
+        const games = {
+            rounds: [
+                [{ home: 'blue', away: 'white', homeScore: null, awayScore: null }],
+                [{ home: 'blue', away: 'green', homeScore: 2, awayScore: 1 }]
+            ]
+        };
+        expect(hasSessionStarted(games)).toBe(true);
+    });
+
+    it('counts a knockout result too', () => {
+        const games = {
+            rounds: [[{ home: 'blue', away: 'white', homeScore: null, awayScore: null }]],
+            'knockout-games': {
+                bracket: [{ home: 'blue', away: 'white', homeScore: 3, awayScore: 2 }]
+            }
+        };
+        expect(hasSessionStarted(games)).toBe(true);
     });
 });

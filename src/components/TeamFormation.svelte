@@ -4,7 +4,12 @@
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import { StarSolid } from 'flowbite-svelte-icons';
+    import {
+        CloseOutline,
+        ExclamationCircleSolid,
+        PlusOutline,
+        StarSolid
+    } from 'flowbite-svelte-icons';
     import { teamStyles } from '$lib/shared/helpers.js';
     import { resolve } from '$app/paths';
 
@@ -23,21 +28,63 @@
 
     /**
      * Callers supply the four raw counters; the contributions total is derived here.
+     *
+     * `statsLayout` picks between the labelled panel beside the player (five contribution
+     * counters need the room) and a single line under their name, where `prefix`/`suffix`
+     * are the only labelling — enough for two stats, and it keeps the pitch legible.
+     *
+     * A player with no name is an empty slot: a caller picking a squad passes one per
+     * unfilled place so the pitch stays the same size while it fills up. `onselect` makes
+     * the tiles buttons rather than links to a player's page — the pitch is then how the
+     * squad is edited — and `onremove` puts a remove control on the filled ones.
+     *
+     * `captain` badges one tile with an armband; what that is worth is the caller's rule,
+     * not the pitch's. `oncaptain` makes every filled tile's armband a button, so the
+     * badge is also how the captain is moved.
+     *
+     * `withdrawnPlayers` names the players who are no longer in the session: their avatar
+     * and name fade back and their stats give way to a `Withdrawn` marker, because a price
+     * and a points total are both answers to questions that no longer apply to them. What
+     * counts as withdrawn is, again, the caller's rule.
      * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
-     * @typedef {{ key: string, label: string, Icon?: any, divider?: boolean }} StatDef
+     * @typedef {{ key: string, label: string, Icon?: any, divider?: boolean, prefix?: string, suffix?: string }} StatDef
      * @type {{
      *   players: Array<{name: string, avatar?: string | null, elo?: number}>,
      *   teamColor?: string,
      *   playerStats?: Record<string, PlayerStat | Record<string, number>>,
-     *   statDefs?: StatDef[]
+     *   statDefs?: StatDef[],
+     *   statsLayout?: 'panel' | 'inline',
+     *   captain?: string | null,
+     *   withdrawnPlayers?: string[],
+     *   onselect?: (playerName: string | null) => void,
+     *   onremove?: (playerName: string) => void,
+     *   oncaptain?: (playerName: string) => void
      * }}
      */
     let {
         players = [],
         teamColor = 'default',
         playerStats = {},
-        statDefs = CONTRIBUTION_STAT_DEFS
+        statDefs = CONTRIBUTION_STAT_DEFS,
+        statsLayout = 'panel',
+        captain = null,
+        withdrawnPlayers = [],
+        onselect = undefined,
+        onremove = undefined,
+        oncaptain = undefined
     } = $props();
+
+    // Geometry shared by the two corner badges. A badge is 20px across; the avatar is 40px
+    // below `sm` and 80px above it, so the same 4px offset that grazes the big circle buries
+    // half the badge in the small one. The breakpoint pair stands it further out below `sm`,
+    // leaving the two circles just touching at either size.
+    const BADGE_BASE =
+        'absolute z-10 flex h-5 w-5 items-center justify-center rounded-full shadow-md ring-1 -top-3 sm:-top-1';
+
+    // Gold for the armband the squad is wearing, muted for the ones it could wear instead.
+    const ARMBAND_BASE = `${BADGE_BASE} -left-3 text-[10px] font-bold sm:-left-1`;
+
+    const REMOVE_BASE = `${BADGE_BASE} bg-primary-600 -right-3 cursor-pointer text-white ring-white/60 sm:-right-1`;
 
     // Get team color styles
     const colorStyles = $derived(teamStyles[teamColor] || teamStyles.default);
@@ -118,6 +165,49 @@
         return maxes;
     });
 </script>
+
+{#snippet tile(
+    /** @type {any} */ player,
+    /** @type {string | null} */ avatarUrl,
+    /** @type {boolean} */ isEmpty,
+    /** @type {boolean} */ isWithdrawn
+)}
+    {#if isEmpty}
+        <!-- A place in the squad that has not been filled. It is drawn at the size of a
+             real tile so the pitch does not resize as players are picked. -->
+        <div
+            class="flex h-10 w-10 items-center justify-center rounded-full border-2 border-dashed border-white/60 bg-black/20 drop-shadow-lg drop-shadow-gray-800 sm:h-20 sm:w-20">
+            <PlusOutline class="h-5 w-5 text-white/70 sm:h-8 sm:w-8" />
+        </div>
+        <div
+            class="rounded bg-black/30 px-2 py-0.5 text-center drop-shadow-lg drop-shadow-gray-700">
+            <div class="text-xs font-semibold text-white/70 sm:text-base">Empty</div>
+        </div>
+    {:else}
+        <!-- A withdrawn pick recedes rather than shouting: they are still shown, because
+             the squad was picked with them in it, but faded so the marker below reads as
+             the thing that matters about the tile now. -->
+        {@const faded = isWithdrawn ? 'opacity-50' : ''}
+        <div class="block sm:hidden {faded}">
+            <Avatar
+                {avatarUrl}
+                size="md"
+                color={teamColor}
+                shadow="lg" />
+        </div>
+        <div class="hidden sm:block {faded}">
+            <Avatar
+                {avatarUrl}
+                size="lg"
+                color={teamColor}
+                shadow="lg" />
+        </div>
+        <div
+            class={`rounded px-2 py-0.5 text-center ${colorStyles.header} ${faded} drop-shadow-lg drop-shadow-gray-700`}>
+            <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
+        </div>
+    {/if}
+{/snippet}
 
 <div class="relative mx-auto aspect-[2/3] w-full overflow-hidden rounded-xl shadow-lg">
     <!-- Soccer Pitch SVG Background -->
@@ -210,40 +300,111 @@
         {#each formation as line, i (i)}
             <div class="flex items-center justify-around gap-2">
                 {#each line as player, j (j)}
+                    {@const isEmpty = !player?.name}
+                    {@const isCaptain = !isEmpty && player.name === captain}
+                    {@const isWithdrawn = !isEmpty && withdrawnPlayers.includes(player.name)}
                     {@const avatarUrl = player?.avatar
                         ? `/api/rankings/${encodeURIComponent(player.name)}/avatar`
                         : null}
-                    {@const stats = player?.name ? statsWithTotal[player.name] : null}
-                    <div class="flex items-start gap-1.5">
-                        <!-- Avatar + name -->
-                        <a
-                            href={resolve(`/rankings/${encodeURIComponent(player?.name)}`)}
-                            class="flex flex-col items-center gap-1">
-                            <div class="block sm:hidden">
-                                <Avatar
-                                    {avatarUrl}
-                                    size="md"
-                                    color={teamColor}
-                                    shadow="lg" />
-                            </div>
-                            <div class="hidden sm:block">
-                                <Avatar
-                                    {avatarUrl}
-                                    size="lg"
-                                    color={teamColor}
-                                    shadow="lg" />
-                            </div>
-                            <div
-                                class={`rounded px-2 py-0.5 text-center ${colorStyles.header} drop-shadow-lg drop-shadow-gray-700`}>
-                                <div class="text-xs font-semibold sm:text-base">{player?.name}</div>
-                            </div>
-                        </a>
+                    {@const stats = isEmpty ? null : statsWithTotal[player.name]}
+                    <div
+                        class="relative {statsLayout === 'inline'
+                            ? 'flex flex-col items-center gap-0.5'
+                            : 'flex items-start gap-1.5'}">
+                        <!-- Avatar + name, in a positioning context of their own so the
+                             corner badges below can be hung off the avatar. A tile normally
+                             links to the player's page; a caller that is picking a squad
+                             takes the click instead, through the overlay below — the avatar
+                             renders a button of its own, and one button cannot contain
+                             another, which is also why the badges stay outside this. -->
+                        <div class="relative flex flex-col items-center gap-1">
+                            {#if onselect || isEmpty}
+                                {@render tile(player, avatarUrl, isEmpty, isWithdrawn)}
+                            {:else}
+                                <a
+                                    href={resolve(`/rankings/${encodeURIComponent(player?.name)}`)}
+                                    class="flex flex-col items-center gap-1">
+                                    {@render tile(player, avatarUrl, isEmpty, isWithdrawn)}
+                                </a>
+                            {/if}
 
-                        <!-- Stats panel -->
-                        {#if stats}
+                            {#if !isEmpty && (oncaptain || isCaptain || onremove)}
+                                <!-- The badge layer is the avatar's own box, centred on it:
+                                     hung off the tile instead, the corners moved with the
+                                     name and the stats line and no two tiles agreed on
+                                     where a badge lived. Transparent to clicks so the tile
+                                     underneath still takes them. -->
+                                <div
+                                    class="pointer-events-none absolute top-0 left-1/2 h-10 w-10 -translate-x-1/2 sm:h-20 sm:w-20">
+                                    {#if oncaptain || isCaptain}
+                                        {@const label = isCaptain
+                                            ? `${player.name} is captain`
+                                            : `Make ${player.name} captain`}
+                                        {@const colors = isCaptain
+                                            ? 'bg-yellow-400 text-gray-900 ring-white/60'
+                                            : 'bg-black/50 text-white/70 ring-white/40'}
+                                        {#if oncaptain}
+                                            <button
+                                                type="button"
+                                                class="{ARMBAND_BASE} {colors} pointer-events-auto cursor-pointer"
+                                                aria-label={label}
+                                                onclick={() => oncaptain(player.name)}>C</button>
+                                        {:else}
+                                            <div
+                                                class="{ARMBAND_BASE} {colors}"
+                                                role="img"
+                                                aria-label={label}>
+                                                C
+                                            </div>
+                                        {/if}
+                                    {/if}
+
+                                    {#if onremove}
+                                        <button
+                                            type="button"
+                                            class="{REMOVE_BASE} pointer-events-auto"
+                                            aria-label={`Remove ${player.name}`}
+                                            onclick={() => onremove(player.name)}>
+                                            <CloseOutline class="h-3 w-3" />
+                                        </button>
+                                    {/if}
+                                </div>
+                            {/if}
+                        </div>
+
+                        <!-- Stats -->
+                        {#if isWithdrawn}
+                            <!-- In the stats' place, and shaped like them, so a squad with a
+                                 withdrawal is the same pitch with one tile changed. -->
+                            <div
+                                class="text-primary-500 flex items-center gap-1 rounded bg-black/50 px-1.5 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+                                <ExclamationCircleSolid
+                                    class="h-3 w-3 shrink-0"
+                                    aria-hidden="true" />
+                                <span>Withdrawn</span>
+                            </div>
+                        {:else if stats && statsLayout === 'inline'}
+                            <div
+                                class="flex items-center gap-1 rounded bg-black/50 px-1.5 py-0.5 text-[10px] font-bold text-white backdrop-blur-sm">
+                                {#each statDefs as { key, prefix, suffix }, index (key)}
+                                    {@const val = stats[key]}
+                                    {#if index > 0}
+                                        <span
+                                            class="font-normal text-white/40"
+                                            aria-hidden="true">|</span>
+                                    {/if}
+                                    <!-- Null is "not scored yet", which a 0 would misreport. -->
+                                    <span>
+                                        {val === null || val === undefined
+                                            ? '—'
+                                            : `${prefix ?? ''}${val}${suffix ?? ''}`}
+                                    </span>
+                                {/each}
+                            </div>
+                        {:else if stats}
                             <div
                                 class="flex flex-col gap-0.5 rounded bg-black/50 px-1.5 py-1 text-white backdrop-blur-sm">
-                                {#each statDefs as { key, label, Icon, divider } (key)}
+                                {#each statDefs as { key, label, Icon, divider, prefix, suffix } (key)}
                                     {@const val = stats[key] ?? 0}
                                     {@const isLeader = val > 0 && val === statMaxes[key]}
                                     <div
@@ -266,11 +427,19 @@
                                                 : val === 0
                                                   ? 'text-gray-500'
                                                   : 'text-white'}">
-                                            {val}
+                                            {prefix ?? ''}{val}{suffix ?? ''}
                                         </span>
                                     </div>
                                 {/each}
                             </div>
+                        {/if}
+
+                        {#if onselect}
+                            <button
+                                type="button"
+                                class="absolute inset-0 cursor-pointer rounded-lg focus:ring-2 focus:ring-white/70 focus:outline-none"
+                                aria-label={isEmpty ? 'Pick a player' : `Change ${player.name}`}
+                                onclick={() => onselect(isEmpty ? null : player.name)}></button>
                         {/if}
                     </div>
                 {/each}

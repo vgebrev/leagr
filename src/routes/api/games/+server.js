@@ -10,6 +10,8 @@ import {
     validateMatchScorers
 } from '$lib/shared/validation.js';
 import { getConsolidatedSettings } from '$lib/server/settings.js';
+import { createFantasyManager } from '$lib/server/fantasyManager.js';
+import { hasSessionStarted } from '$lib/shared/helpers.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
@@ -171,6 +173,19 @@ export const POST = async ({ request, url, locals }) => {
                 false,
                 leagueId
             );
+
+            // The first score is what closes the fantasy window, so pin the market here
+            // rather than leaving it to whoever loads the page next — registration stays
+            // legal after kick-off, and a board built later could price from a pool that
+            // grew during the match. Fire-and-forget: this must never fail a score save.
+            if (result && hasSessionStarted(result)) {
+                createFantasyManager()
+                    .setLeague(leagueId)
+                    .setDate(dateValidation.date)
+                    .ensureBoardFrozen({ adminUnlockDate: locals.adminUnlockDate })
+                    .catch((err) => console.error('Failed to freeze the fantasy market:', err));
+            }
+
             return result ? json(result) : error(500, 'Failed to save games');
         }
     } catch (err) {

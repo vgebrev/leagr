@@ -398,5 +398,8 @@ mildly harmful one. Dropping the floor to 3.0 is a wash (edge 1.265 vs 1.251, in
    lands them mid-table (Mike M, 2026-08-22, priced 6.0 having never played). Correct
    Bayesian behaviour, and they are flagged, but it makes unknowns lottery tickets. Whether
    that is a feature is a game-design call.
-2. **The pool is the signup list**, which can change up to the registration deadline. Prices
-   would need locking at the same moment the team draw locks.
+2. ~~**The pool is the signup list**, which can change up to the registration deadline. Prices
+   would need locking at the same moment the team draw locks.~~ **Answered** in
+   `202609101740-fantasy-live-market-implementation.md`: the draw locks nothing — signups keep
+   moving until the competition ends — so prices move with the pool and lock at the first
+   score instead. A squad that drifts over budget is flagged and not scored.
