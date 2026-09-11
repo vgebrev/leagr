@@ -51,6 +51,12 @@ Features include:
     - Team Categories
     - Fun/Stats Categories
     - Background Music
+- **Fantasy League**
+    - Weekly mini-game: pick a squad of five from the session's signups within a budget.
+    - Player prices derived from expected fantasy points, moving with the signup pool until kick-off.
+    - Captain pick scores double.
+    - Squads lock at kick-off, with other managers' picks hidden until then.
+    - Leaderboard scored from the session's tracked stats.
 
 ## Environment Setup
 
