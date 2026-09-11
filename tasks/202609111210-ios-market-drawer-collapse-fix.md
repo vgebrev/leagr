@@ -19,7 +19,8 @@ height of its own** — it is sized by its content.
 Inside it, the scroller grew into the sheet the usual way:
 
 ```svelte
-<div class="app-container flex min-h-0 flex-1 flex-col">   <!-- heading + scroller -->
+<div class="app-container flex min-h-0 flex-1 flex-col">
+    <!-- heading + scroller -->
     <div class="min-h-0 flex-1 overflow-y-auto">…market…</div>
 </div>
 ```
@@ -27,7 +28,7 @@ Inside it, the scroller grew into the sheet the usual way:
 `flex-1` is `flex: 1 1 0%`, and `min-h-0` removes the automatic minimum size, so the item's
 contribution to its container's intrinsic height is **zero**. When the flex container has a
 definite height that is harmless — the item grows into the free space. When the container's
-height is `auto`, as a bottom drawer's is, the container has to size itself *from* those
+height is `auto`, as a bottom drawer's is, the container has to size itself _from_ those
 contributions, and the two engines disagree:
 
 - **WebKit** takes the flex base size, gets 0, and the sheet collapses to its own `p-4`.
@@ -36,12 +37,12 @@ contributions, and the two engines disagree:
 
 Measured on the real markup and the real built stylesheet, 390×844:
 
-| | dialog height | scroller height | market rows in view |
-|---|---|---|---|
-| WebKit, before | 34px | 0px | 0 of 24 |
-| Chromium, before | 717px | 651px | 12 of 24 |
-| WebKit, after | 687px | 621px | 12 of 24 |
-| Chromium, after | 687px | 621px | 12 of 24 |
+|                  | dialog height | scroller height | market rows in view |
+| ---------------- | ------------- | --------------- | ------------------- |
+| WebKit, before   | 34px          | 0px             | 0 of 24             |
+| Chromium, before | 717px         | 651px           | 12 of 24            |
+| WebKit, after    | 687px         | 621px           | 12 of 24            |
+| Chromium, after  | 687px         | 621px           | 12 of 24            |
 
 The heading stayed visible in the bug because it simply overflowed the zero-height wrapper —
 which is exactly what both screenshots show.
@@ -66,15 +67,15 @@ of the list.
 
 ## Testing
 
-- `test/routes/fantasy/team.svelte.test.js` — new case *"caps the market scroller itself
-  rather than growing into the sheet"*. jsdom has no layout engine and can never reproduce
+- `test/routes/fantasy/team.svelte.test.js` — new case _"caps the market scroller itself
+  rather than growing into the sheet"_. jsdom has no layout engine and can never reproduce
   the collapse, so the test pins the shape instead: the scroller carries a height cap and
   carries neither `flex-1` nor `min-h-0`. Verified to fail against the old markup.
 - Full suite green: 1345 backend, 318 frontend.
 - Verified in a real WebKit, not by reasoning. The recipe extends the one in
   `202609110920-fantasy-pick-screen-rework-implementation.md`: render the page in jsdom, dump
   `document.body.innerHTML`, wrap it in the built stylesheet, strip the drawer's
-  `translate-y-full` and call `showModal()`, then load it in Playwright's WebKit *and*
+  `translate-y-full` and call `showModal()`, then load it in Playwright's WebKit _and_
   Chromium and measure. The before/after screenshots of that dump are a pixel match for the
   reported ones.
 - Edge cases measured in WebKit after the fix: a 3-player market hugs its content (241px, no
