@@ -293,12 +293,20 @@
 
     <!-- The market, as a sheet over the pitch. The drawer's own max-h-none outranks a
          plain max-h-*, so the height cap has to be important or a long market runs off
-         the bottom of the screen. -->
+         the bottom of the screen.
+
+         The scroller carries its own height cap rather than growing into the sheet with
+         flex-1. A bottom drawer is a height:auto flex container, and WebKit sizes such a
+         container from its items' flex base size — which `flex-1 min-h-0` makes zero — so
+         on iOS (Safari *and* Chrome, both WebKit) the whole sheet collapsed to its padding
+         and only the heading showed. Blink sizes it from the content instead, which is why
+         it looked fine everywhere we tested. Keep the two caps in step: heading plus the
+         drawer's own p-4 is the 6rem subtracted here, with slack for a heading that wraps. -->
     <Drawer
         bind:open={marketOpen}
         placement="bottom"
-        class="glass-strong max-h-[85vh]! rounded-t-xl border-gray-200">
-        <div class="app-container flex min-h-0 flex-1 flex-col">
+        class="glass-strong max-h-[85dvh]! rounded-t-xl border-gray-200">
+        <div class="app-container">
             <div class="mb-2 flex items-baseline gap-2 pe-8">
                 <h5 class="text-base font-bold dark:text-gray-300">Player market</h5>
                 {#if !readOnly}
@@ -311,7 +319,7 @@
                     </span>
                 {/if}
             </div>
-            <div class="min-h-0 flex-1 overflow-y-auto">
+            <div class="max-h-[calc(85dvh-6rem)] overflow-y-auto">
                 <PlayerMarket
                     {market}
                     {picks}

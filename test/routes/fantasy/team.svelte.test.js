@@ -204,6 +204,22 @@ describe('fantasy team page', () => {
         expect(view.getByText('$20m to spend')).toBeInTheDocument();
     });
 
+    // A bottom Drawer is a height:auto flex container, and WebKit sizes one from its
+    // items' flex base size — so `flex-1 min-h-0` on the market scroller made the whole
+    // sheet collapse to its padding on iOS while Blink, which sizes from the content,
+    // showed it correctly. jsdom has no layout and can never catch that, so pin the shape
+    // instead: the scroller owns a height cap and never asks the sheet for room.
+    it('caps the market scroller itself rather than growing into the sheet', async () => {
+        const view = await renderPage();
+
+        await openMarket(view);
+
+        const scroller = view.getByText('Player market').closest('div')?.nextElementSibling;
+        expect(scroller?.className).toMatch(/overflow-y-auto/);
+        expect(scroller?.className).toMatch(/max-h-\[calc\(85dvh-6rem\)\]/);
+        expect(scroller?.className).not.toMatch(/flex-1|min-h-0/);
+    });
+
     it('hands the pitch back once the last pick completes the squad', async () => {
         const view = await renderPage();
 
