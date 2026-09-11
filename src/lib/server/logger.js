@@ -50,6 +50,11 @@ class Logger {
         const timestamp = new Date().toISOString();
         const message = args
             .map((arg) => {
+                // JSON.stringify(new Error('x')) is '{}' — message and stack would
+                // vanish from the log file, so unwrap Errors explicitly.
+                if (arg instanceof Error) {
+                    return arg.stack || `${arg.name}: ${arg.message}`;
+                }
                 if (typeof arg === 'object') {
                     try {
                         return JSON.stringify(arg, null, 2);

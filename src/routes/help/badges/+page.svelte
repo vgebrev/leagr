@@ -11,6 +11,7 @@
         gradeLabel,
         BASE_PERCENTILE,
         ELITE_PERCENTILE,
+        eliteBandFor,
         TRAIT_SEASON_GAMES_THRESHOLD,
         TRAIT_MIN_TRACKED_SESSIONS
     } from '$lib/shared/badges.js';
@@ -101,8 +102,10 @@
     <section class="glass rounded-lg border border-gray-200 p-3 dark:border-gray-700">
         <h6 class="mb-2 text-base font-bold">How traits are earned</h6>
         <p class="mb-3 text-sm text-gray-500 dark:text-gray-400">
-            Badges are built from four traits, each measured on one stat, averaged per session
-            rather than totalled — so playing more games earns you nothing on its own.
+            Badges are built from four traits, each measured on one stat and averaged per session
+            rather than totalled, so simply playing more games earns you nothing on its own. Shot
+            Stopper is the one that also counts your season total, because how much of the keeping
+            you do is the largest part of what makes someone the team's shot stopper.
         </p>
         <!-- Badge and description are direct children of one grid rather than rows of their
              own, so the first column sizes to the widest badge across the whole list and the
@@ -127,7 +130,7 @@
             <strong>{TRAIT_MIN_TRACKED_SESSIONS} sessions of the stat itself</strong>. The second
             one matters when a league starts recording a stat mid-season: attendance from before it
             was tracked does not count toward proving yourself at it. Shot Stopper reads that as {TRAIT_MIN_TRACKED_SESSIONS}
-            sessions in goal.
+            sessions in goal — turning up is enough to be measured, but only time in goal proves the role.
         </p>
         <h6 class="mt-4 mb-1 text-sm font-bold">Where the bar sits</h6>
         <p class="text-sm text-gray-500 dark:text-gray-400">
@@ -138,6 +141,14 @@
             every time rankings are, so they track the league as it changes — and only players past the
             gates set them, so newcomers cannot drag the bar around.
         </p>
+        {#each TRAIT_DEFS.filter((t) => t.elitePercentile) as trait (trait.key)}
+            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
+                <strong>{trait.label}</strong> is the exception: Elite is
+                <strong>Top {bandPercent(eliteBandFor(trait.key))}%</strong> there. Far fewer players
+                ever keep goal, so its pool is roughly half the size of the others — on a flat bar it
+                would hand out half as many Elite badges as the rest for no reason to do with the standard.
+            </p>
+        {/each}
     </section>
 
     <!-- Material legend -->

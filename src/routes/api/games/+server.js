@@ -1,7 +1,8 @@
 import { error, json } from '@sveltejs/kit';
+import { toApiError } from '$lib/server/apiError.js';
 import { data } from '$lib/server/data.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createGameScheduler, GameSchedulerError } from '$lib/server/gameScheduler.js';
+import { createGameScheduler } from '$lib/server/gameScheduler.js';
 import {
     validateDateParameter,
     parseRequestBody,
@@ -9,6 +10,8 @@ import {
     validateMatchScorers
 } from '$lib/shared/validation.js';
 import { getConsolidatedSettings } from '$lib/server/settings.js';
+import { createFantasyManager } from '$lib/server/fantasyManager.js';
+import { hasSessionStarted } from '$lib/shared/helpers.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
@@ -34,8 +37,7 @@ export const GET = async ({ url, locals }) => {
             teamCount
         });
     } catch (err) {
-        console.error('Error fetching games:', err);
-        return error(500, 'Failed to fetch games data');
+        return toApiError(err, 'Failed to fetch games data');
     }
 };
 
@@ -171,16 +173,23 @@ export const POST = async ({ request, url, locals }) => {
                 false,
                 leagueId
             );
+
+            // The first score is what closes the fantasy window, so pin the market here
+            // rather than leaving it to whoever loads the page next — registration stays
+            // legal after kick-off, and a board built later could price from a pool that
+            // grew during the match. Fire-and-forget: this must never fail a score save.
+            if (result && hasSessionStarted(result)) {
+                createFantasyManager()
+                    .setLeague(leagueId)
+                    .setDate(dateValidation.date)
+                    .ensureBoardFrozen({ adminUnlockDate: locals.adminUnlockDate })
+                    .catch((err) => console.error('Failed to freeze the fantasy market:', err));
+            }
+
             return result ? json(result) : error(500, 'Failed to save games');
         }
     } catch (err) {
-        console.error('Error processing games request:', err);
-
-        if (err instanceof GameSchedulerError) {
-            return error(err.statusCode, err.message);
-        }
-
-        return error(500, 'Internal server error processing games');
+        return toApiError(err, 'Internal server error processing games');
     }
 };
 

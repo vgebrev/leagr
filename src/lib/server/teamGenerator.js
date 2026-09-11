@@ -832,7 +832,13 @@ class TeamGenerator {
         // reunion is cheaper to skip than to buy, so chronically starved pairs involving an ELO
         // outlier (e.g. Dan & Veli) never got drawn together.
         const W_REUNION = this.hasAttendingOverduePairs(teams) ? 2.0 : 0;
-        const RATING_DELTA_CAP = 0.2; // Treat a 20-point gap as fully unacceptable
+        // Treat a 26-point gap as fully unacceptable. Calibrated against 20k random 4x6
+        // splits of the pirates pool: percentile-normalised ratings spread wider than the
+        // old min-max ones, and 0.26 leaves the same share of splits saturated at the cap
+        // as 0.2 did before (attack wants 0.24, control 0.27). Holding that share constant
+        // matters because clamp01 flattens the gradient above the cap — leaving it at 0.2
+        // would have blunted the balancer rather than tightened it.
+        const RATING_DELTA_CAP = 0.26;
         /** @param {number} value */
         const clamp01 = (value) => Math.min(1, Math.max(0, value));
 

@@ -173,6 +173,61 @@ export function contributionAggregate(stats) {
     return tracked.reduce((sum, v) => sum + v, 0);
 }
 
+/** The individual stat types a session file can carry. */
+export const STAT_TYPES = /** @type {(keyof SessionStats)[]} */ ([
+    'goals',
+    'offActions',
+    'defActions',
+    'saveActions'
+]);
+
+/**
+ * Resolve the league's current stat-tracking regime.
+ *
+ * Stat tracking can change mid-season (pirates recorded goals only from
+ * 2026-01-03 and all four types from 2026-03-07). Aggregates spanning that
+ * boundary aren't comparable - the ~10x jump in tracked volume reads as the
+ * whole league improving, which is instrumentation drift, not performance.
+ *
+ * The regime is the set of stat types tracked in the latest tracked session;
+ * only sessions that tracked *all* of them are observations, and only those
+ * types are summed.
+ *
+ * @param {PlayersWithHistory} players - rankings players with history
+ * @returns {{types: (keyof SessionStats)[], isInRegime: (date: string) => boolean}}
+ */
+export function trackedStatRegime(players) {
+    /** @type {Map<string, Set<string>>} */
+    const signatures = new Map();
+    for (const player of Object.values(players)) {
+        for (const { date, entry } of sortedHistory(player.history)) {
+            if (!entry.stats) continue;
+            let signature = signatures.get(date);
+            if (!signature) {
+                signature = new Set();
+                signatures.set(date, signature);
+            }
+            for (const type of STAT_TYPES) {
+                if (typeof entry.stats[type] === 'number') signature.add(type);
+            }
+        }
+    }
+
+    const latestTrackedDate = [...signatures.keys()].sort().pop();
+    const types = latestTrackedDate
+        ? STAT_TYPES.filter((type) => signatures.get(latestTrackedDate).has(type))
+        : [];
+
+    return {
+        types,
+        isInRegime: (date) => {
+            if (types.length === 0) return false;
+            const signature = signatures.get(date);
+            return !!signature && types.every((type) => signature.has(type));
+        }
+    };
+}
+
 /**
  * Calendar weeks between two YYYY-MM-DD dates (or Date objects).
  * @param {string|Date} from
@@ -475,42 +530,11 @@ export function deriveBallerTops(players) {
  * @returns {Array<object>} board entries sorted hottest first
  */
 export function buildBallersMomentum(players, config, now) {
-    const allSessions = Object.values(players).flatMap((p) => sortedHistory(p.history));
-
-    // Stat tracking can change mid-season (e.g. goals-only early on, full
-    // contribution tracking later) - aggregates across regimes aren't
-    // comparable and would read as league-wide drift, not personal form.
-    // Use the stat types tracked in the latest session and only count
-    // sessions that tracked all of them, summing exactly those types.
-    /** @type {Map<string, Set<string>>} */
-    const signatures = new Map();
-    const STAT_TYPES = /** @type {(keyof SessionStats)[]} */ ([
-        'goals',
-        'offActions',
-        'defActions',
-        'saveActions'
-    ]);
-    for (const { date, entry } of allSessions) {
-        if (!entry.stats) continue;
-        let signature = signatures.get(date);
-        if (!signature) {
-            signature = new Set();
-            signatures.set(date, signature);
-        }
-        for (const type of STAT_TYPES) {
-            if (typeof entry.stats[type] === 'number') signature.add(type);
-        }
-    }
-    const latestTrackedDate = [...signatures.keys()].sort().pop();
-    const currentTypes = latestTrackedDate
-        ? STAT_TYPES.filter((type) => signatures.get(latestTrackedDate).has(type))
-        : [];
+    const { types: currentTypes, isInRegime } = trackedStatRegime(players);
 
     /** @param {string} date @param {SessionStats|undefined} stats */
     const observationValue = (date, stats) => {
-        if (!stats || currentTypes.length === 0) return null;
-        const signature = signatures.get(date);
-        if (!signature || !currentTypes.every((type) => signature.has(type))) return null;
+        if (!stats || !isInRegime(date)) return null;
         return currentTypes.reduce((sum, type) => sum + (stats[type] ?? 0), 0);
     };
 

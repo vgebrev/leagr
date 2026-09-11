@@ -104,6 +104,24 @@ if (!HTMLElement.prototype.showPopover) {
     };
 }
 
+// jsdom ships HTMLDialogElement but none of its methods, so every Flowbite component built
+// on <dialog> (Modal, Drawer) throws `showModal is not a function` the moment it opens.
+// Enough of the real element for tests: it opens, closes and fires `close`. There is no top
+// layer, so nothing here makes the backdrop or focus containment behave like a browser.
+if (typeof HTMLDialogElement !== 'undefined' && !HTMLDialogElement.prototype.showModal) {
+    function openDialog() {
+        this.open = true;
+    }
+    HTMLDialogElement.prototype.show = openDialog;
+    HTMLDialogElement.prototype.showModal = openDialog;
+    HTMLDialogElement.prototype.close = function (returnValue) {
+        if (returnValue !== undefined) this.returnValue = returnValue;
+        if (!this.open) return;
+        this.open = false;
+        this.dispatchEvent(new Event('close'));
+    };
+}
+
 // Mock fetch if not available
 if (!global.fetch) {
     global.fetch = vi.fn();

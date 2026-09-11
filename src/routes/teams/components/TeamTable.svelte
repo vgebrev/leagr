@@ -1,5 +1,6 @@
 <script>
     import { capitalize, teamStyles } from '$lib/shared/helpers.js';
+    import { displayRatingPercent } from '$lib/shared/ratingDisplay.js';
     import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
     import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
     import { settings } from '$lib/client/stores/settings.js';
@@ -79,15 +80,10 @@
         return assignedPlayerCount > 0 ? total / assignedPlayerCount : 0;
     });
 
-    // Apply a gentle gamma spread to stretch the bar display (cosmetic only)
-    // Clamp normalized values to [0.1, 1] range before gamma to give everyone a reasonable floor
-    function applyGammaSpread(value, gamma = 0.45, minClamp = 0.1) {
-        if (value === null || value === undefined) return null;
-        const normalized = Math.min(1, Math.max(0, value));
-        // Map [0, 1] to [minClamp, 1]
-        const clamped = minClamp + normalized * (1 - minClamp);
-        return Math.pow(clamped, gamma);
-    }
+    // Same display scale as a player's own profile, so the two never disagree. It is a
+    // straight rescale, which leaves the gaps between teams — the thing this table is
+    // read for — proportional to the gaps in the underlying ratings.
+    const displayPercent = displayRatingPercent;
 
     // Calculate team average attacking rating
     const teamAverageAttacking = $derived.by(() => {
@@ -271,15 +267,13 @@
                                         class="h-2 flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 w-full rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {(
-                                                applyGammaSpread(teamAverageAttacking) * 100
+                                            style="width: {displayPercent(
+                                                teamAverageAttacking
                                             ).toFixed(1)}%">
                                         </div>
                                     </div>
-                                    <span
-                                        class={`text-right text-xs ${headerTextClass}`}
-                                        title={`Raw ${(teamAverageAttacking * 100).toFixed(0)}%`}>
-                                        {(applyGammaSpread(teamAverageAttacking) * 100).toFixed(0)}
+                                    <span class={`text-right text-xs ${headerTextClass}`}>
+                                        {displayPercent(teamAverageAttacking).toFixed(0)}
                                     </span>
                                 </div>
                             {/if}
@@ -290,15 +284,13 @@
                                         class="h-2 w-full flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {(
-                                                applyGammaSpread(teamAverageControl) * 100
+                                            style="width: {displayPercent(
+                                                teamAverageControl
                                             ).toFixed(1)}%">
                                         </div>
                                     </div>
-                                    <span
-                                        class={`text-right text-xs ${headerTextClass}`}
-                                        title={`Raw ${(teamAverageControl * 100).toFixed(0)}%`}>
-                                        {(applyGammaSpread(teamAverageControl) * 100).toFixed(0)}
+                                    <span class={`text-right text-xs ${headerTextClass}`}>
+                                        {displayPercent(teamAverageControl).toFixed(0)}
                                     </span>
                                 </div>
                             {/if}

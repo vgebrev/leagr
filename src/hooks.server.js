@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { getLeagueInfo } from '$lib/server/league.js';
 import { initializeEmailService } from '$lib/server/email.js';
 import { logger, initializeLogger } from '$lib/server/logger.js';
@@ -171,13 +172,61 @@ function isPublicEndpoint(method, pathname) {
     );
 }
 
+// Credential-bearing fields that must never reach the log file. Access codes were
+// previously written to app.log in plaintext by the DEBUG body logger below.
+const REDACTED_KEYS = new Set([
+    'accesscode',
+    'admincode',
+    'newaccesscode',
+    'password',
+    'resetcode',
+    'secret',
+    'token'
+]);
+
+/**
+ * Recursively replace credential values with a placeholder.
+ * @param {unknown} value
+ * @returns {unknown}
+ */
+function redactSecrets(value) {
+    if (Array.isArray(value)) {
+        return value.map(redactSecrets);
+    }
+    if (value && typeof value === 'object') {
+        return Object.fromEntries(
+            Object.entries(value).map(([key, val]) => [
+                key,
+                REDACTED_KEYS.has(key.toLowerCase()) ? '[redacted]' : redactSecrets(val)
+            ])
+        );
+    }
+    return value;
+}
+
+/**
+ * Render a raw JSON request body for logging with credentials stripped.
+ * @param {string} rawBody
+ * @returns {string}
+ */
+export function sanitizeBodyForLog(rawBody) {
+    try {
+        return JSON.stringify(redactSecrets(JSON.parse(rawBody)));
+    } catch {
+        // Never log a body we could not parse — it may hold credentials in an unknown shape.
+        return '[unparseable body omitted]';
+    }
+}
+
 function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
     const path = url.pathname + (url.search ? url.search : '');
+    // Tag failures so a status line is greppable alongside its [ERROR] entry.
+    const marker = status >= 500 ? ' FAILED' : status >= 400 ? ' REJECTED' : '';
     logger.info(
-        `${method} ${path} ${status} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`
+        `${method} ${path} ${status}${marker} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`
     );
     if (body) {
-        logger.debug(`${method} ${path} body:`, body);
+        logger.debug(`${method} ${path} body:`, sanitizeBodyForLog(body));
     }
 }
 
@@ -188,6 +237,9 @@ export const handle = async ({ event, resolve }) => {
 
     if (request.method === 'OPTIONS') {
         const { allowed, origin } = isOriginAllowed(request);
+        if (url.pathname.startsWith('/api/')) {
+            logApiRequest(request.method, url, null, ip, 204, Date.now() - start);
+        }
         return new Response(null, {
             status: 204,
             headers: {
@@ -319,7 +371,17 @@ export const handle = async ({ event, resolve }) => {
         }
     }
 
-    const response = await resolve(event);
+    let response;
+    try {
+        response = await resolve(event);
+    } catch (err) {
+        // resolve() throwing means the request never produced a Response. Record the
+        // attempt here, then re-throw so handleError logs the cause with its stack.
+        if (url.pathname.startsWith('/api/')) {
+            logApiRequest(request.method, url, leagueId, ip, 500, Date.now() - start, requestBody);
+        }
+        throw err;
+    }
 
     if (url.pathname.startsWith('/api/')) {
         logApiRequest(
@@ -335,4 +397,39 @@ export const handle = async ({ event, resolve }) => {
 
     response.headers.set('Access-Control-Allow-Origin', allowed ? origin || '*' : 'null');
     return response;
+};
+
+/**
+ * Catch-all handler for unexpected server errors.
+ *
+ * SvelteKit calls this only for genuine failures — errors raised with `error()` are
+ * an intended response and bypass it. This is the single place a stack reaches the
+ * log file; routes no longer need their own console.error.
+ *
+ * @type {import('@sveltejs/kit').HandleServerError}
+ */
+export const handleError = ({ error: err, event, status, message }) => {
+    const errorId = randomUUID();
+    const path = event.url.pathname + (event.url.search ? event.url.search : '');
+    const cause = /** @type {any} */ (err);
+
+    logger.error(
+        `Unhandled ${status} ${event.request.method} ${path} errorId=${errorId}`,
+        {
+            errorId,
+            league: event.locals?.leagueId ?? 'none',
+            clientId: event.locals?.clientId ?? null,
+            name: cause?.name,
+            message: cause?.message,
+            ...(cause?.apiContext ?? {})
+        },
+        err instanceof Error ? err : String(err)
+    );
+
+    // apiFallbackMessage is attached by toApiError so the client still gets a
+    // route-specific message instead of SvelteKit's bare "Internal Error".
+    return {
+        message: cause?.apiFallbackMessage || message,
+        errorId
+    };
 };

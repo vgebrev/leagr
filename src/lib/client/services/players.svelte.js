@@ -4,7 +4,7 @@ import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
-import { isDateInPast } from '$lib/shared/helpers.js';
+import { isDateInPast, isRegistrationOpen as registrationOpenFor } from '$lib/shared/helpers.js';
 import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class PlayersService {
@@ -56,10 +56,9 @@ class PlayersService {
 
     /** @type {boolean} Registration-open gate. Applies to everyone — never bypassable. */
     isRegistrationOpen = $derived.by(() => {
-        if (!this.#settings.registrationWindow.enabled) return true;
-
-        if (!this.registrationOpenDate) return false;
-        return new Date() >= this.registrationOpenDate;
+        if (!this.currentDate) return false;
+        // Shared with the fantasy market, which opens on the same moment.
+        return registrationOpenFor(this.currentDate, this.#settings);
     });
 
     /** @type {boolean} Competition-end gate. Bypassable by an admin session unlock. */

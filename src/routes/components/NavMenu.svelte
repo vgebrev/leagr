@@ -9,6 +9,7 @@
         SunOutline
     } from 'flowbite-svelte-icons';
     import { Dropdown, DropdownItem } from 'flowbite-svelte';
+    import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
     import { get } from 'svelte/store';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
@@ -106,6 +107,14 @@
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <NewspaperOutline class="me-2 h-4 w-4" />News
+            </span>
+        </DropdownItem>
+        <DropdownItem
+            class={itemClass}
+            href={resolve(`/fantasy?date=${date}`)}
+            onclick={() => (isOpen = false)}>
+            <span class="flex items-center">
+                <WizardHatIcon class="me-2 h-4 w-4" />Fantasy
             </span>
         </DropdownItem>
         <DropdownItem

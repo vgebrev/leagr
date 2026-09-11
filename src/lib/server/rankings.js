@@ -8,7 +8,7 @@ import * as fuzzball from 'fuzzball';
 import {
     qualifiedBadges,
     BASE_PERCENTILE,
-    ELITE_PERCENTILE,
+    eliteBandFor,
     TRAIT_SEASON_GAMES_THRESHOLD,
     TRAIT_MIN_TRACKED_SESSIONS
 } from '../shared/badges.js';
@@ -902,11 +902,14 @@ export class RankingsManager {
                 defActions: data.defActions ?? 0,
                 saveActions: data.saveActions ?? 0,
 
-                // Per-stat session counters (for accurate total calculations). sessionsInGoal
-                // is the odd one out: sessions the player kept goal, not sessions measured.
+                // Per-stat session counters (for accurate total calculations). Saves carry
+                // two: sessionsWithSaveActions is the measured-attendance denominator the
+                // other three stats use, and sessionsInGoal counts the sessions the player
+                // actually kept goal — the eligibility gate, not the divisor.
                 sessionsWithGoals: data.sessionsWithGoals ?? 0,
                 sessionsWithOffActions: data.sessionsWithOffActions ?? 0,
                 sessionsWithDefActions: data.sessionsWithDefActions ?? 0,
+                sessionsWithSaveActions: data.sessionsWithSaveActions ?? 0,
                 sessionsInGoal: data.sessionsInGoal ?? 0,
 
                 // Activity tracking
@@ -1115,8 +1118,9 @@ export class RankingsManager {
      * start recording a stat mid-season: without it, attendance from before the stat
      * existed would count toward "proving yourself" at it.
      *
-     * Eligible players are then banded per stat against the live distribution:
-     * base at the 45th percentile, Elite at the 85th (top 15%).
+     * Eligible players are then banded per stat against the live distribution: base at the
+     * 45th percentile, Elite at the 85th (top 15%) — or at the trait's own band where it
+     * sets one, which only Shot Stopper does (75th, top 25%).
      * Bands recompute on every recalculation, so they never go stale as the league grows.
      *
      * Called after calculateAttackControlRatings() so goalsNorm etc. are available.
@@ -1130,9 +1134,11 @@ export class RankingsManager {
         /**
          * Stat key → the fields it reads and the trait it awards.
          *
-         * The three outfield stats measure per session attended-with-tracking. Saves measure
-         * per session in goal — a different denominator, because only the keeper can record
-         * one (see the note where sessionsInGoal is incremented).
+         * All four stats measure per session attended-with-tracking. Saves additionally
+         * carry a volume half inside their norm, and gate on sessionsInGoal rather than on
+         * sessionsWithSaveActions: attendance proves you were measured, but only sessions
+         * actually spent in goal prove the role (see the note where the counters are
+         * incremented, and calculateAttackControlRatings).
          */
         const STAT_SOURCES = [
             { key: 'g', trait: 'isFinisher', norm: 'goalsNorm', sessions: 'sessionsWithGoals' },
@@ -1181,7 +1187,10 @@ export class RankingsManager {
             const pool = allPlayers.filter((p) => isEligible(p, source)).map((p) => p[source.norm]);
             bands[source.key] = {
                 base: percentileOf(pool, BASE_PERCENTILE),
-                elite: percentileOf(pool, ELITE_PERCENTILE)
+                // Per-trait: Shot Stopper's pool is much smaller than the outfield pools,
+                // so a flat band made it the scarcest trait for a reason unrelated to the
+                // standard. See TRAIT_DEFS in shared/badges.js.
+                elite: percentileOf(pool, eliteBandFor(source.trait))
             };
         }
 
@@ -1351,6 +1360,8 @@ export class RankingsManager {
                         if (!playerData.sessionsWithDefActions)
                             playerData.sessionsWithDefActions = 0;
                         if (!playerData.saveActions) playerData.saveActions = 0;
+                        if (!playerData.sessionsWithSaveActions)
+                            playerData.sessionsWithSaveActions = 0;
                         if (!playerData.sessionsInGoal) playerData.sessionsInGoal = 0;
 
                         if (sessionTracked.goals) {
@@ -1365,18 +1376,29 @@ export class RankingsManager {
                             playerData.defActions += ind.defensiveActions;
                             playerData.sessionsWithDefActions += 1;
                         }
-                        // Saves are the one stat that only a keeper can record, so the
-                        // denominator is sessions spent in goal rather than sessions attended.
-                        // Counting attendance diluted every keeper who ever played outfield —
-                        // on 2026-08-22 it cost the league's runaway save leader his Elite tier
-                        // for turning up and playing on the pitch.
+                        // Saves keep two counters because Shot Stopper is scored on two
+                        // things at once: a rate over sessions attended (the same denominator
+                        // the other three stats use) and season volume. Measured on pirates
+                        // 2026, saves per session ATTENDED is the more reliable of the two
+                        // available rates — r 0.877 across 400 random half-splits, against
+                        // 0.746 for saves per session IN GOAL — because dividing by sessions
+                        // in goal discards how often a player takes the gloves at all and
+                        // keeps only intensity-when-keeping, which is noisier.
+                        //
+                        // Attendance dilution is therefore back, deliberately: an outfield
+                        // week is honest evidence. It no longer costs a badge on its own,
+                        // because it moves only the rate half of the norm — see
+                        // calculateAttackControlRatings() and docs/traits.md.
                         //
                         // Session files carry no keeper field, so "in goal" is proxied by
                         // "recorded at least one save". A keeper who faced nothing is therefore
                         // invisible; see docs/traits.md for what that costs in practice.
-                        if (sessionTracked.saveActions && ind.saveActions > 0) {
-                            playerData.saveActions += ind.saveActions;
-                            playerData.sessionsInGoal += 1;
+                        if (sessionTracked.saveActions) {
+                            playerData.sessionsWithSaveActions += 1;
+                            if (ind.saveActions > 0) {
+                                playerData.saveActions += ind.saveActions;
+                                playerData.sessionsInGoal += 1;
+                            }
                         }
 
                         // Calculate running averages — null when no tracked sessions yet for that type
@@ -1395,9 +1417,14 @@ export class RankingsManager {
                             playerData.sessionsWithDefActions > 0
                                 ? playerData.defActions / playerData.sessionsWithDefActions
                                 : null;
+                        // Null, not zero, until the player has actually kept goal: a player
+                        // who has only ever been outfield was never measured at this, and a
+                        // phantom zero would drag the trait bands down for everyone. The
+                        // denominator is sessions attended-with-tracking; the sessionsInGoal
+                        // test only decides whether the player is measured at all.
                         const saveActionsPerSession =
-                            playerData.sessionsInGoal > 0
-                                ? playerData.saveActions / playerData.sessionsInGoal
+                            playerData.sessionsInGoal > 0 && playerData.sessionsWithSaveActions > 0
+                                ? playerData.saveActions / playerData.sessionsWithSaveActions
                                 : null;
 
                         // Store appearance data for this date (grouped structure)
@@ -1459,10 +1486,16 @@ export class RankingsManager {
                                             ? parseFloat(defActionsPerSession.toFixed(3))
                                             : null
                                 },
+                                // Two halves: the rate, and the cumulative season total that
+                                // the second half of the keeper norm is built from.
                                 saveActions: {
                                     perSession:
                                         saveActionsPerSession !== null
                                             ? parseFloat(saveActionsPerSession.toFixed(3))
+                                            : null,
+                                    total:
+                                        playerData.sessionsInGoal > 0
+                                            ? playerData.saveActions
                                             : null
                                 }
                             },
@@ -1629,27 +1662,64 @@ export class RankingsManager {
     }
 
     /**
-     * Calculate normalized attack/control ratings using min-max normalization.
+     * Calculate normalized attack/control ratings using percentile normalization.
      * Composite formula blends individual stats (goals, offensive/defensive/save actions)
-     * with team-level goals for/against. All six metrics are normalised per date using
-     * established players (35+ ELO games) as bounds.
+     * with team-level goals for/against. All six metrics are normalised per date against
+     * the distribution of established players (35+ season ELO games).
      *
-     * attacking = (3×goalsNorm + 2×offActionsNorm + 1×teamGFNorm) / 6
-     * control   = (0.5×saveActionsNorm + 3.5×defActionsNorm + 1.5×teamGAInvNorm) / 5.5
+     * attacking = (3×goalsNorm + 2×offActionsNorm + 0.6×teamGFNorm) / 5.6
+     * control   = (1×saveActionsNorm + 3.5×defActionsNorm + 0.75×teamGAInvNorm) / 5.25
      *
-     * Falls back to team-GF/GA only when individual stats are all zero (legacy data).
+     * A component that was never measured for a player drops out of both the numerator
+     * and the denominator, so the rating is a weighted mean of what is actually known.
+     *
+     * `saveActionsNorm` is the one two-part component: the mean of a rate percentile
+     * (saves per session attended) and a volume percentile (season save total), because
+     * the data has no per-match keeper skill in it to normalise. See the comment where it
+     * is computed, and docs/traits.md.
+     *
+     * Falls back to team-GF/GA only when no individual stat was ever recorded (legacy data).
      *
      * @param {Object} enhancedRankings - Enhanced rankings with complete history
      */
     calculateAttackControlRatings(enhancedRankings) {
         const MIN_GAMES_FOR_NORMALIZATION_POOL = 35;
 
-        // Helper: min-max normalise a value within a range, clamped to [0,1]
-        const norm = (value, min, max) => {
-            if (max === min) return 0.5;
-            return Math.max(0, Math.min(1, (value - min) / (max - min)));
+        // Midrank percentile of a value within the established pool. This replaced
+        // min-max, which let a single outlier own most of the scale: on right-skewed
+        // individual stats the median player normalised to ~0.2 while near-symmetric
+        // team stats spread across the full range, so a component's nominal weight
+        // stopped predicting its influence on the rating. Percentile rank is monotone,
+        // so trait bands — percentiles over these same norms — are unaffected.
+        const norm = (value, pool) => {
+            if (!pool || pool.length === 0) return 0.5;
+            let below = 0;
+            let equal = 0;
+            for (const v of pool) {
+                if (v < value) below++;
+                else if (v === value) equal++;
+            }
+            return (below + equal / 2) / pool.length;
         };
-        const invNorm = (value, min, max) => 1 - norm(value, min, max);
+        const invNorm = (value, pool) => 1 - norm(value, pool);
+
+        /**
+         * Weighted mean over the components that exist. A null component is one that
+         * was never measured, not a zero: leaving its weight in the denominator scored
+         * the player down for a gap in the data rather than for their play.
+         * @param {Array<[number, number|null]>} terms - [weight, normalised value] pairs
+         * @returns {number|null}
+         */
+        const blend = (terms) => {
+            let num = 0;
+            let den = 0;
+            for (const [weight, value] of terms) {
+                if (value === null || value === undefined) continue;
+                num += weight * value;
+                den += weight;
+            }
+            return den > 0 ? num / den : null;
+        };
 
         // Get all unique dates sorted
         const allDates = new Set();
@@ -1665,6 +1735,7 @@ export class RankingsManager {
             let lastGFPerSession = null;
             let lastGAPerSession = null;
             const lastInd = { goals: null, offActions: null, defActions: null, saveActions: null };
+            let lastSaveTotal = null;
 
             dates.forEach((date) => {
                 const entry = playerData.history[date];
@@ -1686,14 +1757,31 @@ export class RankingsManager {
                         r[field] = { perSession: lastInd[field] };
                     }
                 }
+                // The saves volume half is a cumulative count, so a session the player
+                // missed carries the same total forward rather than resetting it. Runs
+                // after the loop above, which rebuilds r.saveActions without the field.
+                if (r.saveActions?.total != null) {
+                    lastSaveTotal = r.saveActions.total;
+                } else if (lastSaveTotal !== null && r.saveActions) {
+                    r.saveActions.total = lastSaveTotal;
+                }
             });
         });
 
-        // Second pass: per date, build min/max bounds from established players
-        const dateMinMax = {};
+        // Second pass: per date, collect the established players' values as the
+        // normalisation pool for that date.
+        const datePools = {};
 
         sortedDates.forEach((date) => {
-            const established = { gf: [], ga: [], goals: [], off: [], def: [], save: [] };
+            const established = {
+                gf: [],
+                ga: [],
+                goals: [],
+                off: [],
+                def: [],
+                save: [],
+                saveTotal: []
+            };
 
             Object.entries(enhancedRankings.players).forEach(([, playerData]) => {
                 const entry = playerData.history[date];
@@ -1713,30 +1801,13 @@ export class RankingsManager {
                         established.def.push(r.defActions.perSession);
                     if (r.saveActions?.perSession != null)
                         established.save.push(r.saveActions.perSession);
+                    if (r.saveActions?.total != null)
+                        established.saveTotal.push(r.saveActions.total);
                 }
             });
 
             if (established.gf.length > 0) {
-                const safeMinMax = (arr) =>
-                    arr.length > 0 ? { min: Math.min(...arr), max: Math.max(...arr) } : null;
-                const goalsMM = safeMinMax(established.goals);
-                const offMM = safeMinMax(established.off);
-                const defMM = safeMinMax(established.def);
-                const saveMM = safeMinMax(established.save);
-                dateMinMax[date] = {
-                    minGF: Math.min(...established.gf),
-                    maxGF: Math.max(...established.gf),
-                    minGA: Math.min(...established.ga),
-                    maxGA: Math.max(...established.ga),
-                    minGoals: goalsMM?.min ?? null,
-                    maxGoals: goalsMM?.max ?? null,
-                    minOff: offMM?.min ?? null,
-                    maxOff: offMM?.max ?? null,
-                    minDef: defMM?.min ?? null,
-                    maxDef: defMM?.max ?? null,
-                    minSave: saveMM?.min ?? null,
-                    maxSave: saveMM?.max ?? null
-                };
+                datePools[date] = established;
             }
         });
 
@@ -1757,7 +1828,7 @@ export class RankingsManager {
             dates.forEach((date) => {
                 const entry = playerData.history[date];
                 const r = entry.ratings;
-                const mm = dateMinMax[date];
+                const pools = datePools[date];
 
                 const hasTeamData = r.teamGF?.perSession != null && r.teamGA?.perSession != null;
 
@@ -1766,7 +1837,7 @@ export class RankingsManager {
                     return;
                 }
 
-                if (!mm) {
+                if (!pools) {
                     // No established pool yet — use neutral 0.5
                     r.attacking = 0.5;
                     r.control = 0.5;
@@ -1778,7 +1849,13 @@ export class RankingsManager {
                     if (r.defActions)
                         r.defActions = { perSession: r.defActions.perSession, norm: null };
                     if (r.saveActions)
-                        r.saveActions = { perSession: r.saveActions.perSession, norm: null };
+                        r.saveActions = {
+                            perSession: r.saveActions.perSession,
+                            total: r.saveActions.total ?? null,
+                            rateNorm: null,
+                            volumeNorm: null,
+                            norm: null
+                        };
                     latestAttackingRating = 0.5;
                     latestControlRating = 0.5;
                     latestGoalsForPerSession = r.teamGF.perSession ?? latestGoalsForPerSession;
@@ -1788,29 +1865,32 @@ export class RankingsManager {
                 }
 
                 // Normalise team-level GF/GA
-                const teamGFNorm = norm(r.teamGF.perSession, mm.minGF, mm.maxGF);
-                const teamGAInvNorm = invNorm(r.teamGA.perSession, mm.minGA, mm.maxGA);
+                const teamGFNorm = norm(r.teamGF.perSession, pools.gf);
+                const teamGAInvNorm = invNorm(r.teamGA.perSession, pools.ga);
 
-                // Normalise individual stats — null when bounds aren't available for that
-                // type yet, or when this player has never had it tracked. The second case
+                // Normalise individual stats — null when no established player has that
+                // stat yet, or when this player has never had it tracked. The second case
                 // matters: treating "never measured" as a rate of 0 would otherwise put a
                 // phantom zero into the trait bands and understate every bar.
-                const goalsN =
-                    mm.minGoals != null && r.goals?.perSession != null
-                        ? norm(r.goals.perSession, mm.minGoals, mm.maxGoals)
-                        : null;
-                const offN =
-                    mm.minOff != null && r.offActions?.perSession != null
-                        ? norm(r.offActions.perSession, mm.minOff, mm.maxOff)
-                        : null;
-                const defN =
-                    mm.minDef != null && r.defActions?.perSession != null
-                        ? norm(r.defActions.perSession, mm.minDef, mm.maxDef)
-                        : null;
+                const statNorm = (pool, value) =>
+                    pool.length > 0 && value != null ? norm(value, pool) : null;
+                const goalsN = statNorm(pools.goals, r.goals?.perSession);
+                const offN = statNorm(pools.off, r.offActions?.perSession);
+                const defN = statNorm(pools.def, r.defActions?.perSession);
+                // Shot Stopper is the one stat whose norm has two halves. Per-match save
+                // rate carries no player signal at all in this data (ICC 0.05; 458
+                // unambiguous keeper-matches permute to p = 0.17), so a save "rate" on its
+                // own is mostly a measure of how many matches a player spends in goal. The
+                // two things that do carry signal are how often they take the gloves — the
+                // rate below — and how much keeping they have done over the season. Averaging
+                // the two percentiles scores both, and stops a five-session cameo at a hot
+                // rate outranking a keeper with four times the evidence. See docs/traits.md.
+                const saveRateN = statNorm(pools.save, r.saveActions?.perSession);
+                const saveVolN = statNorm(pools.saveTotal, r.saveActions?.total);
                 const saveN =
-                    mm.minSave != null && r.saveActions?.perSession != null
-                        ? norm(r.saveActions.perSession, mm.minSave, mm.maxSave)
-                        : null;
+                    saveRateN !== null && saveVolN !== null
+                        ? (saveRateN + saveVolN) / 2
+                        : (saveRateN ?? saveVolN);
 
                 // Determine whether meaningful individual data exists
                 const hasIndividualData =
@@ -1821,10 +1901,20 @@ export class RankingsManager {
 
                 let attacking, control;
                 if (hasIndividualData) {
-                    // Composite weighted formula — use available norms, fall back to 0 for missing ones
-                    // so the weight is effectively redistributed toward what we do have
-                    attacking = (3 * (goalsN ?? 0) + 2 * (offN ?? 0) + 1 * teamGFNorm) / 6;
-                    control = (0.5 * (saveN ?? 0) + 3.5 * (defN ?? 0) + 1.5 * teamGAInvNorm) / 5.5;
+                    // Composite weighted mean over the components this player actually has.
+                    // Team GF/GA are deliberately minor: measured over the season they
+                    // explain far less of a player than their own recorded actions do,
+                    // and their spread comes mostly from low-appearance players.
+                    attacking = blend([
+                        [3, goalsN],
+                        [2, offN],
+                        [0.6, teamGFNorm]
+                    ]);
+                    control = blend([
+                        [1, saveN],
+                        [3.5, defN],
+                        [0.75, teamGAInvNorm]
+                    ]);
                 } else {
                     // Fallback: team-level only (preserves legacy behaviour)
                     attacking = teamGFNorm;
@@ -1855,6 +1945,9 @@ export class RankingsManager {
                 };
                 r.saveActions = {
                     perSession: r.saveActions?.perSession ?? null,
+                    total: r.saveActions?.total ?? null,
+                    rateNorm: saveRateN !== null ? parseFloat(saveRateN.toFixed(3)) : null,
+                    volumeNorm: saveVolN !== null ? parseFloat(saveVolN.toFixed(3)) : null,
                     norm: saveN !== null ? parseFloat(saveN.toFixed(3)) : null
                 };
 

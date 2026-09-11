@@ -299,11 +299,21 @@ describe('PlayerBadges — requirement popover', () => {
     });
 
     it('uses the Elite band for an Elite trait badge', async () => {
+        const { baseElement, container } = renderTiers([2, 0, 0, 0]);
+        await openPopover(badge(container, 'Elite Finisher'));
+        const text = baseElement.textContent ?? '';
+        expect(text).toContain('Top 15%');
+        expect(text).toContain('goals per session');
+    });
+
+    // Shot Stopper bands Elite at 0.75 rather than 0.85 — its eligible pool is about half
+    // the size of the outfield pools. The popover has to state that trait's own bar.
+    it("states Shot Stopper's wider Elite band on its badge", async () => {
         const { baseElement, container } = renderTiers([0, 0, 0, 2]);
         await openPopover(badge(container, 'Elite Shot Stopper'));
         const text = baseElement.textContent ?? '';
-        expect(text).toContain('Top 15%');
-        expect(text).toContain('saves per session');
+        expect(text).toContain('Top 25%');
+        expect(text).toContain('saves per session and season save total');
     });
 
     it('states the requirement for a combination badge', async () => {
