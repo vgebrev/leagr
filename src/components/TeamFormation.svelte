@@ -81,10 +81,19 @@
     const BADGE_BASE =
         'absolute z-10 flex h-5 w-5 items-center justify-center rounded-full shadow-md ring-1 -top-3 sm:-top-1';
 
-    // Gold for the armband the squad is wearing, muted for the ones it could wear instead.
+    // Gold for the armband the squad is wearing; the ones it could wear instead are faded
+    // back far enough that only one badge reads as live — squads were being picked on the
+    // belief that every lit armband was a captain. Hover brings the offer back up.
     const ARMBAND_BASE = `${BADGE_BASE} -left-3 text-[10px] font-bold sm:-left-1`;
 
-    const REMOVE_BASE = `${BADGE_BASE} bg-primary-600 -right-3 cursor-pointer text-white ring-white/60 sm:-right-1`;
+    const ARMBAND_ON = 'bg-yellow-400 text-gray-900 ring-white/60';
+
+    const ARMBAND_OFF =
+        'bg-black/50 text-white/70 ring-white/40 opacity-75 transition-opacity hover:opacity-100';
+
+    // Grey, not primary: removing a pick is routine, and a red badge on every tile shouted
+    // louder than the armband it sits opposite.
+    const REMOVE_BASE = `${BADGE_BASE} -right-3 cursor-pointer bg-gray-600 text-white ring-white/40 sm:-right-1 opacity-75 hover:opacity-100`;
 
     // Get team color styles
     const colorStyles = $derived(teamStyles[teamColor] || teamStyles.default);
@@ -340,9 +349,7 @@
                                         {@const label = isCaptain
                                             ? `${player.name} is captain`
                                             : `Make ${player.name} captain`}
-                                        {@const colors = isCaptain
-                                            ? 'bg-yellow-400 text-gray-900 ring-white/60'
-                                            : 'bg-black/50 text-white/70 ring-white/40'}
+                                        {@const colors = isCaptain ? ARMBAND_ON : ARMBAND_OFF}
                                         {#if oncaptain}
                                             <button
                                                 type="button"
