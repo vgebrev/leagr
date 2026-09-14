@@ -78,10 +78,16 @@ export const POST = async ({ request, url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        const players = gameData.players;
+        if (!settings || !players) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             date,
-            gameData.settings,
+            settings,
             locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
@@ -97,13 +103,12 @@ export const POST = async ({ request, url, locals }) => {
         const teamPlayers = Object.values(teams)
             .flat()
             .filter((p) => p !== null && p !== undefined);
-        const available = gameData.players?.available || [];
-        const waitingList = gameData.players?.waitingList || [];
+        const available = players?.available || [];
+        const waitingList = players?.waitingList || [];
         const unassigned = available.filter((p) => !teamPlayers.includes(p));
 
-        const maxPlayersPerTeam = gameData.settings.teamGeneration?.maxPlayersPerTeam || 7;
-        const playerLimit =
-            gameData.settings[date]?.playerLimit || gameData.settings.playerLimit || Infinity;
+        const maxPlayersPerTeam = settings.teamGeneration?.maxPlayersPerTeam || 7;
+        const playerLimit = settings[date]?.playerLimit || settings.playerLimit || Infinity;
         // Waiting-list players can only join if there is room under the cap to promote them
         const canPromoteWaiting = available.length < playerLimit;
 
@@ -113,7 +118,7 @@ export const POST = async ({ request, url, locals }) => {
 
         const generator = createTeamGenerator()
             .setLeague(leagueId)
-            .setSettings(gameData.settings)
+            .setSettings(settings)
             .setRankings(rankings)
             .setPreviousYearRankings(previousYearRankings)
             .setTeammateHistory(teammateHistory)

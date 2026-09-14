@@ -327,7 +327,8 @@ declare global {
     interface GameData {
         players?: PlayersData;
         teams?: TeamsData;
-        settings?: LeagueSettings;
+        /** getData() loads these via getConsolidatedSettings, so day overrides are present. */
+        settings?: ConsolidatedSettings;
     }
 
     interface DataOptions {

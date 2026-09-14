@@ -1,5 +1,5 @@
 {
-    "errors": 116,
+    "errors": 98,
     "warnings": 0,
     "files": {
         "src/components/avatars/AvatarApprovalQueue.svelte": 1,
@@ -19,9 +19,8 @@
         "src/routes/api/games/+server.js": 1,
         "src/routes/api/rankings/+server.js": 2,
         "src/routes/api/settings/+server.js": 2,
-        "src/routes/api/teams/+server.js": 9,
-        "src/routes/api/teams/auto-assign/+server.js": 8,
-        "src/routes/api/teams/configurations/+server.js": 5,
+        "src/routes/api/teams/+server.js": 1,
+        "src/routes/api/teams/auto-assign/+server.js": 3,
         "src/routes/api/teams/logos/[teamName]/+server.js": 2,
         "src/routes/api/teams/players/+server.js": 1,
         "src/routes/ballers-board/+page.svelte": 4,

@@ -203,10 +203,16 @@ export const DELETE = async ({ request, url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        const players = gameData.players;
+        if (!settings || !players) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             dateValidation.date,
-            gameData.settings,
+            settings,
             locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
