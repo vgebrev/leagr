@@ -47,7 +47,7 @@ initializeLogger(LOG_LEVEL);
 
 /**
  * Extract league identifier from subdomain
- * @param {string} host - The host header (e.g., "pirates.leagr.local:5173")
+ * @param {string|null} host - The host header (e.g., "pirates.leagr.local:5173")
  * @returns {string|null} - The league name or null if no subdomain
  */
 function extractLeagueId(host) {

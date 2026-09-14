@@ -4,7 +4,11 @@ declare global {
     type LeagueInfo = import('./lib/shared/types.js').LeagueInfo;
 
     namespace App {
-        // interface Error {}
+        /** Shape returned by `handleError` in hooks.server.js and rendered by +error.svelte. */
+        interface Error {
+            message: string;
+            errorId?: string;
+        }
         interface Locals {
             leagueId: string | null;
             leagueInfo: LeagueInfo | null;

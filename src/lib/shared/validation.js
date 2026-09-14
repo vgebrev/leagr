@@ -277,7 +277,7 @@ export function validatePlayerNameForUI(playerName) {
 /**
  * Validates that a date parameter is present in URL search params
  * @param {URLSearchParams} searchParams - URL search parameters
- * @returns {{isValid: boolean, date: string | null, error: string}}
+ * @returns {{isValid: true, date: string, error: string} | {isValid: false, date: null, error: string}}
  */
 export function validateDateParameter(searchParams) {
     const date = searchParams.get('date');

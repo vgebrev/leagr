@@ -21,7 +21,7 @@ export class LeagueError extends Error {
 
 /**
  * Check if a league exists by verifying the info.json file
- * @param {string} leagueId - The league id (null for default league)
+ * @param {string|null} leagueId - The league id (null for the default league)
  * @returns {boolean} - Whether the league exists
  */
 export function leagueExists(leagueId) {
@@ -34,8 +34,8 @@ export function leagueExists(leagueId) {
 
 /**
  * Get league information from info.json
- * @param {string} leagueId - The league name
- * @returns {Object|null} - League info object or null if not found
+ * @param {string|null} leagueId - The league name (null for the default league)
+ * @returns {LeagueInfo|null} - League info object or null if not found
  */
 export function getLeagueInfo(leagueId) {
     if (!leagueId || !leagueExists(leagueId)) return null;
@@ -75,7 +75,7 @@ export function updateLeagueInfo(leagueId, leagueInfo) {
 
 /**
  * Get the data directory path for a league
- * @param {string} leagueId - The league name (null for default)
+ * @param {string|null} leagueId - The league name (null for the default league)
  * @returns {string} - The data directory path
  */
 export function getLeagueDataPath(leagueId) {
@@ -297,9 +297,11 @@ export class LeagueService {
 export const createLeagueService = () => new LeagueService();
 
 /**
- * Validate league exists for API requests
- * @param {Record<string, any>} locals - SvelteKit locals object
- * @returns {{leagueId: string|null, isValid: boolean}} - { leagueId, isValid }
+ * Validate league exists for API requests.
+ * Returns a discriminated union so `if (!isValid) return` narrows `leagueId` to `string`
+ * at every call site - a `{isValid, leagueId: string|null}` shape does not narrow.
+ * @param {App.Locals} locals - SvelteKit locals object
+ * @returns {{leagueId: string, isValid: true} | {leagueId: null, isValid: false}}
  */
 export function validateLeagueForAPI(locals) {
     const leagueInfo = locals.leagueInfo;

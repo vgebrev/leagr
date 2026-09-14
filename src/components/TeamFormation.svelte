@@ -218,7 +218,7 @@
     {/if}
 {/snippet}
 
-<div class="relative mx-auto aspect-[2/3] w-full overflow-hidden rounded-xl shadow-lg">
+<div class="relative mx-auto aspect-2/3 w-full overflow-hidden rounded-xl shadow-lg">
     <!-- Soccer Pitch SVG Background -->
     <svg
         class="absolute inset-0 h-full w-full"

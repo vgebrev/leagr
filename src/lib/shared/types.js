@@ -106,6 +106,8 @@
 
 /**
  * @typedef {Object} LeagueInfo
+ * @property {string} id
+ * @property {string} [icon]
  * @property {string} [name]
  * @property {string} [accessCode]
  * @property {string} [adminCode]
