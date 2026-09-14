@@ -11,8 +11,8 @@ import { globalSettingsCache, invalidateSettingsCache } from './settingsCache.js
  * Get consolidated settings for a league and date (with caching)
  * Returns league defaults merged with day-specific overrides
  * @param {string} date - Date in YYYY-MM-DD format
- * @param {string} leagueId - League identifier
- * @returns {Promise<Object>} - Consolidated settings object
+ * @param {string|null} leagueId - League identifier
+ * @returns {Promise<ConsolidatedSettings>} - Consolidated settings object
  */
 export async function getConsolidatedSettings(date, leagueId) {
     // Try cache first
@@ -30,12 +30,13 @@ export async function getConsolidatedSettings(date, leagueId) {
     const daySettings = (await data.get('settings', date, leagueId)) || {};
 
     // Create the response structure with league settings as the base
+    /** @type {ConsolidatedSettings} */
     const response = { ...leagueSettings };
 
     // Add day-specific overrides as a nested object if a date is provided
     if (date) {
         // Create a day overrides object with league defaults as fallback
-        const dayOverrides = {};
+        const dayOverrides = /** @type {DaySettings} */ ({});
 
         // For each day-level setting, use saved value or fallback to league default
         for (const settingKey of DAY_LEVEL_SETTINGS) {
@@ -59,9 +60,9 @@ export async function getConsolidatedSettings(date, leagueId) {
 /**
  * Save settings to the appropriate location (league info.json or daily file)
  * @param {string} date - Date in YYYY-MM-DD format
- * @param {string} leagueId - League identifier
- * @param {Object} settings - Settings object to save
- * @returns {Promise<Object>} - Updated consolidated settings
+ * @param {string|null} leagueId - League identifier
+ * @param {Partial<ConsolidatedSettings>} settings - Settings to save: league keys plus an optional nested day block
+ * @returns {Promise<ConsolidatedSettings>} - Updated consolidated settings
  */
 export async function saveConsolidatedSettings(date, leagueId, settings) {
     const leagueInfo = getLeagueInfo(leagueId);
@@ -70,7 +71,9 @@ export async function saveConsolidatedSettings(date, leagueId, settings) {
     }
 
     // Separate league-level and day-level settings
+    /** @type {Record<string, unknown>} */
     const leagueUpdates = {};
+    /** @type {Record<string, unknown>} */
     const dayUpdates = {};
 
     for (const [key, value] of Object.entries(settings)) {
@@ -79,7 +82,7 @@ export async function saveConsolidatedSettings(date, leagueId, settings) {
 
         if (LEAGUE_ONLY_SETTINGS.includes(key)) {
             leagueUpdates[key] = value;
-        } else if (DAY_LEVEL_SETTINGS.includes(key)) {
+        } else if (DAY_LEVEL_SETTINGS.some((dayKey) => dayKey === key)) {
             // Day-level settings should ALWAYS be saved at league level as the default
             // This ensures league-level changes are preserved even when day overrides exist
             leagueUpdates[key] = value;
@@ -92,7 +95,7 @@ export async function saveConsolidatedSettings(date, leagueId, settings) {
     // Handle date-specific overrides if present
     if (settings[date]) {
         for (const [key, value] of Object.entries(settings[date])) {
-            if (DAY_LEVEL_SETTINGS.includes(key)) {
+            if (DAY_LEVEL_SETTINGS.some((dayKey) => dayKey === key)) {
                 dayUpdates[key] = value;
             }
         }

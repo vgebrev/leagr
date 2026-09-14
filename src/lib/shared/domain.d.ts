@@ -155,6 +155,15 @@ declare global {
         fantasy?: FantasySettings;
     }
 
+    /**
+     * What getConsolidatedSettings() returns: the league settings with a day-override
+     * block nested under the session date, e.g. `settings['2026-09-05'].playerLimit`.
+     * Those date keys are why this is not simply a LeagueSettings.
+     */
+    type ConsolidatedSettings = LeagueSettings & {
+        [sessionDate: string]: DaySettings | LeagueSettings[keyof LeagueSettings];
+    };
+
     /** Contents of data/{leagueId}/info.json. */
     interface LeagueInfo {
         id: string;
@@ -190,6 +199,34 @@ declare global {
         awaySaveActions?: StatMap;
         /** `true` in a knockout bracket; the bye team's name in a round robin. */
         bye?: boolean | string;
+    }
+
+    /**
+     * A match as it arrives from a client, before validation: any field may be absent and
+     * scores may still be strings. validateRound()/validateMatchScores() turn one of these
+     * into a Match.
+     */
+    interface RawMatch {
+        home?: string;
+        away?: string;
+        homeScore?: number | string | null;
+        awayScore?: number | string | null;
+        homeScorers?: StatMap;
+        awayScorers?: StatMap;
+        homeOffensiveActions?: StatMap;
+        awayOffensiveActions?: StatMap;
+        homeDefensiveActions?: StatMap;
+        awayDefensiveActions?: StatMap;
+        homeSaveActions?: StatMap;
+        awaySaveActions?: StatMap;
+        bye?: boolean | string;
+    }
+
+    type RawRound = RawMatch[];
+
+    interface RawScheduleData {
+        anchorIndex?: number;
+        rounds?: RawRound[];
     }
 
     interface KnockoutMatch extends Match {

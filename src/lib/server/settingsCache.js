@@ -2,6 +2,8 @@
  * Global settings cache to reduce disk I/O for frequently accessed settings data
  * Provides league isolation and automatic TTL expiration
  */
+/** @typedef {{data: ConsolidatedSettings, timestamp: number}} CacheEntry */
+
 class GlobalSettingsCache {
     #cache = new Map(); // key: "leagueId:date", value: { data, timestamp }
 
@@ -10,7 +12,7 @@ class GlobalSettingsCache {
 
     /**
      * Generate cache key ensuring league isolation
-     * @param {string} leagueId
+     * @param {string|null} leagueId
      * @param {string} date
      * @returns {string}
      */
@@ -20,7 +22,7 @@ class GlobalSettingsCache {
 
     /**
      * Check if cache entry has expired
-     * @param {Object} entry - Cache entry with timestamp
+     * @param {CacheEntry} entry - Cache entry with timestamp
      * @returns {boolean}
      */
     #isExpired(entry) {
@@ -29,9 +31,9 @@ class GlobalSettingsCache {
 
     /**
      * Get cached settings data
-     * @param {string} leagueId
+     * @param {string|null} leagueId
      * @param {string} date
-     * @returns {Object|null} - Cached settings or null if not found/expired
+     * @returns {ConsolidatedSettings|null} - Cached settings or null if not found/expired
      */
     get(leagueId, date) {
         const key = this.#getCacheKey(leagueId, date);
@@ -52,9 +54,9 @@ class GlobalSettingsCache {
 
     /**
      * Store settings data in cache
-     * @param {string} leagueId
+     * @param {string|null} leagueId
      * @param {string} date
-     * @param {Object} data - Settings data to cache
+     * @param {ConsolidatedSettings} data - Settings data to cache
      */
     set(leagueId, date, data) {
         const key = this.#getCacheKey(leagueId, date);
@@ -68,7 +70,7 @@ class GlobalSettingsCache {
 
     /**
      * Invalidate specific date settings for a league
-     * @param {string} leagueId
+     * @param {string|null} leagueId
      * @param {string} date
      */
     invalidate(leagueId, date) {
@@ -78,7 +80,7 @@ class GlobalSettingsCache {
 
     /**
      * Invalidate all settings for a specific league
-     * @param {string} leagueId
+     * @param {string|null} leagueId
      */
     invalidateLeague(leagueId) {
         const prefix = `${leagueId}:`;
@@ -99,7 +101,7 @@ class GlobalSettingsCache {
 
     /**
      * Get cache statistics for monitoring
-     * @returns {Object}
+     * @returns {{totalEntries: number, activeEntries: number, expiredEntries: number, ttlMs: number}}
      */
     getStats() {
         const now = Date.now();
@@ -149,7 +151,7 @@ export const globalSettingsCache = new GlobalSettingsCache();
 /**
  * Invalidate settings cache when settings are modified
  * Call this from settings modification APIs
- * @param {string} leagueId
+ * @param {string|null} leagueId
  * @param {?string} date - Optional, if provided invalidates only that date
  */
 export function invalidateSettingsCache(leagueId, date = null) {
