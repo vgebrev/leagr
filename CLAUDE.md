@@ -424,3 +424,4 @@ The project is JavaScript with JSDoc types, checked by `svelte-check` under `str
 - **Use TodoWrite tool** for in-session progress tracking
 - **Create persistent summary docs** in `tasks/` folder for completed features
 - **Consider multi-league context**: Most operations require a league ID parameter
+- **Do not run git commands unprompted**: Commits are user-owned, do not commit. Any repository mutating commands must be approved by the user first.
