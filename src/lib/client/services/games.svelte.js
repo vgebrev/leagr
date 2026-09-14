@@ -1,4 +1,5 @@
 import { api } from '$lib/client/services/api-client.svelte.js';
+import { errorStatus } from '$lib/shared/helpers.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '$lib/shared/matchUtils.js';
@@ -173,7 +174,7 @@ class GamesService {
                     const knockoutData = await api.get('games/knockout', date);
                     this.knockoutBracket = knockoutData.knockoutGames;
                 } catch (knockoutErr) {
-                    if (knockoutErr.status !== 404) throw knockoutErr;
+                    if (errorStatus(knockoutErr) !== 404) throw knockoutErr;
                     this.knockoutBracket = null;
                 }
             },

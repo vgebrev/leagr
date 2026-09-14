@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { getLeagueDataPath } from '$lib/server/league.js';
@@ -148,7 +149,7 @@ export async function GET({ locals, url }) {
         return json(
             {
                 error: 'Failed to load golden boot data',
-                details: error.message
+                details: errorMessage(error)
             },
             { status: 500 }
         );

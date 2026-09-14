@@ -3,7 +3,7 @@ import { playersService } from '$lib/client/services/players.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { isCompetitionEnded } from '$lib/shared/helpers.js';
+import { isCompetitionEnded, errorMessage, errorStatus } from '$lib/shared/helpers.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
@@ -440,7 +440,10 @@ class TeamsService {
                     this.drawHistory = await api.get('teams/draw-history', this.currentDate);
                 } catch (err) {
                     // Draw history is optional - don't show error if not found
-                    if (err.status === 404 || err.message?.includes('No draw history found')) {
+                    if (
+                        errorStatus(err) === 404 ||
+                        errorMessage(err)?.includes('No draw history found')
+                    ) {
                         this.drawHistory = null;
                     } else {
                         throw err;

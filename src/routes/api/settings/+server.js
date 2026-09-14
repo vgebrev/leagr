@@ -1,4 +1,5 @@
 import { error, json } from '@sveltejs/kit';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { getConsolidatedSettings, saveConsolidatedSettings } from '$lib/server/settings.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 
@@ -35,6 +36,6 @@ export const POST = async ({ request, url, locals }) => {
         return json(result);
     } catch (err) {
         console.error('Error saving settings:', err);
-        return error(500, err.message || 'Failed to save settings');
+        return error(500, errorMessage(err) || 'Failed to save settings');
     }
 };

@@ -1,4 +1,5 @@
 import path from 'path';
+import { errorMessage, errorCode } from '$lib/shared/helpers.js';
 import fs from 'fs/promises';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
@@ -69,7 +70,7 @@ export class TeamLogoManager {
             const raw = await fs.readFile(this.getLogosMetadataPath(), 'utf-8');
             return JSON.parse(raw);
         } catch (err) {
-            if (err.code === 'ENOENT') return {};
+            if (errorCode(err) === 'ENOENT') return {};
             throw err;
         }
     }
@@ -212,8 +213,8 @@ export class TeamLogoManager {
                     logger.info('[teamLogos] Saved logo', { teamName, filename });
                 } catch (err) {
                     logger.error(`[teamLogos] Failed to generate logo for "${teamName}"`, {
-                        error: err.message,
-                        stack: err.stack
+                        error: errorMessage(err),
+                        stack: err instanceof Error ? err.stack : undefined
                     });
                 }
             })

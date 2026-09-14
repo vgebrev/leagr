@@ -1,4 +1,5 @@
 import { data } from './data.js';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { createStandingsManager } from './standings.js';
 
 /**
@@ -48,7 +49,10 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to generate knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to generate knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
@@ -88,7 +92,7 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to save knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(`Failed to save knockout bracket: ${errorMessage(error)}`, 500);
         }
     }
 
@@ -107,7 +111,10 @@ export class KnockoutManager {
             const games = (await data.get('games', date, leagueId)) || {};
             return games['knockout-games'] || null;
         } catch (error) {
-            throw new KnockoutError(`Failed to fetch knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to fetch knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
@@ -149,7 +156,10 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to update knockout scores: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to update knockout scores: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
@@ -245,7 +255,10 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to create knockout tournament: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to create knockout tournament: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 

@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { errorCode } from '$lib/shared/helpers.js';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
@@ -99,7 +100,7 @@ export class AvatarManager {
             const data = await fs.readFile(this.getAvatarsMetadataPath(), 'utf-8');
             return JSON.parse(data);
         } catch (err) {
-            if (err.code === 'ENOENT') {
+            if (errorCode(err) === 'ENOENT') {
                 return {};
             }
             throw err;
@@ -221,7 +222,7 @@ export class AvatarManager {
         try {
             await fs.unlink(filePath);
         } catch (err) {
-            if (err.code !== 'ENOENT') {
+            if (errorCode(err) !== 'ENOENT') {
                 console.error('Failed to delete avatar file:', err);
             }
         }

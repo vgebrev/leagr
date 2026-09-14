@@ -65,7 +65,7 @@ export async function shareContent(shareData) {
             return { success: true, method: 'native' };
         } catch (error) {
             // User cancelled sharing or other error
-            if (error.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 return { success: false, method: 'native', cancelled: true };
             }
             // Fall back to clipboard if sharing fails

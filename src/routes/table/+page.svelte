@@ -10,7 +10,7 @@
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
-    import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
+    import { isCompetitionEnded, teamColours, errorStatus } from '$lib/shared/helpers.js';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
@@ -85,7 +85,7 @@
                     knockoutGames = knockoutData?.knockoutGames?.bracket || [];
                 } catch (err) {
                     // Knockout games might not exist, that's okay
-                    if (err.status !== 404) {
+                    if (errorStatus(err) !== 404) {
                         console.warn('Error loading knockout games:', err);
                     }
                     knockoutGames = [];

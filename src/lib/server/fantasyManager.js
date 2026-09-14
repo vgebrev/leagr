@@ -12,7 +12,12 @@ import {
     sessionActuals,
     DEFAULT_FANTASY_CONFIG
 } from './fantasyPricing.js';
-import { hasSessionStarted, isCompetitionEnded, isRegistrationOpen } from '$lib/shared/helpers.js';
+import {
+    hasSessionStarted,
+    isCompetitionEnded,
+    isRegistrationOpen,
+    errorCode
+} from '$lib/shared/helpers.js';
 import { validateFantasyTeamName } from '$lib/shared/validation.js';
 
 /** Shown for an entry whose owner has no registered player in the session. */
@@ -120,7 +125,7 @@ export class FantasyManager {
                 results: parsed.results ?? null
             };
         } catch (err) {
-            if (err.code === 'ENOENT') return empty;
+            if (errorCode(err) === 'ENOENT') return empty;
             console.error('Error reading fantasy file:', err);
             return empty;
         }

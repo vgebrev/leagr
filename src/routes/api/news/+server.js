@@ -12,7 +12,7 @@ import {
 } from '$lib/server/newsFeed.js';
 import { createStandingsManager } from '$lib/server/standings.js';
 import { data } from '$lib/server/data.js';
-import { dateString } from '$lib/shared/helpers.js';
+import { dateString, errorMessage } from '$lib/shared/helpers.js';
 
 // The feed is paged over recap cards; the preview card rides along on page 1.
 const DEFAULT_LIMIT = 5;
@@ -185,7 +185,7 @@ export async function GET({ locals, url }) {
     } catch (error) {
         console.error('Error building news feed:', error);
         return json(
-            { error: 'Failed to build news feed', details: error.message },
+            { error: 'Failed to build news feed', details: errorMessage(error) },
             { status: 500 }
         );
     }

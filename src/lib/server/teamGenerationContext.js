@@ -1,4 +1,5 @@
 import { createRankingsManager } from '$lib/server/rankings.js';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
 import { createAvatarManager } from '$lib/server/avatarManager.js';
 import { logger } from '$lib/server/logger.js';
@@ -65,7 +66,7 @@ export async function buildTeamGenerationContext({
             });
         } catch (error) {
             logger.warn(
-                `[teams] Failed to load teammate history, proceeding without it: ${error.message}`
+                `[teams] Failed to load teammate history, proceeding without it: ${errorMessage(error)}`
             );
         }
     }

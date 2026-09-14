@@ -6,6 +6,7 @@
     import { page } from '$app/state';
     import NewsCard from '$components/NewsCard.svelte';
     import PlayerModal from '$components/PlayerModal.svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import TeamModal from '$components/TeamModal.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '$lib/client/stores/loading.js';
@@ -103,7 +104,7 @@
             nextCursor = response.nextCursor ?? null;
         } catch (err) {
             console.error('Error loading more news:', err);
-            setNotification(err.message || 'Failed to load more stories', 'error');
+            setNotification(errorMessage(err) || 'Failed to load more stories', 'error');
         } finally {
             loadingMore = false;
         }

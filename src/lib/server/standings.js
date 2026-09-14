@@ -1,4 +1,5 @@
 import { data } from './data.js';
+import { errorMessage } from '$lib/shared/helpers.js';
 
 /**
  * Table of standings calculation error class
@@ -145,7 +146,7 @@ export class StandingsManager {
             }
 
             console.error('Error calculating standings for date:', date, error);
-            throw new StandingsError(`Failed to calculate standings: ${error.message}`, 500);
+            throw new StandingsError(`Failed to calculate standings: ${errorMessage(error)}`, 500);
         }
     }
 
@@ -164,7 +165,7 @@ export class StandingsManager {
                 throw error;
             }
 
-            throw new StandingsError(`Failed to get knockout seeding: ${error.message}`, 500);
+            throw new StandingsError(`Failed to get knockout seeding: ${errorMessage(error)}`, 500);
         }
     }
 
@@ -323,7 +324,10 @@ export class StandingsManager {
                 throw error;
             }
 
-            throw new StandingsError(`Failed to generate knockout bracket: ${error.message}`, 500);
+            throw new StandingsError(
+                `Failed to generate knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 }
