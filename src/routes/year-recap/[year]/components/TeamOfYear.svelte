@@ -8,7 +8,7 @@
 
     // Calculate delays
     const itemStagger = 150; // Delay increment per item
-    const summaryDelay = initialDelay + (data?.length || 6) * itemStagger + 200; // After last item + buffer
+    const summaryDelay = $derived(initialDelay + (data?.length || 6) * itemStagger + 200); // After last item + buffer
     const summaryDuration = 600; // Longer duration for summary fade
 </script>
 

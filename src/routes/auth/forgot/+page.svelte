@@ -12,7 +12,7 @@
 
     let { data } = $props();
     let email = $state('');
-    let hasOwnerEmail = $state(data.leagueInfo?.hasOwnerEmail || false);
+    let hasOwnerEmail = $derived(data.leagueInfo?.hasOwnerEmail || false);
 
     onMount(() => {
         if (!data.leagueInfo) {

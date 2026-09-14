@@ -8,12 +8,12 @@
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Calculate delays
-    const delays = {
+    const delays = $derived({
         highestScoring: initialDelay,
         biggestMargin: initialDelay + 200,
         mostGoals: initialDelay + 400,
         fewestGoals: initialDelay + 500
-    };
+    });
 </script>
 
 <SlideCard

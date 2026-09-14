@@ -27,7 +27,7 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
 
     // URL params
     let competition = $derived(

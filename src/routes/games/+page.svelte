@@ -14,7 +14,7 @@
     let { data } = $props();
 
     /** @type {string} */
-    const date = data.date;
+    const date = $derived(data.date);
 
     let showTeamModal = $state(false);
     /** @type {string | null} */

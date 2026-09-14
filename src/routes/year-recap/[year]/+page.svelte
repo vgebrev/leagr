@@ -358,6 +358,9 @@
         <!-- Carousel Container with relative positioning for absolute children -->
         <div
             class="relative flex min-h-0 flex-1 flex-col"
+            role="group"
+            aria-roledescription="carousel"
+            aria-label="Year in review slides"
             ontouchstart={handleTouchStart}
             ontouchend={handleTouchEnd}>
             <!-- Slides Container with absolute positioning for smooth transitions -->

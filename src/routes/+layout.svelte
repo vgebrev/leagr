@@ -20,11 +20,13 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data, children } = $props();
-    setLeagueId(data.leagueId);
+    $effect(() => setLeagueId(data.leagueId));
     let selectedDate = $derived(new Date(data.date));
     let date = $derived(dateString(selectedDate));
 
-    $settings = data.settings;
+    $effect(() => {
+        $settings = data.settings;
+    });
 
     // Construct page title from parts and league name
     let pageTitle = $derived.by(() => {

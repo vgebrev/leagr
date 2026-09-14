@@ -16,11 +16,11 @@
     );
 
     // Calculate delays
-    const badgeDelay = initialDelay;
-    const playersStartDelay = initialDelay + 200;
+    const badgeDelay = $derived(initialDelay);
+    const playersStartDelay = $derived(initialDelay + 200);
     const playerStagger = 100;
-    const leagueDelay = initialDelay + 800;
-    const cupDelay = initialDelay + 900;
+    const leagueDelay = $derived(initialDelay + 800);
+    const cupDelay = $derived(initialDelay + 900);
 </script>
 
 <SlideCard

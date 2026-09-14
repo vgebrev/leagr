@@ -1,5 +1,6 @@
 <script>
     import { Alert, Button, Input, Label, Radio } from 'flowbite-svelte';
+    import { untrack } from 'svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import { isValidSubdomain, generateAccessCode } from '$lib/shared/validation.js';
     import { capitalize, errorMessage } from '$lib/shared/helpers.js';
@@ -15,9 +16,10 @@
         appUrl
     } = $props();
 
-    // Form state
-    let subdomain = $state(leagueId || '');
-    let name = $state(capitalize(leagueId || ''));
+    // Form state. These are editable fields seeded from the prop, so the initial value is
+    // the point - untrack() says that rather than leaving it looking like a missed $derived.
+    let subdomain = $state(untrack(() => leagueId) || '');
+    let name = $state(capitalize(untrack(() => leagueId) || ''));
     let icon = $state('soccer');
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
