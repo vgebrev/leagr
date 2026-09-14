@@ -7,11 +7,17 @@ import {
     validateAccessCode,
     removeStoredAccessCode
 } from '$lib/client/services/auth.js';
-import { setFetch } from '$lib/client/services/api-client.svelte.js';
+import { setFetch, setLeagueId } from '$lib/client/services/api-client.svelte.js';
 
 export const load = async ({ data, url, fetch }) => {
     // Set SvelteKit's fetch for API client to avoid warnings
     setFetch(fetch);
+    // The API client needs the league id before any component can issue a request, and
+    // this load is the earliest client-side hook there is. It cannot move into the
+    // layout component: Svelte 5 flushes effects child-first, so a layout $effect runs
+    // *after* every page's own onMount, and those first calls would go out with no
+    // Authorization header - a 403 that clears the stored access code.
+    if (browser) setLeagueId(data.leagueId);
     // Handle code-based authentication BEFORE anything else (client-side only)
     if (browser && data.leagueInfo && url.pathname !== '/auth/reset') {
         const codeFromQuery = extractAccessCodeFromQuery(url.searchParams);
