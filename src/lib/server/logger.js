@@ -68,6 +68,7 @@ class Logger {
         return `[${timestamp}] [${level}] ${message}\n`;
     }
 
+    /** @param {string} message */
     writeToFile(message) {
         try {
             // Check file size and rotate if needed

@@ -4,6 +4,11 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 
 class HttpError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} status
+     * @param {unknown} body
+     */
     constructor(message, status, body) {
         super(message);
         this.name = 'HttpError';

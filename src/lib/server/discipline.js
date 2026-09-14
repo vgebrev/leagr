@@ -11,6 +11,10 @@ const disciplineMutexes = new Map();
  * Custom error class for discipline operations
  */
 export class DisciplineError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'DisciplineError';
@@ -74,7 +78,7 @@ export class DisciplineManager {
 
     /**
      * Load discipline data without mutex protection (internal use)
-     * @returns {Promise<Object>} - Raw discipline data
+     * @returns {Promise<DisciplineData>} - Raw discipline data
      */
     async loadDisciplineDataUnsafe() {
         try {
@@ -90,7 +94,7 @@ export class DisciplineManager {
 
     /**
      * Load discipline data with mutex protection
-     * @returns {Promise<Object>} - Raw discipline data
+     * @returns {Promise<DisciplineData>} - Raw discipline data
      */
     async loadDisciplineData() {
         const mutex = this.getDisciplineMutex();
@@ -101,7 +105,7 @@ export class DisciplineManager {
 
     /**
      * Save discipline data without mutex protection (internal use)
-     * @param {Object} disciplineData - Discipline data to save
+     * @param {DisciplineData} disciplineData - Discipline data to save
      * @returns {Promise<void>}
      */
     async saveDisciplineDataUnsafe(disciplineData) {
@@ -112,7 +116,7 @@ export class DisciplineManager {
     /**
      * Get player's discipline record
      * @param {string} playerName - Player name
-     * @returns {Promise<Object>} - Player discipline record
+     * @returns {Promise<DisciplineRecord>} - Player discipline record
      */
     async getPlayerRecord(playerName) {
         const disciplineData = await this.loadDisciplineData();
@@ -130,7 +134,7 @@ export class DisciplineManager {
      * Record a no-show for a player on a specific date
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Date of the no-show (YYYY-MM-DD format)
-     * @returns {Promise<Object>} - Updated discipline data
+     * @returns {Promise<DisciplineData>} - Updated discipline data
      */
     async recordNoShow(playerName, sessionDate) {
         if (!this.leagueId) {
@@ -163,8 +167,8 @@ export class DisciplineManager {
     /**
      * Check if player should be suspended based on no-shows
      * @param {string} playerName - Player name
-     * @param {Object} settings - League settings
-     * @returns {Promise<Object>} - Suspension check result
+     * @param {LeagueSettings} settings - League settings
+     * @returns {Promise<{shouldSuspend: boolean, reason: string}>} - Suspension check result
      */
     async shouldSuspend(playerName, settings) {
         const playerRecord = await this.getPlayerRecord(playerName);
@@ -193,7 +197,7 @@ export class DisciplineManager {
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Date when suspension should be applied
      * @param {string} reason - Reason for suspension
-     * @returns {Promise<Object>} - Updated discipline data
+     * @returns {Promise<DisciplineData>} - Updated discipline data
      */
     async applySuspension(playerName, sessionDate, reason = 'Repeated no-shows') {
         if (!this.leagueId) {
@@ -238,7 +242,7 @@ export class DisciplineManager {
      * Check if player is currently suspended for a session
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Session date to check
-     * @returns {Promise<Object>} - Suspension status
+     * @returns {Promise<SuspensionStatus>} - Suspension status
      */
     async isPlayerSuspended(playerName, sessionDate) {
         const playerRecord = await this.getPlayerRecord(playerName);
@@ -262,7 +266,7 @@ export class DisciplineManager {
      * @param {string} playerName - Player name to check
      * @param {string} sessionDate - Session date
      * @param {number} threshold - Similarity threshold (0-100, default 85)
-     * @returns {Promise<Object>} - Fuzzy match result
+     * @returns {Promise<FuzzySuspensionMatch>} - Fuzzy match result
      */
     async checkFuzzySuspensionMatch(playerName, sessionDate, threshold = 85) {
         const disciplineData = await this.loadDisciplineData();
@@ -308,8 +312,8 @@ export class DisciplineManager {
      * Evaluate suspension on signup attempt
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Date of the session they're trying to join
-     * @param {Object} settings - League settings
-     * @returns {Promise<Object>} - Suspension evaluation result
+     * @param {LeagueSettings} settings - League settings
+     * @returns {Promise<SuspensionStatus>} - Suspension evaluation result
      */
     async evaluateSuspensionOnSignup(playerName, sessionDate, settings) {
         // First check if player is already suspended for this specific session
@@ -363,7 +367,7 @@ export class DisciplineManager {
      * Clear active no-shows for a player if they have appeared after their latest no-show
      * @param {string} playerName - Player name
      * @param {string} appearanceDate - Date when player appeared (YYYY-MM-DD format)
-     * @returns {Promise<Object>} - Updated discipline data or null if no changes
+     * @returns {Promise<DisciplineData|null>} - Updated discipline data or null if no changes
      */
     async clearNoShowsIfAppeared(playerName, appearanceDate) {
         if (!this.leagueId) {
@@ -474,7 +478,7 @@ export class DisciplineManager {
     /**
      * Update suspension readiness if threshold is reached
      * @param {string} playerName - Player name
-     * @param {Object} settings - League settings
+     * @param {LeagueSettings} settings - League settings
      * @returns {Promise<void>}
      */
     async updateSuspensionReadinessIfNeeded(playerName, settings) {
@@ -489,7 +493,7 @@ export class DisciplineManager {
 
     /**
      * Get all discipline records for reporting
-     * @returns {Promise<Object>} - All discipline data
+     * @returns {Promise<DisciplineData>} - All discipline data
      */
     async getAllRecords() {
         return await this.loadDisciplineData();

@@ -229,7 +229,11 @@ declare global {
         rounds?: RawRound[];
     }
 
-    interface KnockoutMatch extends Match {
+    interface KnockoutMatch extends Omit<Match, 'home' | 'away'> {
+        /** null in a later round until the feeding round decides a winner. */
+        home?: string | null;
+        /** null in a later round until the feeding round decides a winner. */
+        away?: string | null;
         round?: string;
         match?: number;
         homePenalties?: number | null;
@@ -254,6 +258,36 @@ declare global {
         status?: ScheduleStatus;
         teamCount?: number;
         'knockout-games'?: { teams: string[]; bracket: KnockoutMatch[] };
+    }
+
+    /** The `games['knockout-games']` value: the seeded field plus its bracket. */
+    interface KnockoutBracketData {
+        teams: string[];
+        bracket: KnockoutMatch[];
+    }
+
+    /**
+     * Running statistics for one player pair while computeOverduePairs walks the session
+     * history. The drought fields track the current unpaired run and stop accumulating
+     * once the pair is seen together again.
+     */
+    interface PairStats {
+        coAttendance: number;
+        probNone: number;
+        paired: boolean;
+        droughtCoAttendance: number;
+        droughtProbNone: number;
+        droughtClosed: boolean;
+    }
+
+    /** One pair from computeOverduePairs, sorted most-starved first. */
+    interface OverduePair {
+        player1: string;
+        player2: string;
+        coAttendance: number;
+        probNone: number;
+        droughtCoAttendance?: number;
+        droughtProbNone?: number;
     }
 
     interface StandingsRow {
@@ -563,6 +597,31 @@ declare global {
         revertedSuspensions?: Array<Suspension & { revertedOn: string }>;
     }
 
+    interface SuspensionStatus {
+        suspended: boolean;
+        reason?: string;
+        suspension?: Suspension;
+        /** Set when the match was made by fuzzy name comparison rather than exactly. */
+        fuzzyMatch?: boolean;
+        similarity?: number;
+        matchedPlayer?: string;
+        isSuspended?: boolean;
+        hasActiveNoShows?: boolean;
+        newSuspension?: boolean;
+    }
+
+    type FuzzySuspensionMatch =
+        | { isMatch: false }
+        | {
+              isMatch: true;
+              matchedPlayer: string;
+              similarity: number;
+              isSuspended: boolean;
+              hasActiveNoShows: boolean;
+              activeNoShowCount: number;
+              suspension: Suspension | null;
+          };
+
     interface DisciplineData {
         lastUpdated: string | null;
         players: Record<string, DisciplineRecord>;
@@ -572,9 +631,19 @@ declare global {
     // Avatars, logos, noun pool
     // ---------------------------------------------------------------------
 
+    /** As stored: a field is absent rather than null when the player has no such avatar. */
     interface PlayerAvatarRecord {
         avatar?: string;
         pendingAvatar?: string;
+    }
+
+    /**
+     * Payload for updatePlayerAvatar. Distinct from PlayerAvatarRecord because `null` here
+     * means "clear this field" - the manager deletes the key rather than storing a null.
+     */
+    interface PlayerAvatarUpdate {
+        avatar?: string | null;
+        pendingAvatar?: string | null;
     }
 
     /** Contents of data/{leagueId}/avatars.json. */

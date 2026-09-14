@@ -93,7 +93,7 @@ export class AvatarManager {
 
     /**
      * Load avatars metadata without mutex protection (internal use)
-     * @returns {Promise<Object>} - Avatars metadata
+     * @returns {Promise<AvatarsData>} - Avatars metadata
      */
     async loadAvatarsUnsafe() {
         try {
@@ -109,7 +109,7 @@ export class AvatarManager {
 
     /**
      * Load avatars metadata with mutex protection
-     * @returns {Promise<Object>} - Avatars metadata
+     * @returns {Promise<AvatarsData>} - Avatars metadata
      */
     async loadAvatars() {
         const mutex = this.getAvatarsMutex();
@@ -120,7 +120,7 @@ export class AvatarManager {
 
     /**
      * Save avatars metadata without mutex protection (internal use)
-     * @param {Object} avatars - Avatars metadata to save
+     * @param {AvatarsData} avatars - Avatars metadata to save
      * @returns {Promise<void>}
      */
     async saveAvatarsUnsafe(avatars) {
@@ -231,7 +231,7 @@ export class AvatarManager {
     /**
      * Update player avatar metadata in avatars.json
      * @param {string} playerName
-     * @param {Object} avatarData - { avatar?: filename, pendingAvatar?: filename }
+     * @param {PlayerAvatarUpdate} avatarData - null clears a field; undefined leaves it alone
      */
     async updatePlayerAvatar(playerName, avatarData) {
         const mutex = this.getAvatarsMutex();
