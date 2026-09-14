@@ -32,7 +32,7 @@ export class DisciplineManager {
 
     /**
      * Set the league ID for operations
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @returns {DisciplineManager} - Returns this for chaining
      */
     setLeague(leagueId) {

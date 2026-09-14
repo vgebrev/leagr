@@ -442,17 +442,26 @@ declare global {
         norm: number | null;
     }
 
+    /**
+     * Saves carry a volume half as well as a rate. The three volume fields are optional
+     * only because the carry-forward pass rebuilds this object with perSession/norm and
+     * the passes after it restore the rest; every persisted entry has all five.
+     */
     interface SaveActionsRating {
         perSession: number | null;
-        total: number | null;
-        rateNorm: number | null;
-        volumeNorm: number | null;
         norm: number | null;
+        total?: number | null;
+        rateNorm?: number | null;
+        volumeNorm?: number | null;
     }
 
     interface RankingRatings {
         elo: number;
-        eloGames: { allTime: number; season: number };
+        /**
+         * A bare number is a legacy shape kept for older league files; every row in the
+         * current data is the object form.
+         */
+        eloGames: { allTime: number; season: number } | number;
         attacking: number | null;
         control: number | null;
         teamGF: PerSessionNorm | null;
@@ -512,8 +521,8 @@ declare global {
         cupWins: number;
         attackingRating: number | null;
         controlRating: number | null;
-        goalsForPerSession: number;
-        goalsAgainstPerSession: number;
+        goalsForPerSession: number | null;
+        goalsAgainstPerSession: number | null;
         teamGFNorm: number | null;
         teamGANorm: number | null;
         goalsNorm: number | null;
@@ -543,7 +552,59 @@ declare global {
      * these and assigns `rank`; rank movement, traits and norms are filled in by later
      * passes. Only the persisted rankings-YYYY.json holds complete PlayerRankingData.
      */
-    type EnrichingPlayerRankingData = RankablePlayer & Partial<PlayerRankingData>;
+    type EnrichingPlayerRankingData = RankablePlayer &
+        Partial<PlayerRankingData> & {
+            /**
+             * Session goal totals accumulated during the calculation and folded into
+             * goalsForPerSession / goalsAgainstPerSession. Never persisted.
+             */
+            goalsFor?: number;
+            goalsAgainst?: number;
+        };
+
+    /**
+     * Rankings part-way through the pipeline. calculateEnhancedRankings takes and returns
+     * this; traits, norms and rank movement are added by the passes after it, and only the
+     * file written to disk is a complete RankingsData.
+     */
+    interface WorkingRankingsData {
+        lastUpdated?: string | null;
+        calculatedDates?: string[];
+        players: Record<string, EnrichingPlayerRankingData>;
+        rankingMetadata?: RankingMetadata;
+    }
+
+    /** The established-player value pools a date's norms are computed against. */
+    interface RankingNormPools {
+        gf: number[];
+        ga: number[];
+        goals: number[];
+        off: number[];
+        def: number[];
+        save: number[];
+        saveTotal: number[];
+    }
+
+    /** Which stat types a session actually recorded, so untracked ones don't dilute averages. */
+    interface TrackedStatFlags {
+        goals: boolean;
+        offActions: boolean;
+        defActions: boolean;
+        saveActions: boolean;
+    }
+
+    /** One entry of STAT_SOURCES: which PlayerRankingData fields back a trait. */
+    interface TraitStatSource {
+        key: string;
+        trait: keyof PlayerTraits;
+        norm: 'goalsNorm' | 'offActionsNorm' | 'defActionsNorm' | 'saveActionsNorm';
+        sessions:
+            | 'sessionsWithGoals'
+            | 'sessionsWithOffActions'
+            | 'sessionsWithDefActions'
+            | 'sessionsWithSaveActions'
+            | 'sessionsInGoal';
+    }
 
     interface RankingMetadata {
         globalAverage: number;
