@@ -15,6 +15,7 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyPopover from '$components/TrophyPopover.svelte';
@@ -61,7 +62,7 @@
             (err) => {
                 console.error('Error loading champions:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load champions data', 'error');
+                setNotification(errorMessage(err) || 'Failed to load champions data', 'error');
             }
         );
     }

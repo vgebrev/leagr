@@ -13,6 +13,7 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
@@ -56,7 +57,7 @@
             (err) => {
                 console.error('Error loading golden boot data:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load golden boot data', 'error');
+                setNotification(errorMessage(err) || 'Failed to load golden boot data', 'error');
             }
         );
     }

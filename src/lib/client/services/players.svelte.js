@@ -4,7 +4,11 @@ import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { validatePlayerNameForUI } from '$lib/shared/validation.js';
-import { isDateInPast, isRegistrationOpen as registrationOpenFor } from '$lib/shared/helpers.js';
+import {
+    isDateInPast,
+    isRegistrationOpen as registrationOpenFor,
+    errorMessage
+} from '$lib/shared/helpers.js';
 import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class PlayersService {
@@ -97,7 +101,7 @@ class PlayersService {
             },
             (error) => {
                 setNotification(
-                    error.message || 'Failed to load players. Please try again.',
+                    errorMessage(error) || 'Failed to load players. Please try again.',
                     'error'
                 );
             }
@@ -125,7 +129,7 @@ class PlayersService {
             (error) => {
                 console.error('Error loading suspension data:', error);
                 setNotification(
-                    error.message || 'Failed to load suspension data. Please try again.',
+                    errorMessage(error) || 'Failed to load suspension data. Please try again.',
                     'error'
                 );
                 this.suspendedPlayers = [];
@@ -152,7 +156,7 @@ class PlayersService {
             (error) => {
                 console.error('Error clearing suspension:', error);
                 setNotification(
-                    error.message || 'Failed to clear discipline records. Please try again.',
+                    errorMessage(error) || 'Failed to clear discipline records. Please try again.',
                     'error'
                 );
                 return false;
@@ -173,7 +177,7 @@ class PlayersService {
             (error) => {
                 console.error('Error loading ranked players:', error);
                 setNotification(
-                    error.message || 'Failed to load player suggestions. Please try again.',
+                    errorMessage(error) || 'Failed to load player suggestions. Please try again.',
                     'error'
                 );
                 this.rankedPlayers = [];
@@ -253,7 +257,7 @@ class PlayersService {
             async (error) => {
                 console.error('Error adding player:', error);
                 setNotification(
-                    error.message || 'Failed to add player. Please try again.',
+                    errorMessage(error) || 'Failed to add player. Please try again.',
                     'error'
                 );
 
@@ -294,7 +298,7 @@ class PlayersService {
             (error) => {
                 console.error('Error removing player:', error);
                 setNotification(
-                    error.message || 'Failed to remove player. Please try again.',
+                    errorMessage(error) || 'Failed to remove player. Please try again.',
                     'error'
                 );
             }
@@ -328,7 +332,7 @@ class PlayersService {
             (error) => {
                 console.error('Error moving player:', error);
                 setNotification(
-                    error.message || 'Failed to move player. Please try again.',
+                    errorMessage(error) || 'Failed to move player. Please try again.',
                     'error'
                 );
             }
@@ -379,7 +383,7 @@ class PlayersService {
             (error) => {
                 console.error('Error renaming player:', error);
                 setNotification(
-                    error.message || 'Failed to rename player. Please try again.',
+                    errorMessage(error) || 'Failed to rename player. Please try again.',
                     'error'
                 );
                 throw error; // Re-throw so modal can handle it

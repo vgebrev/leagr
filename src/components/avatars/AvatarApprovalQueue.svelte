@@ -1,5 +1,6 @@
 <script>
     import Avatar from './Avatar.svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { Alert, Button, ButtonGroup } from 'flowbite-svelte';
     import { CheckOutline, CloseOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
@@ -7,6 +8,7 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { setNotification } from '$lib/client/stores/notification.js';
 
+    /** @type {{ onCountChange?: (count: number) => void }} */
     let { onCountChange = () => {} } = $props();
 
     let pending = $state([]);
@@ -26,7 +28,7 @@
             (err) => {
                 console.error('Error loading pending avatars:', err);
                 loadingError = true;
-                setNotification(err.message || 'Failed to load pending avatars.', 'error');
+                setNotification(errorMessage(err) || 'Failed to load pending avatars.', 'error');
             }
         );
     }
@@ -45,7 +47,7 @@
             },
             (err) => {
                 console.error('Error approving avatar:', err);
-                setNotification(err.message || 'Failed to approve avatar.', 'error');
+                setNotification(errorMessage(err) || 'Failed to approve avatar.', 'error');
             }
         );
     }
@@ -64,7 +66,7 @@
             },
             (err) => {
                 console.error('Error rejecting avatar:', err);
-                setNotification(err.message || 'Failed to reject avatar.', 'error');
+                setNotification(errorMessage(err) || 'Failed to reject avatar.', 'error');
             }
         );
     }

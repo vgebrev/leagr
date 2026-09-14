@@ -1,5 +1,6 @@
 <script>
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import PlayerSummaryCard from './components/PlayerSummaryCard.svelte';
     import RankProgressionChart from './components/RankProgressionChart.svelte';
     import PerformanceSection from './components/PerformanceSection.svelte';
@@ -109,7 +110,7 @@
                 console.error('Error loading player profile:', err);
                 loadingError = true;
                 setNotification(
-                    err.message || 'Failed to load player profile. Please try again.',
+                    errorMessage(err) || 'Failed to load player profile. Please try again.',
                     'error'
                 );
             }
@@ -173,7 +174,7 @@
             (err) => {
                 console.error('Error uploading avatar:', err);
                 setNotification(
-                    err.message || 'Failed to upload avatar. Please try again.',
+                    errorMessage(err) || 'Failed to upload avatar. Please try again.',
                     'error'
                 );
             }

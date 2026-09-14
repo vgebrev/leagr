@@ -1,5 +1,6 @@
 <script>
     import { Button, Input, Label, Alert, Spinner } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { LockOpenSolid, LockSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
@@ -84,7 +85,7 @@
             },
             (error) => {
                 console.error('Error updating access code:', error);
-                setNotification(error.message || 'Failed to update access code', 'error');
+                setNotification(errorMessage(error) || 'Failed to update access code', 'error');
             }
         );
     }

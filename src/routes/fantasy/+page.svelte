@@ -11,6 +11,7 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupOutline } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
@@ -81,7 +82,7 @@
             (err) => {
                 console.error('Error loading fantasy league:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load fantasy league', 'error');
+                setNotification(errorMessage(err) || 'Failed to load fantasy league', 'error');
             }
         );
     }

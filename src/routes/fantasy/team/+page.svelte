@@ -1,5 +1,6 @@
 <script>
     import { Alert, Button, Drawer, Input, Label, Spinner } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { ArrowLeftOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { resolve } from '$app/paths';
     import PlayerMarket from '../components/PlayerMarket.svelte';
@@ -114,7 +115,7 @@
             (err) => {
                 console.error('Error loading fantasy squad:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load fantasy squad', 'error');
+                setNotification(errorMessage(err) || 'Failed to load fantasy squad', 'error');
             }
         );
     }
@@ -151,7 +152,7 @@
             },
             (err) => {
                 console.error('Error saving fantasy squad:', err);
-                setNotification(err.message || 'Failed to save squad', 'error');
+                setNotification(errorMessage(err) || 'Failed to save squad', 'error');
             }
         );
         saving = false;
@@ -170,7 +171,7 @@
             },
             (err) => {
                 console.error('Error withdrawing fantasy squad:', err);
-                setNotification(err.message || 'Failed to withdraw squad', 'error');
+                setNotification(errorMessage(err) || 'Failed to withdraw squad', 'error');
             }
         );
         saving = false;

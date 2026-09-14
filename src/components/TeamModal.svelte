@@ -1,5 +1,6 @@
 <script>
     import { Modal, Spinner } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import TeamFormation from './TeamFormation.svelte';
     import TeamBadge from './TeamBadge.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
@@ -133,7 +134,7 @@
                 console.error('Error loading team data:', err);
                 loadingError = true;
                 setNotification(
-                    err.message || 'Failed to load team data. Please try again.',
+                    errorMessage(err) || 'Failed to load team data. Please try again.',
                     'error'
                 );
             }

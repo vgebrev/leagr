@@ -55,7 +55,7 @@ function fallbackCopyToClipboard(text) {
  * @param {string} shareData.title - The title of the content being shared
  * @param {string} shareData.text - The text to share
  * @param {string} shareData.url - The URL to share
- * @returns {Promise<{success: boolean, method: string}>} Promise with success status and method used
+ * @returns {Promise<{success: boolean, method: string, cancelled?: boolean}>} Promise with success status and method used
  */
 export async function shareContent(shareData) {
     // Check if Web Share API is available and supported

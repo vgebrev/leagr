@@ -3,10 +3,8 @@
 
     /**
      * @typedef {Object} GameTimerSettingsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {number} leagueSettings.gameDurationMinutes - Default game length in minutes
-     * @property {boolean} leagueSettings.lastPlayEnabled - Whether the last play period applies
-     * @property {number} leagueSettings.lastPlaySeconds - Maximum length of the last play period
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object; this
+     *   panel edits gameDurationMinutes, lastPlayEnabled and lastPlaySeconds
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 

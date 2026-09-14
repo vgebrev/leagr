@@ -75,7 +75,7 @@
             (err) => {
                 console.error('Error loading news feed:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load the news feed', 'error');
+                setNotification(errorMessage(err) || 'Failed to load the news feed', 'error');
             }
         );
     }

@@ -10,7 +10,12 @@
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
-    import { isCompetitionEnded, teamColours, errorStatus } from '$lib/shared/helpers.js';
+    import {
+        isCompetitionEnded,
+        teamColours,
+        errorStatus,
+        errorMessage
+    } from '$lib/shared/helpers.js';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
@@ -98,7 +103,7 @@
             (err) => {
                 console.error('Error loading table:', err);
                 setNotification(
-                    err.message || 'Failed to load standings data. Please try again.',
+                    errorMessage(err) || 'Failed to load standings data. Please try again.',
                     'error'
                 );
             }

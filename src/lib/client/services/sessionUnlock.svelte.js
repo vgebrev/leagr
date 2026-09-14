@@ -39,7 +39,7 @@ export const sessionUnlock = new SessionUnlockService();
 /**
  * Canonical client-side "this session is read-only" predicate.
  * @param {string|null|undefined} date
- * @param {Object} settings
+ * @param {LeagueSettings} settings
  * @returns {boolean}
  */
 export function isSessionLocked(date, settings) {

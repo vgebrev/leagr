@@ -160,9 +160,14 @@ declare global {
      * block nested under the session date, e.g. `settings['2026-09-05'].playerLimit`.
      * Those date keys are why this is not simply a LeagueSettings.
      */
-    type ConsolidatedSettings = LeagueSettings & {
-        [sessionDate: string]: DaySettings | LeagueSettings[keyof LeagueSettings];
-    };
+    interface ConsolidatedSettings extends LeagueSettings {
+        /**
+         * Day-level override block, keyed by session date. Loosely typed because a type
+         * cannot carry both LeagueSettings' named keys and a DaySettings index signature;
+         * the named keys above keep their real types through dot access.
+         */
+        [sessionDate: string]: any;
+    }
 
     /** Contents of data/{leagueId}/info.json. */
     interface LeagueInfo {

@@ -1,5 +1,6 @@
 <script>
     import { withLoading } from '$lib/client/stores/loading.js';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { setNotification } from '$lib/client/stores/notification.js';
     import { api } from '$lib/client/services/api-client.svelte.js';
     import { Button, Toggle, Tooltip, Dropdown, DropdownItem } from 'flowbite-svelte';
@@ -16,7 +17,9 @@
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let rankings = $state({ players: {}, rankingMetadata: {} });
+    let rankings = $state(
+        /** @type {Partial<RankingsData>} */ ({ players: {}, rankingMetadata: {} })
+    );
     let sortBy = $state('rankingPoints'); // Default to ranking points
     let showActiveOnly = $state(true); // Default to showing active players only
     let yearDropdownOpen = $state(false);
@@ -69,8 +72,8 @@
 
     /**
      * Recalculate rank movement for filtered players
-     * @param {Array} players - Filtered and sorted players array
-     * @returns {Array} - Players with adjusted rank movement
+     * @param {Array<[string, PlayerRankingData]>} players - Filtered and sorted [name, data] entries
+     * @returns {Array<[string, PlayerRankingData & {adjustedRank: number}]>} - Entries with a view-relative rank
      */
     function adjustRankMovement(players) {
         return players.map(([name, data], index) => {
@@ -80,13 +83,13 @@
             // For simplicity, we'll keep the original rank movement for now
             // A more sophisticated implementation would track filtered rankings over time
 
-            return [
+            return /** @type {[string, PlayerRankingData & {adjustedRank: number}]} */ ([
                 name,
                 {
                     ...data,
                     adjustedRank: currentRankInView
                 }
-            ];
+            ]);
         });
     }
 
@@ -145,7 +148,7 @@
             (err) => {
                 console.error(err);
                 setNotification(
-                    err.message || 'Unable to load rankings. Please try again.',
+                    errorMessage(err) || 'Unable to load rankings. Please try again.',
                     'error'
                 );
             }
@@ -159,12 +162,12 @@
         await withLoading(
             async () => {
                 const url = `rankings?year=${selectedYear}`;
-                rankings = await api.post(url);
+                rankings = await api.post(url, null, {});
             },
             (err) => {
                 console.error(err);
                 setNotification(
-                    err.message || 'Unable to update rankings. Please try again.',
+                    errorMessage(err) || 'Unable to update rankings. Please try again.',
                     'error'
                 );
             }

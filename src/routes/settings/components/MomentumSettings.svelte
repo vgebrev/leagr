@@ -4,7 +4,7 @@
 
     /**
      * @typedef {Object} MomentumSettingsProps
-     * @property {LeagueSettings & {momentum: MomentumSettings}} leagueSettings - The league-wide settings object
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object; momentum is backfilled below
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 
@@ -15,6 +15,13 @@
     // a league saved before this feature has no momentum block, and the page
     // replaces leagueSettings wholesale after loading from the API
     leagueSettings.momentum = getEffectiveMomentumSettings(leagueSettings);
+
+    // The backfill above runs before first render and the effect below keeps it whole, so
+    // this is always the live block; binding through it mutates leagueSettings.momentum.
+    const momentum = $derived(
+        leagueSettings.momentum ?? getEffectiveMomentumSettings(leagueSettings)
+    );
+
     $effect(() => {
         const momentum = leagueSettings.momentum;
         if (!momentum || !momentum.ballers || !momentum.champions) {
@@ -46,12 +53,12 @@
 <div class="flex flex-col gap-2 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
     <Toggle
         classes={{ input: 'leagr-toggle-input' }}
-        bind:checked={leagueSettings.momentum.enabled}
+        bind:checked={momentum.enabled}
         onchange={onSave}>
         Enable form (momentum) boards
     </Toggle>
 
-    {#if leagueSettings.momentum.enabled}
+    {#if momentum.enabled}
         {#each boards as board (board.key)}
             <div class="flex flex-col gap-2 text-sm">
                 <Label>{board.label}:</Label>
@@ -65,7 +72,7 @@
                             </Label>
                             <Input
                                 id="momentum-{board.key}-{field.key}"
-                                bind:value={leagueSettings.momentum[board.key][field.key]}
+                                bind:value={momentum[board.key][field.key]}
                                 type="number"
                                 min={field.min}
                                 max={field.max}

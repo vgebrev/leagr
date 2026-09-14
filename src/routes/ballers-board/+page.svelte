@@ -15,6 +15,7 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid, StarSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
@@ -84,7 +85,7 @@
             (err) => {
                 console.error('Error loading ballers board:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load ballers board', 'error');
+                setNotification(errorMessage(err) || 'Failed to load ballers board', 'error');
             }
         );
     }

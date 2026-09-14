@@ -1,9 +1,9 @@
 /**
  * Find a league match using 1-indexed round and match URL params.
- * @param {Array<Array<Object>>} rounds
+ * @param {Round[]} rounds
  * @param {string|null} roundParam - 1-indexed round number
  * @param {string|null} matchParam - 1-indexed match position within round
- * @returns {Object|null}
+ * @returns {Match|null}
  */
 export function findLeagueMatch(rounds, roundParam, matchParam) {
     if (!rounds || !roundParam || !matchParam) return null;
@@ -15,10 +15,10 @@ export function findLeagueMatch(rounds, roundParam, matchParam) {
 
 /**
  * Find a knockout match by round name and match number.
- * @param {Object|null} bracket - Knockout bracket object (has .bracket array)
+ * @param {KnockoutBracketData|null} bracket - Knockout bracket object (has .bracket array)
  * @param {string|null} roundParam - Round name e.g. 'quarter', 'semi', 'final'
  * @param {string|null} matchParam - Match number as string
- * @returns {Object|null}
+ * @returns {KnockoutMatch|null}
  */
 export function findKnockoutMatch(bracket, roundParam, matchParam) {
     if (!bracket?.bracket || !roundParam || !matchParam) return null;

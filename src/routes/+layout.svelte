@@ -51,6 +51,7 @@
             systemThemeIsDark = mediaQuery.matches;
 
             // Listen for changes
+            /** @param {MediaQueryListEvent} e */
             const handler = (e) => {
                 systemThemeIsDark = e.matches;
             };

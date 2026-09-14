@@ -1,5 +1,6 @@
 <script>
     import { Modal, Spinner, Button } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
     import PlayerHeader from './PlayerHeader.svelte';
     import PlayerSummaryCard from '../routes/rankings/[player]/components/PlayerSummaryCard.svelte';
@@ -77,7 +78,7 @@
                 console.error('Error loading player profile:', err);
                 loadingError = true;
                 setNotification(
-                    err.message || 'Failed to load player profile. Please try again.',
+                    errorMessage(err) || 'Failed to load player profile. Please try again.',
                     'info'
                 );
             }

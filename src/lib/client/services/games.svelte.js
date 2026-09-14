@@ -1,5 +1,5 @@
 import { api } from '$lib/client/services/api-client.svelte.js';
-import { errorStatus } from '$lib/shared/helpers.js';
+import { errorStatus, errorMessage } from '$lib/shared/helpers.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '$lib/shared/matchUtils.js';
@@ -60,7 +60,7 @@ class GamesService {
             (err) => {
                 console.error('Error fetching games data:', err);
                 setNotification(
-                    err.message || 'Failed to load games data. Please try again.',
+                    errorMessage(err) || 'Failed to load games data. Please try again.',
                     'error'
                 );
             }
@@ -85,7 +85,7 @@ class GamesService {
             (err) => {
                 console.error(err);
                 setNotification(
-                    err.message || 'Failed to generate schedule. Please try again.',
+                    errorMessage(err) || 'Failed to generate schedule. Please try again.',
                     'error'
                 );
                 this.schedule = restoreSchedule;
@@ -111,7 +111,7 @@ class GamesService {
             (err) => {
                 console.error(err);
                 setNotification(
-                    err.message || 'Failed to add more games. Please try again.',
+                    errorMessage(err) || 'Failed to add more games. Please try again.',
                     'error'
                 );
                 this.schedule = restoreSchedule;
@@ -123,7 +123,7 @@ class GamesService {
      * Update a league match and save to server. Uses optimistic update with revert on error.
      * @param {number} roundIndex - 0-based round index
      * @param {number} matchIndex - 0-based match index within round
-     * @param {Object} updatedMatch - Updated match object
+     * @param {Match | KnockoutMatch} updatedMatch - Updated match object
      */
     async updateLeagueMatch(roundIndex, matchIndex, updatedMatch) {
         const restoreSchedule = this.schedule;
@@ -145,7 +145,10 @@ class GamesService {
             },
             (err) => {
                 console.error(err);
-                setNotification(err.message || 'Failed to save score. Please try again.', 'error');
+                setNotification(
+                    errorMessage(err) || 'Failed to save score. Please try again.',
+                    'error'
+                );
                 this.schedule = restoreSchedule;
             }
         );
@@ -181,7 +184,7 @@ class GamesService {
             (err) => {
                 console.error('Error loading knockout data:', err);
                 setNotification(
-                    err.message || 'Failed to load knockout data. Please try again.',
+                    errorMessage(err) || 'Failed to load knockout data. Please try again.',
                     'error'
                 );
             }
@@ -219,7 +222,7 @@ class GamesService {
             (err) => {
                 console.error('Error generating knockout games:', err);
                 setNotification(
-                    err.message || 'Failed to generate knockout games. Please try again.',
+                    errorMessage(err) || 'Failed to generate knockout games. Please try again.',
                     'error'
                 );
             }
@@ -228,7 +231,7 @@ class GamesService {
 
     /**
      * Update a knockout match score and save. Uses optimistic update with reload on error.
-     * @param {Object} updatedMatch - Updated match object (must have .round and .match)
+     * @param {KnockoutMatch} updatedMatch - Updated match object (must have .round and .match)
      */
     async updateKnockoutMatch(updatedMatch) {
         if (!this.knockoutBracket) return;
@@ -253,7 +256,7 @@ class GamesService {
             (err) => {
                 console.error('Error saving knockout scores:', err);
                 setNotification(
-                    err.message || 'Failed to save knockout scores. Please try again.',
+                    errorMessage(err) || 'Failed to save knockout scores. Please try again.',
                     'error'
                 );
                 this.reloadKnockout();
@@ -285,7 +288,7 @@ class GamesService {
                 },
                 (err) => {
                     console.error(err);
-                    setNotification(err.message || 'Failed to load match data.', 'error');
+                    setNotification(errorMessage(err) || 'Failed to load match data.', 'error');
                 }
             );
         }
@@ -296,7 +299,7 @@ class GamesService {
      * @param {'league'|'knockout'} competition
      * @param {string} roundParam - 1-indexed round number (league) or round name (knockout)
      * @param {string} matchParam - Match number as string
-     * @returns {Object|null}
+     * @returns {Match|KnockoutMatch|null}
      */
     #findMatch(competition, roundParam, matchParam) {
         return competition === 'league'
@@ -309,7 +312,7 @@ class GamesService {
      * @param {'league'|'knockout'} competition
      * @param {string} roundParam
      * @param {string} matchParam
-     * @param {Object} updatedMatch
+     * @param {KnockoutMatch} updatedMatch
      */
     async #saveMatch(competition, roundParam, matchParam, updatedMatch) {
         if (competition === 'league') {
