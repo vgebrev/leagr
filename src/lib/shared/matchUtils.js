@@ -3,7 +3,7 @@
  * @param {Round[]} rounds
  * @param {string|null} roundParam - 1-indexed round number
  * @param {string|null} matchParam - 1-indexed match position within round
- * @returns {Match|null}
+ * @returns {KnockoutMatch|null}
  */
 export function findLeagueMatch(rounds, roundParam, matchParam) {
     if (!rounds || !roundParam || !matchParam) return null;

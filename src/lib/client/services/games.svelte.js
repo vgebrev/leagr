@@ -123,7 +123,7 @@ class GamesService {
      * Update a league match and save to server. Uses optimistic update with revert on error.
      * @param {number} roundIndex - 0-based round index
      * @param {number} matchIndex - 0-based match index within round
-     * @param {Match | KnockoutMatch} updatedMatch - Updated match object
+     * @param {KnockoutMatch} updatedMatch - Updated match object
      */
     async updateLeagueMatch(roundIndex, matchIndex, updatedMatch) {
         const restoreSchedule = this.schedule;
@@ -299,7 +299,7 @@ class GamesService {
      * @param {'league'|'knockout'} competition
      * @param {string} roundParam - 1-indexed round number (league) or round name (knockout)
      * @param {string} matchParam - Match number as string
-     * @returns {Match|KnockoutMatch|null}
+     * @returns {KnockoutMatch|null}
      */
     #findMatch(competition, roundParam, matchParam) {
         return competition === 'league'

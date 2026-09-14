@@ -556,6 +556,8 @@ declare global {
          */
         avatar?: string | null;
         pendingAvatar?: string | null;
+        /** Added by /api/rankings/[player] for the player page; not persisted. */
+        details?: PlayerSessionDetail[];
     }
 
     /** The minimum a player record needs to take part in a ranking pass. */
@@ -623,6 +625,36 @@ declare global {
             | 'sessionsWithDefActions'
             | 'sessionsWithSaveActions'
             | 'sessionsInGoal';
+    }
+
+    /**
+     * One row of the player page's unified detail list: every session in range, with the
+     * appearance fields present only on the ones the player played.
+     */
+    interface PlayerSessionDetail {
+        date: string;
+        rank: number;
+        totalPlayers: number;
+        rankingPoints: number;
+        played: boolean;
+        team?: string;
+        appearancePoints?: number;
+        matchPoints?: number;
+        bonusPoints?: number;
+        knockoutPoints?: number;
+        totalPoints?: number;
+        leagueWinner?: boolean;
+        cupWinner?: boolean;
+        eloRating?: number;
+        leaguePosition?: number | null;
+        cupProgress?: string | null;
+        /** Rating stats, merged in by the route where the history entry carries them. */
+        attackingRating?: number | null;
+        controlRating?: number | null;
+        goals?: number | null;
+        offActions?: number | null;
+        defActions?: number | null;
+        saveActions?: number | null;
     }
 
     interface RankingMetadata {
