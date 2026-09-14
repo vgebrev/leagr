@@ -15,6 +15,7 @@
     import { SvelteSet } from 'svelte/reactivity';
     import confetti from 'canvas-confetti';
 
+    /** @type {{ drawHistory: DrawHistoryData | null, open?: boolean, date?: string | null }} */
     let { drawHistory, open = $bindable(false), date = null } = $props();
 
     // Reverse the draw history to show lowest ELO players first for drama
@@ -25,11 +26,14 @@
 
     let isPlaying = $state(false);
     let currentStep = $state(0);
+    /** @type {ReturnType<typeof setInterval> | null} */
     let intervalId = null;
     let showPlayerRankings = $state(false);
 
     // Animation state for visual transitions
+    /** @type {string | null} */
     let animatingPlayer = $state(null);
+    /** @type {string | null} */
     let animatingPlayerTeam = $state(null);
     let completedAnimations = $state(new Set());
     let completedSteps = $state(0); // For team table updates (delayed)
@@ -40,6 +44,7 @@
     let isFlying = $state(false);
 
     // Track active timeouts for cleanup
+    /** @type {ReturnType<typeof setTimeout>[]} */
     let activeTimeouts = $state([]);
 
     // Logo reveal animation state
@@ -51,7 +56,9 @@
     let flyingLogoScale = $state('scale-0');
     let flyingLogoOpacity = $state('opacity-0');
     let flyingLogoPulsing = $state(false);
-    let revealedTeams = new SvelteSet();
+    /** @type {SvelteSet<string>} */
+    /** @type {SvelteSet<string>} */
+    const revealedTeams = new SvelteSet();
     let logoRevealIndex = $state(0);
     let potsVisible = $state(false);
 
@@ -61,7 +68,9 @@
             return '';
         }
 
-        const teamColor = animatingPlayerTeam.split(' ')[0].toLowerCase();
+        const teamColor = /** @type {TeamColour} */ (
+            animatingPlayerTeam.split(' ')[0].toLowerCase()
+        );
         const teamStyle = teamStyles[teamColor] || teamStyles.default || teamStyles.blue;
         return `animate-pulse ${teamStyle.text}`;
     });
@@ -81,7 +90,9 @@
             return '';
         }
 
-        const teamColor = animatingPlayerTeam.split(' ')[0].toLowerCase();
+        const teamColor = /** @type {TeamColour} */ (
+            animatingPlayerTeam.split(' ')[0].toLowerCase()
+        );
         const teamStyle = teamStyles[teamColor] || teamStyles.default || teamStyles.blue;
         return `${teamStyle.text} ${teamStyle.border} ${flyingPlayerScale}`;
     });
@@ -98,6 +109,10 @@
     });
 
     // Helper function to get player ELO from initialPots (with fallback to rankingPoints for legacy data)
+    /**
+     * @param {string} playerName
+     * @returns {number | null}
+     */
     function getPlayerElo(playerName) {
         if (!drawHistory?.initialPots) return null;
 
@@ -105,13 +120,17 @@
             const player = pot.players.find((p) => p.name === playerName);
             if (player) {
                 // Use ELO if available, fallback to rankingPoints for legacy data
-                return player.elo ?? player.rankingPoints ?? null;
+                return player.elo ?? null;
             }
         }
         return null;
     }
 
     // Helper function to get player avatar from initialPots
+    /**
+     * @param {string} playerName
+     * @returns {string | null}
+     */
     function getPlayerAvatar(playerName) {
         if (!drawHistory?.initialPots) return null;
 
@@ -129,6 +148,7 @@
         if (!reversedDrawHistory.length) return {};
 
         // Get all unique team names and their target sizes from the full draw history
+        /** @type {Record<string, number>} */
         const teamSizes = {};
         reversedDrawHistory.forEach((step) => {
             if (!teamSizes[step.toTeam]) {
@@ -140,6 +160,7 @@
         });
 
         // Initialize teams with correct sizes filled with nulls
+        /** @type {Record<string, Array<string | null>>} */
         const teams = {};
         Object.entries(teamSizes).forEach(([teamName, size]) => {
             teams[teamName] = new Array(size).fill(null);
@@ -163,6 +184,7 @@
 
     // Enhanced teams data with ranking information for display
     let currentTeamsWithRankings = $derived.by(() => {
+        /** @type {Record<string, {players: Array<{name: string, elo: number|null} | null>, totalRankingPoints: number}>} */
         const teamsWithRankings = {};
 
         Object.entries(currentTeams).forEach(([teamName, players]) => {
@@ -196,7 +218,9 @@
     });
 
     function scrollToBottom() {
-        const container = document.querySelector('.draw-replay-container');
+        const container = /** @type {HTMLElement | null} */ (
+            document.querySelector('.draw-replay-container')
+        );
         if (!container) return;
         // Walk up to find the first scrollable ancestor (the Flowbite modal body)
         let el = container.parentElement;
@@ -242,7 +266,8 @@
         // Skip logo reveal if user steps manually
         if (logoRevealPhase !== 'done') {
             logoRevealPhase = 'done';
-            revealedTeams = new SvelteSet(Object.keys(currentTeams));
+            revealedTeams.clear();
+            for (const teamName of Object.keys(currentTeams)) revealedTeams.add(teamName);
             potsVisible = true;
         }
 
@@ -283,6 +308,10 @@
         currentStep++;
     }
 
+    /**
+     * @param {string} playerName
+     * @param {string} teamName
+     */
     function startFlyingAnimation(playerName, teamName) {
         // Enable flying state (player/team already set in animatingPlayer/Team)
         isFlying = true;
@@ -304,11 +333,11 @@
 
         const startRect = potElement?.getBoundingClientRect();
 
-        if (startRect) {
-            const containerRect = document
-                .querySelector('.draw-replay-container')
-                .getBoundingClientRect();
+        const containerRect = document
+            .querySelector('.draw-replay-container')
+            ?.getBoundingClientRect();
 
+        if (startRect && containerRect) {
             // Start position (relative to container)
             const startX = startRect.left - containerRect.left + startRect.width / 2 - 40;
             const startY = startRect.top - containerRect.top + startRect.height / 2 - 15;
@@ -382,12 +411,16 @@
         flyingLogoSize = 80;
         flyingLogoOpacity = 'opacity-0';
         flyingLogoPulsing = false;
-        revealedTeams = new SvelteSet();
+        revealedTeams.clear();
         logoRevealIndex = 0;
         potsVisible = false;
     }
 
     // Helper function to track timeouts for cleanup
+    /**
+     * @param {() => void} callback
+     * @param {number} delay
+     */
     function createTimeout(callback, delay) {
         const timeoutId = setTimeout(callback, delay);
         activeTimeouts.push(timeoutId);
@@ -401,13 +434,16 @@
     }
 
     // Fire a short confetti burst in team colors
+    /** @param {string} teamName */
     function fireStepConfetti(teamName) {
-        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const teamColor = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         const teamStyle = teamStyles[teamColor] || teamStyles.default || teamStyles.blue;
         const colors = teamStyle.confetti || ['#999999', '#ffffff'];
 
         // Create confetti canvas attached to the modal container
-        const container = document.querySelector('.draw-replay-container');
+        const container = /** @type {HTMLElement | null} */ (
+            document.querySelector('.draw-replay-container')
+        );
         if (!container) return;
 
         const canvas = document.createElement('canvas');
@@ -487,12 +523,14 @@
         }
 
         const teamName = teamNames[logoRevealIndex];
-        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const teamColor = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         const logoSrc = date
             ? `/api/teams/logos/${encodeURIComponent(teamName)}?date=${date}&size=256`
             : `/logos/${teamColor}.webp`;
 
-        const container = document.querySelector('.draw-replay-container');
+        const container = /** @type {HTMLElement | null} */ (
+            document.querySelector('.draw-replay-container')
+        );
         if (!container) return;
         const containerRect = container.getBoundingClientRect();
 
@@ -530,7 +568,6 @@
             flyingLogoPosition = { x: -(logoSize + 20), y: centerY };
             flyingLogoOpacity = 'opacity-0';
             revealedTeams.add(teamName);
-            revealedTeams = revealedTeams;
         }, 1050);
 
         // Clean up and move to next logo
@@ -541,9 +578,15 @@
         }, 1500);
     }
 
+    /**
+     * @param {string} teamName
+     * @param {number} x
+     * @param {number} y
+     * @param {HTMLElement | null} container
+     */
     function fireConfettiAt(teamName, x, y, container) {
         if (!container) return;
-        const teamColor = teamName.split(' ')[0].toLowerCase();
+        const teamColor = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         const teamStyle = teamStyles[teamColor] || teamStyles.blue;
         const colors = teamStyle.confetti || ['#999999', '#ffffff'];
 
@@ -609,7 +652,8 @@
     <div class="draw-replay-container relative overflow-hidden p-2">
         <!-- Flying Logo Animation -->
         {#if flyingLogo}
-            {@const logoStyle = teamStyles[flyingLogo.color] || teamStyles.blue}
+            {@const logoStyle =
+                teamStyles[/** @type {TeamColour} */ (flyingLogo.color)] || teamStyles.blue}
             <div
                 class="pointer-events-none absolute z-50 origin-center transform transition-all duration-400 ease-in-out {flyingLogoScale} {flyingLogoOpacity} drop-shadow-2xl drop-shadow-gray-950"
                 style="left: {flyingLogoPosition.x}px; top: {flyingLogoPosition.y}px; width: {flyingLogoSize}px;">
@@ -705,7 +749,10 @@
             </div>
         </div>
 
-        {#snippet potDisplay(potName, players)}
+        {#snippet potDisplay(
+            /** @type {string} */ potName,
+            /** @type {ProvisionalPlayerData[]} */ players
+        )}
             <div class="pot min-w-0 flex-1">
                 <Listgroup class="shadow-lg">
                     <ListgroupItem
@@ -721,15 +768,14 @@
                                     class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
                                     {player.name}
                                 </div>
-                                {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
+                                {#if player.elo != null && showPlayerRankings}
                                     <div
                                         class="text-xs font-light whitespace-nowrap opacity-70"
                                         class:italic={player.isProvisional}
                                         title={player.isProvisional
                                             ? `Provisional (actual: ${player.actualElo ?? player.elo})`
                                             : ''}>
-                                        {#if player.isProvisional}~{/if}{player.elo ??
-                                            player.rankingPoints}
+                                        {#if player.isProvisional}~{/if}{player.elo}
                                     </div>
                                 {/if}
                             </div>
@@ -794,15 +840,14 @@
                                                     class="mr-1 flex-1 overflow-hidden font-normal text-ellipsis whitespace-nowrap">
                                                     {player.name}
                                                 </div>
-                                                {#if (player.elo ?? player.rankingPoints) !== null && showPlayerRankings}
+                                                {#if player.elo != null && showPlayerRankings}
                                                     <div
                                                         class="text-xs font-light whitespace-nowrap opacity-70"
                                                         class:italic={player.isProvisional}
                                                         title={player.isProvisional
                                                             ? `Provisional (actual: ${player.actualElo ?? player.elo})`
                                                             : ''}>
-                                                        {#if player.isProvisional}~{/if}{player.elo ??
-                                                            player.rankingPoints}
+                                                        {#if player.isProvisional}~{/if}{player.elo}
                                                     </div>
                                                 {/if}
                                             </div>
