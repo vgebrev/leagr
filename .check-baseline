@@ -1,5 +1,5 @@
 {
-    "errors": 1307,
+    "errors": 1270,
     "warnings": 29,
     "files": {
         "src/components/avatars/Avatar.svelte": 1,
@@ -20,7 +20,6 @@
         "src/components/TeamLogo.svelte": 2,
         "src/components/TeamModal.svelte": 3,
         "src/components/TrophyPopover.svelte": 1,
-        "src/hooks.server.js": 14,
         "src/lib/client/services/api-client.svelte.js": 32,
         "src/lib/client/services/auth.js": 4,
         "src/lib/client/services/clipboard.js": 1,
@@ -33,9 +32,8 @@
         "src/lib/client/stores/loading.js": 1,
         "src/lib/client/stores/notification.js": 2,
         "src/lib/server/avatarManager.js": 15,
-        "src/lib/server/data.js": 17,
         "src/lib/server/discipline.js": 46,
-        "src/lib/server/fantasyManager.js": 63,
+        "src/lib/server/fantasyManager.js": 59,
         "src/lib/server/fantasyPricing.js": 117,
         "src/lib/server/imageProcessor.js": 6,
         "src/lib/server/knockoutManager.js": 29,
@@ -44,7 +42,6 @@
         "src/lib/server/newsFeed.js": 25,
         "src/lib/server/openaiImageClient.js": 2,
         "src/lib/server/playerAccessControl.js": 4,
-        "src/lib/server/playerManager.js": 2,
         "src/lib/server/rankings.js": 102,
         "src/lib/server/settings.js": 1,
         "src/lib/server/standings.js": 13,

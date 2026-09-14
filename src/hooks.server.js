@@ -11,6 +11,18 @@ import {
 
 const rateLimitMap = new Map();
 // Rule-based rate limiting configuration (first match wins)
+/**
+ * @typedef {Object} RateRule
+ * @property {string} verb - HTTP method, or '*' for any
+ * @property {RegExp} routePattern
+ * @property {number} maxRequests
+ * @property {number} duration - Window length in ms
+ * @property {string} message
+ * @property {(url: URL) => string} [keyExtractor] - Extra key component, e.g. the session date
+ * @property {boolean} [ipOnly] - Key on IP alone rather than ip+clientId
+ */
+
+/** @type {RateRule[]} */
 const RATE_RULES = [
     {
         verb: 'POST',
@@ -19,7 +31,7 @@ const RATE_RULES = [
         duration: 60 * 60 * 1000, // 1 hour
         message:
             "You've already added a player recently. Please use the share link to invite other players.",
-        keyExtractor: (url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
+        keyExtractor: (/** @type {URL} */ url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
         // Uses ip+clientId key so different people on the same network get separate quotas
     },
     {
@@ -93,6 +105,12 @@ const getIp = (event) => {
     );
 };
 
+/**
+ * The first rate rule matching this request, or null when none applies.
+ * @param {string} method
+ * @param {string} path
+ * @returns {RateRule | null}
+ */
 function pickRateRule(method, path) {
     const m = method.toUpperCase();
     for (const rule of RATE_RULES) {
@@ -103,6 +121,12 @@ function pickRateRule(method, path) {
     return null;
 }
 
+/**
+ * @param {RateRule} rule
+ * @param {string} key - ip, or ip+clientId for per-person quotas
+ * @param {string} [extraKey]
+ * @returns {boolean}
+ */
 function isRateLimitedFor(rule, key, extraKey = '') {
     const now = Date.now();
     const mapKey = `${rule.verb}:${rule.routePattern}:${key}${extraKey ? `:${extraKey}` : ''}`;
@@ -119,6 +143,10 @@ function isRateLimitedFor(rule, key, extraKey = '') {
     return data.count > rule.maxRequests;
 }
 
+/**
+ * @param {Request} request
+ * @returns {{allowed: boolean, origin: string | null}}
+ */
 function isOriginAllowed(request) {
     if (!allowedOrigin) return { allowed: true, origin: null };
     const origin = request.headers.get('origin');
@@ -218,6 +246,15 @@ export function sanitizeBodyForLog(rawBody) {
     }
 }
 
+/**
+ * @param {string} method
+ * @param {URL} url
+ * @param {string | null} leagueId
+ * @param {string} ip
+ * @param {number} status
+ * @param {number} durationMs
+ * @param {string | null} [body]
+ */
 function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
     const path = url.pathname + (url.search ? url.search : '');
     // Tag failures so a status line is greppable alongside its [ERROR] entry.

@@ -54,13 +54,26 @@ export class FantasyError extends Error {
  */
 export class FantasyManager {
     constructor() {
+        /** @type {string|null} */
         this.leagueId = null;
+        /** @type {string|null} */
         this.date = null;
+        /** @type {import('./playerAccessControl.js').PlayerAccessControl|null} */
         this.accessControl = null;
     }
 
     /**
-     * @param {string} leagueId
+     * The session date, which every storage path and lock rule needs. Narrows the
+     * nullable field at the point of use rather than re-checking at each call site.
+     * @returns {string}
+     */
+    #requireDate() {
+        if (!this.date) throw new FantasyError('Date must be set', 500);
+        return this.date;
+    }
+
+    /**
+     * @param {string|null} leagueId
      * @returns {FantasyManager}
      */
     setLeague(leagueId) {
@@ -96,8 +109,11 @@ export class FantasyManager {
      */
     getFilePath() {
         if (!this.leagueId) throw new FantasyError('League ID must be set', 500);
-        if (!this.date) throw new FantasyError('Date must be set', 500);
-        return path.join(getLeagueDataPath(this.leagueId), 'fantasy', `${this.date}.json`);
+        return path.join(
+            getLeagueDataPath(this.leagueId),
+            'fantasy',
+            `${this.#requireDate()}.json`
+        );
     }
 
     /** @returns {Mutex} */
@@ -111,15 +127,16 @@ export class FantasyManager {
 
     /**
      * Read the stored session without mutex protection (internal use).
-     * @returns {Promise<{date: string, board: Object|null, entries: FantasyEntry[], results: Object|null}>}
+     * @returns {Promise<FantasyFile>}
      */
     async #loadUnsafe() {
-        const empty = { date: this.date, board: null, entries: [], results: null };
+        /** @type {FantasyFile} */
+        const empty = { date: this.#requireDate(), board: null, entries: [], results: null };
         try {
             const raw = await fs.readFile(this.getFilePath(), 'utf-8');
             const parsed = JSON.parse(raw);
             return {
-                date: parsed.date ?? this.date,
+                date: parsed.date ?? this.#requireDate(),
                 board: parsed.board ?? null,
                 entries: Array.isArray(parsed.entries) ? parsed.entries : [],
                 results: parsed.results ?? null
@@ -145,14 +162,15 @@ export class FantasyManager {
 
     /**
      * Everything the lock rules and the market need from the rest of the app.
-     * @returns {Promise<{settings: Object, config: Object, players: Object, games: Object, playerOwners: Object, avatars: Object}>}
+     * @returns {Promise<{settings: ConsolidatedSettings, config: FantasyConfig, players: PlayersData, games: SessionGames, playerOwners: OwnersMap, avatars: AvatarsData}>}
      */
     async #loadContext() {
+        const date = this.#requireDate();
         const [settings, players, games, playerOwners, avatars] = await Promise.all([
-            getConsolidatedSettings(this.date, this.leagueId),
-            data.get('players', this.date, this.leagueId),
-            data.get('games', this.date, this.leagueId),
-            data.get('playerOwners', this.date, this.leagueId),
+            getConsolidatedSettings(date, this.leagueId),
+            data.get('players', date, this.leagueId),
+            data.get('games', date, this.leagueId),
+            data.get('playerOwners', date, this.leagueId),
             createAvatarManager().setLeague(this.leagueId).loadAvatars()
         ]);
 
@@ -160,7 +178,7 @@ export class FantasyManager {
             settings: settings ?? {},
             config: resolveFantasyConfig(settings),
             players: players ?? { available: [], waitingList: [] },
-            games: games ?? {},
+            games: games ?? { rounds: [] },
             playerOwners: playerOwners ?? {},
             avatars: avatars ?? {}
         };
