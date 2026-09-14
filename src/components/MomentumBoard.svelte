@@ -119,7 +119,7 @@
 
     /** @param {string} playerName */
     function handlePlayerClick(playerName) {
-        goto(resolve(`/rankings/${playerName}`, {}));
+        goto(resolve(`/rankings/${encodeURIComponent(playerName)}`));
     }
 </script>
 

@@ -8,7 +8,7 @@ export { findLeagueMatch, findKnockoutMatch, updateActionCount };
 
 class GamesService {
     // League games state
-    /** @type {Array<Array<Object>>} */
+    /** @type {Round[]} */
     schedule = $state([]);
 
     /** @type {number} */
@@ -17,20 +17,20 @@ class GamesService {
     /** @type {number} */
     teamCount = $state(0);
 
-    /** @type {Object} */
+    /** @type {TeamsData} */
     teams = $state({});
 
     /** @type {string|null} */
     currentDate = $state(null);
 
     // Knockout state
-    /** @type {Object|null} */
+    /** @type {KnockoutBracketData|null} */
     knockoutBracket = $state(null);
 
-    /** @type {Array} */
+    /** @type {StandingsRow[]} */
     standings = $state([]);
 
-    /** @type {Array<Array<Object>>} */
+    /** @type {Round[]} */
     leagueGames = $state([]);
 
     // Derived

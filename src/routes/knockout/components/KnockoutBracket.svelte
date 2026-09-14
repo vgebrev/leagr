@@ -5,6 +5,17 @@
     import { resolve } from '$app/paths';
     import { ClipboardListOutline } from 'flowbite-svelte-icons';
 
+    /**
+     * @type {{
+     *   bracket?: KnockoutBracketData | null,
+     *   teams?: TeamsData,
+     *   date?: string,
+     *   onMatchUpdate?: ((match: KnockoutMatch) => void) | null,
+     *   onCelebrate?: ((teamName: string) => void) | null,
+     *   onTeamClick?: ((teamName: string) => void) | null,
+     *   disabled?: boolean
+     * }}
+     */
     let {
         bracket = null,
         teams = {},
@@ -38,7 +49,7 @@
     /**
      * Get matches for a specific round
      * @param {string} round - Round name
-     * @returns {Array} Matches for the round
+     * @returns {KnockoutMatch[]} Matches for the round
      */
     function getMatchesForRound(round) {
         if (!bracket?.bracket) return [];
@@ -47,12 +58,14 @@
 
     /**
      * Get all unique rounds in order
-     * @returns {Array} Round names in tournament order
+     * @returns {string[]} Round names in tournament order
      */
     function getRounds() {
         if (!bracket?.bracket) return [];
 
-        const rounds = [...new Set(bracket.bracket.map((match) => match.round))];
+        const rounds = [...new Set(bracket.bracket.map((match) => match.round ?? ''))].filter(
+            Boolean
+        );
 
         // Sort rounds by typical tournament order
         const roundOrder = ['quarter', 'semi', 'final'];
@@ -91,12 +104,12 @@
 
     /**
      * Check if a team is the loser of a match
-     * @param {Object} match - Match object
+     * @param {KnockoutMatch} match - Match object
      * @param {string} team - Team name ('home' or 'away')
      * @returns {boolean} True if team lost
      */
     function isLoser(match, team) {
-        if (match.homeScore === null || match.awayScore === null) return false;
+        if (match.homeScore == null || match.awayScore == null) return false;
         if (match.homeScore !== match.awayScore) {
             return team === 'home'
                 ? match.homeScore < match.awayScore
@@ -112,7 +125,7 @@
 
     /**
      * Check if score input should be disabled for a match
-     * @param {Object} match - Match object
+     * @param {KnockoutMatch} match - Match object
      * @returns {boolean} True if score input should be disabled
      */
     function isMatchDisabled(match) {
@@ -152,8 +165,7 @@
                                     {#if date && match.home && match.home !== 'BYE' && match.away && match.away !== 'BYE'}
                                         <a
                                             href={resolve(
-                                                `/games/match?date=${date}&competition=knockout&round=${match.round}&match=${match.match}`,
-                                                {}
+                                                `/games/match?date=${date}&competition=knockout&round=${match.round}&match=${match.match}`
                                             )}
                                             class="text-gray-400 hover:text-gray-200"
                                             aria-label="Open match tracker"
@@ -169,8 +181,8 @@
                                         onclick={() => {
                                             // Celebrate the winner if match is complete
                                             if (
-                                                match.homeScore !== null &&
-                                                match.awayScore !== null
+                                                match.homeScore != null &&
+                                                match.awayScore != null
                                             ) {
                                                 let winner;
                                                 if (match.homeScore > match.awayScore) {
@@ -192,8 +204,8 @@
                                         onkeydown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
                                                 if (
-                                                    match.homeScore !== null &&
-                                                    match.awayScore !== null
+                                                    match.homeScore != null &&
+                                                    match.awayScore != null
                                                 ) {
                                                     let winner;
                                                     if (match.homeScore > match.awayScore) {

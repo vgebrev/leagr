@@ -326,7 +326,7 @@ export class TeammateHistoryTracker {
      * @param {string|null} leagueId - League identifier
      * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
      * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
-     * @returns {Promise<{historyData: Object}>} Updated history data
+     * @returns {Promise<{historyData: TeammateHistoryData}>} Updated history data
      */
     async updateTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
         const historyData = await this.buildTeammateHistory(leagueId, sessionLimit, beforeDate);

@@ -6,7 +6,7 @@ import { createAvatarManager } from './avatarManager.js';
 /**
  * @typedef {Object} YearRecapSession
  * @property {string} date
- * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: Match[] }, knockout?: { bracket?: Match[] } }} [games]
+ * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: KnockoutMatch[] }, knockout?: { bracket?: KnockoutMatch[] } }} [games]
  * @property {Record<string, string[]>} [teams]
  */
 
@@ -850,7 +850,7 @@ export class YearRecapManager {
             // Check for cup winner
             const knockoutGames = games['knockout-games'] || games.knockout;
             if (knockoutGames?.bracket) {
-                /** @type {Array<Match & { round?: string }>} */
+                /** @type {KnockoutMatch[]} */
                 const bracket = knockoutGames.bracket;
                 // Find the final
                 const final = bracket.find((match) => match.round === 'final');

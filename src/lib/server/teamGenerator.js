@@ -54,6 +54,7 @@ class TeamGenerator {
         /** @type {TeammateHistoryData | null} */
         this.teammateHistory = null;
         /** @type {Array<{player1: string, player2: string, coAttendance?: number, probNone?: number}>} */
+        /** @type {OverduePair[]} */
         this.overduePairs = [];
         /** @type {{ elo: number, attack: number, control: number } | null} */
         this._provisionalAnchors = null;
@@ -122,7 +123,7 @@ class TeamGenerator {
     /**
      * Set statistically overdue pairs (never paired despite frequent co-attendance).
      * The reunion norm rewards draws that put at least one of these pairs on the same team.
-     * @param {Array<{player1: string, player2: string}> | null} overduePairs - Overdue pairs, most starved first
+     * @param {OverduePair[] | null} overduePairs - Overdue pairs, most starved first
      * @returns {TeamGenerator} - Fluent interface
      */
     setOverduePairs(overduePairs) {
@@ -889,8 +890,11 @@ class TeamGenerator {
         const teamNames = Object.keys(teams);
         if (teamNames.length < 2) return 0;
 
+        /** @type {(keyof PlayerTraits)[]} */
         const traitKeys = ['isFinisher', 'isAttacker', 'isDefender', 'isShotStopper'];
+        /** @param {number} v */
         const clamp01 = (v) => Math.min(1, Math.max(0, v));
+        /** @type {number[]} */
         const traitScores = [];
 
         for (const traitKey of traitKeys) {
@@ -954,7 +958,7 @@ class TeamGenerator {
             }
 
             for (const player of teams[teamName]) {
-                const potIndex = playerPotMap.get(player) ?? 0;
+                const potIndex = (player ? playerPotMap.get(player) : undefined) ?? 0;
                 playersByPot[potIndex].push(player);
             }
 
@@ -1005,7 +1009,7 @@ class TeamGenerator {
      * Optimize teams using within-pot swaps to improve balance using normalized scoring.
      * @param {TeamsData} teams - Current team assignments
      * @param {string[]} sortedPlayers - Players sorted by ELO (same order used in generation)
-     * @param {{ maxSwaps?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null }} options
+     * @param {{ maxSwaps?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null, hardConstraintLimit?: number }} options
      * @returns {TeamsData} Optimized teams object
      */
     optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
@@ -1391,6 +1395,19 @@ class TeamGenerator {
      * Log a summary of a completed seeded draw — health signals, iteration stats, best norms.
      * Emits warn if fallback fired or blocked-pair density is high, info for the standard summary,
      * and debug for the per-player blocked breakdown.
+     * @param {{
+     *   sortedPlayers: string[],
+     *   numTeams: number,
+     *   config: TeamConfig,
+     *   maxIterations: number,
+     *   iterationsUsed: number,
+     *   pairingRejects: number,
+     *   eloRejects: number,
+     *   bestMetrics: Record<string, number> | null,
+     *   fallbackUsed: boolean,
+     *   hardConstraintLimit: number,
+     *   hardEloDeltaLimit: number | null
+     * }} info
      */
     logDrawInfo({
         sortedPlayers,

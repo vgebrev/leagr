@@ -9,7 +9,7 @@
         TRAIT_DEFS
     } from '$lib/shared/badges.js';
 
-    /** @type {{ traits?: Record<string, boolean>, traitTiers?: Record<string, number>, idPrefix?: string }} */
+    /** @type {{ traits?: Partial<PlayerTraits>, traitTiers?: Partial<TraitTiers>, idPrefix?: string }} */
     let { traits = {}, traitTiers = {}, idPrefix = 'badge' } = $props();
 
     // Popovers are wired by element id, so ids must survive two PlayerBadges on one page.

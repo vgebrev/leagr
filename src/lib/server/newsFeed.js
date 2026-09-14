@@ -202,7 +202,9 @@ function attended(players, name, date) {
  * @param {Thread['outcome']} [outcome]
  */
 function streakNotability(type, length, outcome) {
-    const base = STREAK_WEIGHTS[type] * (1 + Math.log2(length));
+    const base =
+        (STREAK_WEIGHTS[/** @type {keyof typeof STREAK_WEIGHTS} */ (type)] ?? 0) *
+        (1 + Math.log2(length));
     return round4(outcome ? base * OUTCOME_MULTIPLIERS[outcome] : base);
 }
 
@@ -256,8 +258,8 @@ function lastSwing(entry) {
 /**
  * Momentum threads for a preview card: red hot, comeback brewing, and the
  * biggest mover/faller, across both boards, at most one thread per player.
- * @param {Array<{playerName: string, value: number, provisional: boolean}>} champBoard
- * @param {Array<{playerName: string, value: number, provisional: boolean}>} ballersBoard
+ * @param {MomentumEntry[]} champBoard
+ * @param {MomentumEntry[]} ballersBoard
  * @returns {Thread[]}
  */
 function momentumThreads(champBoard, ballersBoard) {
@@ -268,10 +270,12 @@ function momentumThreads(champBoard, ballersBoard) {
     /** @type {{thread: Thread, swing: number}|null} */
     let faller = null;
 
-    for (const [board, entries] of [
+    /** @type {Array<[string, MomentumEntry[]]>} */
+    const boards = [
         ['champions', champBoard],
         ['ballers', ballersBoard]
-    ]) {
+    ];
+    for (const [board, entries] of boards) {
         for (const entry of entries) {
             if (entry.provisional) continue;
             const swing = lastSwing(entry);
@@ -323,6 +327,7 @@ function momentumThreads(champBoard, ballersBoard) {
     /** @type {Map<string, Thread>} */
     const byPlayer = new Map();
     for (const thread of candidates) {
+        if (!thread.player) continue;
         const existing = byPlayer.get(thread.player);
         if (!existing || thread.notability > existing.notability) {
             byPlayer.set(thread.player, thread);
@@ -386,7 +391,7 @@ function isInvincible(team, cupProgress, table) {
  * recap card per played session, newest first. Threads per card are scored
  * for notability and capped.
  * @param {PlayersWithHistory} players - rankings players with history
- * @param {{champions: object, ballers: object}} config - momentum board configs
+ * @param {MomentumSettings} config - momentum board configs
  * @param {{asOf: string, competitionDays?: number[], maxThreads?: number, registeredPlayers?: string[]|null, previewDate?: string, standingsByDate?: Record<string, Array<{team: string, goalsFor: number, goalsAgainst: number}>>, recapDates?: string[], includePreview?: boolean}} options
  *   registeredPlayers: roster signed up for the upcoming session. When an
  *   array is given, the preview card is gated to it - only those players are
@@ -422,7 +427,12 @@ export function buildNewsFeed(players, config, options) {
     // Session date -> the session before it. Always derived from the full set
     // of played dates, so it stays correct when only a page of cards is built.
     const playedAsc = [...playedDates].sort();
-    const previousPlayed = new Map(playedAsc.map((date, i) => [date, playedAsc[i - 1]]).slice(1));
+    /** @type {Map<string, string>} */
+    const previousPlayed = new Map(
+        playedAsc
+            .map((date, i) => /** @type {[string, string]} */ ([date, playedAsc[i - 1]]))
+            .slice(1)
+    );
 
     // Full-history per-date lookups for resolving session-day outcomes
     const teamCounts = deriveTeamCounts(players);
@@ -455,6 +465,7 @@ export function buildNewsFeed(players, config, options) {
             !attended(players, player, prevDate);
 
         /** @type {Thread[]} */
+        /** @type {Thread[]} */
         const threads = [];
 
         // Trophy and wooden-spoon streaks from the going-in champions board
@@ -471,7 +482,7 @@ export function buildNewsFeed(players, config, options) {
             const trophyThread = resolveStreakThread(
                 'trophyStreak',
                 entry.playerName,
-                entry.trophyStreak.length,
+                entry.trophyStreak?.length ?? 0,
                 trophyResult,
                 state
             );
@@ -486,12 +497,12 @@ export function buildNewsFeed(players, config, options) {
             const spoonThread = resolveStreakThread(
                 'spoonStreak',
                 entry.playerName,
-                entry.woodenSpoonStreak,
+                entry.woodenSpoonStreak ?? 0,
                 spoonResult,
                 state
             );
             if (spoonThread) {
-                if (spoonThread.outcome === 'broken') spoonThread.position = position;
+                if (spoonThread.outcome === 'broken') spoonThread.position = position ?? undefined;
                 threads.push(spoonThread);
             }
         }
@@ -629,7 +640,7 @@ export function buildNewsFeed(players, config, options) {
         const storyThreads = threads.filter(
             (t) =>
                 !(t.outcome === 'carriedOver' && inAbsenceRun(t.player)) &&
-                (state !== 'preview' || !roster || roster.has(t.player))
+                (state !== 'preview' || !roster || !t.player || roster.has(t.player))
         );
 
         // Reserved fixtures (team league, team cup, stars of the day) are

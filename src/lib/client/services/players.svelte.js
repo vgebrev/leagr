@@ -23,7 +23,7 @@ class PlayersService {
     /** @type {string | null} */
     currentDate = $state(null);
 
-    /** @type {Array} */
+    /** @type {string[]} */
     suspendedPlayers = $state([]);
 
     /** @type {string[]} */

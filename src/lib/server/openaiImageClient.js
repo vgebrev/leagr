@@ -54,7 +54,7 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gp
     const colour = parts[0].toLowerCase();
     const noun = parts.slice(1).join(' ');
 
-    const style = teamStyles[colour];
+    const style = teamStyles[/** @type {TeamColour} */ (colour)];
     const logoPrompt = style?.logoPrompt;
     const primary = logoPrompt?.primary ?? colour;
     const secondaryOptions = logoPrompt?.secondary ?? ['white'];
@@ -81,7 +81,7 @@ export async function generateTeamLogo(teamName, badgeShape, apiKey, model = 'gp
         output_format: 'webp'
     });
 
-    const b64 = response.data[0].b64_json;
+    const b64 = response.data?.[0]?.b64_json;
     if (!b64) throw new Error('No image data returned from OpenAI');
 
     const buffer = Buffer.from(b64, 'base64');

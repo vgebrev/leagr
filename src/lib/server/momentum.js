@@ -194,9 +194,8 @@ export function trackedStatRegime(players) {
     }
 
     const latestTrackedDate = [...signatures.keys()].sort().pop();
-    const types = latestTrackedDate
-        ? STAT_TYPES.filter((type) => signatures.get(latestTrackedDate).has(type))
-        : [];
+    const latestSignature = latestTrackedDate ? signatures.get(latestTrackedDate) : undefined;
+    const types = latestSignature ? STAT_TYPES.filter((type) => latestSignature.has(type)) : [];
 
     return {
         types,
@@ -365,8 +364,9 @@ function round4(value) {
 /**
  * @param {NonNullable<ReturnType<typeof computeMomentum>>} momentum
  * @param {string} playerName
- * @param {object} components
- * @param {object} streak - board-specific streak fields merged into the entry
+ * @param {Record<string, number>} components
+ * @param {Partial<MomentumEntry>} streak - board-specific streak fields merged into the entry
+ * @returns {MomentumEntry}
  */
 function boardEntry(momentum, playerName, components, streak) {
     return {
@@ -386,7 +386,7 @@ function boardEntry(momentum, playerName, components, streak) {
  * @param {PlayersWithHistory} players - rankings players with history
  * @param {MomentumBoardConfig} config - champions momentum config
  * @param {string|Date} now - render time
- * @returns {Array<object>} board entries sorted hottest first
+ * @returns {MomentumEntry[]} board entries sorted hottest first
  */
 export function buildChampionsMomentum(players, config, now) {
     const teamCounts = deriveTeamCounts(players);
@@ -507,7 +507,7 @@ export function deriveBallerTops(players) {
  * @param {PlayersWithHistory} players - rankings players with history
  * @param {MomentumBoardConfig} config - ballers momentum config
  * @param {string|Date} now - render time
- * @returns {Array<object>} board entries sorted hottest first
+ * @returns {MomentumEntry[]} board entries sorted hottest first
  */
 export function buildBallersMomentum(players, config, now) {
     const { types: currentTypes, isInRegime } = trackedStatRegime(players);

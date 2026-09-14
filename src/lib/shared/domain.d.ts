@@ -359,6 +359,18 @@ declare global {
     /** 0 = not held, 1 = held, 2 = elite. Keyed by the same names as PlayerTraits. */
     type TraitTiers = Record<keyof PlayerTraits, 0 | 1 | 2>;
 
+    /** A player enriched with ELO for the draw UI. Subset of ProvisionalPlayerData. */
+    interface PlayerWithElo {
+        name: string;
+        elo: number;
+        actualElo: number;
+        avatar: string | null;
+        attackingRating: number;
+        controlRating: number;
+        isProvisional: boolean;
+        appearances: number;
+    }
+
     interface ProvisionalPlayerData {
         name: string;
         elo: number;
@@ -533,10 +545,12 @@ declare global {
         traitTiers: TraitTiers;
         playerProfile: string[];
         /**
-         * Not persisted in rankings-YYYY.json. Merged in at runtime by
-         * teamGenerationContext.mergeAvatars() so draw data carries avatars.
+         * Not persisted in rankings-YYYY.json. Merged in at runtime -
+         * by teamGenerationContext.mergeAvatars() for the draw, and by the
+         * /api/rankings/[player] route for the player page.
          */
         avatar?: string | null;
+        pendingAvatar?: string | null;
     }
 
     /** The minimum a player record needs to take part in a ranking pass. */

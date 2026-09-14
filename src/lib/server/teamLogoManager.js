@@ -79,6 +79,7 @@ export class TeamLogoManager {
         return await this.getLogosMutex().runExclusive(() => this.loadLogosUnsafe());
     }
 
+    /** @param {LogosMap} logos */
     async saveLogosUnsafe(logos) {
         await fs.writeFile(this.getLogosMetadataPath(), JSON.stringify(logos, null, 2));
     }

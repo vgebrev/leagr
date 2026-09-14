@@ -187,6 +187,7 @@ export function rotateArray(arr, offset) {
 }
 
 /** @type {TeamColour[]} */
+/** @type {TeamColour[]} */
 export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
 /** @type {Record<TeamColour, TeamStyle>} */

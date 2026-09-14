@@ -76,7 +76,7 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}?${query}`, {});
+        const href = resolve(`/champions?${query}`);
 
         // Navigate and reload data
         await goto(href, { replaceState: true });

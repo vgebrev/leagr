@@ -27,18 +27,6 @@ function getTransactionMutex(leagueId, date) {
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
 
 /**
- * @typedef {Object} PlayerWithElo
- * @property {string} name
- * @property {number} elo
- * @property {number} actualElo
- * @property {string | null} avatar
- * @property {number} attackingRating
- * @property {number} controlRating
- * @property {boolean} isProvisional
- * @property {number} appearances
- */
-
-/**
  * Custom error class for player operations that preserves HTTP status codes
  */
 export class PlayerError extends Error {

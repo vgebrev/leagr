@@ -2,6 +2,8 @@
 import fs from 'fs';
 import path from 'path';
 
+/** @typedef {'debug' | 'info' | 'warn' | 'error'} LogLevel */
+
 const LEVELS = { debug: 0, info: 1, warn: 2, error: 3 };
 
 /**
@@ -22,15 +24,16 @@ class Logger {
 
     /**
      * Set the minimum log level. Messages below this level are silently dropped.
-     * @param {string} level - 'debug' | 'info' | 'warn' | 'error'
+     * @param {string | undefined} level - 'debug' | 'info' | 'warn' | 'error'
      */
     initialize(level) {
-        const normalised = level?.toLowerCase();
+        const normalised = /** @type {LogLevel} */ (level?.toLowerCase());
         if (normalised && normalised in LEVELS) {
             this.#minLevel = LEVELS[normalised];
         }
     }
 
+    /** @param {LogLevel} level */
     #shouldLog(level) {
         return LEVELS[level] >= this.#minLevel;
     }
@@ -46,7 +49,11 @@ class Logger {
         }
     }
 
-    formatMessage(level, ...args) {
+    /**
+     * @param {string} label - Display label, e.g. 'INFO'
+     * @param {unknown[]} args
+     */
+    formatMessage(label, ...args) {
         const timestamp = new Date().toISOString();
         const message = args
             .map((arg) => {
@@ -65,7 +72,7 @@ class Logger {
                 return String(arg);
             })
             .join(' ');
-        return `[${timestamp}] [${level}] ${message}\n`;
+        return `[${timestamp}] [${label}] ${message}\n`;
     }
 
     /** @param {string} message */
@@ -100,6 +107,7 @@ class Logger {
         }
     }
 
+    /** @param {unknown[]} args */
     log(...args) {
         if (!this.#shouldLog('info')) return;
         const message = this.formatMessage('INFO', ...args);
@@ -107,6 +115,7 @@ class Logger {
         this.writeToFile(message);
     }
 
+    /** @param {unknown[]} args */
     error(...args) {
         if (!this.#shouldLog('error')) return;
         const message = this.formatMessage('ERROR', ...args);
@@ -114,6 +123,7 @@ class Logger {
         this.writeToFile(message);
     }
 
+    /** @param {unknown[]} args */
     warn(...args) {
         if (!this.#shouldLog('warn')) return;
         const message = this.formatMessage('WARN', ...args);
@@ -121,6 +131,7 @@ class Logger {
         this.writeToFile(message);
     }
 
+    /** @param {unknown[]} args */
     info(...args) {
         if (!this.#shouldLog('info')) return;
         const message = this.formatMessage('INFO', ...args);
@@ -128,6 +139,7 @@ class Logger {
         this.writeToFile(message);
     }
 
+    /** @param {unknown[]} args */
     debug(...args) {
         if (!this.#shouldLog('debug')) return;
         const message = this.formatMessage('DEBUG', ...args);

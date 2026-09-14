@@ -24,7 +24,7 @@ function mergeAvatars(rankings, avatars) {
  * teammate history. Used by both the team-draw and auto-assign endpoints.
  *
  * @param {{ leagueId: string, date: string, includeTeammateHistory?: boolean }} params
- * @returns {Promise<{ rankings: any, previousYearRankings: any, teammateHistory: any | null, overduePairs: Array<{player1: string, player2: string, coAttendance: number, probNone: number}> }>}
+ * @returns {Promise<{ rankings: RankingsData | null, previousYearRankings: RankingsData | null, teammateHistory: TeammateHistoryData | null, overduePairs: OverduePair[] }>}
  */
 export async function buildTeamGenerationContext({
     leagueId,
@@ -48,6 +48,7 @@ export async function buildTeamGenerationContext({
     mergeAvatars(previousYearRankings, avatars);
 
     let teammateHistory = null;
+    /** @type {OverduePair[]} */
     let overduePairs = [];
     if (includeTeammateHistory) {
         try {

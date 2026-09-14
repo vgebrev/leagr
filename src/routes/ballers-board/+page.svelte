@@ -94,7 +94,7 @@
         yearDropdownOpen = false;
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
-        const href = resolve(`${page.url.pathname}?${params.toString()}`, {});
+        const href = resolve(`/ballers-board?${params.toString()}`);
         await goto(href, { replaceState: true });
     }
 

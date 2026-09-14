@@ -11,6 +11,14 @@
         "strict": true,
         "moduleResolution": "bundler"
     },
-    "include": ["src/**/*.js", "src/**/*.ts", "src/**/*.svelte"],
+    "include": [
+        ".svelte-kit/ambient.d.ts",
+        ".svelte-kit/env.d.ts",
+        ".svelte-kit/non-ambient.d.ts",
+        ".svelte-kit/types/**/$types.d.ts",
+        "src/**/*.js",
+        "src/**/*.ts",
+        "src/**/*.svelte"
+    ],
     "exclude": ["test/**"]
 }

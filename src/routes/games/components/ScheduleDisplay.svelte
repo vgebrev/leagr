@@ -40,8 +40,7 @@
                                 {#if date}
                                     <a
                                         href={resolve(
-                                            `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${matchIndex + 1}`,
-                                            {}
+                                            `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${matchIndex + 1}`
                                         )}
                                         class="shrink-0 ps-0 pe-1 pt-2 text-gray-400 hover:text-gray-200"
                                         aria-label="Open match tracker"

@@ -920,7 +920,7 @@ export function validateMatchScorers(match, teams) {
 /**
  * Validate if competition modification operations are allowed based on timing
  * @param {string} dateString - Date in YYYY-MM-DD format
- * @param {LeagueSettings} settings - Settings object with registration window configuration
+ * @param {LeagueSettings | undefined} settings - Settings object with registration window configuration
  * @param {string|null} [adminUnlockDate] - Session date an admin has explicitly unlocked for
  *   post-session fixes. Bypasses the competition-end gate for that date only.
  * @returns {{isValid: boolean, error?: string}}
@@ -949,7 +949,7 @@ export function validateCompetitionOperationsAllowed(dateString, settings, admin
 /**
  * Validate if a team draw is allowed based on the draw window and admin requirement
  * @param {string} dateString - Date in YYYY-MM-DD format
- * @param {LeagueSettings} settings - Settings object
+ * @param {LeagueSettings | undefined} settings - Settings object
  * @param {boolean} isAdmin - Whether the requester has admin privileges
  * @returns {{isValid: boolean, error?: string}}
  */

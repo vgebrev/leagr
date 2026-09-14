@@ -167,14 +167,14 @@ export class DisciplineManager {
     /**
      * Check if player should be suspended based on no-shows
      * @param {string} playerName - Player name
-     * @param {LeagueSettings} settings - League settings
+     * @param {LeagueSettings | undefined} settings - League settings
      * @returns {Promise<{shouldSuspend: boolean, reason: string}>} - Suspension check result
      */
     async shouldSuspend(playerName, settings) {
         const playerRecord = await this.getPlayerRecord(playerName);
-        const disciplineSettings = settings.discipline || {};
+        const disciplineSettings = settings?.discipline;
 
-        if (!disciplineSettings.enabled) {
+        if (!disciplineSettings?.enabled) {
             return { shouldSuspend: false, reason: 'Discipline system disabled' };
         }
 
@@ -312,7 +312,7 @@ export class DisciplineManager {
      * Evaluate suspension on signup attempt
      * @param {string} playerName - Player name
      * @param {string} sessionDate - Date of the session they're trying to join
-     * @param {LeagueSettings} settings - League settings
+     * @param {LeagueSettings | undefined} settings - League settings
      * @returns {Promise<SuspensionStatus>} - Suspension evaluation result
      */
     async evaluateSuspensionOnSignup(playerName, sessionDate, settings) {
@@ -478,7 +478,7 @@ export class DisciplineManager {
     /**
      * Update suspension readiness if threshold is reached
      * @param {string} playerName - Player name
-     * @param {LeagueSettings} settings - League settings
+     * @param {LeagueSettings | undefined} settings - League settings
      * @returns {Promise<void>}
      */
     async updateSuspensionReadinessIfNeeded(playerName, settings) {

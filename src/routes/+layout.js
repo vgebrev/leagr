@@ -25,9 +25,13 @@ export const load = async ({ data, url, fetch }) => {
                 storeAccessCode(data.leagueId, codeFromQuery);
 
                 // Redirect to clean URL without code parameter
+                // Strip the code from whatever page the link landed on. The path comes
+                // from `url`, so it already carries any configured base path - there is
+                // no route literal to hand resolve(), and re-resolving would double it.
                 const newUrl = new URL(url);
                 newUrl.searchParams.delete('code');
-                goto(resolve(newUrl.pathname + newUrl.search), { replaceState: true });
+                // eslint-disable-next-line svelte/no-navigation-without-resolve -- base-safe by construction
+                goto(newUrl, { replaceState: true });
             } else {
                 // Invalid code - remove any stored code and redirect to auth
                 removeStoredAccessCode(data.leagueId);

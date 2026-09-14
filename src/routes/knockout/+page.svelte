@@ -15,12 +15,14 @@
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
+    /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
 
     let sessionLocked = $derived(isSessionLocked(date, $settings));
 
     let showTeamModal = $state(false);
+    /** @type {string | null} */
     let selectedTeam = $state(null);
 
     $effect(() => {
@@ -35,7 +37,7 @@
 
     /**
      * Get the winner of a knockout match, including penalty tiebreaker.
-     * @param {Object} match
+     * @param {KnockoutMatch} match
      * @returns {string|null}
      */
     function getKnockoutWinner(match) {
@@ -107,7 +109,7 @@
     }
 
     /**
-     * @param {Object} updatedMatch
+     * @param {KnockoutMatch} updatedMatch
      */
     async function handleKnockoutMatchUpdate(updatedMatch) {
         await gamesService.updateKnockoutMatch(updatedMatch);

@@ -4,7 +4,7 @@
     import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
     import { teamStyles, teamColours } from '$lib/shared/helpers.js';
 
-    /** @type {{ triggerId: string, teamName: string, players: Array<string | { name: string }>, scorers?: Record<string, number>, isOpen?: boolean, onUpdate: (change: { player: string, delta: number }) => void }} */
+    /** @type {{ triggerId: string, teamName: string, players: Array<string | null | { name: string }>, scorers?: Record<string, number>, isOpen?: boolean, onUpdate: (change: { player: string, delta: number }) => void }} */
     let {
         triggerId,
         teamName,
@@ -16,16 +16,17 @@
 
     /**
      * Helper to get player name from string or object
-     * @param {string | { name: string }} player
+     * @param {string | { name: string } | null} player - a team slot, which may be empty
      * @returns {string}
      */
     const getPlayerName = (player) => {
+        if (!player) return '';
         return typeof player === 'string' ? player : player.name;
     };
 
     // Extract team color from team name
     let teamColour = $derived.by(() => {
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     });
 

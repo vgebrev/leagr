@@ -16,6 +16,12 @@ export class PlayerAccessControl {
             'leagr-insecure-default-salt';
     }
 
+    /**
+     * @param {string|null} date
+     * @param {string|null} leagueId
+     * @param {string|null|undefined} clientId
+     * @param {boolean} [isAdmin]
+     */
     setContext(date, leagueId, clientId, isAdmin = false) {
         this.date = date;
         this.leagueId = leagueId;
@@ -44,6 +50,8 @@ export class PlayerAccessControl {
     /**
      * Check if the provided owner id matches the current client.
      * If ownerId is null/undefined (legacy/no owner), we do not enforce.
+     * @param {string|null|undefined} ownerId
+     * @returns {boolean}
      */
     isOwner(ownerId) {
         if (this.isAdmin) return true;

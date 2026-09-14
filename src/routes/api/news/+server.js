@@ -28,11 +28,11 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
  * @param {string[]} dates
  * @param {string} asOf
  * @param {string} leagueId
- * @returns {Promise<Record<string, Array>>}
+ * @returns {Promise<Record<string, StandingsRow[]>>}
  */
 async function loadSessionStandings(dates, asOf, leagueId) {
     const standingsManager = createStandingsManager();
-    /** @type {Record<string, Array>} */
+    /** @type {Record<string, StandingsRow[]>} */
     const standingsByDate = {};
     await Promise.all(
         dates
@@ -169,7 +169,7 @@ export async function GET({ locals, url }) {
 
         const cards = buildNewsFeed(
             rankings.players,
-            { champions: config.champions, ballers: config.ballers },
+            { enabled: true, champions: config.champions, ballers: config.ballers },
             {
                 asOf,
                 competitionDays,

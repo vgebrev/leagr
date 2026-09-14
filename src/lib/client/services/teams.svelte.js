@@ -11,22 +11,22 @@ class TeamsService {
     #settings = $state(defaultSettings);
 
     // State
-    /** @type {Object} */
+    /** @type {TeamsData} */
     teams = $state({});
 
     /** @type {string | null} */
     currentDate = $state(null);
 
-    /** @type {Object | null} */
+    /** @type {LeagueInfo | null} */
     leagueInfo = $state(null);
 
-    /** @type {Object | null} */
+    /** @type {DrawHistoryData | null} */
     drawHistory = $state(null);
 
-    /** @type {Object[]} Enhanced waiting list players with ELO data */
+    /** @type {PlayerWithElo[]} Enhanced waiting list players with ELO data */
     waitingListWithElo = $state([]);
 
-    /** @type {Object[]} Enhanced available players with ELO data */
+    /** @type {PlayerWithElo[]} Enhanced available players with ELO data */
     availablePlayersWithElo = $state([]);
 
     /** @type {boolean} */
@@ -57,7 +57,7 @@ class TeamsService {
         return this.#teamConfigurations || [];
     });
 
-    /** @type {Array} */
+    /** @type {TeamConfig[]} */
     #teamConfigurations = $state([]);
 
     /** @type {boolean} */
@@ -69,7 +69,7 @@ class TeamsService {
         );
     });
 
-    /** @type {Object[]} */
+    /** @type {PlayerWithElo[]} */
     unassignedPlayersWithElo = $derived.by(() => {
         const assignedPlayerNames = $state(new Set());
 

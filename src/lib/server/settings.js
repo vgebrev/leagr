@@ -103,12 +103,13 @@ export async function saveConsolidatedSettings(date, leagueId, settings) {
 
     // Update league info if there are league-level changes
     if (Object.keys(leagueUpdates).length > 0) {
+        /** @type {LeagueInfo} */
         const updatedLeagueInfo = {
             ...leagueInfo,
-            settings: {
+            settings: /** @type {LeagueSettings} */ ({
                 ...leagueInfo.settings,
                 ...leagueUpdates
-            }
+            })
         };
 
         const success = updateLeagueInfo(leagueId, updatedLeagueInfo);
