@@ -137,12 +137,7 @@ export function isTeamDrawOpen(dateString, settings) {
 export function hasSessionStarted(games) {
     /** @param {Record<string, any>|null|undefined} match */
     const isPlayed = (match) =>
-        Boolean(match) &&
-        !match.bye &&
-        match.homeScore !== null &&
-        match.homeScore !== undefined &&
-        match.awayScore !== null &&
-        match.awayScore !== undefined;
+        match != null && !match.bye && match.homeScore != null && match.awayScore != null;
 
     const rounds = Array.isArray(games?.rounds) ? games.rounds : [];
     if (rounds.some((round) => Array.isArray(round) && round.some(isPlayed))) return true;

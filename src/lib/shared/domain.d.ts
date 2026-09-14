@@ -722,6 +722,20 @@ declare global {
         elo: { rating: number } | null;
     }
 
+    /** One session a player won, as the champions API returns it. */
+    type ChampionSession = RankingHistoryEntry & { date: string };
+
+    /** One player's honours, as the champions API returns them. */
+    interface ChampionEntry {
+        playerName: string;
+        leagueWins: number;
+        cupWins: number;
+        totalChampionships?: number;
+        /** Only when the request asks for session details. */
+        leagueSessions?: ChampionSession[];
+        cupSessions?: ChampionSession[];
+    }
+
     interface RankingMetadata {
         globalAverage: number;
         minAverage: number;

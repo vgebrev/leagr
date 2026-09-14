@@ -30,7 +30,7 @@ export function generateFaviconDataUrl(icon, theme = 'light') {
     };
 
     // Get the SVG for the icon, fallback to soccer if not found
-    const svg = iconSvgs[icon] || iconSvgs.soccer;
+    const svg = iconSvgs[/** @type {keyof typeof iconSvgs} */ (icon)] || iconSvgs.soccer;
 
     // Convert to data URL
     return `data:image/svg+xml;base64,${btoa(svg)}`;

@@ -11,7 +11,7 @@
     /** @type {{ onCountChange?: (count: number) => void }} */
     let { onCountChange = () => {} } = $props();
 
-    let pending = $state([]);
+    let pending = $state(/** @type {Array<{name: string, avatar: string}>} */ ([]));
     let loadingError = $state(false);
 
     /**

@@ -27,7 +27,7 @@ export async function GET({ locals, url }) {
         /**
          * Merge a player's stats from a rankings entry into totals
          * @param {string} playerName
-         * @param {object} playerData
+         * @param {PlayerRankingData} playerData
          */
         function mergePlayer(playerName, playerData) {
             if (!totals[playerName]) {

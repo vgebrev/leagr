@@ -39,6 +39,7 @@ export async function GET({ params, locals, url }) {
             return error(404, `Player "${player}" has no championship wins`);
         }
 
+        /** @type {ChampionEntry} */
         const response = {
             playerName: player,
             leagueWins,

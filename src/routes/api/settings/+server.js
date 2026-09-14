@@ -9,7 +9,7 @@ export const GET = async ({ url, locals }) => {
         return error(404, 'League not found');
     }
 
-    const date = url.searchParams.get('date');
+    const date = url.searchParams.get('date') ?? '';
     const settings = await getConsolidatedSettings(date, leagueId);
     return json(settings);
 };
@@ -25,7 +25,7 @@ export const POST = async ({ request, url, locals }) => {
         return error(401, 'Admin privileges required to update settings');
     }
 
-    const date = url.searchParams.get('date');
+    const date = url.searchParams.get('date') ?? '';
     const body = await request.json();
     if (!body) {
         return error(400, 'Invalid request body');

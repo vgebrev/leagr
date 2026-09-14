@@ -9,7 +9,7 @@
      */
     let { triggerId, playerName, trophyType } = $props();
 
-    let sessions = $state([]);
+    let sessions = $state(/** @type {ChampionSession[]} */ ([]));
     let loading = $state(false);
     let error = $state(false);
     let hasLoaded = $state(false);

@@ -22,7 +22,7 @@
     const date = $derived(data.date);
 
     let showTeamModal = $state(false);
-    let selectedTeam = $state(null);
+    let selectedTeam = $state(/** @type {string | null} */ (null));
 
     $effect(() => {
         const state = page.state.teamModal;
@@ -39,10 +39,10 @@
         if (page.state.teamModal) history.back();
     }
 
-    let standings = $state([]);
-    let leagueGames = $state([]);
-    let knockoutGames = $state([]);
-    let teams = $state({});
+    let standings = $state(/** @type {StandingsRow[]} */ ([]));
+    let leagueGames = $state(/** @type {Round[]} */ ([]));
+    let knockoutGames = $state(/** @type {KnockoutMatch[]} */ ([]));
+    let teams = $state(/** @type {TeamsData} */ ({}));
 
     /**
      * @typedef {Object} WinningTeam

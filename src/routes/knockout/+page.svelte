@@ -41,12 +41,12 @@
      * @returns {string|null}
      */
     function getKnockoutWinner(match) {
-        if (match.homeScore === null || match.awayScore === null) return null;
-        if (match.homeScore > match.awayScore) return match.home;
-        if (match.awayScore > match.homeScore) return match.away;
+        if (match.homeScore == null || match.awayScore == null) return null;
+        if (match.homeScore > match.awayScore) return match.home ?? null;
+        if (match.awayScore > match.homeScore) return match.away ?? null;
         if (match.homePenalties != null && match.awayPenalties != null) {
-            if (match.homePenalties > match.awayPenalties) return match.home;
-            if (match.awayPenalties > match.homePenalties) return match.away;
+            if (match.homePenalties > match.awayPenalties) return match.home ?? null;
+            if (match.awayPenalties > match.homePenalties) return match.away ?? null;
         }
         return null;
     }
@@ -81,7 +81,7 @@
             const winner = getKnockoutWinner(finalMatch);
             if (winner && winner !== winningTeam.name) {
                 winningTeam.name = winner;
-                const firstWord = winner.split(' ')[0].toLowerCase();
+                const firstWord = /** @type {TeamColour} */ (winner.split(' ')[0].toLowerCase());
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
             }
@@ -102,7 +102,7 @@
             const winner = getKnockoutWinner(finalMatch);
             if (winner && teamName === winner) {
                 winningTeam.name = winner;
-                const firstWord = winner.split(' ')[0].toLowerCase();
+                const firstWord = /** @type {TeamColour} */ (winner.split(' ')[0].toLowerCase());
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
             }

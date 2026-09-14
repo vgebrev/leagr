@@ -25,6 +25,7 @@ export async function GET({ locals, url }) {
 
         const rankingsManager = createRankingsManager().setLeague(leagueId);
 
+        /** @type {Record<string, {leagueWins: number, cupWins: number, history: Record<string, RankingHistoryEntry>}>} */
         let allPlayersData = {};
         /** @type {Array<object>|null} */
         let momentum = null;
@@ -94,6 +95,7 @@ export async function GET({ locals, url }) {
                     (playerData.leagueWins || 0) > 0 || (playerData.cupWins || 0) > 0
             )
             .map(([playerName, playerData]) => {
+                /** @type {ChampionEntry} */
                 const championData = {
                     playerName,
                     leagueWins: playerData.leagueWins || 0,
@@ -118,7 +120,7 @@ export async function GET({ locals, url }) {
             .sort((a, b) => {
                 // Sort by total championships first, then league wins, then cup wins
                 if (b.totalChampionships !== a.totalChampionships) {
-                    return b.totalChampionships - a.totalChampionships;
+                    return (b.totalChampionships ?? 0) - (a.totalChampionships ?? 0);
                 }
                 if (b.leagueWins !== a.leagueWins) {
                     return b.leagueWins - a.leagueWins;

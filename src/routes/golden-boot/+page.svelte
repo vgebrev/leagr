@@ -26,7 +26,9 @@
     import { resolve } from '$app/paths';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let scorers = $state([]);
+    let scorers = $state(
+        /** @type {Array<{playerName: string, totalGoals: number, leagueGoals: number, cupGoals: number}>} */ ([])
+    );
     let error = $state(false);
     let celebrating = $state(false);
     let yearDropdownOpen = $state(false);

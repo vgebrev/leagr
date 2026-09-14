@@ -46,7 +46,7 @@
                         Appearance
                     </div>
                     <div class="font-semibold dark:text-gray-200">
-                        {appearances.reduce((sum, d) => sum + d.appearancePoints, 0)}
+                        {appearances.reduce((sum, d) => sum + (d.appearancePoints ?? 0), 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
@@ -55,7 +55,7 @@
                         Match
                     </div>
                     <div class="font-semibold dark:text-gray-200">
-                        {appearances.reduce((sum, d) => sum + d.matchPoints, 0)}
+                        {appearances.reduce((sum, d) => sum + (d.matchPoints ?? 0), 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
@@ -64,7 +64,7 @@
                         Bonus
                     </div>
                     <div class="font-semibold dark:text-gray-200">
-                        {appearances.reduce((sum, d) => sum + d.bonusPoints, 0)}
+                        {appearances.reduce((sum, d) => sum + (d.bonusPoints ?? 0), 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
@@ -73,7 +73,7 @@
                         Knockout
                     </div>
                     <div class="font-semibold dark:text-gray-200">
-                        {appearances.reduce((sum, d) => sum + d.knockoutPoints, 0)}
+                        {appearances.reduce((sum, d) => sum + (d.knockoutPoints ?? 0), 0)}
                     </div>
                 </div>
                 <div class="shrink-0 text-center">
@@ -82,7 +82,7 @@
                         Total
                     </div>
                     <div class="font-semibold dark:text-gray-200">
-                        {appearances.reduce((sum, d) => sum + d.totalPoints, 0)}
+                        {appearances.reduce((sum, d) => sum + (d.totalPoints ?? 0), 0)}
                     </div>
                 </div>
             </div>

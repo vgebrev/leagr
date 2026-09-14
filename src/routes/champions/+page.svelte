@@ -30,7 +30,7 @@
     import { resolve } from '$app/paths';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let champions = $state([]);
+    let champions = $state(/** @type {ChampionEntry[]} */ ([]));
     /** @type {Array<any>|null} */
     let momentum = $state(null);
     let error = $state(false);

@@ -23,6 +23,11 @@ export const GET = async ({ url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        if (!settings) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         // Get all discipline records
         const disciplineData = await disciplineManager.getAllRecords();
 
@@ -40,7 +45,7 @@ export const GET = async ({ url, locals }) => {
 
             // Check if player has active no-shows or suspensions
             const suspensionForDate = suspensions.find((s) => s.date === dateValidation.date);
-            const threshold = gameData.settings.discipline?.noShowThreshold || 2;
+            const threshold = settings.discipline?.noShowThreshold || 2;
             const relevantNoShowCount = relevantNoShows.length;
 
             // Only include players with relevant discipline issues
@@ -91,8 +96,8 @@ export const GET = async ({ url, locals }) => {
 
         return json({
             players: suspensionInfo,
-            threshold: gameData.settings.discipline?.noShowThreshold || 2,
-            enabled: gameData.settings.discipline?.enabled !== false
+            threshold: settings.discipline?.noShowThreshold || 2,
+            enabled: settings.discipline?.enabled !== false
         });
     } catch (err) {
         return toApiError(err, 'Failed to fetch discipline data');
