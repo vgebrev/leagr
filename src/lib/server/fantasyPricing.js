@@ -165,10 +165,10 @@ const STAT_WEIGHT_KEYS = {
  * Only stat types in the current tracking regime are paid for, so a goals-only
  * session from before full tracking cannot be compared against a fully tracked one.
  *
- * @param {Object} entry - a `history[date]` entry from rankings-YYYY.json
+ * @param {RankingHistoryEntry} entry - a `history[date]` entry from rankings-YYYY.json
  * @param {FantasyScoringConfig} weights - config.scoring
  * @param {(keyof SessionStats)[]} regimeTypes - stat types to pay for
- * @returns {{total: number, breakdown: Record<string, number>}|null} null when the player did not attend
+ * @returns {SessionFantasyPoints|null} null when the player did not attend
  */
 export function sessionFantasyPoints(entry, weights, regimeTypes = STAT_TYPES) {
     // Presence of the `points` block is the attended test (rankings redesign:
@@ -187,7 +187,10 @@ export function sessionFantasyPoints(entry, weights, regimeTypes = STAT_TYPES) {
 
     for (const type of regimeTypes) {
         const count = entry.stats?.[type];
-        if (typeof count === 'number') breakdown[type] = weights[STAT_WEIGHT_KEYS[type]] * count;
+        if (typeof count === 'number') {
+            const weightKey = /** @type {keyof FantasyScoringConfig} */ (STAT_WEIGHT_KEYS[type]);
+            breakdown[type] = weights[weightKey] * count;
+        }
     }
 
     breakdown.results =
@@ -209,13 +212,24 @@ function weeksBetween(from, to) {
     return (new Date(to).getTime() - new Date(from).getTime()) / WEEK_MS;
 }
 
-/** Recency weight of a session, halving every `halfLifeWeeks`. */
+/**
+ * Recency weight of a session, halving every `halfLifeWeeks`.
+ * @param {string|Date} date
+ * @param {string|Date} asOf
+ * @param {number} halfLifeWeeks
+ * @returns {number}
+ */
 function recencyWeight(date, asOf, halfLifeWeeks) {
     const weeks = Math.max(weeksBetween(date, asOf), 0);
     return Math.pow(2, -weeks / halfLifeWeeks);
 }
 
-/** Nearest-rank percentile, matching the convention used for trait bands. */
+/**
+ * Nearest-rank percentile, matching the convention used for trait bands.
+ * @param {number[]} values
+ * @param {number} fraction
+ * @returns {number|null}
+ */
 export function percentileOf(values, fraction) {
     if (values.length === 0) return null;
     const sorted = [...values].sort((a, b) => a - b);
@@ -223,11 +237,19 @@ export function percentileOf(values, fraction) {
     return sorted[Math.min(index, sorted.length - 1)];
 }
 
+/**
+ * @param {number[]} values
+ * @returns {number}
+ */
 function mean(values) {
     if (values.length === 0) return 0;
     return values.reduce((sum, v) => sum + v, 0) / values.length;
 }
 
+/**
+ * @param {number[]} values
+ * @returns {number}
+ */
 function stdDev(values) {
     if (values.length < 2) return 0;
     const m = mean(values);
@@ -324,7 +346,14 @@ export function priceFromExpectedPoints(ewp, anchor, pricing) {
     return Math.round(clamped / step) * step;
 }
 
-/** Damp a price move so a single big session drifts the price rather than teleporting it. */
+/**
+ * Damp a price move so a single big session drifts the price rather than teleporting it.
+ * @param {number|null|undefined} previous
+ * @param {number} target
+ * @param {number} maxMove
+ * @param {number} step
+ * @returns {number}
+ */
 export function dampPrice(previous, target, maxMove, step) {
     if (previous == null) return target;
     const delta = Math.min(Math.abs(target - previous), maxMove) * Math.sign(target - previous);
@@ -338,14 +367,14 @@ export function dampPrice(previous, target, maxMove, step) {
  * the game alive: it directly sets how much of the best available squad a manager can
  * afford, and that fraction is stable whether the week's pool is strong or weak.
  *
- * @param {Array<{price: number}>} prices - sorted most expensive first
+ * @param {Array<{price?: number}>} prices - sorted most expensive first
  * @param {{size: number, affordability: number}} squad - config.squad
  */
 export function deriveBudget(prices, squad) {
     const topCost = [...prices]
-        .sort((a, b) => b.price - a.price)
+        .sort((a, b) => (b.price ?? 0) - (a.price ?? 0))
         .slice(0, squad.size)
-        .reduce((sum, p) => sum + p.price, 0);
+        .reduce((sum, p) => sum + (p.price ?? 0), 0);
     return Math.round(topCost * squad.affordability * 2) / 2;
 }
 
@@ -354,13 +383,14 @@ export function deriveBudget(prices, squad) {
 /**
  * Flatten a player's history into one chronological timeline, so snapshots are a
  * slice rather than a rescan.
- * @param {Object} playerData
+ * @param {PlayerRankingData} playerData
  * @param {string[]} allDates - every session date the league played, ascending
  * @param {{types: any[], isInRegime: (d: string) => boolean}} regime
  * @param {FantasyScoringConfig} weights
  */
 function buildTimeline(playerData, allDates, regime, weights) {
     const history = playerData.history ?? {};
+    /** @type {number | null} */
     let lastElo = null;
     return allDates.map((date) => {
         const entry = history[date];
@@ -381,13 +411,18 @@ function buildTimeline(playerData, allDates, regime, weights) {
  * The components sum to the total mean, so a price can be explained by where the
  * points come from - "you cost 12.0 because you're expected to score 41.9 a week,
  * two thirds of it from goals".
- * @param {Array<Object>} timeline - the player's timeline slice, chronological
+ * @param {FantasyTimelineEntry[]} timeline - the player's timeline slice, chronological
  * @param {number} halfLifeWeeks
  */
 function meanBreakdown(timeline, halfLifeWeeks) {
-    const scored = timeline.filter((t) => t.scored);
+    const scored = timeline.filter(
+        /** @returns {t is FantasyTimelineEntry & {scored: SessionFantasyPoints}} */
+        (t) => t.scored !== null
+    );
     if (scored.length === 0) return null;
-    const sources = Object.keys(scored[0].scored.breakdown);
+    const sources = /** @type {(keyof FantasyPointsBreakdown)[]} */ (
+        Object.keys(scored[0].scored.breakdown)
+    );
     /** @type {Record<string, number>} */
     const out = {};
     for (const source of sources) {
@@ -404,12 +439,16 @@ function meanBreakdown(timeline, halfLifeWeeks) {
  * Expected fantasy points per session for every player, as of one date, using only
  * data up to and including it. This is `E[points | plays]` - the half of the model
  * that both the season and the weekly game share.
- * @returns {{entries: Map<string, Object>, leagueRate: number}}
+ * @param {Map<string, FantasyTimelineEntry[]>} timelines
+ * @param {string} asOf
+ * @param {Record<string, number>} honours
+ * @param {FantasyConfig} config
+ * @returns {{entries: Map<string, ExpectedPointsEntry>, leagueRate: number}}
  */
 function expectedPointsSnapshot(timelines, asOf, honours, config) {
     const { pricing } = config;
 
-    /** @type {Map<string, Object>} */
+    /** @type {Map<string, FantasyDraftEntry>} */
     const draft = new Map();
     const pooledPoints = [];
     let attendedTotal = 0;
@@ -420,7 +459,10 @@ function expectedPointsSnapshot(timelines, asOf, honours, config) {
         if (upTo.length === 0) continue;
 
         const observations = upTo
-            .filter((t) => t.scored)
+            .filter(
+                /** @returns {t is FantasyTimelineEntry & {scored: SessionFantasyPoints}} */
+                (t) => t.scored !== null
+            )
             .map((t) => ({ date: t.date, value: t.scored.total }));
         const attendedDates = new Set(upTo.filter((t) => t.attended).map((t) => t.date));
 
@@ -452,7 +494,7 @@ function expectedPointsSnapshot(timelines, asOf, honours, config) {
         (d) => d.observations.length >= pricing.minSessions
     );
     const poolMean = mean(pooledPoints);
-    const poolSd = stdDev(established.map((d) => d.emaMean));
+    const poolSd = stdDev(established.map((d) => d.emaMean ?? 0));
     const eloValues = established.map((d) => d.elo).filter((v) => typeof v === 'number');
     const eloMean = mean(eloValues);
     const eloSd = stdDev(eloValues);
@@ -461,7 +503,7 @@ function expectedPointsSnapshot(timelines, asOf, honours, config) {
     const honoursSd = stdDev(honourValues);
     const leagueRate = sessionsTotal > 0 ? attendedTotal / sessionsTotal : 0.5;
 
-    /** @type {Map<string, Object>} */
+    /** @type {Map<string, ExpectedPointsEntry>} */
     const entries = new Map();
     for (const d of draft.values()) {
         const n = d.observations.length;
@@ -501,7 +543,12 @@ function expectedPointsSnapshot(timelines, asOf, honours, config) {
  * Season-mode snapshot: expected points scaled by availability, then mapped onto the
  * price band. Used by the continuous league, where whether a player turns up at all is
  * the manager's risk to carry.
- * @returns {Map<string, Object>}
+ * @param {Map<string, FantasyTimelineEntry[]>} timelines
+ * @param {string} asOf
+ * @param {Record<string, number>} honours
+ * @param {FantasyConfig} config
+ * @param {Record<string, {activeNoShows?: number, suspended?: boolean}>} overrides
+ * @returns {Map<string, ExpectedPointsEntry>}
  */
 function priceSnapshot(timelines, asOf, honours, config, overrides) {
     const { pricing, availability, scoring } = config;
@@ -526,12 +573,12 @@ function priceSnapshot(timelines, asOf, honours, config, overrides) {
     }
 
     const anchor = percentileOf(
-        [...entries.values()].filter((p) => !p.provisional).map((p) => p.expectedWeeklyPoints),
+        [...entries.values()].filter((p) => !p.provisional).map((p) => p.expectedWeeklyPoints ?? 0),
         pricing.anchorPercentile
     );
     for (const entry of entries.values()) {
         entry.targetPrice = priceFromExpectedPoints(
-            entry.expectedWeeklyPoints,
+            entry.expectedWeeklyPoints ?? 0,
             anchor ?? 0,
             pricing
         );
@@ -548,12 +595,12 @@ function priceSnapshot(timelines, asOf, honours, config, overrides) {
  * it needs no new data file, and it yields the price history for free.
  *
  * @param {Object} params
- * @param {Record<string, Object>} params.players - rankings-YYYY.json players
+ * @param {Record<string, PlayerRankingData>} params.players - rankings-YYYY.json players
  * @param {string[]} params.calculatedDates - session dates that produced rankings
- * @param {Record<string, Object>} [params.previousYearPlayers] - for the honours prior
+ * @param {Record<string, PlayerRankingData>} [params.previousYearPlayers] - for the honours prior
  * @param {Record<string, {activeNoShows?: number, suspended?: boolean}>} [params.availabilityOverrides]
  * @param {FantasyConfig} [params.config]
- * @param {string} [params.asOf] - defaults to the last usable session
+ * @param {string|null} [params.asOf] - defaults to the last usable session
  */
 export function buildPrices({
     players,
@@ -568,7 +615,7 @@ export function buildPrices({
     const usableDates = allDates.filter((d) => regime.isInRegime(d));
     const effectiveAsOf = asOf ?? usableDates[usableDates.length - 1] ?? null;
 
-    /** @type {Map<string, Array<Object>>} */
+    /** @type {Map<string, FantasyTimelineEntry[]>} */
     const timelines = new Map(
         Object.entries(players).map(([name, data]) => [
             name,
@@ -600,7 +647,7 @@ export function buildPrices({
     const replayDates = usableDates.filter((d) => d <= effectiveAsOf);
     /** @type {Map<string, Array<{date: string, price: number}>>} */
     const series = new Map();
-    /** @type {Map<string, Object>} */
+    /** @type {Map<string, ExpectedPointsEntry>} */
     let latest = new Map();
 
     for (const date of replayDates) {
@@ -617,7 +664,7 @@ export function buildPrices({
             const previous = history.length ? history[history.length - 1].price : null;
             const price = dampPrice(
                 previous,
-                entry.targetPrice,
+                entry.targetPrice ?? 0,
                 config.pricing.maxWeeklyMove,
                 config.pricing.step
             );
@@ -632,7 +679,11 @@ export function buildPrices({
 
     const prices = [...latest.values()]
         .map((entry) => ({ ...entry, series: series.get(entry.playerName) ?? [] }))
-        .sort((a, b) => b.price - a.price || b.expectedWeeklyPoints - a.expectedWeeklyPoints);
+        .sort(
+            (a, b) =>
+                (b.price ?? 0) - (a.price ?? 0) ||
+                (b.expectedWeeklyPoints ?? 0) - (a.expectedWeeklyPoints ?? 0)
+        );
 
     const budget = deriveBudget(
         prices.filter((p) => !p.provisional),
@@ -681,11 +732,11 @@ export function priceInPool(mu, low, high, pricing) {
  * signup list and the prices are exactly what a manager would have seen that morning.
  *
  * @param {Object} params
- * @param {Record<string, Object>} params.players - rankings-YYYY.json players
+ * @param {Record<string, PlayerRankingData>} params.players - rankings-YYYY.json players
  * @param {string[]} params.calculatedDates - session dates that produced rankings
  * @param {string[]} params.pool - player names registered for `date`
  * @param {string} params.date - the session being priced
- * @param {Record<string, Object>} [params.previousYearPlayers]
+ * @param {Record<string, PlayerRankingData>} [params.previousYearPlayers]
  * @param {FantasyConfig} [params.config]
  */
 export function buildWeeklyPrices({
@@ -725,7 +776,9 @@ export function buildWeeklyPrices({
     );
 
     const { entries } = expectedPointsSnapshot(timelines, asOf, honours, config);
-    const inPool = pool.map((name) => entries.get(name)).filter(Boolean);
+    const inPool = pool
+        .map((name) => entries.get(name))
+        .filter(/** @returns {e is ExpectedPointsEntry} */ (e) => e !== undefined);
     if (inPool.length === 0) return empty;
 
     const mus = inPool.map((e) => e.expectedPointsPerSession);
@@ -762,21 +815,29 @@ export function buildWeeklyPrices({
 }
 
 /**
+ * Default squad value: a candidate is worth its expected points.
+ * @param {{expectedPoints?: number}} candidate
+ * @returns {number}
+ */
+const defaultSquadValue = (candidate) => candidate.expectedPoints ?? 0;
+
+/**
  * The highest-scoring squad of exactly `size` players affordable within `budget`.
  *
  * Exact, not greedy: an integer knapsack over half-unit prices. The pool is one
  * session's signups (~24) and squads are small, so the table is tiny.
  *
- * @param {Array<{playerName: string, price: number}>} candidates
+ * @template {{playerName: string, price: number, expectedPoints?: number}} C
+ * @param {C[]} candidates
  * @param {number} budget
  * @param {number} size
- * @param {(candidate: Object) => number} [valueOf] - defaults to expected points
- * @returns {{picks: Array<Object>, total: number, cost: number}|null}
+ * @param {(candidate: C) => number} [valueOf] - defaults to expected points
+ * @returns {{picks: C[], total: number, cost: number}|null}
  */
-export function bestSquad(candidates, budget, size, valueOf = (c) => c.expectedPoints ?? 0) {
+export function bestSquad(candidates, budget, size, valueOf = defaultSquadValue) {
     const UNIT = 2; // prices move in halves
     const capacity = Math.round(budget * UNIT);
-    const costOf = (c) => Math.round(c.price * UNIT);
+    const costOf = (/** @type {C} */ c) => Math.round(c.price * UNIT);
 
     // best[k][b] = highest total value using exactly k players costing exactly b.
     const NEG = -Infinity;
@@ -815,7 +876,7 @@ export function bestSquad(candidates, budget, size, valueOf = (c) => c.expectedP
 
 /**
  * What every player in a session actually scored, for settling the week's game.
- * @param {Record<string, Object>} players - rankings-YYYY.json players
+ * @param {Record<string, PlayerRankingData>} players - rankings-YYYY.json players
  * @param {string} date
  * @param {FantasyScoringConfig} weights - config.scoring
  * @param {(keyof SessionStats)[]} [regimeTypes]

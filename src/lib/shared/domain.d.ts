@@ -747,6 +747,55 @@ declare global {
         meta: Record<string, FantasyPriceMeta>;
     }
 
+    /** One session on a player's fantasy timeline, as buildTimeline emits it. */
+    interface FantasyTimelineEntry {
+        date: string;
+        elo: number | null;
+        attended: boolean;
+        scored: SessionFantasyPoints | null;
+    }
+
+    /** Intermediate accumulator inside expectedPointsSnapshot, before the prior is applied. */
+    interface FantasyDraftEntry {
+        playerName: string;
+        observations: Array<{ date: string; value: number }>;
+        attendedDates: Set<string>;
+        sessionDates: string[];
+        elo: number | null;
+        emaMean: number | null;
+        breakdown: Record<string, number> | null;
+    }
+
+    /** A player's expected-points snapshot: what a price is computed from. */
+    interface ExpectedPointsEntry {
+        playerName: string;
+        expectedPointsPerSession: number;
+        sessions: number;
+        provisional: boolean;
+        elo: number | null;
+        credibility: number;
+        prior: number;
+        lastSession: string | null;
+        observedMean: number | null;
+        breakdown: Record<string, number> | null;
+        attendedDates: Set<string>;
+        sessionDates: string[];
+        /**
+         * Added in place by priceSnapshot(), which scales expected points by availability
+         * and maps the result onto the price band. Absent until that pass has run.
+         */
+        availability?: number;
+        attendanceRate?: number;
+        expectedWeeklyPoints?: number;
+        suspended?: boolean;
+        scoringWeights?: FantasyScoringConfig;
+        targetPrice?: number;
+        /** Added by the season replay in buildPrices(), once the price band is damped. */
+        price?: number;
+        previousPrice?: number | null;
+        change?: number;
+    }
+
     interface PriceEntry {
         playerName: string;
         price: number;

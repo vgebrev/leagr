@@ -1,5 +1,5 @@
 {
-    "errors": 1135,
+    "errors": 1018,
     "warnings": 29,
     "files": {
         "src/components/avatars/Avatar.svelte": 1,
@@ -31,7 +31,6 @@
         "src/lib/client/services/whistle.js": 1,
         "src/lib/client/stores/loading.js": 1,
         "src/lib/server/fantasyManager.js": 58,
-        "src/lib/server/fantasyPricing.js": 117,
         "src/lib/server/imageProcessor.js": 6,
         "src/lib/server/logger.js": 11,
         "src/lib/server/momentum.js": 1,
