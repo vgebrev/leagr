@@ -19,6 +19,7 @@ declare global {
             teamModal?: { teamName: string; date?: string };
             playerModal?: { playerName: string; date?: string };
             formTab?: boolean;
+            fantasyEntry?: { teamName: string };
         }
         // interface Platform {}
     }

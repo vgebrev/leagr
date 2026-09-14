@@ -11,7 +11,7 @@
      * @type {{
      *   squadSize?: number,
      *   budget?: number,
-     *   scoring?: Record<string, number>,
+     *   scoring?: Partial<FantasyScoringConfig>,
      *   statTypes?: string[]
      * }}
      */
@@ -48,8 +48,8 @@
         ...statTypes
             .filter((type) => type in STAT_LABELS)
             .map((type) => {
-                const [label, weight] = STAT_LABELS[type];
-                return `${label}: ${pts(scoring[weight] ?? 0)}pts each`;
+                const [label, weight] = STAT_LABELS[/** @type {keyof typeof STAT_LABELS} */ (type)];
+                return `${label}: ${pts(scoring[/** @type {keyof FantasyScoringConfig} */ (weight)] ?? 0)}pts each`;
             }),
         `Match result: ${pts((scoring.matchPoint ?? 0) * WIN_POINTS)}pts for a win, ${pts(
             (scoring.matchPoint ?? 0) * DRAW_POINTS

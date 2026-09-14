@@ -26,8 +26,7 @@
     let { data } = $props();
     let date = $derived(data.date);
 
-    /** @type {any} */
-    let fantasy = $state(null);
+    let fantasy = $state(/** @type {FantasyState | null} */ (null));
     let error = $state(false);
 
     let entries = $derived(fantasy?.entries ?? []);
@@ -41,7 +40,7 @@
     );
 
     // Shallow routing, so the modal is dismissible with the browser back button.
-    let selectedTeam = $state(null);
+    let selectedTeam = $state(/** @type {FantasyPresentedEntry | null} */ (null));
     let showModal = $state(false);
 
     $effect(() => {

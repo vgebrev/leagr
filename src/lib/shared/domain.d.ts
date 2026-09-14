@@ -364,6 +364,13 @@ declare global {
     /** 0 = not held, 1 = held, 2 = elite. Keyed by the same names as PlayerTraits. */
     type TraitTiers = Record<keyof PlayerTraits, 0 | 1 | 2>;
 
+    /** A squad member as the fantasy views render them. */
+    interface SquadPlayer {
+        name: string;
+        avatar?: string | null;
+        elo?: number | null;
+    }
+
     /** One entry in a PlayerActionsDropdown. */
     interface PlayerAction {
         /** Decides the icon shown beside the label. */
@@ -567,6 +574,12 @@ declare global {
         pendingAvatar?: string | null;
         /** Added by /api/rankings/[player] for the player page; not persisted. */
         details?: PlayerSessionDetail[];
+        /** Added for the player modal: that session's snapshot of the player's figures. */
+        detailForDate?: PlayerSessionSnapshot | null;
+        /** Set by the player modal when it is showing one session rather than the season. */
+        asOfDate?: string | null;
+        isSnapshot?: boolean;
+        totalPlayers?: number | null;
     }
 
     /** The minimum a player record needs to take part in a ranking pass. */
@@ -664,6 +677,30 @@ declare global {
         offActions?: number | null;
         defActions?: number | null;
         saveActions?: number | null;
+    }
+
+    /**
+     * The player modal's snapshot of one session: the same figures the player page shows
+     * for the season, but as they stood on that date.
+     */
+    interface PlayerSessionSnapshot {
+        date: string;
+        rank: number | null;
+        totalPlayers: number | null;
+        rankingPoints: number | null;
+        points: number | null;
+        goalsForPerSession: number | null;
+        goalsAgainstPerSession: number | null;
+        attackingRating: number | null;
+        controlRating: number | null;
+        teamGFNorm: number | null;
+        teamGANorm: number | null;
+        goalsNorm: number | null;
+        offActionsNorm: number | null;
+        defActionsNorm: number | null;
+        saveActionsNorm: number | null;
+        eloGames: { allTime: number; season: number } | number | null;
+        elo: { rating: number } | null;
     }
 
     interface RankingMetadata {

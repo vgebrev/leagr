@@ -14,10 +14,9 @@
      * `captain` badges the pick whose points count twice, and `oncaptain` lets the badge be
      * moved. `withdrawnPlayers` names the picks who have left the session: the pitch draws
      * them in the accent colour with a `Withdrawn` marker where their price and points were.
-     * @typedef {{name: string, avatar?: string | null, elo?: number | null}} SquadPlayer
      * @type {{
      *   players?: SquadPlayer[],
-     *   playerStats?: Record<string, {price: number, points: number}>,
+     *   playerStats?: Record<string, {price: number, points: number | null}>,
      *   cost?: number | null,
      *   points?: number | null,
      *   withdrawnPlayers?: string[],

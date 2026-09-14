@@ -23,7 +23,7 @@
 
     const year = $derived(date ? date.substring(0, 4) : null);
 
-    let playerData = $state(null);
+    let playerData = $state(/** @type {PlayerRankingData | null} */ (null));
     let playerDisplayData = $derived.by(() => {
         if (!playerData) return null;
         const detail = playerData.detailForDate;
@@ -112,7 +112,7 @@
             <div class="w-full">
                 <PlayerHeader
                     playerData={playerDisplayData}
-                    {playerName}
+                    playerName={playerName ?? ''}
                     asOfDate={playerDisplayData?.asOfDate ?? date}
                     showStatus={false} />
             </div>
