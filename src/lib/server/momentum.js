@@ -36,9 +36,6 @@ const MOMENTUM_GAIN = 1.5;
 const PLACEMENT_FALLBACK_K = 0.25;
 const CONTRIBUTION_FALLBACK_K = 1;
 
-/** @typedef {import('../shared/types.js').MomentumSettings} MomentumSettings */
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
-
 /**
  * @typedef {Object} SessionStats
  * @property {number|null} [goals]
@@ -404,7 +401,7 @@ function boardEntry(momentum, playerName, components, streak) {
 /**
  * Build the Champions Hall (placement) momentum board.
  * @param {PlayersWithHistory} players - rankings players with history
- * @param {import('../shared/types.js').MomentumBoardConfig} config - champions momentum config
+ * @param {MomentumBoardConfig} config - champions momentum config
  * @param {string|Date} now - render time
  * @returns {Array<object>} board entries sorted hottest first
  */
@@ -525,7 +522,7 @@ export function deriveBallerTops(players) {
 /**
  * Build the Ballers Board (contribution) momentum board.
  * @param {PlayersWithHistory} players - rankings players with history
- * @param {import('../shared/types.js').MomentumBoardConfig} config - ballers momentum config
+ * @param {MomentumBoardConfig} config - ballers momentum config
  * @param {string|Date} now - render time
  * @returns {Array<object>} board entries sorted hottest first
  */

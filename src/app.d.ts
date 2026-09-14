@@ -1,8 +1,6 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
 // for information about these interfaces
 declare global {
-    type LeagueInfo = import('./lib/shared/types.js').LeagueInfo;
-
     namespace App {
         /** Shape returned by `handleError` in hooks.server.js and rendered by +error.svelte. */
         interface Error {

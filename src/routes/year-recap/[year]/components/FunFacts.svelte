@@ -4,8 +4,6 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import { resolve } from '$app/paths';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapFunFacts} YearRecapFunFacts */
-
     /** @type {{ data: YearRecapFunFacts | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 

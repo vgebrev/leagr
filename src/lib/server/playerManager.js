@@ -19,7 +19,6 @@ function getTransactionMutex(leagueId, date) {
     return transactionMutexes.get(key);
 }
 
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
 
 /** @typedef {{ available: string[], waitingList: string[] }} PlayersData */

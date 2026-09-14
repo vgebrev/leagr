@@ -7,8 +7,6 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import { resolve } from '$app/paths';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapTeamHighlight} YearRecapTeamHighlight */
-
     /** @type {{ data: YearRecapTeamHighlight | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 

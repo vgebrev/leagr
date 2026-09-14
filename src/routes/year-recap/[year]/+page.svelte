@@ -34,8 +34,6 @@
     import ConfettiEffect from '$components/ConfettiEffect.svelte';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapData} YearRecapData */
-
     /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
 

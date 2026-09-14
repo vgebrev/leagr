@@ -29,7 +29,7 @@
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     });
 
-    /** @type {import('$lib/shared/helpers.js').TeamStyle} */
+    /** @type {TeamStyle} */
     let styles = $derived(/** @type {any} */ (teamStyles)[teamColour] || teamStyles.blue);
 
     /**

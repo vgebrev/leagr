@@ -7,7 +7,7 @@
     /**
      * @typedef {Object} Props
      * @property {string} teamName
-     * @property {import('$lib/shared/helpers.js').TeamColour} teamColour
+     * @property {TeamColour} teamColour
      * @property {boolean} [celebrating]
      * @property {string} [icon]
      * @property {string[] | null} confettiColours]

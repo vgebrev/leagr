@@ -1,5 +1,5 @@
 {
-    "errors": 1453,
+    "errors": 1448,
     "warnings": 29,
     "files": {
         "src/components/avatars/Avatar.svelte": 1,
@@ -57,7 +57,7 @@
         "src/lib/server/teammateHistory.js": 13,
         "src/lib/server/yearRecapManager.js": 4,
         "src/lib/shared/favicon.js": 1,
-        "src/lib/shared/helpers.js": 10,
+        "src/lib/shared/helpers.js": 5,
         "src/lib/shared/matchUtils.js": 3,
         "src/lib/shared/validation.js": 59,
         "src/routes/+layout.js": 5,

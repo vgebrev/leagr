@@ -13,10 +13,6 @@ import {
     TRAIT_MIN_TRACKED_SESSIONS
 } from '../shared/badges.js';
 
-/** @typedef {import('../shared/types.js').Match} Match */
-/** @typedef {import('../shared/types.js').Round} Round */
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
-
 /**
  * @typedef {{home: string, away: string, homeScore: number, awayScore: number}} MatchResult
  */

@@ -41,7 +41,7 @@
     /**
      * @typedef {Object} WinningTeam
      * @property {string} name
-     * @property {import('$lib/shared/helpers.js').TeamColour} colour
+     * @property {TeamColour} colour
      */
 
     /** @type {WinningTeam} */

@@ -11,9 +11,6 @@ function shuffle(arr) {
     return arr;
 }
 
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
-/** @typedef {import('../shared/types.js').TeamGenerationSettings} TeamGenerationSettings */
-
 /** @typedef {{ teams: number, teamSizes: number[] }} TeamConfig */
 /** @typedef {Record<string, string[]>} TeamsMap */
 /** @typedef {{ players: Record<string, any> }} RankingsData */

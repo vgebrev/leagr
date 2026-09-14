@@ -1,7 +1,3 @@
-/** @typedef {import('./types.js').LeagueSettings} LeagueSettings */
-/** @typedef {import('./types.js').TeamColour} TeamColour */
-/** @typedef {import('./types.js').TeamStyle} TeamStyle */
-
 /** @param {Date} date */
 export function dateString(date) {
     const year = date.getFullYear();

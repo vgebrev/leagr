@@ -3,24 +3,6 @@ import { getLeagueDataPath } from './league.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';
 
-/** @typedef {import('../shared/types.js').Match} Match */
-/** @typedef {import('../shared/types.js').Round} Round */
-/** @typedef {import('../shared/types.js').YearRecapData} YearRecapData */
-/** @typedef {import('../shared/types.js').YearRecapOverview} YearRecapOverview */
-/** @typedef {import('../shared/types.js').YearRecapIronManEntry} YearRecapIronManEntry */
-/** @typedef {import('../shared/types.js').YearRecapMostImprovedEntry} YearRecapMostImprovedEntry */
-/** @typedef {import('../shared/types.js').YearRecapKingOfKingsEntry} YearRecapKingOfKingsEntry */
-/** @typedef {import('../shared/types.js').YearRecapPlayersFavourite} YearRecapPlayersFavourite */
-/** @typedef {import('../shared/types.js').YearRecapPlayerOfYearEntry} YearRecapPlayerOfYearEntry */
-/** @typedef {import('../shared/types.js').YearRecapTeamOfYearEntry} YearRecapTeamOfYearEntry */
-/** @typedef {import('../shared/types.js').YearRecapDreamTeamEntry} YearRecapDreamTeamEntry */
-/** @typedef {import('../shared/types.js').YearRecapTeamHighlight} YearRecapTeamHighlight */
-/** @typedef {import('../shared/types.js').YearRecapTrueColoursEntry} YearRecapTrueColoursEntry */
-/** @typedef {import('../shared/types.js').YearRecapBottle} YearRecapBottle */
-/** @typedef {import('../shared/types.js').YearRecapFunFacts} YearRecapFunFacts */
-/** @typedef {import('../shared/types.js').YearRecapTeamRecord} YearRecapTeamRecord */
-/** @typedef {import('../shared/types.js').YearRecapPlayerAvatar} YearRecapPlayerAvatar */
-
 /**
  * @typedef {Object} YearRecapSession
  * @property {string} date
@@ -1088,13 +1070,13 @@ export class YearRecapManager {
      * @returns {YearRecapFunFacts} - Fun facts
      */
     calculateFunFacts(sessions) {
-        /** @type {import('../shared/types.js').YearRecapMatchFact | null} */
+        /** @type {YearRecapMatchFact | null} */
         let highestScoringMatch = null;
-        /** @type {import('../shared/types.js').YearRecapMarginFact | null} */
+        /** @type {YearRecapMarginFact | null} */
         let biggestMarginWin = null;
-        /** @type {import('../shared/types.js').YearRecapGoalsSession | null} */
+        /** @type {YearRecapGoalsSession | null} */
         let mostGoalsSession = null;
-        /** @type {import('../shared/types.js').YearRecapGoalsSession | null} */
+        /** @type {YearRecapGoalsSession | null} */
         let fewestGoalsSession = null;
         let fewestGoalsCount = Infinity;
 

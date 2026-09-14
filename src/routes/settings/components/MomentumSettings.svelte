@@ -2,11 +2,9 @@
     import { Input, Label, Toggle } from 'flowbite-svelte';
     import { getEffectiveMomentumSettings } from '$lib/shared/defaults.js';
 
-    /** @typedef {import('$lib/shared/types.js').MomentumSettings} MomentumSettings */
-
     /**
      * @typedef {Object} MomentumSettingsProps
-     * @property {import('$lib/shared/types.js').LeagueSettings & {momentum: MomentumSettings}} leagueSettings - The league-wide settings object
+     * @property {LeagueSettings & {momentum: MomentumSettings}} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 
@@ -30,7 +28,7 @@
         { key: 'ballers', label: 'Ballers Board (contributions)' }
     ];
 
-    /** @type {Array<{key: keyof import('$lib/shared/types.js').MomentumBoardConfig, label: string, min: number, max: number, step: number}>} */
+    /** @type {Array<{key: keyof MomentumBoardConfig, label: string, min: number, max: number, step: number}>} */
     const fields = [
         { key: 'fastHalfLifeWeeks', label: 'Fast half-life (weeks)', min: 0.5, max: 26, step: 0.5 },
         { key: 'slowHalfLifeWeeks', label: 'Slow half-life (weeks)', min: 2, max: 52, step: 0.5 },

@@ -5,8 +5,6 @@
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapKingOfKingsEntry} YearRecapKingOfKingsEntry */
-
     /** @type {{ data: YearRecapKingOfKingsEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
