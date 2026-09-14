@@ -254,14 +254,27 @@ export function sanitizeBodyForLog(rawBody) {
  * @param {number} status
  * @param {number} durationMs
  * @param {string | null} [body]
+ * @param {string | null} [failureDetail] - Response body of a 5xx, so the reason is logged
  */
-function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
+function logApiRequest(
+    method,
+    url,
+    leagueId,
+    ip,
+    status,
+    durationMs,
+    body = null,
+    failureDetail = null
+) {
     const path = url.pathname + (url.search ? url.search : '');
     // Tag failures so a status line is greppable alongside its [ERROR] entry.
     const marker = status >= 500 ? ' FAILED' : status >= 400 ? ' REJECTED' : '';
     logger.info(
         `${method} ${path} ${status}${marker} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`
     );
+    if (failureDetail) {
+        logger.error(`${method} ${path} ${status} reason:`, failureDetail);
+    }
     if (body) {
         logger.debug(`${method} ${path} body:`, sanitizeBodyForLog(body));
     }
@@ -421,6 +434,17 @@ export const handle = async ({ event, resolve }) => {
     }
 
     if (url.pathname.startsWith('/api/')) {
+        // A 5xx that comes back as a Response was declared by a route - error(500, ...) is an
+        // intended response, so SvelteKit never routes it through handleError and nothing else
+        // records why. Carry the reason into the log; a thrown error still logs its stack there.
+        let failureDetail = null;
+        if (response.status >= 500) {
+            try {
+                failureDetail = await response.clone().text();
+            } catch {
+                // ignore - reading the body must never affect the response we return
+            }
+        }
         logApiRequest(
             request.method,
             url,
@@ -428,7 +452,8 @@ export const handle = async ({ event, resolve }) => {
             ip,
             response.status,
             Date.now() - start,
-            requestBody
+            requestBody,
+            failureDetail
         );
     }
 
