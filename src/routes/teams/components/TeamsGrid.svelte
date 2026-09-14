@@ -1,6 +1,13 @@
 <script>
     import TeamTable from './TeamTable.svelte';
 
+    /**
+     * The drawable colour a team name starts with.
+     * @param {string} teamName
+     * @returns {TeamColour}
+     */
+    const colourOf = (teamName) => /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
+
     let {
         teams,
         waitingList,
@@ -26,7 +33,7 @@
         <TeamTable
             {team}
             {teamName}
-            color={teamName.split(' ')[0].toLowerCase()}
+            color={colourOf(teamName)}
             {canModifyList}
             {onassign}
             {onAutoAssign}

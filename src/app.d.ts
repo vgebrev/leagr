@@ -16,8 +16,8 @@ declare global {
         }
         // interface PageData {}
         interface PageState {
-            teamModal?: { teamName: string };
-            playerModal?: { playerName: string };
+            teamModal?: { teamName: string; date?: string };
+            playerModal?: { playerName: string; date?: string };
             formTab?: boolean;
         }
         // interface Platform {}

@@ -364,6 +364,15 @@ declare global {
     /** 0 = not held, 1 = held, 2 = elite. Keyed by the same names as PlayerTraits. */
     type TraitTiers = Record<keyof PlayerTraits, 0 | 1 | 2>;
 
+    /** One entry in a PlayerActionsDropdown. */
+    interface PlayerAction {
+        /** Decides the icon shown beside the label. */
+        type: 'remove' | 'no-show' | 'move-to-waiting' | 'move-to-active' | 'assign' | 'rename';
+        label: string;
+        onclick: () => void;
+        disabled?: boolean;
+    }
+
     /** A player enriched with ELO for the draw UI. Subset of ProvisionalPlayerData. */
     interface PlayerWithElo {
         name: string;

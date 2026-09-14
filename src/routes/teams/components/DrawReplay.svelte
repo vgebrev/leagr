@@ -15,6 +15,13 @@
     import { SvelteSet } from 'svelte/reactivity';
     import confetti from 'canvas-confetti';
 
+    /**
+     * The drawable colour a team name starts with.
+     * @param {string} teamName
+     * @returns {TeamColour}
+     */
+    const colourOf = (teamName) => /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
+
     /** @type {{ drawHistory: DrawHistoryData | null, open?: boolean, date?: string | null }} */
     let { drawHistory, open = $bindable(false), date = null } = $props();
 
@@ -885,7 +892,7 @@
                         <TeamTable
                             team={teamData.players}
                             {teamName}
-                            color={teamName.split(' ')[0].toLowerCase()}
+                            color={colourOf(teamName)}
                             canModifyList={false}
                             onremove={null}
                             onassign={null}

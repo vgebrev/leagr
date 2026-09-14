@@ -1,5 +1,5 @@
 {
-    "errors": 301,
+    "errors": 231,
     "warnings": 27,
     "files": {
         "src/components/avatars/Avatar.svelte": 1,
@@ -9,7 +9,6 @@
         "src/components/FantasyTeamModal.svelte": 1,
         "src/components/GoalscorerList.svelte": 4,
         "src/components/LeagueInfo.svelte": 1,
-        "src/components/NewsCard.svelte": 37,
         "src/components/PlayerModal.svelte": 18,
         "src/components/RenamePlayerModal.svelte": 1,
         "src/components/StarsOfTheDay.svelte": 3,
@@ -62,7 +61,7 @@
         "src/routes/help/badges/+page.svelte": 2,
         "src/routes/knockout/+page.svelte": 14,
         "src/routes/knockout/components/KnockoutBracket.svelte": 2,
-        "src/routes/news/+page.svelte": 3,
+        "src/routes/news/+page.svelte": 1,
         "src/routes/players/+page.svelte": 2,
         "src/routes/players/components/PlayerRegistrationForm.svelte": 4,
         "src/routes/players/components/PlayersGrid.svelte": 6,
@@ -78,7 +77,6 @@
         "src/routes/settings/components/PlayerLimitSettings.svelte": 1,
         "src/routes/table/+page.svelte": 7,
         "src/routes/teams/+page.svelte": 7,
-        "src/routes/teams/components/TeamTable.svelte": 31,
         "src/routes/year-recap/[year]/+page.svelte": 1,
         "src/routes/year-recap/[year]/components/AnimatedIn.svelte": 1,
         "src/routes/year-recap/[year]/components/DreamTeam.svelte": 2,
