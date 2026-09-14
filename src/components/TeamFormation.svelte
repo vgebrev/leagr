@@ -49,7 +49,7 @@
      * @type {{
      *   players: SquadPlayer[],
      *   teamColor?: TeamColour,
-     *   playerStats?: Record<string, PlayerStat | Record<string, number>>,
+     *   playerStats?: Record<string, PlayerStat | Record<string, number | null>>,
      *   statDefs?: StatDef[],
      *   statsLayout?: 'panel' | 'inline',
      *   captain?: string | null,

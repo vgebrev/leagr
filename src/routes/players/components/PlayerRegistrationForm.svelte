@@ -21,9 +21,9 @@
      */
     function addToWaitingList() {
         dropdownOpen = false;
-        if (!input.checkValidity()) {
-            input.reportValidity();
-            input.focus();
+        if (!input?.checkValidity()) {
+            input?.reportValidity();
+            input?.focus();
             return;
         }
         onadd && onadd(playerName.trim(), 'waitingList');

@@ -131,7 +131,7 @@ class GamesService {
         // Optimistic update
         const newSchedule = [...this.schedule];
         newSchedule[roundIndex] = [...newSchedule[roundIndex]];
-        newSchedule[roundIndex][matchIndex] = updatedMatch;
+        newSchedule[roundIndex][matchIndex] = /** @type {Match} */ (updatedMatch);
         this.schedule = newSchedule;
 
         await withLoading(

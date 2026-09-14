@@ -12,6 +12,8 @@ import {
 import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class PlayersService {
+    /** @type {ConsolidatedSettings} */
+    /** @type {ConsolidatedSettings} */
     #settings = $state(defaultSettings);
 
     // State
@@ -219,8 +221,8 @@ class PlayersService {
                 }
 
                 const originalList = list;
-                const effectivePlayerLimit =
-                    this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+                const dayOverride = this.currentDate ? this.#settings[this.currentDate] : null;
+                const effectivePlayerLimit = dayOverride?.playerLimit || this.#settings.playerLimit;
                 if (list === 'available' && this.players.length >= effectivePlayerLimit) {
                     list = 'waitingList';
                 }

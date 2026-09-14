@@ -390,6 +390,12 @@ declare global {
         elo?: number | null;
     }
 
+    /** The sortable stat columns on the ballers board. */
+    type BallerStatKey = 'appearances' | 'saves' | 'defence' | 'attack' | 'goals' | 'total';
+
+    /** One row on the ballers board. */
+    type BallerRow = { playerName: string } & Record<BallerStatKey, number>;
+
     /** One entry in a PlayerActionsDropdown. */
     interface PlayerAction {
         /** Decides the icon shown beside the label. */

@@ -65,7 +65,10 @@
         }
         return {
             ...playerStats,
-            [captain]: { ...captainStat, points: Math.round(captainStat.points * 200) / 100 }
+            [String(captain)]: {
+                ...captainStat,
+                points: Math.round(captainStat.points * 200) / 100
+            }
         };
     });
 

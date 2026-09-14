@@ -15,7 +15,7 @@
      * @type {{
      *   actions: PlayerAction[],
      *   canModifyList: boolean,
-     *   styleClass: string
+     *   styleClass?: string
      * }}
      */
     let {

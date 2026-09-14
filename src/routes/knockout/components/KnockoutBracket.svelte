@@ -251,8 +251,9 @@
                                                     >TBD</span>
                                             {:else}
                                                 <TeamBadge
-                                                    teamName={match.home}
-                                                    onclick={() => handleTeamBadgeClick(match.home)}
+                                                    teamName={match.home ?? ''}
+                                                    onclick={() =>
+                                                        handleTeamBadgeClick(match.home ?? '')}
                                                     className="w-full text-sm {isLoser(
                                                         match,
                                                         'home'
@@ -274,8 +275,9 @@
                                                     >TBD</span>
                                             {:else}
                                                 <TeamBadge
-                                                    teamName={match.away}
-                                                    onclick={() => handleTeamBadgeClick(match.away)}
+                                                    teamName={match.away ?? ''}
+                                                    onclick={() =>
+                                                        handleTeamBadgeClick(match.away ?? '')}
                                                     className="w-full text-sm {isLoser(
                                                         match,
                                                         'away'

@@ -19,9 +19,9 @@
     let { data } = $props();
     const date = $derived(data.date);
     let showPlayerModal = $state(false);
-    let selectedPlayer = $state(null);
+    let selectedPlayer = $state(/** @type {string | null} */ (null));
     let showTeamModal = $state(false);
-    let selectedTeam = $state(null);
+    let selectedTeam = $state(/** @type {string | null} */ (null));
 
     $effect(() => {
         const state = page.state.teamModal;
@@ -53,6 +53,10 @@
         if (page.state.teamModal) history.back();
     }
 
+    /**
+     * @param {string} oldName
+     * @param {string} newName
+     */
     async function handleRename(oldName, newName) {
         await playersService.renamePlayer(oldName, newName);
         // Reload teams data to show updated name
@@ -103,9 +107,10 @@
     }
 
     let showReplay = $state(false);
-    let replayData = $state(null);
+    let replayData = $state(/** @type {DrawHistoryData | null} */ (null));
     let showPlayerRankings = $state(false);
 
+    /** @param {DrawHistoryData} history */
     function handleReplay(history) {
         replayData = history;
         showReplay = true;

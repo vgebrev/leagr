@@ -736,13 +736,7 @@ export function validateGameRequest(requestBody) {
     }
 
     // Use existing schedule validation
-    const scheduleResult = validateScheduleData(requestBody);
-
-    return {
-        isValid: scheduleResult.isValid,
-        errors: scheduleResult.errors,
-        sanitizedData: scheduleResult.sanitizedData
-    };
+    return validateScheduleData(requestBody);
 }
 
 /**

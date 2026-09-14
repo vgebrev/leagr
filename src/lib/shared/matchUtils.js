@@ -1,6 +1,6 @@
 /**
  * Find a league match using 1-indexed round and match URL params.
- * @param {Round[]} rounds
+ * @param {Round[] | KnockoutMatch[][]} rounds
  * @param {string|null} roundParam - 1-indexed round number
  * @param {string|null} matchParam - 1-indexed match position within round
  * @returns {KnockoutMatch|null}

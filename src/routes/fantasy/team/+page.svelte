@@ -37,7 +37,11 @@
         fantasy?.myEntry && !fantasy.myEntry.valid ? fantasy.myEntry.invalidReason : null
     );
 
-    let priceOf = $derived(Object.fromEntries(market.map((entry) => [entry.playerName, entry])));
+    let priceOf = $derived(
+        Object.fromEntries(
+            market.map((/** @type {FantasyMarketRow} */ entry) => [entry.playerName, entry])
+        )
+    );
     let cost = $derived(
         Math.round(picks.reduce((sum, name) => sum + (priceOf[name]?.price ?? 0), 0) * 2) / 2
     );

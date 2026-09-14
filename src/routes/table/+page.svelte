@@ -65,9 +65,9 @@
     function celebrate(index) {
         if (index !== 0 || !isCompetitionEnded(date, $settings)) return;
         winningTeam.name = standings[index].team;
+        const firstWord = /** @type {TeamColour} */ (winningTeam.name.split(' ')[0]);
         winningTeam.colour =
-            teamColours[teamColours.indexOf(winningTeam.name.split(' ')[0]) % teamColours.length] ||
-            'default';
+            teamColours[teamColours.indexOf(firstWord) % teamColours.length] || 'default';
         celebrating = true;
     }
 

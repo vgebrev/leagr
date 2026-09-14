@@ -50,6 +50,7 @@ export const POST = async ({ request, url, locals }) => {
     }
 
     // Validate the supplied player name (player mode)
+    /** @type {string | null} */
     let playerName = null;
     if (mode === 'player') {
         const nameValidation = validateAndSanitizePlayerName(rawPlayerName);
@@ -125,13 +126,17 @@ export const POST = async ({ request, url, locals }) => {
             .setOverduePairs(overduePairs);
 
         if (mode === 'player') {
-            const pool = [...teamPlayers, playerName];
+            const pool = [...teamPlayers, playerName].filter(
+                /** @returns {p is string} */ (p) => p != null
+            );
             generator.prepareAnchors(pool);
-            const team = generator.findBestTeamForPlayer(teams, playerName, { maxPlayersPerTeam });
+            const team = generator.findBestTeamForPlayer(teams, playerName ?? '', {
+                maxPlayersPerTeam
+            });
             if (!team) {
                 return error(400, 'No team has space for this player.');
             }
-            await playerManager.fillEmptySlotWithPlayer(team, playerName);
+            await playerManager.fillEmptySlotWithPlayer(team, playerName ?? '');
         } else if (mode === 'team') {
             if (!teams[teamName]) {
                 return error(404, `Team "${teamName}" not found.`);

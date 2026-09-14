@@ -83,6 +83,7 @@ export const CATEGORY_ORDER = ['trait', 'archetype', 'breadth', 'mastery'];
 export const SHAPE_ORDER = ['pill', 'rounded', 'notched', 'faceted'];
 
 /** Render order for the material channel within a category. */
+/** @type {Array<'bronze' | 'silver' | 'gold' | 'diamond'>} */
 export const TIER_ORDER = ['bronze', 'silver', 'gold', 'diamond'];
 
 /**

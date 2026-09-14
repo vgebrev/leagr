@@ -10,7 +10,7 @@
      * @property {TeamColour} teamColour
      * @property {boolean} [celebrating]
      * @property {string} [icon]
-     * @property {string[] | null} confettiColours]
+     * @property {string[] | null} [confettiColours]
      * @property {string | null} [date]
      */
 

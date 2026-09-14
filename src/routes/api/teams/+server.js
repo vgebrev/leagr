@@ -127,7 +127,7 @@ export const POST = async ({ request, url, locals }) => {
         const drawValidation = validateTeamDrawAllowed(
             dateValidation.date,
             settings,
-            locals.isAdmin
+            locals.isAdmin ?? false
         );
         if (!drawValidation.isValid) {
             return error(401, drawValidation.error);

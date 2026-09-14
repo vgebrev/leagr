@@ -392,7 +392,7 @@ await manager.addPlayer('John Doe', date);
 ### Typing Rules
 
 The project is JavaScript with JSDoc types, checked by `svelte-check` under `strict` + `checkJs`.
-`npm run check:ci` gates CI and deployment.
+`npm run check:ci` gates CI and deployment, and fails on warnings as well as errors.
 
 - **Shared shapes live in `src/lib/shared/domain.d.ts`** as a single `declare global` block. They
   are ambient: use `PlayerRankingData`, `Match`, `LeagueSettings` etc. directly in any `.js` or
