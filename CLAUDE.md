@@ -378,7 +378,7 @@ await manager.addPlayer('John Doe', date);
 5. **Explain Changes**: Every step of the way, give high-level explanations of what changes you made
 6. **Keep it Simple**: Make every task and code change as simple as possible. Avoid massive or complex changes. Every change should impact as little code as possible. Everything is about simplicity.
 7. **Run tests frequently** - Use `npm test` to verify changes don't break existing functionality
-8. **Type checking**: Only run `npm run check` when explicitly requested or when type errors are blocking functionality. Focus on working code over perfect types. Add JSDoc type annotations pragmatically when they improve code clarity, not exhaustively.
+8. **Type checking**: `npm run check` must stay clean - it is gated in CI and in `deploy.sh` via `npm run check:ci`. Run it before considering any task complete. Fix the underlying type error rather than suppressing it; `@ts-ignore`, `@ts-expect-error` and `{any}` are not acceptable resolutions. See the Typing Rules section below.
 9. **Document**: After completing a non-trivial feature or significant change, create a summary document in `tasks/[yyyyMMddhhmm]-[feature-name]-implementation.md` with:
     - Timestamp filename prefix, so tasks chronology is easily seen by default at filesystem level
     - Overview of what was implemented
@@ -388,6 +388,30 @@ await manager.addPlayer('John Doe', date);
     - Any assumptions or limitations
 10. Before marking any task complete, briefly verify the change works as intended **and tests pass**.
 11. If a task becomes more complex than initially planned, pause and discuss alternatives.
+
+### Typing Rules
+
+The project is JavaScript with JSDoc types, checked by `svelte-check` under `strict` + `checkJs`.
+`npm run check:ci` gates CI and deployment.
+
+- **Shared shapes live in `src/lib/shared/domain.d.ts`** as a single `declare global` block. They
+  are ambient: use `PlayerRankingData`, `Match`, `LeagueSettings` etc. directly in any `.js` or
+  `.svelte` file with **no import and no `@typedef {import(...)}` preamble**.
+- **Never write `{Object}`.** It resolves to TypeScript's `Object` interface, which has no
+  properties, so it is strictly worse than writing nothing. Use a named domain type, a concrete
+  inline shape (`{{a: string, b: number}}`), or `Record<string, X>`.
+- **Never write bare generics** - `{Array}`, `{Promise}`, `{Map}` all need their type arguments.
+- **Never write `@param name` without braces** - it makes the parameter an implicit `any`.
+- **Annotate every exported function boundary** (`@param` + `@returns`) and **every class field**
+  assigned `null` in a constructor (`/** @type {string|null} */ this.date = null;`).
+- **Guard helpers return discriminated unions**, not `{isValid: boolean, value: T|null}` - the
+  latter does not narrow, so every call site downstream has to re-check. See
+  `validateLeagueForAPI` in `src/lib/server/league.js`.
+- **Narrow nullable instance fields at the point of use** with a private helper rather than
+  casting - see `#requireDate()` / `#requireLeagueId()` in `src/lib/server/playerManager.js`.
+- **`src/lib/server/playerManager.js` is the reference implementation.** 1200+ lines, zero errors.
+  Match its style when touching any other server module.
+- `test/**` is deliberately outside the type-check scope; Vitest executes those files instead.
 
 **Important Notes:**
 

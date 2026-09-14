@@ -302,7 +302,12 @@ if [[ "$NO_VERSION" == true ]]; then
     fi
 fi
 
-# Step 2: Run tests
+# Step 2: Type check and run tests
+print_step "Type checking..."
+if ! npm run check:ci; then
+    rollback "Type check failed"
+fi
+
 print_step "Running tests..."
 if ! npm test; then
     rollback "Tests failed"
