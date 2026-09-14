@@ -35,6 +35,7 @@
         if (state?.playerName) selectedPlayer = state.playerName;
     });
 
+    /** @param {string} player */
     function handlePlayerClick(player) {
         pushState('', { playerModal: { playerName: player } });
     }
@@ -43,6 +44,7 @@
         if (page.state.playerModal) history.back();
     }
 
+    /** @param {string} teamName */
     function handleTeamClick(teamName) {
         pushState('', { teamModal: { teamName } });
     }

@@ -364,6 +364,24 @@ declare global {
     /** 0 = not held, 1 = held, 2 = elite. Keyed by the same names as PlayerTraits. */
     type TraitTiers = Record<keyof PlayerTraits, 0 | 1 | 2>;
 
+    /** Per-player session stats as the pitch formation renders them. */
+    interface PlayerStat {
+        goals: number;
+        attack: number;
+        defence: number;
+        saves: number;
+    }
+
+    /** One stat column in the formation's player rows. */
+    interface StatDef {
+        key: string;
+        label: string;
+        Icon?: any;
+        divider?: boolean;
+        prefix?: string;
+        suffix?: string;
+    }
+
     /** A squad member as the fantasy views render them. */
     interface SquadPlayer {
         name: string;
@@ -1178,7 +1196,7 @@ declare global {
     }
 
     interface YearRecapTrueColoursEntry {
-        color: string;
+        color: TeamColour;
         leagueWins: number;
         cupWins: number;
         wins: number;

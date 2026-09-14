@@ -80,8 +80,11 @@
     teams={gamesService.teams}
     {date}
     disabled={sessionLocked}
-    onMatchUpdate={(roundIndex, matchIndex, updatedMatch) =>
-        gamesService.updateLeagueMatch(roundIndex, matchIndex, updatedMatch)}
+    onMatchUpdate={(
+        /** @type {number} */ roundIndex,
+        /** @type {number} */ matchIndex,
+        /** @type {KnockoutMatch} */ updatedMatch
+    ) => gamesService.updateLeagueMatch(roundIndex, matchIndex, updatedMatch)}
     onTeamClick={handleTeamClick} />
 
 <TeamModal

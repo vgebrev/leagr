@@ -27,6 +27,10 @@
     let showRenameModal = $state(false);
     let playerToRename = $state('');
 
+    /**
+     * @param {string} oldName
+     * @param {string} newName
+     */
     function handleRename(oldName, newName) {
         if (onrename) {
             onrename(oldName, newName);

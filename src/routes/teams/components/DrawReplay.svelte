@@ -88,7 +88,7 @@
             return undefined;
         }
 
-        return animatingPlayerTeam.split(' ')[0].toLowerCase();
+        return /** @type {TeamColour} */ (animatingPlayerTeam.split(' ')[0].toLowerCase());
     });
 
     // Get team color classes for the flying player (uses unified animating state)

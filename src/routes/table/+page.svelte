@@ -30,6 +30,7 @@
         if (state?.teamName) selectedTeam = state.teamName;
     });
 
+    /** @param {string} teamName */
     function handleTeamClick(teamName) {
         pushState('', { teamModal: { teamName } });
     }

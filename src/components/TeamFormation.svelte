@@ -46,11 +46,9 @@
      * and name fade back and their stats give way to a `Withdrawn` marker, because a price
      * and a points total are both answers to questions that no longer apply to them. What
      * counts as withdrawn is, again, the caller's rule.
-     * @typedef {{ goals: number, attack: number, defence: number, saves: number }} PlayerStat
-     * @typedef {{ key: string, label: string, Icon?: any, divider?: boolean, prefix?: string, suffix?: string }} StatDef
      * @type {{
-     *   players: Array<{name: string, avatar?: string | null, elo?: number}>,
-     *   teamColor?: string,
+     *   players: SquadPlayer[],
+     *   teamColor?: TeamColour,
      *   playerStats?: Record<string, PlayerStat | Record<string, number>>,
      *   statDefs?: StatDef[],
      *   statsLayout?: 'panel' | 'inline',

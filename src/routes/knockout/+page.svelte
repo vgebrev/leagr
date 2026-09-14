@@ -51,6 +51,7 @@
         return null;
     }
 
+    /** @param {string} teamName */
     function handleTeamClick(teamName) {
         pushState('', { teamModal: { teamName } });
     }

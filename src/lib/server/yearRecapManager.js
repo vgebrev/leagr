@@ -913,14 +913,14 @@ export class YearRecapManager {
         }
 
         // For each team/color, get their top player
-        /** @type {Array<{ color: string, players: Array<[string, number]>, topCaps: number }>} */
+        /** @type {Array<{ color: TeamColour, players: Array<[string, number]>, topCaps: number }>} */
         const teamPriorities = [];
         for (const [color, data] of Object.entries(colorData)) {
             const sortedPlayers = Object.entries(data.playerCaps).sort((a, b) => b[1] - a[1]);
             if (sortedPlayers.length > 0) {
                 const [, topCaps] = sortedPlayers[0];
                 teamPriorities.push({
-                    color,
+                    color: /** @type {TeamColour} */ (color),
                     players: sortedPlayers, // All players sorted by caps for this team
                     topCaps // Highest cap count for this team
                 });

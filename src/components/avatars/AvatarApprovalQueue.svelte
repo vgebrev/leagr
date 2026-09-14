@@ -36,6 +36,7 @@
     /**
      * Approve an avatar
      */
+    /** @param {string} playerName */
     async function approve(playerName) {
         await withLoading(
             async () => {
@@ -55,6 +56,7 @@
     /**
      * Reject an avatar
      */
+    /** @param {string} playerName */
     async function reject(playerName) {
         await withLoading(
             async () => {

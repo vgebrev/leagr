@@ -5,7 +5,7 @@
     let { teamName, date, size = 192, className = '', shadow = true } = $props();
 
     let teamColour = $derived.by(() => {
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     });
 

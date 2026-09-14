@@ -41,7 +41,7 @@
             players={availablePlayers}
             {allPlayers}
             {canModifyList}
-            onremove={async (name) => await onremove(name, 'available')}
+            onremove={async (/** @type {string} */ name) => await onremove(name, 'available')}
             {onmove}
             {onrename}
             {onPlayerClick}
@@ -57,7 +57,7 @@
             players={waitingList}
             {allPlayers}
             {canModifyList}
-            onremove={async (name) => await onremove(name, 'waitingList')}
+            onremove={async (/** @type {string} */ name) => await onremove(name, 'waitingList')}
             {onmove}
             {onrename}
             {onPlayerClick}

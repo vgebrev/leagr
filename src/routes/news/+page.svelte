@@ -98,7 +98,9 @@
             const seen = new Set((cards ?? []).map((card) => card.date));
             cards = [
                 ...(cards ?? []),
-                ...(response.cards ?? []).filter((card) => !seen.has(card.date))
+                .../** @type {Card[]} */ (response.cards ?? []).filter(
+                    (card) => !seen.has(card.date)
+                )
             ];
             hasMore = !!response.hasMore;
             nextCursor = response.nextCursor ?? null;

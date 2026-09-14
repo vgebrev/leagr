@@ -25,6 +25,7 @@
         if (state?.playerName) selectedPlayer = state.playerName;
     });
 
+    /** @param {string} playerName */
     function openPlayerModal(playerName) {
         pushState('', { playerModal: { playerName } });
     }
@@ -291,18 +292,18 @@
      */
     function getTeamColorClass(teamName) {
         if (!teamName) return '';
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         const colour = teamColours.includes(firstWord) ? firstWord : 'blue';
         return /** @type {any} */ (teamStyles)[colour]?.header ?? teamStyles.blue.header;
     }
 
     /**
      * @param {string | null | undefined} teamName
-     * @returns {string}
+     * @returns {TeamColour}
      */
     function getTeamColor(teamName) {
         if (!teamName) return 'blue';
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     }
 

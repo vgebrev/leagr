@@ -17,7 +17,7 @@
      * @property {string | null} teamName - Current team name for color styling
      */
 
-    /** @type {{ leagueGames: Array, knockoutGames: Array, teams: Object, size?: number }} */
+    /** @type {{ leagueGames?: Round[], knockoutGames?: KnockoutMatch[], teams?: TeamsData, size?: number }} */
     let { leagueGames = [], knockoutGames = [], teams = {}, size = 5 } = $props();
 
     /**
@@ -48,14 +48,14 @@
                                     totalGoals: 0,
                                     leagueGoals: 0,
                                     cupGoals: 0,
-                                    teamName: match.home
+                                    teamName: match.home ?? null
                                 });
                             }
                             const stats = scorerMap.get(player);
                             if (stats) {
                                 stats.leagueGoals += goals;
                                 stats.totalGoals += goals;
-                                stats.teamName = match.home; // Update to latest team
+                                stats.teamName = match.home ?? null; // Update to latest team
                             }
                         }
                     }
@@ -72,14 +72,14 @@
                                     totalGoals: 0,
                                     leagueGoals: 0,
                                     cupGoals: 0,
-                                    teamName: match.away
+                                    teamName: match.away ?? null
                                 });
                             }
                             const stats = scorerMap.get(player);
                             if (stats) {
                                 stats.leagueGoals += goals;
                                 stats.totalGoals += goals;
-                                stats.teamName = match.away; // Update to latest team
+                                stats.teamName = match.away ?? null; // Update to latest team
                             }
                         }
                     }
@@ -104,14 +104,14 @@
                                 totalGoals: 0,
                                 leagueGoals: 0,
                                 cupGoals: 0,
-                                teamName: match.home
+                                teamName: match.home ?? null
                             });
                         }
                         const stats = scorerMap.get(player);
                         if (stats) {
                             stats.cupGoals += goals;
                             stats.totalGoals += goals;
-                            stats.teamName = match.home; // Update to latest team
+                            stats.teamName = match.home ?? null; // Update to latest team
                         }
                     }
                 }
@@ -128,14 +128,14 @@
                                 totalGoals: 0,
                                 leagueGoals: 0,
                                 cupGoals: 0,
-                                teamName: match.away
+                                teamName: match.away ?? null
                             });
                         }
                         const stats = scorerMap.get(player);
                         if (stats) {
                             stats.cupGoals += goals;
                             stats.totalGoals += goals;
-                            stats.teamName = match.away; // Update to latest team
+                            stats.teamName = match.away ?? null; // Update to latest team
                         }
                     }
                 }
@@ -160,15 +160,19 @@
      */
     function getTeamColorClass(teamName) {
         if (!teamName) return '';
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         const teamColour = teamColours.includes(firstWord) ? firstWord : 'blue';
         const styles = /** @type {any} */ (teamStyles)[teamColour] || teamStyles.blue;
         return styles.header;
     }
 
+    /**
+     * @param {string} teamName
+     * @returns {TeamColour}
+     */
     function getTeamColor(teamName) {
-        if (!teamName) return '';
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        if (!teamName) return 'default';
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     }
     /**
@@ -180,8 +184,8 @@
         // Search through all teams to find the player and check if they have an avatar
         for (const teamPlayers of Object.values(teams)) {
             if (!Array.isArray(teamPlayers)) continue;
-            const player = teamPlayers.find((p) => p?.name === playerName);
-            if (player && player.avatar) {
+            // Team rosters hold names; the avatar endpoint 404s for a player without one.
+            if (teamPlayers.includes(playerName)) {
                 return `/api/rankings/${encodeURIComponent(playerName)}/avatar`;
             }
         }
@@ -208,7 +212,7 @@
                     <div class="mt-1 shrink-0">
                         <Avatar
                             avatarUrl={getPlayerAvatarUrl(scorer.playerName)}
-                            color={getTeamColor(scorer.teamName)}
+                            color={getTeamColor(scorer.teamName ?? '')}
                             size="xs" />
                     </div>
 

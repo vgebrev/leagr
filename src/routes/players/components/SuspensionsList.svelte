@@ -12,6 +12,7 @@
 
     let confirmingPlayer = $state(null);
 
+    /** @param {string} playerName */
     async function clearPlayer(playerName) {
         confirmingPlayer = null;
         await playersService.clearSuspension(playerName);

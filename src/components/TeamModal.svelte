@@ -20,14 +20,16 @@
         onclose = undefined
     } = $props();
 
-    let teamPlayers = $state([]);
+    let teamPlayers = $state(/** @type {SquadPlayer[]} */ ([]));
     let loadingError = $state(false);
 
     /** @type {{ rounds: any[], knockoutBracket: any[] }} */
     let gamesData = $state({ rounds: [], knockoutBracket: [] });
 
     // Extract team color from team name for avatar colors
-    let teamColor = $derived(teamName?.split(' ')[0].toLowerCase() || 'default');
+    let teamColor = $derived(
+        /** @type {TeamColour} */ (teamName?.split(' ')[0].toLowerCase() || 'default')
+    );
 
     /**
      * Accumulate per-player action counts from a match side into a stats map.
@@ -116,9 +118,9 @@
                 ]);
 
                 const teams = teamResponse.teams || {};
-                const players = teams[teamName] || [];
+                const players = /** @type {Array<PlayerWithElo | null>} */ (teams[teamName] || []);
                 teamPlayers = players
-                    .filter((player) => player !== null)
+                    .filter(/** @returns {p is PlayerWithElo} */ (p) => p !== null)
                     .map((player) => ({
                         name: player.name,
                         avatar: player.avatar || null,

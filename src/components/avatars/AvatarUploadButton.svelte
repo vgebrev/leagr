@@ -8,10 +8,13 @@
     let { avatarUrl = null, hasPendingAvatar = false, size = 'lg', onUpload } = $props();
 
     let uploading = $state(false);
-    let fileInput = $state(null);
+    /** @type {HTMLInputElement | null} */
+    let fileInput = $state(/** @type {HTMLInputElement | null} */ (null));
 
+    /** @param {Event} event */
     async function handleFileSelect(event) {
-        const file = event.target.files?.[0];
+        const input = /** @type {HTMLInputElement} */ (event.target);
+        const file = input.files?.[0];
         if (!file) return;
 
         uploading = true;

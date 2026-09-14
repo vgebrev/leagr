@@ -11,7 +11,9 @@
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Extract team color from team name (first word)
-    const teamColor = $derived(data?.teamName?.split(' ')[0]?.toLowerCase() || 'default');
+    const teamColor = $derived(
+        /** @type {TeamColour} */ (data?.teamName?.split(' ')[0]?.toLowerCase() || 'default')
+    );
 
     // Calculate delays
     const badgeDelay = initialDelay;
