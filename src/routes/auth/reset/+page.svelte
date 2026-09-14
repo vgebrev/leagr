@@ -145,7 +145,7 @@
                         bind:value={newAccessCode}
                         placeholder="Enter new access code"
                         required
-                        classes={{ wrapper: 'flex-1 font-mono' }}
+                        classes={{ div: 'flex-1 font-mono' }}
                         class="dark:bg-gray-800" />
                     <Button
                         type="button"

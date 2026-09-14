@@ -3,8 +3,7 @@
 
     /**
      * @typedef {Object} CompetitionTimeControlsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {RegistrationWindow} leagueSettings.registrationWindow - The registration window configuration
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      * @property {function(string): void} onUpdateStartDayOffset - The callback to update the start day offset
      * @property {function(string): void} onUpdateTeamDrawDayOffset - The callback to update the team draw day offset

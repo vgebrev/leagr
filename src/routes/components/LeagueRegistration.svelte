@@ -163,7 +163,7 @@
                 bind:value={subdomain}
                 placeholder="your-league"
                 disabled={mode === 'existing'}
-                classes={{ wrapper: 'w-full flex-1' }}
+                classes={{ div: 'w-full flex-1' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <span class="text-sm text-gray-500 dark:text-gray-300">.{urlHost}</span>
@@ -221,7 +221,7 @@
                 type="text"
                 bind:value={accessCode}
                 placeholder="XXXX-XXXX-XXXX"
-                classes={{ wrapper: 'flex-1 font-mono' }}
+                classes={{ div: 'flex-1 font-mono' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button
@@ -250,7 +250,7 @@
                 type="text"
                 bind:value={adminCode}
                 placeholder="XXXX-XXXX-XXXX"
-                classes={{ wrapper: 'flex-1 font-mono' }}
+                classes={{ div: 'flex-1 font-mono' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button

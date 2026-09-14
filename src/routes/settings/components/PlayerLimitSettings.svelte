@@ -4,8 +4,7 @@
 
     /**
      * @typedef {Object} PlayerLimitSettingsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {number} leagueSettings.playerLimit - The default player limit for the league
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 
@@ -34,7 +33,7 @@
                 type="number"
                 step={1}
                 min={0}
-                classes={{ wrapper: 'w-full' }}
+                classes={{ div: 'w-full' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button type="submit">

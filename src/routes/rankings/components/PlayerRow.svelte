@@ -31,8 +31,11 @@
             params.set('date', dateParam);
         }
         const queryString = params.toString();
-        const url = queryString ? `/rankings/${player}?${queryString}` : `/rankings/${player}`;
-        goto(resolve(url));
+        goto(
+            queryString
+                ? resolve(`/rankings/${player}?${queryString}`)
+                : resolve(`/rankings/${player}`)
+        );
     }
 
     /** Handles sorting when a column header is clicked.

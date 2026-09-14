@@ -101,7 +101,7 @@
                     bind:value={email}
                     placeholder="your.email@example.com"
                     required
-                    classes={{ wrapper: 'w-full' }}
+                    classes={{ div: 'w-full' }}
                     class="dark:bg-gray-800" />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-300">
                     Enter the email address associated with this league

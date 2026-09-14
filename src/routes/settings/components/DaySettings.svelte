@@ -6,10 +6,8 @@
     /**
      * @typedef {Object} DaySettingsProps
      * @property {string} date - The date for the day-specific settings
-     * @property {Object} daySettings - The day-specific settings object
-     * @property {number} daySettings.playerLimit - The player limit for this specific day
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {number} leagueSettings.playerLimit - The default player limit for the league
+     * @property {DaySettings} daySettings - The day-specific settings object
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the day settings
      */
 
@@ -39,7 +37,7 @@
                 step={1}
                 min={0}
                 placeholder="Leave blank to use the league default ({leagueSettings.playerLimit})"
-                classes={{ wrapper: 'w-full' }}
+                classes={{ div: 'w-full' }}
                 class="!bg-gray-50 dark:!bg-gray-800" />
             <Button type="submit">
                 <CheckCircleSolid class="me-2 h-4 w-4" /> Set

@@ -60,7 +60,7 @@
                 bind:value={adminCode}
                 placeholder="Enter admin code"
                 required
-                classes={{ wrapper: 'w-full font-mono' }}
+                classes={{ div: 'w-full font-mono' }}
                 class="!bg-gray-50 dark:!bg-gray-800" />
         </div>
 

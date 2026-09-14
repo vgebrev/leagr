@@ -25,7 +25,7 @@ export async function POST({ request, locals }) {
     }
 
     // Check if access code matches
-    const isValid = accessCode.trim() === locals.leagueInfo.accessCode;
+    const isValid = accessCode.trim() === locals.leagueInfo?.accessCode;
 
     if (isValid) {
         return json({
