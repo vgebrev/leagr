@@ -46,7 +46,7 @@ export class RankingsManager {
 
     /**
      * Set the league ID for this manager instance
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @returns {RankingsManager} - Fluent interface
      */
     setLeague(leagueId) {

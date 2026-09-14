@@ -1,5 +1,5 @@
 {
-    "errors": 890,
+    "errors": 835,
     "warnings": 29,
     "files": {
         "src/components/avatars/Avatar.svelte": 1,
@@ -30,7 +30,6 @@
         "src/lib/client/services/teams.svelte.js": 19,
         "src/lib/client/services/whistle.js": 1,
         "src/lib/client/stores/loading.js": 1,
-        "src/lib/server/fantasyManager.js": 54,
         "src/lib/server/imageProcessor.js": 6,
         "src/lib/server/logger.js": 11,
         "src/lib/server/momentum.js": 1,
@@ -59,7 +58,7 @@
         "src/routes/api/leagues/reset-access-code/+server.js": 3,
         "src/routes/api/leagues/validate-reset-code/+server.js": 3,
         "src/routes/api/news/+server.js": 2,
-        "src/routes/api/players/+server.js": 6,
+        "src/routes/api/players/+server.js": 5,
         "src/routes/api/rankings/[player]/+server.js": 4,
         "src/routes/api/rankings/+server.js": 2,
         "src/routes/api/settings/+server.js": 2,

@@ -41,7 +41,7 @@ export class AvatarManager {
 
     /**
      * Set the league ID for this manager instance
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @returns {AvatarManager} - Fluent interface
      */
     setLeague(leagueId) {

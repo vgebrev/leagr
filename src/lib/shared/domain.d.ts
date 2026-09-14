@@ -862,7 +862,7 @@ declare global {
         price: number;
         expectedPoints: number;
         observedMean: number | null;
-        breakdown: Record<string, number>;
+        breakdown: Record<string, number> | null;
         sessions: number;
         provisional: boolean;
         credibility: number;
@@ -898,6 +898,85 @@ declare global {
     interface FantasyResults {
         settledAt: string;
         playerPoints: Record<string, SessionFantasyPoints>;
+    }
+
+    /** What buildWeeklyPrices returns: the week's priced pool plus its band. */
+    interface WeeklyPrices {
+        date: string;
+        asOf: string | null;
+        regime: string[];
+        budget: number;
+        squadSize: number;
+        prices: PriceEntry[];
+        /** Absent from the degenerate early return, when there is no pool to price. */
+        poolSize?: number;
+        priceRange?: { low: number | null; high: number | null };
+    }
+
+    /** One market row as the fantasy API presents it. */
+    interface FantasyMarketRow {
+        playerName: string;
+        price: number;
+        expectedPoints: number | null;
+        provisional: boolean;
+        elo: number | null;
+        avatar: string | null;
+        /** Priced into the frozen market but no longer signed up. */
+        withdrawn: boolean;
+        points: number | null;
+    }
+
+    /** One squad as the fantasy API presents it. Owner hashes never cross this boundary. */
+    interface FantasyPresentedEntry {
+        teamName: string;
+        ownerName: string;
+        players: string[];
+        captain: string | null;
+        cost: number;
+        valid: boolean;
+        invalidReason: string | null;
+        withdrawnPlayers: string[];
+        points: number | null;
+        isMine: boolean;
+        updatedAt: string;
+        rank?: number | null;
+    }
+
+    /** Where the session sits relative to the fantasy entry window. */
+    interface FantasyWindowState {
+        state: 'pending' | 'open' | 'closed';
+        reason: string;
+    }
+
+    /** The full fantasy payload returned to the client. */
+    interface FantasyState {
+        date: string;
+        squadSize: number;
+        budget: number;
+        asOf: string | null;
+        locked: boolean;
+        squadsRevealed: boolean;
+        scoring: FantasyScoringConfig;
+        statTypes: string[];
+        marketReady: boolean;
+        marketNotice: string;
+        windowState: FantasyWindowState['state'];
+        windowReason: string;
+        settled: boolean;
+        settleHint: string;
+        market: FantasyMarketRow[];
+        entries: FantasyPresentedEntry[];
+        myEntry: FantasyPresentedEntry | null;
+    }
+
+    /** Everything the fantasy lock rules and market need from the rest of the app. */
+    interface FantasyContext {
+        settings: ConsolidatedSettings;
+        config: FantasyConfig;
+        players: PlayersData;
+        games: SessionGames;
+        playerOwners: OwnersMap;
+        avatars: AvatarsData;
     }
 
     interface FantasyFile {

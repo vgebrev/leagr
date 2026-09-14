@@ -738,6 +738,7 @@ export function priceInPool(mu, low, high, pricing) {
  * @param {string} params.date - the session being priced
  * @param {Record<string, PlayerRankingData>} [params.previousYearPlayers]
  * @param {FantasyConfig} [params.config]
+ * @returns {WeeklyPrices}
  */
 export function buildWeeklyPrices({
     players,
@@ -880,7 +881,7 @@ export function bestSquad(candidates, budget, size, valueOf = defaultSquadValue)
  * @param {string} date
  * @param {FantasyScoringConfig} weights - config.scoring
  * @param {(keyof SessionStats)[]} [regimeTypes]
- * @returns {Map<string, {total: number, breakdown: Record<string, number>}>}
+ * @returns {Map<string, SessionFantasyPoints>}
  */
 export function sessionActuals(players, date, weights, regimeTypes = STAT_TYPES) {
     const actuals = new Map();
