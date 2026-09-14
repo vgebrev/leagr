@@ -29,12 +29,6 @@ import { createAvatarManager } from './avatarManager.js';
  * @property {YearRecapTeamRecord} cupStats
  */
 
-/**
- * @typedef {Object} RankingsData
- * @property {string[]} calculatedDates
- * @property {Record<string, any>} players
- */
-
 /** @typedef {Record<string, { avatar?: string | null }>} AvatarMap */
 
 /**

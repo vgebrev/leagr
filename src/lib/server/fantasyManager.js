@@ -41,19 +41,6 @@ export class FantasyError extends Error {
 }
 
 /**
- * @typedef {Object} FantasyEntry
- * @property {string} owner - HMAC client hash; never leaves the server
- * @property {string|null} ownerName - the owner's own registered player, resolved at save time
- * @property {string} teamName
- * @property {string[]} players
- * @property {string|null} captain - one of `players`, scored twice; null for a squad with none
- * @property {number} cost
- * @property {number|null} points
- * @property {string} createdAt
- * @property {string} updatedAt
- */
-
-/**
  * Weekly fantasy game: the squad store, its lock rules, and settlement.
  *
  * Pricing itself lives in the pure `fantasyPricing.js`; this class is the I/O half —

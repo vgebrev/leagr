@@ -50,14 +50,6 @@ const EPS = 1e-9;
 export const PRIOR_ELO_BETA = 0.554;
 export const PRIOR_HONOURS_GAMMA = 0.048;
 
-/**
- * @typedef {Object} FantasyConfig
- * @property {Record<string, number>} scoring
- * @property {Record<string, number>} pricing
- * @property {Record<string, number>} availability
- * @property {Record<string, number>} squad
- */
-
 /** @type {FantasyConfig} */
 export const DEFAULT_FANTASY_CONFIG = {
     // Points for one player-session. Save weight is deliberately low relative to its
@@ -174,8 +166,8 @@ const STAT_WEIGHT_KEYS = {
  * session from before full tracking cannot be compared against a fully tracked one.
  *
  * @param {Object} entry - a `history[date]` entry from rankings-YYYY.json
- * @param {Record<string, number>} weights - config.scoring
- * @param {(keyof import('./momentum.js').SessionStats)[]} regimeTypes - stat types to pay for
+ * @param {FantasyScoringConfig} weights - config.scoring
+ * @param {(keyof SessionStats)[]} regimeTypes - stat types to pay for
  * @returns {{total: number, breakdown: Record<string, number>}|null} null when the player did not attend
  */
 export function sessionFantasyPoints(entry, weights, regimeTypes = STAT_TYPES) {
@@ -275,7 +267,7 @@ export function recencyWeightedMean(observations, halfLifeWeeks) {
  * @param {Set<string>} params.attendedDates
  * @param {string} params.asOf
  * @param {number} params.leagueRate - pooled attendance rate, the shrinkage target
- * @param {Record<string, number>} params.config - config.availability
+ * @param {FantasyAvailabilityConfig} params.config - config.availability
  * @param {number} [params.activeNoShows]
  * @param {boolean} [params.suspended]
  * @returns {{value: number, weightedSessions: number, rawRate: number}}
@@ -322,7 +314,7 @@ export function computeAvailability({
  * a single outlier cannot compress the rest of the pool.
  * @param {number} ewp
  * @param {number} anchor - the EWP that maps to the ceiling
- * @param {Record<string, number>} pricing - config.pricing
+ * @param {FantasyPricingConfig} pricing - config.pricing
  */
 export function priceFromExpectedPoints(ewp, anchor, pricing) {
     const { floor, ceiling, step } = pricing;
@@ -365,7 +357,7 @@ export function deriveBudget(prices, squad) {
  * @param {Object} playerData
  * @param {string[]} allDates - every session date the league played, ascending
  * @param {{types: any[], isInRegime: (d: string) => boolean}} regime
- * @param {Record<string, number>} weights
+ * @param {FantasyScoringConfig} weights
  */
 function buildTimeline(playerData, allDates, regime, weights) {
     const history = playerData.history ?? {};
@@ -673,7 +665,7 @@ export function buildPrices({
  * @param {number} mu - expected points per session
  * @param {number} low - the expected points that map to the floor
  * @param {number} high - the expected points that map to the ceiling
- * @param {Record<string, number>} pricing - config.pricing
+ * @param {FantasyPricingConfig} pricing - config.pricing
  */
 export function priceInPool(mu, low, high, pricing) {
     const { floor, ceiling, step } = pricing;
@@ -825,8 +817,8 @@ export function bestSquad(candidates, budget, size, valueOf = (c) => c.expectedP
  * What every player in a session actually scored, for settling the week's game.
  * @param {Record<string, Object>} players - rankings-YYYY.json players
  * @param {string} date
- * @param {Record<string, number>} weights - config.scoring
- * @param {(keyof import('./momentum.js').SessionStats)[]} [regimeTypes]
+ * @param {FantasyScoringConfig} weights - config.scoring
+ * @param {(keyof SessionStats)[]} [regimeTypes]
  * @returns {Map<string, {total: number, breakdown: Record<string, number>}>}
  */
 export function sessionActuals(players, date, weights, regimeTypes = STAT_TYPES) {

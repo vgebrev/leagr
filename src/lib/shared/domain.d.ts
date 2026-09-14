@@ -231,6 +231,467 @@ declare global {
     }
 
     // ---------------------------------------------------------------------
+    // Session file: data/{leagueId}/YYYY-MM-DD.json
+    // ---------------------------------------------------------------------
+
+    interface PlayersData {
+        available: string[];
+        waitingList: string[];
+    }
+
+    /**
+     * teamName -> player slots. A slot is null when the team was drawn with a gap;
+     * 24 of 273 stored team arrays contain one, so consumers must handle it.
+     */
+    type TeamsData = Record<string, Array<string | null>>;
+
+    /** playerName -> HMAC client hash. Never leaves the server. */
+    type OwnersMap = Record<string, string>;
+
+    interface GameData {
+        players?: PlayersData;
+        teams?: TeamsData;
+        settings?: LeagueSettings;
+    }
+
+    interface DataOptions {
+        players?: boolean;
+        teams?: boolean;
+        settings?: boolean;
+    }
+
+    interface DrawHistoryStep {
+        step: number;
+        player: string;
+        fromPot: number;
+        toTeam: string;
+        potPlayersRemaining: number;
+    }
+
+    interface DrawHistoryData {
+        method: string;
+        initialPots: Pot[];
+        drawHistory: DrawHistoryStep[];
+    }
+
+    // ---------------------------------------------------------------------
+    // Team generation
+    // ---------------------------------------------------------------------
+
+    interface PlayerTraits {
+        isFinisher: boolean;
+        isAttacker: boolean;
+        isDefender: boolean;
+        isShotStopper: boolean;
+    }
+
+    /** 0 = not held, 1 = held, 2 = elite. Keyed by the same names as PlayerTraits. */
+    type TraitTiers = Record<keyof PlayerTraits, 0 | 1 | 2>;
+
+    interface ProvisionalPlayerData {
+        name: string;
+        elo: number;
+        actualElo: number;
+        isProvisional: boolean;
+        attackingRating: number;
+        controlRating: number;
+        avatar: string | null;
+        appearances: number;
+        traits: PlayerTraits;
+        playerProfile: string[];
+    }
+
+    interface Pot {
+        name: string;
+        players: ProvisionalPlayerData[];
+    }
+
+    interface TeamConfig {
+        teams: number;
+        teamSizes: number[];
+    }
+
+    /** Contents of data/{leagueId}/teammate-history.json. */
+    interface TeammateHistoryData {
+        leagueId: string;
+        /** Index order defines both matrix axes. */
+        players: string[];
+        /** P x P symmetric; matrix[i][j] is how often i and j were teammates. */
+        matrix: number[][];
+        totalSessions: number;
+        lastUpdated: string;
+        metadata: {
+            totalPlayers: number;
+            totalUniquePairs: number;
+            maxPairings: number;
+        };
+    }
+
+    // ---------------------------------------------------------------------
+    // Rankings file: data/{leagueId}/rankings-YYYY.json
+    // ---------------------------------------------------------------------
+
+    interface PlayerElo {
+        rating: number;
+        lastDecayAt: string | null;
+        gamesPlayed: number;
+    }
+
+    interface EloCarryOver {
+        rating: number;
+        gamesPlayed: number;
+        lastAppearance?: string | null;
+    }
+
+    /** Per-session stat totals as stored in rankings history (short field names). */
+    interface SessionStats {
+        goals?: number | null;
+        offActions?: number | null;
+        defActions?: number | null;
+        saveActions?: number | null;
+    }
+
+    /** Per-session stat totals as computed in rankings.js (long field names). */
+    interface SessionStatTotals {
+        goals: number;
+        offensiveActions: number;
+        defensiveActions: number;
+        saveActions: number;
+    }
+
+    interface RankingPerformance {
+        leaguePosition?: number | null;
+        cupProgress?: string | null;
+        leagueWinner?: boolean;
+        cupWinner?: boolean;
+    }
+
+    interface PerSessionNorm {
+        perSession: number | null;
+        norm: number | null;
+    }
+
+    interface SaveActionsRating {
+        perSession: number | null;
+        total: number | null;
+        rateNorm: number | null;
+        volumeNorm: number | null;
+        norm: number | null;
+    }
+
+    interface RankingRatings {
+        elo: number;
+        eloGames: { allTime: number; season: number };
+        attacking: number | null;
+        control: number | null;
+        teamGF: PerSessionNorm | null;
+        teamGA: PerSessionNorm | null;
+        goals: PerSessionNorm | null;
+        offActions: PerSessionNorm | null;
+        defActions: PerSessionNorm | null;
+        saveActions: SaveActionsRating | null;
+    }
+
+    /**
+     * One `players[name].history[date]` entry. `ratings` and `ranking` are always
+     * written; the rest only on dates the player actually attended.
+     */
+    interface RankingHistoryEntry {
+        team?: string;
+        points?: {
+            appearance: number;
+            match: number;
+            bonus: number;
+            knockout: number;
+            total: number;
+        };
+        performance?: RankingPerformance;
+        stats?: SessionStats;
+        ratings: RankingRatings;
+        ranking: { rank: number; totalPlayers: number; rankingPoints: number };
+    }
+
+    interface PlayerRankingData {
+        points: number;
+        appearances: number;
+        history: Record<string, RankingHistoryEntry>;
+        elo: PlayerElo | null;
+        seasonEloGames: number;
+        indGoals: number;
+        offActions: number;
+        defActions: number;
+        saveActions: number;
+        sessionsWithGoals: number;
+        sessionsWithOffActions: number;
+        sessionsWithDefActions: number;
+        sessionsWithSaveActions: number;
+        sessionsInGoal: number;
+        lastAppearance: string | null;
+        rawAverage: number;
+        weightedAverage: number;
+        rankingPoints: number;
+        pullFactor: number;
+        hasFullConfidence: boolean;
+        gamesUntilFullConfidence: number;
+        rank: number;
+        previousRank: number | null;
+        rankMovement: number;
+        isNew: boolean;
+        leagueWins: number;
+        cupWins: number;
+        attackingRating: number | null;
+        controlRating: number | null;
+        goalsForPerSession: number;
+        goalsAgainstPerSession: number;
+        teamGFNorm: number | null;
+        teamGANorm: number | null;
+        goalsNorm: number | null;
+        offActionsNorm: number | null;
+        defActionsNorm: number | null;
+        saveActionsNorm: number | null;
+        traits: PlayerTraits;
+        traitTiers: TraitTiers;
+        playerProfile: string[];
+        /**
+         * Not persisted in rankings-YYYY.json. Merged in at runtime by
+         * teamGenerationContext.mergeAvatars() so draw data carries avatars.
+         */
+        avatar?: string | null;
+    }
+
+    /** The minimum a player record needs to take part in a ranking pass. */
+    interface RankablePlayer {
+        points: number;
+        appearances: number;
+        history: Record<string, RankingHistoryEntry>;
+        elo: PlayerElo | null;
+    }
+
+    /**
+     * A record part-way through the rankings pipeline. calculateEnhancedRankings emits
+     * these and assigns `rank`; rank movement, traits and norms are filled in by later
+     * passes. Only the persisted rankings-YYYY.json holds complete PlayerRankingData.
+     */
+    type EnrichingPlayerRankingData = RankablePlayer & Partial<PlayerRankingData>;
+
+    interface RankingMetadata {
+        globalAverage: number;
+        minAverage: number;
+        maxAppearances: number;
+        confidenceThreshold: number;
+        confidenceFraction?: number;
+        pullStrength?: number;
+        totalPlayers?: number;
+        lastCalculated: string;
+    }
+
+    interface RankingsData {
+        lastUpdated: string | null;
+        calculatedDates: string[];
+        players: Record<string, PlayerRankingData>;
+        rankingMetadata?: RankingMetadata;
+    }
+
+    /** Rankings players reduced to just their history - what the feed builders consume. */
+    type PlayersWithHistory = Record<string, { history?: Record<string, RankingHistoryEntry> }>;
+
+    interface MatchResult {
+        home: string;
+        away: string;
+        homeScore: number;
+        awayScore: number;
+    }
+
+    interface TeamStats {
+        points: number;
+        gf: number;
+        ga: number;
+    }
+
+    // ---------------------------------------------------------------------
+    // Discipline: data/{leagueId}/discipline.json
+    // ---------------------------------------------------------------------
+
+    interface Suspension {
+        date: string;
+        reason: string;
+        applied: string;
+    }
+
+    interface DisciplineRecord {
+        activeNoShows: string[];
+        clearedNoShows: Array<{ date: string; clearedOn: string }>;
+        suspensions: Suspension[];
+        totalSuspensions: number;
+        revertedSuspensions?: Array<Suspension & { revertedOn: string }>;
+    }
+
+    interface DisciplineData {
+        lastUpdated: string | null;
+        players: Record<string, DisciplineRecord>;
+    }
+
+    // ---------------------------------------------------------------------
+    // Avatars, logos, noun pool
+    // ---------------------------------------------------------------------
+
+    interface PlayerAvatarRecord {
+        avatar?: string;
+        pendingAvatar?: string;
+    }
+
+    /** Contents of data/{leagueId}/avatars.json. */
+    type AvatarsData = Record<string, PlayerAvatarRecord>;
+
+    /** Contents of data/{leagueId}/logos.json: `${date}_${teamName}` -> filename. */
+    type LogosMap = Record<string, string>;
+
+    interface NounPool {
+        shuffledNouns: string[];
+        currentIndex: number;
+        cycleCount: number;
+    }
+
+    interface NounPoolStatus {
+        currentIndex: number;
+        totalNouns: number;
+        cycleCount: number;
+        percentUsed: number;
+    }
+
+    // ---------------------------------------------------------------------
+    // Momentum and news feed (derived, not persisted)
+    // ---------------------------------------------------------------------
+
+    interface MomentumEntry {
+        playerName: string;
+        value: number;
+        sessions: number;
+        provisional: boolean;
+        lastSession: string;
+        components: Record<string, number>;
+        series: Array<{ date: string; value: number }>;
+        trophyStreak?: Array<{ league: boolean; cup: boolean }>;
+        woodenSpoonStreak?: number;
+        badges?: Array<{ type: string; count: number }>;
+    }
+
+    interface Thread {
+        type: string;
+        notability: number;
+        player?: string;
+        streak?: number;
+        category?: string;
+        outcome?: 'extended' | 'broken' | 'started' | 'carriedOver';
+        position?: number;
+        board?: string;
+        value?: number;
+        swing?: number;
+        team?: string;
+        runnerUp?: string | null;
+        finalist?: string | null;
+        points?: number | null;
+        margin?: number | null;
+        gd?: { winner: number; runnerUp: number } | null;
+        double?: boolean;
+        invincible?: boolean;
+        winners?: Array<{ category: string; players: string[]; value: number }>;
+    }
+
+    interface Card {
+        date: string;
+        state: 'preview' | 'recap';
+        threads: Thread[];
+    }
+
+    // ---------------------------------------------------------------------
+    // Fantasy: data/{leagueId}/fantasy/YYYY-MM-DD.json
+    // ---------------------------------------------------------------------
+
+    interface FantasyEntry {
+        /** HMAC client hash; never leaves the server. */
+        owner: string;
+        /** The owner's own registered player, resolved at save time. */
+        ownerName: string | null;
+        teamName: string;
+        players: string[];
+        /** One of `players`, scored twice; null for a squad with none. */
+        captain: string | null;
+        cost: number;
+        points: number | null;
+        createdAt: string;
+        updatedAt: string;
+    }
+
+    interface FantasyPriceMeta {
+        expectedPoints: number;
+        provisional: boolean;
+        elo: number | null;
+        sessions: number;
+    }
+
+    /** The board as persisted once the week locks. */
+    interface FrozenBoard {
+        lockedAt: string;
+        asOf: string | null;
+        regime: string[];
+        budget: number;
+        squadSize: number;
+        prices: Record<string, number>;
+        meta: Record<string, FantasyPriceMeta>;
+    }
+
+    interface PriceEntry {
+        playerName: string;
+        price: number;
+        expectedPoints: number;
+        observedMean: number | null;
+        breakdown: Record<string, number>;
+        sessions: number;
+        provisional: boolean;
+        credibility: number;
+        prior: number;
+        elo: number | null;
+    }
+
+    /** The board before it locks; #resolveBoard re-expands a FrozenBoard into this. */
+    interface LiveBoard {
+        asOf: string | null;
+        regime: string[];
+        budget: number;
+        squadSize: number;
+        prices: PriceEntry[];
+        locked?: boolean;
+    }
+
+    interface FantasyPointsBreakdown {
+        appearance: number;
+        goals: number;
+        offActions: number;
+        defActions: number;
+        saveActions: number;
+        results: number;
+        trophies: number;
+    }
+
+    interface SessionFantasyPoints {
+        total: number;
+        breakdown: FantasyPointsBreakdown;
+    }
+
+    interface FantasyResults {
+        settledAt: string;
+        playerPoints: Record<string, SessionFantasyPoints>;
+    }
+
+    interface FantasyFile {
+        date: string;
+        board: FrozenBoard | null;
+        entries: FantasyEntry[];
+        results: FantasyResults | null;
+    }
+
+    // ---------------------------------------------------------------------
     // Year recap
     // ---------------------------------------------------------------------
 

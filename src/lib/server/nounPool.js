@@ -7,21 +7,6 @@ const DATA_DIR = process.env.DATA_DIR || 'data';
 const mutex = new Mutex();
 
 /**
- * @typedef {Object} NounPool
- * @property {string[]} shuffledNouns - Shuffled array of all available nouns
- * @property {number} currentIndex - Current position in the shuffled array
- * @property {number} cycleCount - Number of times the pool has been reshuffled
- */
-
-/**
- * @typedef {Object} NounPoolStatus
- * @property {number} currentIndex - Current position in the pool
- * @property {number} totalNouns - Total number of nouns in the pool
- * @property {number} cycleCount - Number of complete cycles through the pool
- * @property {number} percentUsed - Percentage of current cycle used (0-100)
- */
-
-/**
  * Get the noun pool file path for a league
  * @param {string} leagueId - League identifier
  * @returns {string} File path to noun pool JSON

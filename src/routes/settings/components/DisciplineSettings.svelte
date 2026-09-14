@@ -2,12 +2,6 @@
     import { Input, Label, Toggle } from 'flowbite-svelte';
 
     /**
-     * @typedef {Object} DisciplineSettings
-     * @property {boolean} enabled - Whether the discipline system is enabled
-     * @property {number} noShowThreshold - Number of no-shows before suspension
-     */
-
-    /**
      * @typedef {Object} DisciplineSettingsProps
      * @property {Object} leagueSettings - The league-wide settings object
      * @property {DisciplineSettings} leagueSettings.discipline - The discipline configuration

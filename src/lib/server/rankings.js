@@ -14,50 +14,6 @@ import {
 } from '../shared/badges.js';
 
 /**
- * @typedef {{home: string, away: string, homeScore: number, awayScore: number}} MatchResult
- */
-
-/**
- * @typedef {Match & { round?: string }} KnockoutMatch
- */
-
-/**
- * @typedef {{points: number, gf: number, ga: number}} TeamStats
- */
-
-/**
- * @typedef {{rating: number, lastDecayAt: string | null, gamesPlayed: number}} PlayerElo
- */
-
-/**
- * @typedef {{rating: number, gamesPlayed: number, lastAppearance?: string | null}} EloCarryOver
- */
-
-/** @typedef {Record<string, any>} RankingDetailEntry */
-
-/** @typedef {Record<string, any>} PlayerRankingData */
-
-/**
- * @typedef {Object} RankingMetadata
- * @property {number} globalAverage
- * @property {number} minAverage
- * @property {number} maxAppearances
- * @property {number} confidenceThreshold
- * @property {number} [confidenceFraction]
- * @property {number} [pullStrength]
- * @property {number} [totalPlayers]
- * @property {string} lastCalculated
- */
-
-/**
- * @typedef {Object} RankingsData
- * @property {string | null} lastUpdated
- * @property {string[]} calculatedDates
- * @property {Record<string, PlayerRankingData>} players
- * @property {RankingMetadata} [rankingMetadata]
- */
-
-/**
  * @typedef {Object} SessionData
  * @property {Record<string, string[]>} [teams]
  * @property {{ rounds?: Round[], 'knockout-games'?: { bracket?: Match[] } }} [games]
@@ -313,7 +269,7 @@ export class RankingsManager {
     /**
      * Add knockout game goals to team stats
      * @param {Record<string, TeamStats>} teamStats - Team statistics object to update
-     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @param {KnockoutMatch[] | null | undefined} knockoutBracket - Knockout tournament bracket
      */
     addKnockoutGoalsToTeamStats(teamStats, knockoutBracket) {
         if (!knockoutBracket || !Array.isArray(knockoutBracket)) {
@@ -345,7 +301,7 @@ export class RankingsManager {
 
     /**
      * Calculate knockout points for players based on knockout game results
-     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @param {KnockoutMatch[] | null | undefined} knockoutBracket - Knockout tournament bracket
      * @param {Record<string, string[]>} teams - Teams data with player lists
      * @returns {Record<string, number>} Player knockout wins count
      */
@@ -504,7 +460,7 @@ export class RankingsManager {
      * @param {Map<string, PlayerRankingData>} playerTracker - Map of all player data
      * @param {Record<string, string[]>} teams - Teams data with player lists
      * @param {Round[]} rounds - Game rounds data
-     * @param {Match[] | null | undefined} knockoutBracket - Knockout tournament bracket
+     * @param {KnockoutMatch[] | null | undefined} knockoutBracket - Knockout tournament bracket
      * @param {string} date - Current session date
      * @param {Record<string, EloCarryOver>} eloCarryOver - ELO carry-over data from previous year
      */
@@ -850,7 +806,7 @@ export class RankingsManager {
         const confidenceThreshold = Math.max(1, Math.round(maxAppearances * CONFIDENCE_FRACTION));
 
         // Step 2: Calculate enhanced player data
-        /** @type {Record<string, PlayerRankingData>} */
+        /** @type {Record<string, EnrichingPlayerRankingData>} */
         const enhancedPlayers = {};
 
         Object.entries(rawRankings.players).forEach(([name, data]) => {
@@ -1027,7 +983,7 @@ export class RankingsManager {
      * Reserved scorer keys (__ownGoal__, __unassigned__) are excluded.
      *
      * @param {Round[]} rounds - League game rounds
-     * @param {Array|null|undefined} knockoutBracket - Knockout bracket matches
+     * @param {KnockoutMatch[]|null|undefined} knockoutBracket - Knockout bracket matches
      * @param {Record<string, string[]>} teams - Teams map
      * @returns {Record<string, {goals: number, offensiveActions: number, defensiveActions: number, saveActions: number}>}
      */
@@ -1198,6 +1154,7 @@ export class RankingsManager {
 
             for (const source of STAT_SOURCES) {
                 const band = bands[source.key];
+                /** @type {0 | 1 | 2} */
                 let tier = 0;
                 if (isEligible(playerData, source) && band.base != null) {
                     const norm = playerData[source.norm];
@@ -1569,6 +1526,7 @@ export class RankingsManager {
      */
     updateRanksForDate(date, playerTracker) {
         // Create snapshot of all players' cumulative data up to this date
+        /** @type {Record<string, RankablePlayer>} */
         const playersForRanking = {};
 
         playerTracker.forEach((playerData, playerName) => {

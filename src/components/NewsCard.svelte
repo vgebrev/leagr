@@ -12,24 +12,6 @@
     import { formatDisplayDate, titleCase } from '$lib/shared/helpers.js';
 
     /**
-     * @typedef {Object} Thread
-     * @property {string} type
-     * @property {string} [player]
-     * @property {number} [streak]
-     * @property {string} [category]
-     * @property {'extended'|'broken'|'started'|'carriedOver'} [outcome]
-     * @property {number} [position]
-     * @property {string} [team]
-     * @property {string|null} [runnerUp]
-     * @property {string|null} [finalist]
-     * @property {number|null} [points]
-     * @property {number|null} [margin]
-     * @property {{winner: number, runnerUp: number}|null} [gd]
-     * @property {boolean} [double]
-     * @property {boolean} [invincible]
-     */
-
-    /**
      * @type {{ card: { date: string, state: 'preview'|'recap', threads: Thread[] } }}
      */
     let { card } = $props();

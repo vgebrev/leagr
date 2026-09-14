@@ -11,27 +11,6 @@ function shuffle(arr) {
     return arr;
 }
 
-/** @typedef {{ teams: number, teamSizes: number[] }} TeamConfig */
-/** @typedef {Record<string, string[]>} TeamsMap */
-/** @typedef {{ players: Record<string, any> }} RankingsData */
-/** @typedef {{ players: string[], matrix: number[][] }} TeammateHistory */
-
-/**
- * @typedef {Object} ProvisionalPlayerData
- * @property {string} name
- * @property {number} elo
- * @property {number} actualElo
- * @property {boolean} isProvisional
- * @property {number} attackingRating
- * @property {number} controlRating
- * @property {string | null} avatar
- * @property {number} appearances
- * @property {{ isFinisher: boolean, isAttacker: boolean, isDefender: boolean, isShotStopper: boolean }} traits
- * @property {string[]} playerProfile
- */
-
-/** @typedef {{ name: string, players: ProvisionalPlayerData[] }} Pot */
-
 // Provisional rating constants
 const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
 const DEFAULT_ELO = 1000;
@@ -72,7 +51,7 @@ class TeamGenerator {
         this.drawHistory = [];
         /** @type {Pot[]} */
         this.initialPots = [];
-        /** @type {TeammateHistory | null} */
+        /** @type {TeammateHistoryData | null} */
         this.teammateHistory = null;
         /** @type {Array<{player1: string, player2: string, coAttendance?: number, probNone?: number}>} */
         this.overduePairs = [];
@@ -132,7 +111,7 @@ class TeamGenerator {
 
     /**
      * Set the teammate history for variance-conscious team generation
-     * @param {TeammateHistory | null} teammateHistory - Teammate history data with matrix and players
+     * @param {TeammateHistoryData | null} teammateHistory - Teammate history data with matrix and players
      * @returns {TeamGenerator} - Fluent interface
      */
     setTeammateHistory(teammateHistory) {
@@ -161,6 +140,20 @@ class TeamGenerator {
         this.drawHistory = [];
         this.initialPots = [];
         return this;
+    }
+
+    /**
+     * A player's ranking record, current year first and then the previous year for
+     * carry-over. A team slot can be null - a team drawn with a gap - and a null slot
+     * has no record, exactly as an unknown name has none.
+     * @param {string | null} playerName
+     * @returns {PlayerRankingData | undefined}
+     */
+    rankingRecordFor(playerName) {
+        if (!playerName) return undefined;
+        return (
+            this.rankings?.players?.[playerName] ?? this.previousYearRankings?.players?.[playerName]
+        );
     }
 
     /**
@@ -227,11 +220,7 @@ class TeamGenerator {
      */
     sortEstablishedPlayers(players) {
         const established = players.filter((name) => {
-            // Try current year first, fall back to previous year for carry-over
-            let playerData = this.rankings?.players?.[name];
-            if (!playerData && this.previousYearRankings?.players?.[name]) {
-                playerData = this.previousYearRankings.players[name];
-            }
+            const playerData = this.rankingRecordFor(name);
             const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
             return gamesPlayed >= GAMES_THRESHOLD;
         });
@@ -275,16 +264,10 @@ class TeamGenerator {
      * Get player data with provisional ratings calculated
      * @param {string} playerName - Player name
      * @param {{elo: number, attack: number, control: number}} anchors - Anchor values for provisional calc
-     * @returns {{name: string, elo: number, actualElo: number, isProvisional: boolean, attackingRating: number, controlRating: number, avatar: string|null, appearances: number}}
+     * @returns {ProvisionalPlayerData}
      */
     getProvisionalPlayerData(playerName, anchors) {
-        // Try current year rankings first
-        let playerData = this.rankings?.players?.[playerName];
-
-        // If player not in current year, fall back to previous year (for carry-over)
-        if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-            playerData = this.previousYearRankings.players[playerName];
-        }
+        const playerData = this.rankingRecordFor(playerName);
 
         const appearances = playerData?.appearances ?? 0;
         const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
@@ -384,14 +367,14 @@ class TeamGenerator {
     /**
      * Generate teams using random distribution
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
-     * @returns {Promise<TeamsMap>} Generated teams object
+     * @returns {Promise<TeamsData>} Generated teams object
      */
     async generateRandomTeams(config) {
         if (!this.players.length) {
             throw new TeamError('No players available for team generation', 400);
         }
 
-        /** @type {TeamsMap} */
+        /** @type {TeamsData} */
         const teams = {};
         const teamSizes = config.teamSizes;
         const shuffledPlayers = shuffle([...this.players]);
@@ -454,7 +437,7 @@ class TeamGenerator {
 
     /**
      * Calculate team ELO averages for balance assessment using provisional ratings
-     * @param {TeamsMap} teams - Teams object with player names
+     * @param {TeamsData} teams - Teams object with player names
      * @returns {number[]} Array of team ELO averages
      */
     calculateTeamEloAverages(teams) {
@@ -468,11 +451,7 @@ class TeamGenerator {
 
         Object.values(teams).forEach((teamPlayers) => {
             const teamEloSum = teamPlayers.reduce((sum, playerName) => {
-                // Try current year first, fall back to previous year for carry-over
-                let playerData = this.rankings?.players?.[playerName];
-                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                    playerData = this.previousYearRankings.players[playerName];
-                }
+                const playerData = this.rankingRecordFor(playerName);
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
                 // Use provisional ELO for consistency with pot sorting
@@ -493,7 +472,7 @@ class TeamGenerator {
     /**
      * Calculate team average rating for a given player rating key using provisional ratings.
      * All players now contribute (no skipping), with provisional values for newcomers.
-     * @param {TeamsMap} teams - Teams object with player names
+     * @param {TeamsData} teams - Teams object with player names
      * @param {'attackingRating'|'controlRating'} ratingKey
      * @param {number} [defaultValue=0.5] - Neutral fallback when no rated players are present
      * @returns {number[]} Array of team rating averages (0-1 scale)
@@ -515,11 +494,7 @@ class TeamGenerator {
             }
 
             const sum = teamPlayers.reduce((acc, playerName) => {
-                // Try current year first, fall back to previous year for carry-over
-                let playerData = this.rankings?.players?.[playerName];
-                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                    playerData = this.previousYearRankings.players[playerName];
-                }
+                const playerData = this.rankingRecordFor(playerName);
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualRating = playerData?.[ratingKey] ?? DEFAULT_RATING;
                 // Use provisional rating for all players
@@ -551,11 +526,11 @@ class TeamGenerator {
 
     /**
      * Extract all teammate pairs from generated teams
-     * @param {TeamsMap} teams - Teams object with player names
-     * @returns {string[][]} Array of player pairs
+     * @param {TeamsData} teams - Teams object with player names
+     * @returns {Array<Array<string | null>>} Array of player pairs; a slot may be null
      */
     extractTeammatePairs(teams) {
-        /** @type {string[][]} */
+        /** @type {Array<Array<string | null>>} */
         const pairs = [];
 
         Object.values(teams).forEach((team) => {
@@ -576,22 +551,23 @@ class TeamGenerator {
 
     /**
      * Check if a team configuration violates hard constraints
-     * @param {TeamsMap} teams - Teams object with team names as keys and player arrays as values
+     * @param {TeamsData} teams - Teams object with team names as keys and player arrays as values
      * @param {number} pairingLimit - Maximum allowed previous pairings (default: 3)
      * @param {number | null} eloDeltaLimit - Maximum allowed ELO delta between teams (optional)
      * @returns {boolean} True if configuration violates constraints
      */
     violatesHardConstraints(teams, pairingLimit = 3, eloDeltaLimit = null) {
         // Check pairing constraints
-        if (this.teammateHistory) {
+        const history = this.teammateHistory;
+        if (history) {
             const pairs = this.extractTeammatePairs(teams);
 
             for (const [player1, player2] of pairs) {
-                const index1 = this.teammateHistory.players.indexOf(player1);
-                const index2 = this.teammateHistory.players.indexOf(player2);
+                const index1 = player1 ? history.players.indexOf(player1) : -1;
+                const index2 = player2 ? history.players.indexOf(player2) : -1;
 
                 if (index1 >= 0 && index2 >= 0) {
-                    const pairingCount = this.teammateHistory.matrix[index1][index2];
+                    const pairingCount = history.matrix[index1][index2];
                     if (pairingCount >= pairingLimit) {
                         return true; // Pairing constraint violated
                     }
@@ -614,11 +590,12 @@ class TeamGenerator {
     /**
      * Calculate normalized pairing score (0-1) where lower is better (more novel).
      * Uses soft penalties for repeats and rewards fresh pairings.
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @returns {number} Normalized pairing score between 0 (ideal) and 1 (stale)
      */
     calculatePairingScoreNormalized(teams) {
-        if (!this.teammateHistory) {
+        const history = this.teammateHistory;
+        if (!history) {
             return 0; // Neutral/best score when no history is available
         }
 
@@ -628,12 +605,11 @@ class TeamGenerator {
         let totalScore = 0;
 
         pairs.forEach(([player1, player2]) => {
-            const index1 = this.teammateHistory.players.indexOf(player1);
-            const index2 = this.teammateHistory.players.indexOf(player2);
+            const index1 = player1 ? history.players.indexOf(player1) : -1;
+            const index2 = player2 ? history.players.indexOf(player2) : -1;
 
-            // Treat unknown players as never teamed
-            const pairingCount =
-                index1 >= 0 && index2 >= 0 ? this.teammateHistory.matrix[index1][index2] : 0;
+            // Treat unknown players (and null slots) as never teamed
+            const pairingCount = index1 >= 0 && index2 >= 0 ? history.matrix[index1][index2] : 0;
 
             let pairScore;
             if (pairingCount === 0) {
@@ -658,7 +634,7 @@ class TeamGenerator {
 
     /**
      * Check whether any overdue pair has both players present in the given teams.
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @returns {boolean} True if at least one overdue pair fully attends
      */
     hasAttendingOverduePairs(teams) {
@@ -678,13 +654,13 @@ class TeamGenerator {
      * reuniting none scores 1, and when only some fit the balance cap the most
      * starved pairs are preferred. Reunited pairs leave the overdue set on the
      * next draw, so the backlog rotates naturally.
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @returns {number} Reunion score [0, 1], 0 when no overdue pair attends
      */
     calculateReunionScoreNormalized(teams) {
         if (!this.overduePairs || this.overduePairs.length === 0) return 0;
 
-        /** @type {Map<string, string>} */
+        /** @type {Map<string | null, string>} */
         const teamOf = new Map();
         Object.entries(teams).forEach(([teamName, teamPlayers]) => {
             teamPlayers.forEach((player) => teamOf.set(player, teamName));
@@ -716,7 +692,7 @@ class TeamGenerator {
      * Calculate ELO spread balance to ensure each team has similar distribution of skill levels.
      * Prevents one team from getting all "top of pot" players while another gets all "bottom of pot".
      * Uses provisional ratings for consistency with pot sorting.
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @returns {number} Spread imbalance score (lower is better)
      */
     calculateEloSpreadBalance(teams) {
@@ -731,11 +707,7 @@ class TeamGenerator {
         // Calculate ELO distribution for each team using provisional ratings
         Object.values(teams).forEach((teamPlayers) => {
             const elos = teamPlayers.map((playerName) => {
-                // Try current year first, fall back to previous year for carry-over
-                let playerData = this.rankings?.players?.[playerName];
-                if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                    playerData = this.previousYearRankings.players[playerName];
-                }
+                const playerData = this.rankingRecordFor(playerName);
                 const gamesPlayed = playerData?.elo?.gamesPlayed ?? 0;
                 const actualElo = playerData?.elo?.rating ?? DEFAULT_ELO;
                 return this.calculateProvisionalRating(actualElo, gamesPlayed, anchors.elo);
@@ -784,11 +756,7 @@ class TeamGenerator {
     calculatePoolEloRange(sortedPlayers, minGamesForElo = 35, defaultElo = 1000) {
         if (!Array.isArray(sortedPlayers) || sortedPlayers.length === 0) return 0;
         const elos = sortedPlayers.map((name) => {
-            // Try current year first, fall back to previous year for carry-over
-            let playerData = this.rankings?.players?.[name];
-            if (!playerData && this.previousYearRankings?.players?.[name]) {
-                playerData = this.previousYearRankings.players[name];
-            }
+            const playerData = this.rankingRecordFor(name);
             const eloGames = playerData?.elo?.gamesPlayed ?? 0;
             return eloGames >= minGamesForElo
                 ? (playerData?.elo?.rating ?? defaultElo)
@@ -799,7 +767,7 @@ class TeamGenerator {
 
     /**
      * Calculate normalized scoring metrics for a given team configuration.
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @param {number} eloRange - Range of ELO values in the current pool
      * @param {number} hardEloDeltaLimit - Hard cap for acceptable ELO delta
      * @returns {{
@@ -914,7 +882,7 @@ class TeamGenerator {
      *
      * Returns 0 when no players have any traits (perfect balance by default).
      *
-     * @param {TeamsMap} teams - Generated teams object
+     * @param {TeamsData} teams - Generated teams object
      * @returns {number} Trait balance score [0, 1] where lower is better
      */
     calculateTraitBalance(teams) {
@@ -932,10 +900,7 @@ class TeamGenerator {
             for (const teamName of teamNames) {
                 let count = 0;
                 for (const playerName of teams[teamName]) {
-                    let playerData = this.rankings?.players?.[playerName];
-                    if (!playerData && this.previousYearRankings?.players?.[playerName]) {
-                        playerData = this.previousYearRankings.players[playerName];
-                    }
+                    const playerData = this.rankingRecordFor(playerName);
                     if (playerData?.traits?.[traitKey]) count++;
                 }
                 teamCounts.push(count);
@@ -960,7 +925,7 @@ class TeamGenerator {
      * Since team generation is randomized and iterative, we reconstruct a plausible
      * draw history that matches the final team assignments and follows the snake draft pattern.
      *
-     * @param {TeamsMap} teams - Final teams object
+     * @param {TeamsData} teams - Final teams object
      * @param {Pot[]} initialPots - Pots captured after best team selection
      * @param {string[]} teamNames - Team names in assignment order
      * @returns {Array<Record<string, any>>} Reconstructed draw steps
@@ -982,7 +947,7 @@ class TeamGenerator {
 
         // Group players from each team by their pot
         const teamsByPot = teamNames.map((teamName) => {
-            /** @type {string[][]} */
+            /** @type {Array<Array<string | null>>} */
             const playersByPot = [];
             for (let potIndex = 0; potIndex < initialPots.length; potIndex++) {
                 playersByPot.push([]);
@@ -1038,10 +1003,10 @@ class TeamGenerator {
 
     /**
      * Optimize teams using within-pot swaps to improve balance using normalized scoring.
-     * @param {TeamsMap} teams - Current team assignments
+     * @param {TeamsData} teams - Current team assignments
      * @param {string[]} sortedPlayers - Players sorted by ELO (same order used in generation)
      * @param {{ maxSwaps?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null }} options
-     * @returns {TeamsMap} Optimized teams object
+     * @returns {TeamsData} Optimized teams object
      */
     optimizeTeamsWithSwaps(teams, sortedPlayers, options = {}) {
         const {
@@ -1150,12 +1115,12 @@ class TeamGenerator {
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
      * @param {string[]} teamNames - Pre-generated team names
      * @param {string[]} sortedPlayers - Players sorted by ELO/ranking
-     * @returns {TeamsMap} Generated teams object
+     * @returns {TeamsData} Generated teams object
      */
     generateSeededTeamsIteration(config, teamNames, sortedPlayers) {
         const teamSizes = config.teamSizes;
         const numTeams = teamSizes.length;
-        /** @type {TeamsMap} */
+        /** @type {TeamsData} */
         const teams = {};
 
         // Initialise teams
@@ -1233,7 +1198,7 @@ class TeamGenerator {
      * Uses two-pass sorting: first establish pot structure from trusted players,
      * then calculate provisional ratings for newcomers based on weakest pot mean.
      * @param {TeamConfig} config - Team configuration { teams, teamSizes }
-     * @returns {Promise<TeamsMap>} Generated teams object
+     * @returns {Promise<TeamsData>} Generated teams object
      */
     async generateSeededTeams(config) {
         if (!this.players.length) {
@@ -1536,7 +1501,7 @@ class TeamGenerator {
     /**
      * Build a null-stripped roster map (team name -> array of player names) from a
      * teams object that may contain null/empty slots.
-     * @param {TeamsMap} teams - Teams object, possibly with null slots
+     * @param {TeamsData} teams - Teams object, possibly with null slots
      * @returns {Record<string, string[]>} Roster map without empty slots
      */
     stripEmptySlots(teams) {
@@ -1593,7 +1558,7 @@ class TeamGenerator {
      * one yielding the best normalized balance score is chosen (ELO delta breaks ties).
      *
      * Requires rankings/teammate history setters and prepareAnchors() to have been called.
-     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {TeamsData} teams - Current teams (may contain null slots)
      * @param {string} playerName - Player to place
      * @param {{ maxPlayersPerTeam?: number, eloRange?: number | null, hardEloDeltaLimit?: number | null }} [options]
      * @returns {string | null} Best team name, or null if no team has space
@@ -1645,7 +1610,7 @@ class TeamGenerator {
      * the best normalized balance score (ELO delta breaks ties).
      *
      * Requires rankings/teammate history setters and prepareAnchors() to have been called.
-     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {TeamsData} teams - Current teams (may contain null slots)
      * @param {string} teamName - Team to fill
      * @param {string[]} candidates - Candidate player names
      * @param {{ eloRange?: number | null, hardEloDeltaLimit?: number | null }} [options]
@@ -1689,7 +1654,7 @@ class TeamGenerator {
      * best-balanced team, stopping at the player cap or when all teams are full.
      *
      * Requires rankings/teammate history setters and prepareAnchors() to have been called.
-     * @param {TeamsMap} teams - Current teams (may contain null slots)
+     * @param {TeamsData} teams - Current teams (may contain null slots)
      * @param {string[]} orderedCandidates - Candidate players in priority order
      * @param {{ maxPlayersPerTeam?: number, playerLimit?: number, assignedCount?: number | null }} [options]
      * @returns {Array<{ player: string, team: string }>} Ordered assignment plan

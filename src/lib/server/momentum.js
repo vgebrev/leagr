@@ -37,23 +37,6 @@ const PLACEMENT_FALLBACK_K = 0.25;
 const CONTRIBUTION_FALLBACK_K = 1;
 
 /**
- * @typedef {Object} SessionStats
- * @property {number|null} [goals]
- * @property {number|null} [offActions]
- * @property {number|null} [defActions]
- * @property {number|null} [saveActions]
- */
-
-/**
- * @typedef {Object} HistoryEntry
- * @property {string} [team]
- * @property {{leaguePosition?: number|null, cupProgress?: string|null, leagueWinner?: boolean, cupWinner?: boolean}} [performance]
- * @property {SessionStats} [stats]
- */
-
-/** @typedef {Record<string, {history?: Record<string, HistoryEntry>}>} PlayersWithHistory */
-
-/**
  * Resolve effective momentum config by deep-merging league settings over defaults.
  * @param {Partial<LeagueSettings>|null|undefined} leagueSettings - Effective league settings object
  * @returns {MomentumSettings}
@@ -318,7 +301,7 @@ export function currentStreak(items, predicate) {
  * chronological. Sessions with no competition observed are skipped (a missed
  * week doesn't break the run); the run breaks on an observed no-win session.
  * A double-winning session yields both flags so it can be drawn stacked.
- * @param {Array<{date: string, entry: HistoryEntry}>} sessions - ascending date order
+ * @param {Array<{date: string, entry: RankingHistoryEntry}>} sessions - ascending date order
  * @returns {Array<{league: boolean, cup: boolean}>}
  */
 export function championsTrophyStreak(sessions) {
@@ -337,7 +320,7 @@ export function championsTrophyStreak(sessions) {
 
 /**
  * A player's history as [{date, entry}] in ascending date order.
- * @param {Record<string, HistoryEntry>|undefined} history
+ * @param {Record<string, RankingHistoryEntry>|undefined} history
  */
 function sortedHistory(history) {
     return Object.entries(history ?? {})
@@ -443,7 +426,7 @@ export function buildChampionsMomentum(players, config, now) {
         // Painted bar split: the games-derived league:cup weight of the player's
         // latest observed session. Presentational only.
         // observations is non-empty, so a qualifying session always exists
-        const last = /** @type {{date: string, entry: HistoryEntry}} */ (
+        const last = /** @type {{date: string, entry: RankingHistoryEntry}} */ (
             sessions.findLast(
                 ({ date, entry }) =>
                     sessionPlacement(entry.performance, teamCounts.get(date)) != null

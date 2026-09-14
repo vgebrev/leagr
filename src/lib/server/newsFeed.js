@@ -21,34 +21,6 @@ import {
     currentStreak
 } from './momentum.js';
 
-/** @typedef {import('./momentum.js').HistoryEntry} HistoryEntry */
-/** @typedef {Record<string, {history?: Record<string, HistoryEntry>}>} PlayersWithHistory */
-
-/**
- * @typedef {Object} Thread
- * @property {string} type
- * @property {number} notability
- * @property {string} [player]
- * @property {number} [streak]
- * @property {string} [category]
- * @property {'extended'|'broken'|'started'|'carriedOver'} [outcome]
- * @property {number} [position]
- * @property {string} [board]
- * @property {number} [value]
- * @property {number} [swing]
- * @property {string} [team]
- * @property {string|null} [runnerUp]
- * @property {string|null} [finalist]
- * @property {number|null} [points]
- * @property {number|null} [margin]
- * @property {{winner: number, runnerUp: number}|null} [gd]
- * @property {boolean} [double]
- * @property {boolean} [invincible]
- * @property {Array<{category: string, players: string[], value: number}>} [winners]
- */
-
-/** @typedef {{date: string, state: 'preview'|'recap', threads: Thread[]}} Card */
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Editorial knobs (v1). Streak threads score on run length with outcome
@@ -180,7 +152,7 @@ export function previewSessionDate(players, { asOf, competitionDays = [] }) {
 
 /**
  * A player's history as [{date, entry}] in ascending date order.
- * @param {Record<string, HistoryEntry>|undefined} history
+ * @param {Record<string, RankingHistoryEntry>|undefined} history
  */
 function sortedHistory(history) {
     return Object.entries(history ?? {})
@@ -199,7 +171,7 @@ function boundHistories(players, before) {
     /** @type {PlayersWithHistory} */
     const bounded = {};
     for (const [name, data] of Object.entries(players)) {
-        /** @type {Record<string, HistoryEntry>} */
+        /** @type {Record<string, RankingHistoryEntry>} */
         const filtered = {};
         for (const [date, entry] of Object.entries(data.history ?? {})) {
             if (date < before) filtered[date] = entry;
@@ -530,7 +502,7 @@ export function buildNewsFeed(players, config, options) {
             const before = sessions.filter((s) => s.date < date);
             const atDate = players[playerName]?.history?.[date];
             for (const category of BALLER_CATEGORIES) {
-                /** @param {{date: string, entry: HistoryEntry}} session */
+                /** @param {{date: string, entry: RankingHistoryEntry}} session */
                 const predicate = ({ date: d, entry }) => {
                     const value = category.valueOf(entry.stats);
                     const top = ballerTops.get(d)?.[category.type];

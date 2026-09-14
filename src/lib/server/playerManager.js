@@ -21,12 +21,6 @@ function getTransactionMutex(leagueId, date) {
 
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
 
-/** @typedef {{ available: string[], waitingList: string[] }} PlayersData */
-/** @typedef {Record<string, Array<string | null>>} TeamsData */
-/** @typedef {{ players?: PlayersData, teams?: TeamsData, settings?: LeagueSettings }} GameData */
-/** @typedef {{ players?: boolean, teams?: boolean, settings?: boolean }} DataOptions */
-/** @typedef {Record<string, string>} OwnersMap */
-
 /**
  * @typedef {Object} PlayerWithElo
  * @property {string} name
