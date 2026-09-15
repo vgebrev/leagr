@@ -12,7 +12,7 @@ class TeamsService {
     #settings = $state(defaultSettings);
 
     // State
-    /** @type {TeamsData} */
+    /** @type {EnhancedTeamsData} */
     teams = $state({});
 
     /** @type {string | null} */
@@ -72,22 +72,16 @@ class TeamsService {
 
     /** @type {PlayerWithElo[]} */
     unassignedPlayersWithElo = $derived.by(() => {
-        const assignedPlayerNames = $state(new Set());
-
-        // Collect all players currently assigned to teams
-        Object.values(this.teams).forEach((team) => {
-            team.forEach((player) => {
-                if (player) {
-                    // Handle both string players and player objects with name property
-                    const playerName = typeof player === 'string' ? player : player;
-                    assignedPlayerNames.add(playerName);
-                }
-            });
-        });
+        // A roster slot holds an enriched player object, or null for an empty slot, so
+        // the comparison against the available list has to go through the name.
+        const assignedPlayerNames = Object.values(this.teams)
+            .flat()
+            .filter((player) => player !== null)
+            .map((player) => player.name);
 
         // Return enhanced available players not assigned to any team
         return this.availablePlayersWithElo.filter(
-            (playerObj) => !assignedPlayerNames.has(playerObj.name)
+            (playerObj) => !assignedPlayerNames.includes(playerObj.name)
         );
     });
 
@@ -205,7 +199,7 @@ class TeamsService {
                 if (!detectedTeamName) {
                     // Find which team the player is in
                     for (const [name, roster] of Object.entries(this.teams)) {
-                        if (roster.includes(playerName)) {
+                        if (roster.some((player) => player?.name === playerName)) {
                             detectedTeamName = name;
                             break;
                         }
@@ -315,7 +309,7 @@ class TeamsService {
 
     /**
      * Apply an assignment API response (teams/players) to local state.
-     * @param {{teams?: TeamsData, players?: {available: PlayerWithElo[], waitingList: PlayerWithElo[]}, ownedByMe?: string[]}} result - API response with teams, players and ownedByMe
+     * @param {{teams?: EnhancedTeamsData, players?: {available: PlayerWithElo[], waitingList: PlayerWithElo[]}, ownedByMe?: string[]}} result - API response with teams, players and ownedByMe
      */
     #applyAssignmentResult(result) {
         this.teams = result.teams ?? {};

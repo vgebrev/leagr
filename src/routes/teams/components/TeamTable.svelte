@@ -19,7 +19,7 @@
      *   onPlayerClick?: ((playerName: string) => void) | null,
      *   onTeamClick?: ((teamName: string) => void) | null,
      *   assignablePlayers?: Array<string | PlayerWithElo>,
-     *   allTeams?: TeamsData,
+     *   allTeams?: EnhancedTeamsData,
      *   size?: 'sm' | 'md',
      *   showPlayerRankings?: boolean,
      *   showTeamRatings?: boolean,
@@ -220,10 +220,8 @@
         if (allTeams) {
             Object.values(allTeams).forEach((teamRoster) => {
                 teamRoster.forEach((player) => {
-                    if (player) {
-                        if (!players.includes(player)) {
-                            players.push(player);
-                        }
+                    if (player && !players.includes(player.name)) {
+                        players.push(player.name);
                     }
                 });
             });

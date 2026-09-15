@@ -321,6 +321,13 @@ declare global {
      */
     type TeamsData = Record<string, Array<string | null>>;
 
+    /**
+     * Teams as the client receives them. getAllDataWithElo() replaces each stored name
+     * with the enriched player, so anything served by /api/teams (and the teams/players,
+     * teams/auto-assign responses) carries objects here, not names.
+     */
+    type EnhancedTeamsData = Record<string, Array<PlayerWithElo | null>>;
+
     /** playerName -> HMAC client hash. Never leaves the server. */
     type OwnersMap = Record<string, string>;
 
