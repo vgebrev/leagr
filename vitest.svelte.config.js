@@ -11,7 +11,7 @@ export default defineConfig({
         setupFiles: ['test/setup.svelte.js'],
         globalTeardown: './test/setup/globalTeardown.js',
         silent: false,
-        reporter: 'default'
+        reporters: ['default']
     },
     resolve: {
         alias: {
