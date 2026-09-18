@@ -180,3 +180,61 @@ copy of the data directory:
 - **Egress is not restricted.** A miner still has outbound network access; what has changed is that
   it has nowhere writable to persist, no capabilities, and a hard resource ceiling.
 - The IIS `web.config` change (§3) is manual and outside the deploy script's rollback.
+
+## Post-deploy note (2026-09-18 cutover)
+
+Deployed as `leagr:2.29.3`. Verified live: `ReadonlyRootfs=true`, `User=65532`, `CapDrop=[ALL]`,
+`no-new-privileges`, 1g/1.5cpu/256 pids, log rotation, `/tmp` tmpfs, and `netstat` showing
+`127.0.0.1:3001` only with IIS connected through it. The remote secrets file was removed by the
+script as intended.
+
+One thing went wrong and is worth recording. `app.log` had been archived _before_ the deploy, but
+the old root container was still running and recreated it by path on its next log write - so the
+new nonroot container inherited a fresh root-owned file and could not write it. `writeToFile`
+catches the `EACCES` and falls back to `console.error`, so the only visible symptom was `app.log`
+stopping 15 seconds before `.State.StartedAt` while `docker logs leagr` filled with the error.
+
+Fixed by archiving the file again with the new container already live, after which it recreated
+`app.log` as uid 65532. **The ordering rule: `chown` the data tree before the deploy (root ignores
+permission bits, so the old container is unaffected), but archive `app.log` after the new container
+is running.**
+
+Confirmed working on real traffic afterwards: `league=pirates` still resolves through IIS, and
+client IPs now log without the ARR source port (`ip=196.39.167.29`), with repeated requests
+collapsing to a single rate-limit identity.
+
+## CI scan follow-up (2026-09-18)
+
+The first CI run failed to even resolve the workflow: `aquasecurity/trivy-action@0.28.0` does not
+exist. The tags are `v`-prefixed and the current release is `v0.36.0`; `docker/build-push-action@v6`
+was stale too (that project is on v7). Both had been written from memory rather than checked.
+
+Resolved by verifying against the GitHub API and then:
+
+- **Dropping `build-push-action` entirely.** Nothing is being pushed, so a plain
+  `run: docker build -t leagr:ci .` does the job without a third-party action or a buildx setup step.
+- **Pinning `trivy-action` to a commit SHA** (`ed142fd...`, v0.36.0) rather than a tag. A tag is
+  mutable and an action runs with access to the workflow token, so this is the same reasoning that
+  put digests on the base images. Its input names were checked against the action definition at that
+  exact SHA.
+- **Renaming the job** from `lint-and-test` to `verify` / "Lint, test, build & scan", since it no
+  longer only lints and tests. Note this changes the status-check name, so any branch protection
+  rule requiring `lint-and-test` needs updating.
+
+### The scan does not pass on the base image, and why it is ignored
+
+Running Trivy locally with the CI settings exits 1: six HIGH/CRITICAL CVEs (one CRITICAL) in
+`libssl3` 3.0.18, all `status: fixed`, so `ignore-unfixed` does not filter them. Re-resolving the
+distroless digest does not help - the pinned digest is already the current `:nonroot` build, and
+upstream has not rebuilt with the patched openssl.
+
+They are ignored via a documented `.trivyignore`, on evidence rather than convenience: **Node
+bundles its own OpenSSL (3.5.5), and nothing in the image links the Debian libssl3.** That was
+verified by scanning every `.so`, `.node` and the node binary for a `libssl.so.3` reference - the
+only match was `libssl.so.3` itself. All outbound TLS (Mailgun, OpenAI) goes through Node's OpenSSL.
+
+Keeping `exit-code: 1` with a narrow ignore list preserves the signal: anything new still fails the
+build. The alternative, `exit-code: 0`, would have made the scan permanently advisory. The entries
+carry a re-check note and should be dropped when the base ships >= 3.0.20.
+
+Verified locally with the exact CI settings: **exit 0**, with every npm package scanning clean.
