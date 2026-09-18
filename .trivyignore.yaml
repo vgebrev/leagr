@@ -1,0 +1,62 @@
+# Accepted findings for the container image scan (.github/workflows/ci.yml).
+#
+# ---------------------------------------------------------------------------
+# IF CI JUST FAILED ON ONE OF THESE CVEs, READ THIS FIRST.
+#
+# Trivy gives no hint that an entry expired - the CVE simply reappears as though
+# newly discovered. A CRITICAL resurfacing here is most likely a scheduled review
+# coming due, not a new problem. Do NOT just extend expired_at. Work through:
+#
+#   1. Re-resolve the distroless digest in the Dockerfile:
+#        docker buildx imagetools inspect gcr.io/distroless/nodejs24-debian12:nonroot \
+#          --format '{{.Manifest.Digest}}'
+#      If the new base ships the fixed package, pin it and DELETE the entries below.
+#
+#   2. If still unpatched upstream, re-verify the reachability claim before
+#      extending - do not trust the old statement. For the libssl3 entries that
+#      means confirming nothing in the image links libssl.so.3:
+#        docker run --rm --entrypoint /nodejs/bin/node leagr:ci -e "<ELF scan>"
+#      (the scan walks /usr/lib, /lib, /nodejs and /app/node_modules looking for a
+#      libssl.so.3 reference in every .so/.node/node binary - see the tasks doc).
+#
+#   3. Only once re-verified, set a fresh expired_at.
+#
+# Note a base-image bump is the MORE likely trigger than the date: if the base
+# updates and the package is still vulnerable at a different version, the new CVE
+# IDs will not be listed here and the scan goes red immediately. Same three steps.
+# ---------------------------------------------------------------------------
+
+vulnerabilities:
+  # libssl3 3.0.18-1~deb12u2 in gcr.io/distroless/nodejs24-debian12:nonroot.
+  # Added 2026-09-18. Fixed upstream in 3.0.19 / 3.0.20 but distroless has not
+  # rebuilt, so this cannot be resolved by re-pinning - the pinned digest is
+  # already the current :nonroot build.
+  - id: CVE-2026-31789
+    statement: >-
+      Not reachable by this application. Node bundles its own OpenSSL (3.5.5) and
+      nothing in the image links the Debian libssl3 - verified by scanning every
+      .so, .node and the node binary for a libssl.so.3 reference, which matched
+      only libssl.so.3 itself. All outbound TLS (Mailgun, OpenAI) uses Node's
+      OpenSSL. Fix exists upstream (3.0.19) but distroless has not rebuilt.
+    expired_at: 2027-01-15
+  - id: CVE-2026-28387
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument.
+    expired_at: 2027-01-15
+  - id: CVE-2026-28388
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument.
+    expired_at: 2027-01-15
+  - id: CVE-2026-28389
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument.
+    expired_at: 2027-01-15
+  - id: CVE-2026-28390
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument.
+    expired_at: 2027-01-15
+  - id: CVE-2026-45447
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument. Fixed
+      upstream in 3.0.20.
+    expired_at: 2027-01-15

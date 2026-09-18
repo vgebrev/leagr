@@ -276,3 +276,32 @@ one failed OpenAI request per team, each throwing into the per-team catch. It no
 
 Verified with the fix applied in the CI-like tree: 2282 files, 0 errors, 0 warnings. Full suite
 (1372 + 323) and lint pass locally.
+
+## Ignore-list expiry (2026-09-18)
+
+`.trivyignore` was converted to `.trivyignore.yaml` so the accepted `libssl3` findings carry an
+`expired_at` (2027-01-15) and a per-entry `statement`. Without it the suppression is permanent and
+silent: CI stays green whether the entries are still justified or long since unnecessary, and
+nothing ever prompts a look.
+
+Verified against Trivy 0.74.0 rather than assumed - both directions:
+
+- with today's date: exit **0**, findings suppressed
+- with the date rolled past: all six resurface, exit **1**, build fails
+
+**Trivy gives no indication that an entry expired.** The CVE reappears exactly as though newly
+discovered, with no reference to the statement or the lapsed date. A CRITICAL surfacing in January
+will therefore look alarming and unrelated to this work, so the response procedure lives at the top
+of the ignore file itself - the one place someone will actually be looking when it fires:
+
+1. Re-resolve the distroless digest; if the base now ships the fix, pin it and delete the entries.
+2. If still unpatched, **re-verify reachability** (the `libssl.so.3` ELF scan) before extending -
+   do not trust the old statement.
+3. Only then set a fresh `expired_at`.
+
+The date is 2027-01-15 rather than a strict three months, to keep a surprise build failure out of
+the December holiday period.
+
+Worth noting a base-image bump is the _more likely_ trigger than the date: if distroless rebuilds
+and the package is still vulnerable at a different version, the new CVE IDs will not be listed and
+the scan goes red at that point instead. The same three steps apply.
