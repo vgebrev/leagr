@@ -180,7 +180,7 @@ export function playWhistle({ long = false } = {}) {
         envelope.connect(ctx.destination);
 
         const shaper = ctx.createWaveShaper();
-        shaper.curve = getClipCurve();
+        shaper.curve = /** @type {Float32Array<ArrayBuffer>} */ (getClipCurve());
         shaper.connect(envelope);
 
         // Wide enough to pass the harmonics that make it cut; narrow enough to

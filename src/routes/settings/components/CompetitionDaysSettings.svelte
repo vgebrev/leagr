@@ -9,8 +9,7 @@
 
     /**
      * @typedef {Object} CompetitionDaysSettingsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {number[]} leagueSettings.competitionDays - The array of weekday numbers for competition days
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 

@@ -21,9 +21,9 @@
      */
     function addToWaitingList() {
         dropdownOpen = false;
-        if (!input.checkValidity()) {
-            input.reportValidity();
-            input.focus();
+        if (!input?.checkValidity()) {
+            input?.reportValidity();
+            input?.focus();
             return;
         }
         onadd && onadd(playerName.trim(), 'waitingList');
@@ -43,7 +43,7 @@
         name="player-name"
         type="text"
         placeholder="Player Name"
-        classes={{ wrapper: 'w-full', combo: 'w-full dark:shadow-gray-900 shadow-md' }}
+        classes={{ div: 'w-full', combo: 'w-full dark:shadow-gray-900 shadow-md' }}
         class="!bg-gray-50 dark:!bg-gray-800"
         required
         disabled={!canModifyList}

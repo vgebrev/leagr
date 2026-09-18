@@ -21,7 +21,7 @@ export class LeagueError extends Error {
 
 /**
  * Check if a league exists by verifying the info.json file
- * @param {string} leagueId - The league id (null for default league)
+ * @param {string|null} leagueId - The league id (null for the default league)
  * @returns {boolean} - Whether the league exists
  */
 export function leagueExists(leagueId) {
@@ -34,8 +34,8 @@ export function leagueExists(leagueId) {
 
 /**
  * Get league information from info.json
- * @param {string} leagueId - The league name
- * @returns {Object|null} - League info object or null if not found
+ * @param {string|null} leagueId - The league name (null for the default league)
+ * @returns {LeagueInfo|null} - League info object or null if not found
  */
 export function getLeagueInfo(leagueId) {
     if (!leagueId || !leagueExists(leagueId)) return null;
@@ -52,8 +52,8 @@ export function getLeagueInfo(leagueId) {
 
 /**
  * Update league info file
- * @param {string} leagueId - The league identifier
- * @param {Object} leagueInfo - The updated league info object
+ * @param {string|null} leagueId - The league identifier
+ * @param {LeagueInfo} leagueInfo - The updated league info object
  * @returns {boolean} - Success status
  */
 export function updateLeagueInfo(leagueId, leagueInfo) {
@@ -74,8 +74,50 @@ export function updateLeagueInfo(leagueId, leagueInfo) {
 }
 
 /**
+ * Extract the league identifier from a request host.
+ *
+ * The host reaches the app through X-Forwarded-Host, so it is client-influenced
+ * and the result is fed to getLeagueDataPath, which joins it into a filesystem
+ * path. Everything returned here is therefore validated with the same
+ * isValidSubdomain guard that league creation applies; anything else is treated
+ * as the root domain.
+ *
+ * @param {string|null} host - The host header, e.g. "pirates.leagr.co.za:5173"
+ * @param {string|undefined} appUrl - The configured base application URL
+ * @returns {string|null} - The league id, or null when there is no valid league subdomain
+ */
+export function extractLeagueId(host, appUrl) {
+    if (!host || !appUrl) return null;
+
+    // Remove port if present
+    const hostname = host.split(':')[0];
+
+    // Extract the base domain from the app URL
+    const baseDomain = new URL(appUrl).hostname;
+
+    // Check for root domain (no league)
+    if (hostname === baseDomain || hostname === 'localhost') {
+        return null;
+    }
+
+    // Split by dots and check if it's a subdomain
+    const parts = hostname.split('.');
+
+    // Check if it's a subdomain of our base domain
+    if (parts.length >= 2) {
+        const domain = parts.slice(1).join('.');
+        if (domain === baseDomain) {
+            return isValidSubdomain(parts[0]) ? parts[0] : null;
+        }
+    }
+
+    // If it's not a recognised domain format, return null
+    return null;
+}
+
+/**
  * Get the data directory path for a league
- * @param {string} leagueId - The league name (null for default)
+ * @param {string|null} leagueId - The league name (null for the default league)
  * @returns {string} - The data directory path
  */
 export function getLeagueDataPath(leagueId) {
@@ -93,14 +135,14 @@ export function getLeagueDataPath(leagueId) {
 export class LeagueService {
     /**
      * Create a new league
-     * @param {Object} leagueData - League creation data
+     * @param {object} leagueData - League creation data
      * @param {string} leagueData.subdomain - League subdomain
      * @param {string} leagueData.name - League name
      * @param {string} leagueData.icon - League icon
      * @param {string} leagueData.accessCode - League access code
      * @param {string} [leagueData.adminCode] - Optional admin code (defaults to accessCode if not provided)
      * @param {string} [leagueData.ownerEmail] - Optional owner email
-     * @returns {Promise<Object>} - Success response with league data
+     * @returns {Promise<{success: true, message: string, league: {subdomain: string, name: string, icon: string}}>} - Success response with league data
      * @throws {LeagueError} - Validation or creation errors
      */
     async createLeague({ subdomain, name, icon, accessCode, adminCode, ownerEmail }) {
@@ -151,10 +193,10 @@ export class LeagueService {
 
     /**
      * Generate and send a reset code for forgotten access codes
-     * @param {string} leagueId - The league identifier
-     * @param {Object} leagueInfo - The league info object
+     * @param {string|null} leagueId - The league identifier
+     * @param {LeagueInfo} leagueInfo - The league info object
      * @param {string} email - The email address to send to
-     * @returns {Promise<Object>} - Success response
+     * @returns {Promise<{success: boolean, message: string}>} - Success response
      * @throws {LeagueError} - Validation or operation errors
      */
     async generateAccessCodeReset(leagueId, leagueInfo, email) {
@@ -197,8 +239,8 @@ export class LeagueService {
         const { sendAccessCodeResetEmail } = await import('$lib/server/email.js');
         const emailSent = await sendAccessCodeResetEmail(
             email,
-            leagueId,
-            leagueInfo.name,
+            leagueId ?? '',
+            leagueInfo.name ?? leagueId ?? '',
             resetCode
         );
 
@@ -216,9 +258,9 @@ export class LeagueService {
 
     /**
      * Validate a reset code
-     * @param {Object} leagueInfo - The league info object
+     * @param {LeagueInfo} leagueInfo - The league info object
      * @param {string} resetCode - The reset code to validate
-     * @returns {Object} - Validation result
+     * @returns {{success: true, message: string}} - Validation result
      * @throws {LeagueError} - Validation errors
      */
     validateResetCode(leagueInfo, resetCode) {
@@ -252,11 +294,11 @@ export class LeagueService {
 
     /**
      * Reset access code using a valid reset code
-     * @param {string} leagueId - The league identifier
-     * @param {Object} leagueInfo - The league info object
+     * @param {string|null} leagueId - The league identifier
+     * @param {LeagueInfo} leagueInfo - The league info object
      * @param {string} resetCode - The reset code for validation
      * @param {string} newAccessCode - The new access code to set
-     * @returns {Object} - Success response
+     * @returns {{success: boolean, message: string}} - Success response
      * @throws {LeagueError} - Validation or operation errors
      */
     resetAccessCode(leagueId, leagueInfo, resetCode, newAccessCode) {
@@ -297,9 +339,11 @@ export class LeagueService {
 export const createLeagueService = () => new LeagueService();
 
 /**
- * Validate league exists for API requests
- * @param {Record<string, any>} locals - SvelteKit locals object
- * @returns {{leagueId: string|null, isValid: boolean}} - { leagueId, isValid }
+ * Validate league exists for API requests.
+ * Returns a discriminated union so `if (!isValid) return` narrows `leagueId` to `string`
+ * at every call site - a `{isValid, leagueId: string|null}` shape does not narrow.
+ * @param {App.Locals} locals - SvelteKit locals object
+ * @returns {{leagueId: string, isValid: true} | {leagueId: null, isValid: false}}
  */
 export function validateLeagueForAPI(locals) {
     const leagueInfo = locals.leagueInfo;

@@ -4,18 +4,16 @@
     import TeamBadge from '$components/TeamBadge.svelte';
     import { resolve } from '$app/paths';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapFunFacts} YearRecapFunFacts */
-
     /** @type {{ data: YearRecapFunFacts | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Calculate delays
-    const delays = {
+    const delays = $derived({
         highestScoring: initialDelay,
         biggestMargin: initialDelay + 200,
         mostGoals: initialDelay + 400,
         fewestGoals: initialDelay + 500
-    };
+    });
 </script>
 
 <SlideCard

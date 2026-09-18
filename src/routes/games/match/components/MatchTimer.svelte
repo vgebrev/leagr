@@ -74,7 +74,7 @@
 <!-- The clock and its status label are rendered from these in both states, so
      they read identically whether tucked into the header row or laid out in
      full - only the size changes. -->
-{#snippet clockFace(sizeClass)}
+{#snippet clockFace(/** @type {string} */ sizeClass)}
     {#if counting}
         <span class="font-mono {sizeClass} font-bold tabular-nums motion-safe:animate-ping">
             {matchTimer.countdownValue}

@@ -37,6 +37,13 @@ vi.mock('$lib/client/stores/settings.js', () => ({
     }
 }));
 
+/**
+ * Team rosters reach the client enriched by getAllDataWithElo(), so fixtures use the shape
+ * the API actually returns: a player object per slot, or null for an empty slot.
+ * @param {...(string|null)} names
+ */
+const roster = (...names) => names.map((name) => (name === null ? null : { name, elo: 1000 }));
+
 describe('TeamsService', () => {
     let mockApi;
     let mockPlayersService;
@@ -94,8 +101,8 @@ describe('TeamsService', () => {
         it('should load teams data and dependencies', async () => {
             const mockTeamsData = {
                 teams: {
-                    'Team A': ['Alice', 'Bob'],
-                    'Team B': ['Charlie', null]
+                    'Team A': roster('Alice', 'Bob'),
+                    'Team B': roster('Charlie', null)
                 },
                 players: {
                     available: [
@@ -199,8 +206,8 @@ describe('TeamsService', () => {
             const mockOptions = { teams: 2, teamSizes: [3, 3] };
             const mockResult = {
                 teams: {
-                    'Team A': ['Alice', 'Bob', 'Charlie'],
-                    'Team B': ['Dave', 'Eve', 'Frank']
+                    'Team A': roster('Alice', 'Bob', 'Charlie'),
+                    'Team B': roster('Dave', 'Eve', 'Frank')
                 },
                 config: mockOptions
             };
@@ -269,7 +276,7 @@ describe('TeamsService', () => {
         });
 
         it('should restore teams on API error', async () => {
-            const originalTeams = { 'Team A': ['Alice'] };
+            const originalTeams = { 'Team A': roster('Alice') };
             teamsService.teams = { ...originalTeams };
 
             const mockError = new Error('Generate Teams Error');
@@ -287,8 +294,8 @@ describe('TeamsService', () => {
         beforeEach(() => {
             teamsService.currentDate = '2025-01-25';
             teamsService.teams = {
-                'Team A': ['Alice', 'Bob'],
-                'Team B': ['Charlie', null]
+                'Team A': roster('Alice', 'Bob'),
+                'Team B': roster('Charlie', null)
             };
             mockPlayersService.players = ['Alice', 'Bob', 'Charlie'];
             mockPlayersService.waitingList = [];
@@ -297,8 +304,8 @@ describe('TeamsService', () => {
         it('should remove player and update state', async () => {
             const mockResult = {
                 teams: {
-                    'Team A': ['Alice', null],
-                    'Team B': ['Charlie', null]
+                    'Team A': roster('Alice', null),
+                    'Team B': roster('Charlie', null)
                 },
                 players: {
                     available: [
@@ -326,7 +333,7 @@ describe('TeamsService', () => {
 
         it('should auto-detect team name when not provided', async () => {
             const mockResult = {
-                teams: { 'Team A': ['Alice', null], 'Team B': ['Charlie', null] },
+                teams: { 'Team A': roster('Alice', null), 'Team B': roster('Charlie', null) },
                 players: {
                     available: [
                         { name: 'Alice', elo: 1000 },
@@ -370,7 +377,7 @@ describe('TeamsService', () => {
             });
             sessionUnlock.unlock('2025-01-25');
             mockApi.remove.mockResolvedValue({
-                teams: { 'Team A': ['Alice', null] },
+                teams: { 'Team A': roster('Alice', null) },
                 players: { available: [{ name: 'Alice' }], waitingList: [] }
             });
 
@@ -388,8 +395,8 @@ describe('TeamsService', () => {
         beforeEach(() => {
             teamsService.currentDate = '2025-01-25';
             teamsService.teams = {
-                'Team A': ['Alice', null],
-                'Team B': ['Charlie', null]
+                'Team A': roster('Alice', null),
+                'Team B': roster('Charlie', null)
             };
             mockPlayersService.players = ['Alice', 'Charlie'];
             mockPlayersService.waitingList = ['Bob'];
@@ -398,8 +405,8 @@ describe('TeamsService', () => {
         it('should assign player to team', async () => {
             const mockResult = {
                 teams: {
-                    'Team A': ['Alice', 'Bob'],
-                    'Team B': ['Charlie', null]
+                    'Team A': roster('Alice', 'Bob'),
+                    'Team B': roster('Charlie', null)
                 },
                 players: {
                     available: [
@@ -426,13 +433,8 @@ describe('TeamsService', () => {
         });
 
         it('should auto-select first unassigned player if none specified', async () => {
-            Object.defineProperty(teamsService, 'unassignedPlayers', {
-                get: () => [],
-                configurable: true
-            });
-
             const mockResult = {
-                teams: { 'Team A': ['Alice', 'Bob'], 'Team B': ['Charlie', null] },
+                teams: { 'Team A': roster('Alice', 'Bob'), 'Team B': roster('Charlie', null) },
                 players: {
                     available: [
                         { name: 'Alice', elo: 1000 },
@@ -455,10 +457,6 @@ describe('TeamsService', () => {
         });
 
         it('should show info if no unassigned players available', async () => {
-            Object.defineProperty(teamsService, 'unassignedPlayers', {
-                get: () => [],
-                configurable: true
-            });
             mockPlayersService.waitingList = [];
 
             await teamsService.assignPlayerToTeam(null, 'Team A');
@@ -471,9 +469,65 @@ describe('TeamsService', () => {
         });
     });
 
+    describe('unassignedPlayers', () => {
+        // /api/teams returns rosters enriched with ELO and avatar data, so a team slot is a
+        // player object rather than a bare name. Matching those against the available list by
+        // identity instead of by name put every assigned player back in "Unassigned Players".
+        it('should exclude players assigned to teams when rosters are enriched objects', async () => {
+            const mockTeamsData = {
+                teams: {
+                    'Team A': [
+                        { name: 'Alice', elo: 1200 },
+                        { name: 'Bob', elo: 1100 }
+                    ],
+                    'Team B': [{ name: 'Charlie', elo: 1000 }, null]
+                },
+                players: {
+                    available: [
+                        { name: 'Alice', elo: 1200 },
+                        { name: 'Bob', elo: 1100 },
+                        { name: 'Charlie', elo: 1000 },
+                        { name: 'Dave', elo: 900 }
+                    ],
+                    waitingList: []
+                }
+            };
+
+            mockApi.get
+                .mockResolvedValueOnce(mockTeamsData)
+                .mockResolvedValueOnce({ configurations: [] });
+
+            await teamsService.loadTeams('2025-01-25');
+
+            expect(teamsService.unassignedPlayers).toEqual(['Dave']);
+            expect(teamsService.unassignedPlayersWithElo).toEqual([{ name: 'Dave', elo: 900 }]);
+        });
+
+        it('should return every available player when no teams have been drawn', async () => {
+            const mockTeamsData = {
+                teams: {},
+                players: {
+                    available: [
+                        { name: 'Alice', elo: 1200 },
+                        { name: 'Bob', elo: 1100 }
+                    ],
+                    waitingList: []
+                }
+            };
+
+            mockApi.get
+                .mockResolvedValueOnce(mockTeamsData)
+                .mockResolvedValueOnce({ configurations: [] });
+
+            await teamsService.loadTeams('2025-01-25');
+
+            expect(teamsService.unassignedPlayers).toEqual(['Alice', 'Bob']);
+        });
+    });
+
     describe('reset', () => {
         it('should reset all state to initial values', () => {
-            teamsService.teams = { 'Team A': ['Alice'] };
+            teamsService.teams = { 'Team A': roster('Alice') };
             teamsService.currentDate = '2025-01-25';
 
             teamsService.reset();

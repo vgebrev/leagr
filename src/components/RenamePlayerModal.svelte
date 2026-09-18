@@ -45,6 +45,7 @@
         }
     });
 
+    /** @param {Event} event */
     async function handleSubmit(event) {
         event.preventDefault();
 

@@ -2,7 +2,6 @@
     import { onMount, onDestroy } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { resolve } from '$app/paths';
     import { settings } from '$lib/client/stores/settings.js';
     import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
     import { Button, Input } from 'flowbite-svelte';
@@ -28,10 +27,12 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
 
     // URL params
-    let competition = $derived(page.url.searchParams.get('competition') || 'league');
+    let competition = $derived(
+        /** @type {'league' | 'knockout'} */ (page.url.searchParams.get('competition') || 'league')
+    );
     let roundParam = $derived(page.url.searchParams.get('round') || '1');
     let matchParam = $derived(page.url.searchParams.get('match') || '1');
 
@@ -50,22 +51,32 @@
         }
         const roundNames = { quarter: 'Quarter Final', semi: 'Semi Final', final: 'Final' };
         const roundName =
-            roundNames[roundParam] ||
+            roundNames[/** @type {keyof typeof roundNames} */ (roundParam)] ||
             roundParam.charAt(0).toUpperCase() + roundParam.slice(1).replace('-', ' ');
         return `Cup · ${roundName} · Match ${matchParam}`;
     });
 
+    // A scored match always names both sides; a bye never reaches this page.
+    const homeTeam = $derived(match?.home ?? '');
+    const awayTeam = $derived(match?.away ?? '');
+
     // Players lists from teams data
-    let homePlayers = $derived(getPlayerNames(gamesService.teams[match?.home]));
-    let awayPlayers = $derived(getPlayerNames(gamesService.teams[match?.away]));
+    let homePlayers = $derived(
+        getPlayerNames(match?.home ? gamesService.teams[homeTeam] : undefined)
+    );
+    let awayPlayers = $derived(
+        getPlayerNames(match?.away ? gamesService.teams[awayTeam] : undefined)
+    );
 
     /**
-     * @param {Array<string|{name:string}>|undefined} teamPlayers
+     * @param {Array<string|null|{name:string}>|undefined} teamPlayers
      * @returns {string[]}
      */
     function getPlayerNames(teamPlayers) {
         if (!teamPlayers) return [];
-        return teamPlayers.filter(Boolean).map((p) => (typeof p === 'string' ? p : p.name));
+        return teamPlayers
+            .filter(/** @returns {p is string | {name: string}} */ (p) => p != null)
+            .map((p) => (typeof p === 'string' ? p : p.name));
     }
 
     /**
@@ -335,8 +346,8 @@
                 const m = schedule[roundIndex][mi];
                 if (m && !m.bye) {
                     return {
-                        home: m.home,
-                        away: m.away,
+                        home: m.home ?? '',
+                        away: m.away ?? '',
                         label: `Round ${roundIndex + 1} · Match ${mi + 1}`,
                         url: `/games/match?date=${date}&competition=league&round=${roundIndex + 1}&match=${mi + 1}`
                     };
@@ -348,8 +359,8 @@
                     const m = schedule[ri][mi];
                     if (m && !m.bye) {
                         return {
-                            home: m.home,
-                            away: m.away,
+                            home: m.home ?? '',
+                            away: m.away ?? '',
                             label: `Round ${ri + 1} · Match ${mi + 1}`,
                             url: `/games/match?date=${date}&competition=league&round=${ri + 1}&match=${mi + 1}`
                         };
@@ -363,7 +374,7 @@
 
             const currentMatchNum = parseInt(matchParam, 10);
 
-            const sortedRounds = [...new Set(bracket.map((m) => m.round))].sort((a, b) => {
+            const sortedRounds = [...new Set(bracket.map((m) => m.round ?? ''))].sort((a, b) => {
                 const ia = KNOCKOUT_ROUND_ORDER.indexOf(a);
                 const ib = KNOCKOUT_ROUND_ORDER.indexOf(b);
                 if (ia === -1 && ib === -1) return a.localeCompare(b);
@@ -389,20 +400,20 @@
                 .filter(
                     (m) =>
                         m.round === roundParam &&
-                        m.match > currentMatchNum &&
+                        (m.match ?? 0) > currentMatchNum &&
                         !m.bye &&
                         m.home &&
                         m.away &&
                         m.home !== 'BYE' &&
                         m.away !== 'BYE'
                 )
-                .sort((a, b) => a.match - b.match)[0];
+                .sort((a, b) => (a.match ?? 0) - (b.match ?? 0))[0];
 
             if (sameRoundNext) {
                 return {
-                    home: sameRoundNext.home,
-                    away: sameRoundNext.away,
-                    label: knockoutLabel(sameRoundNext.round, sameRoundNext.match),
+                    home: sameRoundNext.home ?? '',
+                    away: sameRoundNext.away ?? '',
+                    label: knockoutLabel(sameRoundNext.round ?? '', sameRoundNext.match ?? 0),
                     url: `/games/match?date=${date}&competition=knockout&round=${sameRoundNext.round}&match=${sameRoundNext.match}`
                 };
             }
@@ -420,13 +431,13 @@
                             m.home !== 'BYE' &&
                             m.away !== 'BYE'
                     )
-                    .sort((a, b) => a.match - b.match)[0];
+                    .sort((a, b) => (a.match ?? 0) - (b.match ?? 0))[0];
 
                 if (nextRoundFirst) {
                     return {
-                        home: nextRoundFirst.home,
-                        away: nextRoundFirst.away,
-                        label: knockoutLabel(nextRoundFirst.round, nextRoundFirst.match),
+                        home: nextRoundFirst.home ?? '',
+                        away: nextRoundFirst.away ?? '',
+                        label: knockoutLabel(nextRoundFirst.round ?? '', nextRoundFirst.match ?? 0),
                         url: `/games/match?date=${date}&competition=knockout&round=${nextRoundFirst.round}&match=${nextRoundFirst.match}`
                     };
                 }
@@ -465,7 +476,7 @@
             if (!bracket) return `/games?date=${date}`;
 
             const currentMatchNum = parseInt(matchParam, 10);
-            const sortedRounds = [...new Set(bracket.map((m) => m.round))].sort((a, b) => {
+            const sortedRounds = [...new Set(bracket.map((m) => m.round ?? ''))].sort((a, b) => {
                 const ia = KNOCKOUT_ROUND_ORDER.indexOf(a);
                 const ib = KNOCKOUT_ROUND_ORDER.indexOf(b);
                 if (ia === -1 && ib === -1) return a.localeCompare(b);
@@ -479,14 +490,14 @@
                 .filter(
                     (m) =>
                         m.round === roundParam &&
-                        m.match < currentMatchNum &&
+                        (m.match ?? 0) < currentMatchNum &&
                         !m.bye &&
                         m.home &&
                         m.away &&
                         m.home !== 'BYE' &&
                         m.away !== 'BYE'
                 )
-                .sort((a, b) => b.match - a.match)[0];
+                .sort((a, b) => (b.match ?? 0) - (a.match ?? 0))[0];
 
             if (sameRoundPrev) {
                 return `/games/match?date=${date}&competition=knockout&round=${sameRoundPrev.round}&match=${sameRoundPrev.match}`;
@@ -504,7 +515,7 @@
                             m.home !== 'BYE' &&
                             m.away !== 'BYE'
                     )
-                    .sort((a, b) => b.match - a.match)[0];
+                    .sort((a, b) => (b.match ?? 0) - (a.match ?? 0))[0];
                 if (prevRoundLast) {
                     return `/games/match?date=${date}&competition=knockout&round=${prevRoundLast.round}&match=${prevRoundLast.match}`;
                 }
@@ -568,30 +579,30 @@
                         <button
                             type="button"
                             class="cursor-pointer transition-opacity hover:opacity-80"
-                            onclick={() => openTeamModal(match.home)}>
+                            onclick={() => openTeamModal(homeTeam)}>
                             <TeamLogo
-                                teamName={match.home}
+                                teamName={homeTeam}
                                 {date} />
                         </button>
                         <TeamBadge
-                            teamName={match.home}
+                            teamName={homeTeam}
                             className="w-full"
-                            onclick={() => openTeamModal(match.home)} />
+                            onclick={() => openTeamModal(homeTeam)} />
                     </div>
                     <span class="shrink-0 text-sm text-gray-600 dark:text-gray-400">vs</span>
                     <div class="flex min-w-0 flex-1 flex-col items-center gap-1">
                         <button
                             type="button"
                             class="cursor-pointer transition-opacity hover:opacity-80"
-                            onclick={() => openTeamModal(match.away)}>
+                            onclick={() => openTeamModal(awayTeam)}>
                             <TeamLogo
-                                teamName={match.away}
+                                teamName={awayTeam}
                                 {date} />
                         </button>
                         <TeamBadge
-                            teamName={match.away}
+                            teamName={awayTeam}
                             className="w-full"
-                            onclick={() => openTeamModal(match.away)} />
+                            onclick={() => openTeamModal(awayTeam)} />
                     </div>
                 </div>
                 <div class="flex items-start justify-between">
@@ -606,7 +617,7 @@
                             onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
                             min="0"
                             max="99"
-                            aria-label="{match.home} score" />
+                            aria-label="{homeTeam} score" />
                         {#if homeScoreError}
                             <span class="mt-1 text-xs text-red-500">{homeScoreError}</span>
                         {/if}
@@ -622,7 +633,7 @@
                             onfocus={(e) => /** @type {HTMLInputElement} */ (e.target)?.select()}
                             min="0"
                             max="99"
-                            aria-label="{match.away} score" />
+                            aria-label="{awayTeam} score" />
                         {#if awayScoreError}
                             <span class="mt-1 text-xs text-red-500">{awayScoreError}</span>
                         {/if}
@@ -646,7 +657,7 @@
                                     /** @type {HTMLInputElement} */ (e.target)?.select()}
                                 min="0"
                                 max="99"
-                                aria-label="{match.home} penalties" />
+                                aria-label="{homeTeam} penalties" />
                             {#if homePenaltyError}
                                 <span class="mt-1 text-xs text-red-500">{homePenaltyError}</span>
                             {/if}
@@ -664,7 +675,7 @@
                                     /** @type {HTMLInputElement} */ (e.target)?.select()}
                                 min="0"
                                 max="99"
-                                aria-label="{match.away} penalties" />
+                                aria-label="{awayTeam} penalties" />
                             {#if awayPenaltyError}
                                 <span class="mt-1 text-xs text-red-500">{awayPenaltyError}</span>
                             {/if}
@@ -714,7 +725,7 @@
         <!-- Team action panels -->
         <div class="grid grid-cols-2 gap-2">
             <TeamActionPanel
-                teamName={match.home}
+                teamName={homeTeam}
                 players={homePlayers}
                 {match}
                 side="home"
@@ -722,7 +733,7 @@
                 onAction={handleAction}
                 onPlayerClick={openPlayerModal} />
             <TeamActionPanel
-                teamName={match.away}
+                teamName={awayTeam}
                 players={awayPlayers}
                 {match}
                 side="away"
@@ -745,7 +756,7 @@
                         color="alternative"
                         size="xs"
                         class="me-auto p-1"
-                        href={resolve(prevUrl, {})}><AngleLeftOutline class="h-3 w-3" /></Button>
+                        href={prevUrl}><AngleLeftOutline class="h-3 w-3" /></Button>
                     <TeamBadge
                         teamName={nextMatchInfo.home}
                         className="min-w-0 flex-1"
@@ -759,7 +770,7 @@
                         size="xs"
                         outline={true}
                         color="alternative"
-                        href={resolve(nextMatchInfo.url, {})}
+                        href={nextMatchInfo.url}
                         class="ms-auto p-1"
                         ><AngleRightOutline class="h-3 w-3" />
                     </Button>
@@ -773,13 +784,13 @@
                     color="alternative"
                     size="xs"
                     class="me-auto p-1"
-                    href={resolve(prevUrl, {})}><AngleLeftOutline class="h-3 w-3" /></Button>
+                    href={prevUrl}><AngleLeftOutline class="h-3 w-3" /></Button>
                 <p class="text-sm text-gray-300">{completionState.message}</p>
                 <Button
                     size="xs"
                     outline={true}
                     color="alternative"
-                    href={resolve(completionState.url, {})}
+                    href={completionState.url}
                     class="ms-auto p-1">
                     <AngleRightOutline class="h-3 w-3" />
                 </Button>

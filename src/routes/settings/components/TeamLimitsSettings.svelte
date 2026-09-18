@@ -11,8 +11,7 @@
 
     /**
      * @typedef {Object} TeamLimitsSettingsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {TeamGeneration} leagueSettings.teamGeneration - The team generation configuration
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 

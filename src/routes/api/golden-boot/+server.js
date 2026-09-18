@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
 import { getLeagueDataPath } from '$lib/server/league.js';
@@ -6,8 +7,8 @@ import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
 
 /**
  * Extract goals from a scorers object
- * @param {Object|null} scorers - Scorer object { "PlayerName": goalCount, ... }
- * @param {Object} totals - Accumulated goals object to update
+ * @param {StatMap|undefined} scorers - Scorer object { "PlayerName": goalCount, ... }
+ * @param {Record<string, {leagueGoals: number, cupGoals: number}>} totals - Accumulated goals object to update
  * @param {'league'|'cup'} type - Type of goals (league or cup)
  */
 function extractGoals(scorers, totals, type) {
@@ -35,7 +36,7 @@ function extractGoals(scorers, totals, type) {
 /**
  * Process a single session file and extract goal data
  * @param {string} filePath - Path to session file
- * @param {Object} totals - Accumulated goals object to update
+ * @param {Record<string, {leagueGoals: number, cupGoals: number}>} totals - Accumulated goals object to update
  */
 async function processSessionFile(filePath, totals) {
     try {
@@ -102,6 +103,7 @@ export async function GET({ locals, url }) {
         const yearParam = url.searchParams.get('year');
         const dataPath = getLeagueDataPath(leagueId);
 
+        /** @type {Record<string, {leagueGoals: number, cupGoals: number}>} */
         const totals = {};
 
         // Determine which years to process
@@ -148,7 +150,7 @@ export async function GET({ locals, url }) {
         return json(
             {
                 error: 'Failed to load golden boot data',
-                details: error.message
+                details: errorMessage(error)
             },
             { status: 500 }
         );

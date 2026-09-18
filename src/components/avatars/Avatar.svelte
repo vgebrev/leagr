@@ -4,7 +4,7 @@
     import { teamStyles } from '$lib/shared/helpers.js';
 
     /**
-     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: string, shadow?: 'sm' | 'lg', onclick?: () => void }}
+     * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: TeamColour, shadow?: 'sm' | 'lg', onclick?: () => void }}
      */
     let {
         avatarUrl = null,

@@ -197,7 +197,7 @@ export const POST = async ({ request, url, locals }) => {
  * Helper function to get teams for a specific date
  * @param {string} date - Date string
  * @param {string} leagueId - League identifier
- * @returns {Promise<Object>} Teams data
+ * @returns {Promise<TeamsData|null>} Teams data, or null when it cannot be read
  */
 async function getTeamsForDate(date, leagueId) {
     try {

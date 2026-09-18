@@ -11,6 +11,7 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupOutline } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
@@ -25,8 +26,7 @@
     let { data } = $props();
     let date = $derived(data.date);
 
-    /** @type {any} */
-    let fantasy = $state(null);
+    let fantasy = $state(/** @type {FantasyState | null} */ (null));
     let error = $state(false);
 
     let entries = $derived(fantasy?.entries ?? []);
@@ -40,7 +40,7 @@
     );
 
     // Shallow routing, so the modal is dismissible with the browser back button.
-    let selectedTeam = $state(null);
+    let selectedTeam = $state(/** @type {FantasyPresentedEntry | null} */ (null));
     let showModal = $state(false);
 
     $effect(() => {
@@ -81,7 +81,7 @@
             (err) => {
                 console.error('Error loading fantasy league:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load fantasy league', 'error');
+                setNotification(errorMessage(err) || 'Failed to load fantasy league', 'error');
             }
         );
     }
@@ -157,7 +157,7 @@
             class="w-full table-auto sm:table-fixed dark:text-gray-300"
             shadow>
             <TableHead class="dark:text-gray-300">
-                <TableHeadCell class="w-6 px-2 py-1.5 text-center">#</TableHeadCell>
+                <TableHeadCell class="w-6 px-2 py-1.5 text-center sm:w-10">#</TableHeadCell>
                 <TableHeadCell
                     class="w-full max-w-0 overflow-hidden px-0 py-1.5 font-bold text-ellipsis text-gray-900 dark:text-white">
                     Squad
@@ -176,7 +176,7 @@
                                 pushState('', { fantasyEntry: { teamName: entry.teamName } });
                             }
                         }}>
-                        <TableBodyCell class="px-2 py-1.5 text-center">
+                        <TableBodyCell class="w-6 px-2 py-1.5 text-center sm:w-10">
                             {entry.rank ?? '—'}
                         </TableBodyCell>
                         <TableBodyCell class="w-full max-w-0 px-0 py-1.5">

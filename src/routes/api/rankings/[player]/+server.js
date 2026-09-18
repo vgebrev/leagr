@@ -6,9 +6,9 @@ import { validateLeagueForAPI } from '$lib/server/league.js';
 
 /**
  * Create unified details array with all necessary data for frontend
- * @param {Object} playerData - Player data with complete history
+ * @param {PlayerRankingData} playerData - Player data with complete history
  * @param {number|null} limit - Optional limit for number of recent appearances
- * @returns {Array} Array of unified detail objects
+ * @returns {PlayerSessionDetail[]} Array of unified detail objects
  */
 function createUnifiedDetails(playerData, limit = null) {
     // Get all dates and sort chronologically (oldest first)
@@ -19,11 +19,13 @@ function createUnifiedDetails(playerData, limit = null) {
 
     for (const date of allDates) {
         const entry = playerData.history[date];
-        const attended = 'points' in entry;
+        const points = entry.points;
+        const performance = entry.performance;
+        const attended = points != null;
 
         // Update cumulative totals if this was an appearance
         if (attended) {
-            cumulativePoints += entry.points.total;
+            cumulativePoints += points.total;
         }
 
         // Create unified detail object with all necessary data
@@ -38,16 +40,16 @@ function createUnifiedDetails(playerData, limit = null) {
             ...(attended
                 ? {
                       team: entry.team,
-                      appearancePoints: entry.points.appearance || 0,
-                      matchPoints: entry.points.match || 0,
-                      bonusPoints: entry.points.bonus || 0,
-                      knockoutPoints: entry.points.knockout || 0,
-                      totalPoints: entry.points.total || 0,
-                      leagueWinner: entry.performance.leagueWinner || false,
-                      cupWinner: entry.performance.cupWinner || false,
+                      appearancePoints: points.appearance || 0,
+                      matchPoints: points.match || 0,
+                      bonusPoints: points.bonus || 0,
+                      knockoutPoints: points.knockout || 0,
+                      totalPoints: points.total || 0,
+                      leagueWinner: performance?.leagueWinner || false,
+                      cupWinner: performance?.cupWinner || false,
                       eloRating: entry.ratings.elo || 1000,
-                      leaguePosition: entry.performance.leaguePosition ?? null,
-                      cupProgress: entry.performance.cupProgress
+                      leaguePosition: performance?.leaguePosition ?? null,
+                      cupProgress: performance?.cupProgress
                   }
                 : {})
         });
@@ -90,9 +92,8 @@ export async function GET({ params, locals, url }) {
     const selectedDate = dateParam && dateParam.trim().length > 0 ? dateParam.trim() : null;
 
     // Parse year parameter, default to current year
-    const year = url.searchParams.get('year')
-        ? parseInt(url.searchParams.get('year'), 10)
-        : new Date().getFullYear();
+    const yearParam = url.searchParams.get('year');
+    const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
 
     const { leagueId, isValid } = validateLeagueForAPI(locals);
     if (!isValid) {

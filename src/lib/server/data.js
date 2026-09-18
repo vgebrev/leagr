@@ -8,8 +8,8 @@ const mutexes = new Map();
 
 /**
  * Returns a mutex for the given filename
- * @param filename
- * @returns {any}
+ * @param {string} filename
+ * @returns {Mutex}
  */
 function getMutex(filename) {
     if (!mutexes.has(filename)) {
@@ -22,13 +22,14 @@ function getMutex(filename) {
  * Resolves a path in an object and returns the parent object and the final key.
  * This is useful for setting or getting nested properties in an object.
  * If the path does not exist, it initialises the parent object with a default value.
- * @param obj
- * @param path
- * @param defaultValue
- * @returns {{parent, key: *}}
+ * @param {Record<string, any>} obj
+ * @param {string} path - Dot-separated key path, e.g. 'games.rounds'
+ * @param {unknown} [defaultValue] - Seeded into any missing intermediate level
+ * @returns {{parent: Record<string, any>, key: string}}
  */
 function resolvePath(obj, path, defaultValue = {}) {
     const parts = path.split('.');
+    /** @type {Record<string, any>} */
     let current = obj;
     for (let i = 0; i < parts.length - 1; i++) {
         if (!current[parts[i]]) current[parts[i]] = defaultValue;
@@ -40,8 +41,8 @@ function resolvePath(obj, path, defaultValue = {}) {
 /**
  * Gets a value from the JSON file for a given key and date.
  * If the file does not exist or the key is not found, it returns null.
- * @param key
- * @param date
+ * @param {string} key - Dot-separated key path, e.g. 'players' or 'games.rounds'
+ * @param {string} date - The date string (YYYY-MM-DD format)
  * @param {string | null} leagueId
  * @returns {Promise<*|null>}
  */
@@ -71,13 +72,13 @@ async function get(key, date, leagueId = null) {
 
 /**
  * Sets a value in the JSON file for a given key and date.
- * @param key
- * @param date
- * @param value
- * @param {[]|{}|number}defaultValue
+ * @param {string} key - Dot-separated key path
+ * @param {any} value
+ * @param {string} date - The date string (YYYY-MM-DD format)
+ * @param {unknown[]|Record<string, any>|number} [defaultValue] - Seeded when the key is absent
  * @param {boolean} [overwrite=false] - Whether to overwrite the existing value if it exists (true), or merge/add to it (false).
  * @param {string|null} [leagueId=null] - The league name (null for default league).
- * @returns {Promise}
+ * @returns {Promise<any>}
  */
 async function set(key, date, value, defaultValue = [], overwrite = false, leagueId = null) {
     const results = await setMany([{ key, value, defaultValue, overwrite }], date, leagueId);
@@ -89,7 +90,7 @@ async function set(key, date, value, defaultValue = [], overwrite = false, leagu
  * @param {Array<{key: string, value: any, defaultValue?: any, overwrite?: boolean}>} operations - Array of set operations
  * @param {string} date - The date string (YYYY-MM-DD format)
  * @param {string|null} [leagueId=null] - The league name (null for default league)
- * @returns {Promise<Object>} - Object with keys as operation keys and values as the final values
+ * @returns {Promise<Record<string, any>|null>} - Final value per operation key, or null for an invalid date
  */
 async function setMany(operations, date, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}$/) ? date : null;
@@ -104,6 +105,8 @@ async function setMany(operations, date, leagueId = null) {
 
     return await mutex.runExclusive(async () => {
         try {
+            /** @type {Record<string, any>} */
+            /** @type {Record<string, any>} */
             let jsonData = {};
             try {
                 const file = await fs.readFile(filePath, 'utf-8');
@@ -112,6 +115,7 @@ async function setMany(operations, date, leagueId = null) {
                 console.warn(`File ${filePath} not found or empty, creating a new one.`, ex);
             }
 
+            /** @type {Record<string, any>} */
             const results = {};
 
             // Apply all operations to the in-memory data
@@ -152,11 +156,11 @@ async function setMany(operations, date, leagueId = null) {
  * If the value is an array, it removes the specified value from the array.
  * If the value is an object, it deletes the specified key from the object.
  * If the value is a primitive, it sets the key to null.
- * @param key
- * @param date
- * @param value
+ * @param {string} key - Dot-separated key path
+ * @param {string} date - The date string (YYYY-MM-DD format)
+ * @param {any} value - Array element to remove, or object key to delete
  * @param {string | null } leagueId
- * @returns {Promise<*|null>}
+ * @returns {Promise<any|null>}
  */
 async function remove(key, date, value, leagueId = null) {
     const filename = date?.match(/^\d{4}-\d{2}-\d{2}$/) ? date : null;
@@ -171,6 +175,7 @@ async function remove(key, date, value, leagueId = null) {
 
     return await mutex.runExclusive(async () => {
         try {
+            /** @type {Record<string, any>} */
             let jsonData = {};
             try {
                 const file = await fs.readFile(filePath, 'utf-8');

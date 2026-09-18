@@ -150,26 +150,55 @@ docker build -t leagr:latest
 
 - Run the docker container (The app will be available at http://localhost:3000)
 
+Put the environment in a file rather than on the command line, so the secrets stay out of your
+shell history and the host's process list:
+
+```bash
+cat > leagr.env <<'ENV'
+ALLOWED_ORIGIN=https://your-production-url.com,http://localhost:3000
+SESSION_SECRET=a1b2c3d4-e5f6-7890-abcd-ef1234567890
+APP_URL=https://your-production-url.com
+PLAYER_OWNER_SALT=a-long-random-secret
+MAILGUN_API_KEY=your-mailgun-api-key
+MAILGUN_DOMAIN=your-mailgun-domain.com
+BODY_SIZE_LIMIT=6291456
+LOG_LEVEL=info
+OPENAI_API_KEY=sk-...
+ENV
+chmod 600 leagr.env
+```
+
 ```bash
 docker run -d \
   --name leagr \
   --restart unless-stopped \
-  -p 3000:3000 \
+  --read-only \
+  --tmpfs /tmp:rw,noexec,nosuid,size=64m \
+  --cap-drop=ALL \
+  --security-opt=no-new-privileges:true \
+  --memory=1g --memory-swap=1g \
+  --cpus=1.5 \
+  --pids-limit=256 \
+  --log-opt max-size=10m --log-opt max-file=3 \
+  -p 127.0.0.1:3000:3000 \
   -v /path/to/data/on/host:/app/data \
   -v /path/to/logs/on/host:/app/logs \
-  -e ALLOWED_ORIGIN="https://your-production-url.com,http://localhost:3000" \
-  -e SESSION_SECRET="a1b2c3d4-e5f6-7890-abcd-ef1234567890" \
-  -e APP_URL="https://your-production-url.com" \
-  -e PLAYER_OWNER_SALT="a-long-random-secret" \
-  -e MAILGUN_API_KEY="your-mailgun-api-key" \
-  -e MAILGUN_DOMAIN="your-mailgun-domain.com" \
-  -e BODY_SIZE_LIMIT=6291456 \
-  -e LOG_LEVEL="info" \
-  -e OPENAI_API_KEY="sk-..." \
+  --env-file leagr.env \
   leagr:latest
 ```
 
-Expose the app to the internet by configuring your web server or reverse proxy (e.g. Nginx, Apache) to forward requests to port 3000.
+The image runs as an unprivileged user (uid 65532) on a read-only root filesystem; `/app/data` and
+`/app/logs` are the only writable paths, and both are the mounts you supply. The resource limits
+cap what a compromised container could consume - tune them to your host.
+
+Expose the app to the internet by configuring your web server or reverse proxy (e.g. Nginx, Apache,
+IIS) to forward requests to port 3000.
+
+Note the `-p 127.0.0.1:` prefix. The app derives the league from `X-Forwarded-Host` and the client
+IP from `X-Forwarded-For`, and trusts your reverse proxy to set both. Publishing the port on
+`0.0.0.0` would let anything that can reach the host connect directly, bypass the proxy and forge
+those headers, so bind it to loopback and point the proxy at `127.0.0.1` explicitly (not
+`localhost`, which may resolve to `::1` first).
 
 **Environment Variables:**
 

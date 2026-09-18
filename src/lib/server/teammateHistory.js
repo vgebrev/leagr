@@ -1,5 +1,6 @@
 import { readdir, readFile, writeFile } from 'fs/promises';
 import { join } from 'path';
+import { getLeagueDataPath } from './league.js';
 
 /**
  * Teammate History Tracker
@@ -8,13 +9,9 @@ import { join } from 'path';
  * Creates a PxP matrix where P = total unique players and TH[i][j] = number of times players i and j were teammates.
  */
 export class TeammateHistoryTracker {
-    constructor() {
-        this.leagueDataPath = 'data';
-    }
-
     /**
      * Get all session files for a league, sorted by date descending
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @param {number | null} fileLimit - Max files to return. Default 70 covers the worst case for a
      *   10-session window (10 weeks × 7 days). Pass null for no limit.
      * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
@@ -22,7 +19,7 @@ export class TeammateHistoryTracker {
      * @returns {Promise<string[]>} Array of session file paths
      */
     async getSessionFiles(leagueId, fileLimit = 70, beforeDate = null) {
-        const leaguePath = join(this.leagueDataPath, leagueId);
+        const leaguePath = getLeagueDataPath(leagueId);
         const files = await readdir(leaguePath);
 
         const sorted = files
@@ -38,7 +35,7 @@ export class TeammateHistoryTracker {
     /**
      * Load session data from a file
      * @param {string} filePath - Path to session file
-     * @returns {Promise<Object|null>} Session data or null if loading fails
+     * @returns {Promise<{teams?: TeamsData} | null>} Session data or null if loading fails
      */
     async loadSessionData(filePath) {
         try {
@@ -52,10 +49,11 @@ export class TeammateHistoryTracker {
 
     /**
      * Extract teammate pairs from a single session
-     * @param {Object} sessionData - Session data containing teams
+     * @param {{teams?: TeamsData}} sessionData - Session data containing teams
      * @returns {Array<Array<string>>} Array of player pairs who were teammates
      */
     extractTeammatePairs(sessionData) {
+        /** @type {Array<Array<string>>} */
         const pairs = [];
 
         if (!sessionData?.teams) {
@@ -68,7 +66,8 @@ export class TeammateHistoryTracker {
 
             // Filter out null/undefined/empty players
             const validPlayers = team.filter(
-                (player) => player && typeof player === 'string' && player.trim().length > 0
+                /** @returns {player is string} */
+                (player) => typeof player === 'string' && player.trim().length > 0
             );
 
             // Generate all unique pairs within the team
@@ -86,10 +85,10 @@ export class TeammateHistoryTracker {
 
     /**
      * Build teammate history matrix from recent sessions
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
      * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
-     * @returns {Promise<Object>} Teammate history data
+     * @returns {Promise<TeammateHistoryData>} Teammate history data
      */
     async buildTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
         const sessionFiles = await this.getSessionFiles(leagueId, 70, beforeDate);
@@ -144,7 +143,7 @@ export class TeammateHistoryTracker {
         });
 
         return {
-            leagueId,
+            leagueId: leagueId ?? '',
             players: playerList,
             matrix,
             totalSessions: sessionsWithTeams,
@@ -183,18 +182,18 @@ export class TeammateHistoryTracker {
      * @param {{ alpha?: number, coAttendanceLimit?: number | null }} options -
      *   Significance threshold (default: 0.05) and per-pair cap on co-attendances
      *   considered (default: null = unlimited)
-     * @returns {Array<{player1: string, player2: string, coAttendance: number, probNone: number,
-     *   droughtCoAttendance: number, droughtProbNone: number}>}
+     * @returns {OverduePair[]}
      *   Overdue pairs sorted most-starved first
      */
     computeOverduePairs(sessions, { alpha = 0.05, coAttendanceLimit = null } = {}) {
-        /** @type {Map<string, {coAttendance: number, probNone: number, paired: boolean}>} */
+        /** @type {Map<string, PairStats>} */
         const pairStats = new Map();
 
         for (const teams of sessions) {
             const validTeams = teams.map((team) =>
                 (Array.isArray(team) ? team : []).filter(
-                    (player) => player && typeof player === 'string' && player.trim().length > 0
+                    /** @returns {player is string} */
+                    (player) => typeof player === 'string' && player.trim().length > 0
                 )
             );
             const attendees = validTeams.flat();
@@ -280,10 +279,9 @@ export class TeammateHistoryTracker {
      * sessionLimit caps the calendar lookback (staleness bound); coAttendanceLimit
      * caps how many of each pair's own most recent co-attendances count as evidence,
      * so absences (injury, holiday) don't erode a pair's accumulated debt.
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @param {{ sessionLimit?: number, coAttendanceLimit?: number, alpha?: number, beforeDate?: string | null }} options
-     * @returns {Promise<Array<{player1: string, player2: string, coAttendance: number, probNone: number,
-     *   droughtCoAttendance: number, droughtProbNone: number}>>}
+     * @returns {Promise<OverduePair[]>}
      */
     async findOverduePairs(
         leagueId,
@@ -292,14 +290,20 @@ export class TeammateHistoryTracker {
         const fileLimit = Math.max(70, sessionLimit * 7);
         const sessionFiles = await this.getSessionFiles(leagueId, fileLimit, beforeDate);
 
+        /** @type {Array<Array<Array<string>>>} */
         const sessions = [];
         for (const filePath of sessionFiles) {
             if (sessions.length >= sessionLimit) break;
             const sessionData = await this.loadSessionData(filePath);
             if (!sessionData?.teams) continue;
-            const teams = Object.values(sessionData.teams).filter(
-                (team) => Array.isArray(team) && team.length > 0
-            );
+            const teams = Object.values(sessionData.teams)
+                .filter((team) => Array.isArray(team) && team.length > 0)
+                .map((team) =>
+                    team.filter(
+                        /** @returns {player is string} */
+                        (player) => typeof player === 'string' && player.trim().length > 0
+                    )
+                );
             if (teams.length === 0) continue;
             sessions.push(teams);
         }
@@ -309,20 +313,20 @@ export class TeammateHistoryTracker {
 
     /**
      * Save teammate history to file
-     * @param {string} leagueId - League identifier
-     * @param {Object} historyData - Teammate history data
+     * @param {string|null} leagueId - League identifier
+     * @param {TeammateHistoryData} historyData - Teammate history data
      */
     async saveTeammateHistory(leagueId, historyData) {
-        const filePath = join(this.leagueDataPath, leagueId, 'teammate-history.json');
+        const filePath = join(getLeagueDataPath(leagueId), 'teammate-history.json');
         await writeFile(filePath, JSON.stringify(historyData, null, 2));
     }
 
     /**
      * Update teammate history for a league (main function)
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @param {number} sessionLimit - Maximum number of recent sessions to include (default: 10)
      * @param {string | null} beforeDate - Exclude files on or after this date (YYYY-MM-DD).
-     * @returns {Promise<{historyData: Object}>} Updated history data
+     * @returns {Promise<{historyData: TeammateHistoryData}>} Updated history data
      */
     async updateTeammateHistory(leagueId, sessionLimit = 10, beforeDate = null) {
         const historyData = await this.buildTeammateHistory(leagueId, sessionLimit, beforeDate);

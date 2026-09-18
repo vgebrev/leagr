@@ -2,8 +2,6 @@
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapOverview} YearRecapOverview */
-
     /** @type {{ data: YearRecapOverview | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 

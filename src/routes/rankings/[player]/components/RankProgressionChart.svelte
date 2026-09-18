@@ -2,6 +2,7 @@
     import { onMount } from 'svelte';
     import RankProgressionChartNode from './RankProgressionChartNode.svelte';
 
+    /** @type {{ playerData: PlayerRankingData, limitDropdown?: import('svelte').Snippet }} */
     let { playerData, limitDropdown } = $props();
 
     // Use details for chart progression (already in chronological order)

@@ -32,7 +32,7 @@ export const GET = async ({ params, url, locals, fetch }) => {
     }
 
     // Derive colour from first word of team name for fallback
-    const colour = teamName.split(' ')[0].toLowerCase();
+    const colour = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
     const fallbackUrl = `/logos/${teamColours.includes(colour) ? colour : 'blue'}.webp`;
 
     const logoManager = createTeamLogoManager().setLeague(leagueId);
@@ -57,7 +57,7 @@ export const GET = async ({ params, url, locals, fetch }) => {
                 .webp()
                 .toBuffer();
         }
-        return new Response(imageBuffer, {
+        return new Response(new Uint8Array(imageBuffer), {
             headers: { 'Content-Type': 'image/webp', 'Cache-Control': cacheControl }
         });
     }

@@ -54,9 +54,16 @@ npm run test:backend -- -t "adds player to waiting list"
 
 ### Types and JSDoc
 
-- Prefer JSDoc annotations for complex objects and function boundaries.
-- Use `@typedef` and `@param`/`@returns` when it improves clarity.
-- Avoid full JSDoc coverage on trivial helpers; keep it pragmatic.
+`npm run check` must stay clean; `npm run check:ci` gates CI and `deploy.sh`.
+
+- Shared shapes are ambient globals in `src/lib/shared/domain.d.ts` - use them directly,
+  with no import and no `@typedef {import(...)}` preamble.
+- Never `{Object}` (it has no properties - worse than no annotation), never bare
+  `{Array}`/`{Promise}`/`{Map}`, never `@param name` without braces.
+- Annotate every exported function boundary and every nullable class field.
+- Guard helpers return discriminated unions so call sites narrow.
+- Fix type errors rather than suppressing them - no `@ts-ignore` / `@ts-expect-error` / `{any}`.
+- `src/lib/server/playerManager.js` is the reference implementation.
 
 ### Svelte/Frontend Conventions
 

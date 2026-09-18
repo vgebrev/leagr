@@ -1,4 +1,5 @@
 import path from 'path';
+import { errorMessage, errorCode } from '$lib/shared/helpers.js';
 import fs from 'fs/promises';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
@@ -69,7 +70,7 @@ export class TeamLogoManager {
             const raw = await fs.readFile(this.getLogosMetadataPath(), 'utf-8');
             return JSON.parse(raw);
         } catch (err) {
-            if (err.code === 'ENOENT') return {};
+            if (errorCode(err) === 'ENOENT') return {};
             throw err;
         }
     }
@@ -78,6 +79,7 @@ export class TeamLogoManager {
         return await this.getLogosMutex().runExclusive(() => this.loadLogosUnsafe());
     }
 
+    /** @param {LogosMap} logos */
     async saveLogosUnsafe(logos) {
         await fs.writeFile(this.getLogosMetadataPath(), JSON.stringify(logos, null, 2));
     }
@@ -188,6 +190,18 @@ export class TeamLogoManager {
      * @param {Record<string, string[]>} teams - { teamName: playerNames[] }
      */
     async generateLogosForDraw(date, teams) {
+        // Without a key there is nothing to call, so bail before spawning a request
+        // per team that would each throw. Narrowing here also gives generateTeamLogo
+        // the plain string it requires - env.OPENAI_API_KEY is string|undefined
+        // whenever the variable is absent at svelte-kit sync time, as it is in CI.
+        const apiKey = env.OPENAI_API_KEY;
+        if (!apiKey) {
+            logger.info('[teamLogos] Skipping logo generation - OPENAI_API_KEY is not set', {
+                date
+            });
+            return;
+        }
+
         const teamNames = Object.keys(teams);
         const shapes = pickBadgeShapes(teamNames.length);
 
@@ -203,7 +217,7 @@ export class TeamLogoManager {
                     const rawBuffer = await generateTeamLogo(
                         teamName,
                         shapes[i],
-                        env.OPENAI_API_KEY,
+                        apiKey,
                         env.OPENAI_MODEL
                     );
                     await this.saveRawLogo(date, teamName, rawBuffer);
@@ -212,8 +226,8 @@ export class TeamLogoManager {
                     logger.info('[teamLogos] Saved logo', { teamName, filename });
                 } catch (err) {
                     logger.error(`[teamLogos] Failed to generate logo for "${teamName}"`, {
-                        error: err.message,
-                        stack: err.stack
+                        error: errorMessage(err),
+                        stack: err instanceof Error ? err.stack : undefined
                     });
                 }
             })

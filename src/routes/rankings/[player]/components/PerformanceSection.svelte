@@ -7,14 +7,15 @@
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import GloveIcon from '$components/Icons/GloveIcon.svelte';
 
+    /** @type {{ playerData: PlayerRankingData }} */
     let { playerData } = $props();
 
     let showMissedSessions = $state(false);
 
     /**
      * Format cup round name to human-readable label
-     * @param {string|null} round - Raw round name from bracket
-     * @returns {string} Display label
+     * @param {string|null|undefined} round - Raw round name from bracket
+     * @returns {string|null} Display label, or null when there is no round
      */
     function formatCupRound(round) {
         if (!round) return null;
@@ -44,13 +45,15 @@
      * Calculate league position distribution from player details
      */
     const leagueDistribution = $derived.by(() => {
+        /** @type {Record<number, number>} */
         const distribution = {};
         const appearances = (playerData.details || []).filter(
-            (d) => d.played && d.leaguePosition !== null
+            (d) => d.played && d.leaguePosition != null
         );
 
         appearances.forEach((detail) => {
             const position = detail.leaguePosition;
+            if (position == null) return;
             distribution[position] = (distribution[position] || 0) + 1;
         });
 
@@ -71,14 +74,14 @@
      * Calculate cup progress distribution from player details
      */
     const cupDistribution = $derived.by(() => {
+        /** @type {Record<string, number>} */
         const distribution = {};
         const appearances = (playerData.details || []).filter(
             (d) => d.played && d.cupProgress !== null && d.cupProgress !== undefined
         );
 
         appearances.forEach((detail) => {
-            const progress = detail.cupProgress;
-            const label = formatCupRound(progress);
+            const label = formatCupRound(detail.cupProgress);
             if (label) {
                 distribution[label] = (distribution[label] || 0) + 1;
             }
@@ -97,7 +100,7 @@
             .map(([label, count]) => ({
                 label,
                 count,
-                order: roundOrder[label] ?? 999
+                order: roundOrder[/** @type {keyof typeof roundOrder} */ (label)] ?? 999
             }))
             .sort((a, b) => a.order - b.order);
     });
@@ -166,7 +169,7 @@
 
     /**
      * Render a simple SVG bar chart
-     * @param {Array} data - Array of {label, count} objects
+     * @param {Array<{label: string, count: number}>} data - Distribution rows
      * @param {number} missedCount - Count of missed sessions
      * @param {boolean} includeMissed - Whether to include missed sessions bar
      */
@@ -288,7 +291,7 @@
         <!-- Distribution Charts -->
         <div class="mt-2 grid gap-2 sm:grid-cols-2">
             <!-- League Position Chart -->
-            {#if hasLeagueData}
+            {#if leagueChartData}
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                     <h3
                         class="mb-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -385,7 +388,7 @@
             {/if}
 
             <!-- Cup Progress Chart -->
-            {#if hasCupData}
+            {#if cupChartData}
                 <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
                     <h3
                         class="mb-3 text-center text-sm font-medium text-gray-700 dark:text-gray-300">

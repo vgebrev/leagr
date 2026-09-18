@@ -5,7 +5,7 @@
 
     // Extract the colour from the team name (first word)
     let teamColour = $derived.by(() => {
-        const firstWord = teamName.split(' ')[0].toLowerCase();
+        const firstWord = /** @type {TeamColour} */ (teamName.split(' ')[0].toLowerCase());
         return teamColours.includes(firstWord) ? firstWord : 'blue'; // default to blue if not found
     });
     let styles = $derived(teamStyles[teamColour] || teamStyles.blue);

@@ -3,17 +3,18 @@
 
     /**
      * @typedef {Object} BehaviorTogglesProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {boolean} leagueSettings.canRegenerateTeams - Whether teams can be regenerated after initial creation
-     * @property {boolean} leagueSettings.canResetSchedule - Whether the schedule can be reset after creation
-     * @property {boolean} leagueSettings.seedTeams - Whether to balance teams using player rankings
-     * @property {boolean} [leagueSettings.teamDrawRequiresAdmin] - Whether only admins can draw teams
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {{ enabled: boolean }} [leagueSettings.teamLogos] - Whether to generate AI team logos after draw
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      */
 
     /** @type {BehaviorTogglesProps} */
     let { leagueSettings = $bindable(), onSave } = $props();
+
+    // A league saved before team logos existed has no block, and bind: cannot reach
+    // through an optional chain.
+    leagueSettings.teamLogos ??= { enabled: false };
+    const teamLogos = $derived(leagueSettings.teamLogos ?? { enabled: false });
 </script>
 
 <div class="mt-2 space-y-3 border-t border-t-gray-300 pt-2 dark:border-t-gray-600">
@@ -37,7 +38,7 @@
     </Toggle>
     <Toggle
         classes={{ input: 'leagr-toggle-input' }}
-        bind:checked={leagueSettings.teamLogos.enabled}
+        bind:checked={teamLogos.enabled}
         onchange={onSave}>
         Generate AI team logos after draw
     </Toggle>

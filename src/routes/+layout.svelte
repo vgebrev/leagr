@@ -2,10 +2,7 @@
     import '../app.css';
     import { settings } from '$lib/client/stores/settings.js';
     import { dateString } from '$lib/shared/helpers.js';
-    import {
-        setLeagueId,
-        setAdminCode as setAdminHeader
-    } from '$lib/client/services/api-client.svelte.js';
+    import { setAdminCode as setAdminHeader } from '$lib/client/services/api-client.svelte.js';
     import { page } from '$app/state';
     import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
     import { onMount } from 'svelte';
@@ -20,11 +17,13 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data, children } = $props();
-    setLeagueId(data.leagueId);
+    // The league id is set in +layout.js, not here - see the note there.
     let selectedDate = $derived(new Date(data.date));
     let date = $derived(dateString(selectedDate));
 
-    $settings = data.settings;
+    $effect(() => {
+        $settings = data.settings;
+    });
 
     // Construct page title from parts and league name
     let pageTitle = $derived.by(() => {
@@ -51,6 +50,7 @@
             systemThemeIsDark = mediaQuery.matches;
 
             // Listen for changes
+            /** @param {MediaQueryListEvent} e */
             const handler = (e) => {
                 systemThemeIsDark = e.matches;
             };

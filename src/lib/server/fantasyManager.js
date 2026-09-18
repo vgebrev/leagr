@@ -12,7 +12,12 @@ import {
     sessionActuals,
     DEFAULT_FANTASY_CONFIG
 } from './fantasyPricing.js';
-import { hasSessionStarted, isCompetitionEnded, isRegistrationOpen } from '$lib/shared/helpers.js';
+import {
+    hasSessionStarted,
+    isCompetitionEnded,
+    isRegistrationOpen,
+    errorCode
+} from '$lib/shared/helpers.js';
 import { validateFantasyTeamName } from '$lib/shared/validation.js';
 
 /** Shown for an entry whose owner has no registered player in the session. */
@@ -41,19 +46,6 @@ export class FantasyError extends Error {
 }
 
 /**
- * @typedef {Object} FantasyEntry
- * @property {string} owner - HMAC client hash; never leaves the server
- * @property {string|null} ownerName - the owner's own registered player, resolved at save time
- * @property {string} teamName
- * @property {string[]} players
- * @property {string|null} captain - one of `players`, scored twice; null for a squad with none
- * @property {number} cost
- * @property {number|null} points
- * @property {string} createdAt
- * @property {string} updatedAt
- */
-
-/**
  * Weekly fantasy game: the squad store, its lock rules, and settlement.
  *
  * Pricing itself lives in the pure `fantasyPricing.js`; this class is the I/O half —
@@ -62,13 +54,26 @@ export class FantasyError extends Error {
  */
 export class FantasyManager {
     constructor() {
+        /** @type {string|null} */
         this.leagueId = null;
+        /** @type {string|null} */
         this.date = null;
+        /** @type {import('./playerAccessControl.js').PlayerAccessControl|null} */
         this.accessControl = null;
     }
 
     /**
-     * @param {string} leagueId
+     * The session date, which every storage path and lock rule needs. Narrows the
+     * nullable field at the point of use rather than re-checking at each call site.
+     * @returns {string}
+     */
+    #requireDate() {
+        if (!this.date) throw new FantasyError('Date must be set', 500);
+        return this.date;
+    }
+
+    /**
+     * @param {string|null} leagueId
      * @returns {FantasyManager}
      */
     setLeague(leagueId) {
@@ -104,8 +109,11 @@ export class FantasyManager {
      */
     getFilePath() {
         if (!this.leagueId) throw new FantasyError('League ID must be set', 500);
-        if (!this.date) throw new FantasyError('Date must be set', 500);
-        return path.join(getLeagueDataPath(this.leagueId), 'fantasy', `${this.date}.json`);
+        return path.join(
+            getLeagueDataPath(this.leagueId),
+            'fantasy',
+            `${this.#requireDate()}.json`
+        );
     }
 
     /** @returns {Mutex} */
@@ -119,21 +127,22 @@ export class FantasyManager {
 
     /**
      * Read the stored session without mutex protection (internal use).
-     * @returns {Promise<{date: string, board: Object|null, entries: FantasyEntry[], results: Object|null}>}
+     * @returns {Promise<FantasyFile>}
      */
     async #loadUnsafe() {
-        const empty = { date: this.date, board: null, entries: [], results: null };
+        /** @type {FantasyFile} */
+        const empty = { date: this.#requireDate(), board: null, entries: [], results: null };
         try {
             const raw = await fs.readFile(this.getFilePath(), 'utf-8');
             const parsed = JSON.parse(raw);
             return {
-                date: parsed.date ?? this.date,
+                date: parsed.date ?? this.#requireDate(),
                 board: parsed.board ?? null,
                 entries: Array.isArray(parsed.entries) ? parsed.entries : [],
                 results: parsed.results ?? null
             };
         } catch (err) {
-            if (err.code === 'ENOENT') return empty;
+            if (errorCode(err) === 'ENOENT') return empty;
             console.error('Error reading fantasy file:', err);
             return empty;
         }
@@ -153,14 +162,15 @@ export class FantasyManager {
 
     /**
      * Everything the lock rules and the market need from the rest of the app.
-     * @returns {Promise<{settings: Object, config: Object, players: Object, games: Object, playerOwners: Object, avatars: Object}>}
+     * @returns {Promise<FantasyContext>}
      */
     async #loadContext() {
+        const date = this.#requireDate();
         const [settings, players, games, playerOwners, avatars] = await Promise.all([
-            getConsolidatedSettings(this.date, this.leagueId),
-            data.get('players', this.date, this.leagueId),
-            data.get('games', this.date, this.leagueId),
-            data.get('playerOwners', this.date, this.leagueId),
+            getConsolidatedSettings(date, this.leagueId),
+            data.get('players', date, this.leagueId),
+            data.get('games', date, this.leagueId),
+            data.get('playerOwners', date, this.leagueId),
             createAvatarManager().setLeague(this.leagueId).loadAvatars()
         ]);
 
@@ -168,7 +178,7 @@ export class FantasyManager {
             settings: settings ?? {},
             config: resolveFantasyConfig(settings),
             players: players ?? { available: [], waitingList: [] },
-            games: games ?? {},
+            games: games ?? { rounds: [] },
             playerOwners: playerOwners ?? {},
             avatars: avatars ?? {}
         };
@@ -185,8 +195,8 @@ export class FantasyManager {
      * moving until the competition ends — players register, withdraw and get reassigned
      * long after teams are drawn — so a draw-time gate locked the market on a moment
      * that settles nothing and shut out anyone who signed up later.
-     * @param {Object} settings
-     * @param {Object} games
+     * @param {ConsolidatedSettings} settings
+     * @param {SessionGames} games
      * @param {string|null} [adminUnlockDate]
      * @returns {{state: 'pending'|'open'|'closed', reason: string}}
      */
@@ -220,11 +230,11 @@ export class FantasyManager {
      *
      * `buildWeeklyPrices` is leak-free by construction — it only ever reads sessions
      * strictly before `date` — so this is safe to run for a past session too.
-     * @param {Object} context - from #loadContext
-     * @returns {Promise<{asOf: string|null, regime: string[], budget: number, squadSize: number, prices: Object[]}>}
+     * @param {FantasyContext} context - from #loadContext
+     * @returns {Promise<Omit<LiveBoard, 'locked'>>}
      */
     async #buildBoard(context) {
-        const year = Number(this.date.slice(0, 4));
+        const year = Number(this.#requireDate().slice(0, 4));
         const rankingsManager = createRankingsManager().setLeague(this.leagueId);
 
         // Raw rankings, not the enhanced view: buildWeeklyPrices needs players[name].history,
@@ -238,7 +248,7 @@ export class FantasyManager {
             players: rankings?.players ?? {},
             calculatedDates: rankings?.calculatedDates ?? [],
             pool: context.players?.available ?? [],
-            date: this.date,
+            date: this.#requireDate(),
             previousYearPlayers: previous?.players ?? {},
             config: context.config
         });
@@ -261,23 +271,35 @@ export class FantasyManager {
      * immediately and prices move with the pool. A frozen board always wins — including
      * for an admin-unlocked session, which reopens editing but must not reprice a market
      * the session has already been judged on.
-     * @param {Object} stored
-     * @param {Object} context
-     * @returns {Promise<{prices: Object[], budget: number, squadSize: number, asOf: string|null, regime: string[], locked: boolean}>}
+     * @param {FantasyFile} stored
+     * @param {FantasyContext} context
+     * @returns {Promise<LiveBoard>}
      */
     async #resolveBoard(stored, context) {
-        if (stored.board) {
-            const prices = Object.entries(stored.board.prices ?? {}).map(([playerName, price]) => ({
-                playerName,
-                price,
-                ...(stored.board.meta?.[playerName] ?? {})
-            }));
+        const frozen = stored.board;
+        if (frozen) {
+            /** @type {PriceEntry[]} */
+            const prices = Object.entries(frozen.prices ?? {}).map(([playerName, price]) => {
+                const meta = frozen.meta?.[playerName];
+                return {
+                    playerName,
+                    price,
+                    expectedPoints: meta?.expectedPoints ?? 0,
+                    provisional: meta?.provisional ?? false,
+                    elo: meta?.elo ?? null,
+                    sessions: meta?.sessions ?? 0,
+                    observedMean: null,
+                    breakdown: null,
+                    credibility: 0,
+                    prior: 0
+                };
+            });
             return {
                 prices,
-                budget: stored.board.budget ?? 0,
-                squadSize: stored.board.squadSize ?? context.config.squad.size,
-                asOf: stored.board.asOf ?? null,
-                regime: stored.board.regime ?? [],
+                budget: frozen.budget ?? 0,
+                squadSize: frozen.squadSize ?? context.config.squad.size,
+                asOf: frozen.asOf ?? null,
+                regime: frozen.regime ?? [],
                 locked: true
             };
         }
@@ -288,12 +310,12 @@ export class FantasyManager {
 
     /**
      * Serialisable form of a live board, for freezing into the file.
-     * @param {{asOf: string|null, regime: string[], budget: number, squadSize: number, prices: Object[]}} board
+     * @param {LiveBoard} board
      */
     #freezeBoard(board) {
         /** @type {Record<string, number>} */
         const prices = {};
-        /** @type {Record<string, Object>} */
+        /** @type {Record<string, FantasyPriceMeta>} */
         const meta = {};
 
         for (const entry of board.prices) {
@@ -325,10 +347,10 @@ export class FantasyManager {
      *
      * Callers must already hold the mutex and pass the `stored` they read inside it —
      * that is what stops two simultaneous reads writing two different boards.
-     * @param {{board: Object|null, entries: FantasyEntry[]}} stored
-     * @param {Object} context
-     * @param {{state: string}} window
-     * @returns {Promise<Object|null>} the new board record, or null when nothing froze
+     * @param {{board: FrozenBoard|null, entries: FantasyEntry[]}} stored
+     * @param {FantasyContext} context
+     * @param {FantasyWindowState} window
+     * @returns {Promise<FrozenBoard|null>} the new board record, or null when nothing froze
      */
     async #freezeIfClosedUnsafe(stored, context, window) {
         if (stored.board) return null;
@@ -364,7 +386,7 @@ export class FantasyManager {
             const frozen = await this.#freezeIfClosedUnsafe(stored, context, window);
             if (!frozen) return false;
 
-            await this.#saveUnsafe({ ...stored, date: this.date, board: frozen });
+            await this.#saveUnsafe({ ...stored, date: this.#requireDate(), board: frozen });
             return true;
         });
     }
@@ -378,7 +400,7 @@ export class FantasyManager {
      * a rankings rebuild flows through on the next read — the same self-correcting
      * property settlement already has.
      * @param {{players?: string[]}} entry
-     * @param {{prices: Object[], budget: number}} board
+     * @param {LiveBoard} board
      * @param {Set<string>} available - who is still signed up for the session
      * @returns {{cost: number, valid: boolean, invalidReason: string|null, withdrawnPlayers: string[]}}
      */
@@ -414,7 +436,7 @@ export class FantasyManager {
      * Opening with registration means the first managers arrive to a pool too thin to
      * buy from: the budget is a fraction of what the most expensive `squadSize` players
      * cost, so a pool of exactly `squadSize` can never afford its only possible squad.
-     * @param {{prices: Object[], budget: number, squadSize: number}} board
+     * @param {LiveBoard} board
      * @returns {{ready: boolean, notice: string}}
      */
     #marketReadiness(board) {
@@ -454,7 +476,7 @@ export class FantasyManager {
     /**
      * The manager's own registered player: the first name in `playerOwners` claimed by
      * the same client hash. Null when they have not registered anyone this session.
-     * @param {Object} playerOwners
+     * @param {OwnersMap} playerOwners
      * @param {string} ownerId
      * @returns {string|null}
      */
@@ -470,20 +492,22 @@ export class FantasyManager {
     /**
      * What each player in the session actually scored, once rankings know about the date.
      * @param {string[]} regime
-     * @param {Object} config
-     * @returns {Promise<Map<string, {total: number, breakdown: Object}>|null>} null when not yet settleable
+     * @param {FantasyConfig} config
+     * @returns {Promise<Map<string, SessionFantasyPoints>|null>} null when not yet settleable
      */
     async #computeActuals(regime, config) {
-        const year = Number(this.date.slice(0, 4));
+        const year = Number(this.#requireDate().slice(0, 4));
         const rankings = await createRankingsManager().setLeague(this.leagueId).loadRankings(year);
 
         // Rankings are rebuilt manually in this app, so a finished session stays unsettled
         // until someone runs the update. Absence of the date is the "not yet" signal.
-        if (!rankings?.calculatedDates?.includes(this.date)) return null;
+        if (!rankings?.calculatedDates?.includes(this.#requireDate())) return null;
 
         const weights = config?.scoring ?? DEFAULT_FANTASY_CONFIG.scoring;
-        const regimeTypes = regime?.length ? regime : undefined;
-        return sessionActuals(rankings.players ?? {}, this.date, weights, regimeTypes);
+        const regimeTypes = /** @type {(keyof SessionStats)[] | undefined} */ (
+            regime?.length ? regime : undefined
+        );
+        return sessionActuals(rankings.players ?? {}, this.#requireDate(), weights, regimeTypes);
     }
 
     /**
@@ -513,7 +537,7 @@ export class FantasyManager {
      * The whole fantasy state for the session, from the calling client's point of view.
      * Settles the session as a side effect when rankings have caught up.
      * @param {{adminUnlockDate?: string|null}} [options]
-     * @returns {Promise<Object>}
+     * @returns {Promise<FantasyState>}
      */
     async getState(options = {}) {
         const context = await this.#loadContext();
@@ -569,7 +593,7 @@ export class FantasyManager {
 
             if (dirty) {
                 await this.#saveUnsafe({
-                    date: this.date,
+                    date: this.#requireDate(),
                     board: boardRecord,
                     entries,
                     results
@@ -584,7 +608,7 @@ export class FantasyManager {
      * Create or replace the calling client's squad.
      * @param {{teamName: string, players: string[], captain?: string|null}} submission
      * @param {{adminUnlockDate?: string|null}} [options]
-     * @returns {Promise<Object>} the same shape as getState()
+     * @returns {Promise<FantasyState>} the same shape as getState()
      */
     async saveEntry(submission, options = {}) {
         const ownerId = this.#requireOwnerId();
@@ -687,7 +711,7 @@ export class FantasyManager {
             }
 
             await this.#saveUnsafe({
-                date: this.date,
+                date: this.#requireDate(),
                 board: stored.board,
                 entries,
                 results: stored.results
@@ -707,7 +731,7 @@ export class FantasyManager {
     /**
      * Withdraw the calling client's squad.
      * @param {{adminUnlockDate?: string|null}} [options]
-     * @returns {Promise<Object>} the same shape as getState()
+     * @returns {Promise<FantasyState>} the same shape as getState()
      */
     async deleteEntry(options = {}) {
         const ownerId = this.#requireOwnerId();
@@ -733,7 +757,7 @@ export class FantasyManager {
                 throw new FantasyError('You do not have a squad for this session.', 404);
             }
 
-            await this.#saveUnsafe({ ...stored, date: this.date, entries });
+            await this.#saveUnsafe({ ...stored, date: this.#requireDate(), entries });
 
             const board = await this.#resolveBoard(stored, context);
             return this.#present({
@@ -753,7 +777,8 @@ export class FantasyManager {
      * Shape the state for the API. Owner hashes never cross this boundary — a row is
      * identified to the client only by `isMine` and the owner's player name — and neither
      * do other managers' picks until editing locks.
-     * @returns {Object}
+     * @param {{context: FantasyContext, board: LiveBoard, window: FantasyWindowState, entries: FantasyEntry[], results: FantasyResults|null, settled: boolean}} state
+     * @returns {FantasyState}
      */
     #present({ context, board, window, entries, results, settled }) {
         const ownerId = this.accessControl?.deriveOwnerId() ?? null;
@@ -771,7 +796,7 @@ export class FantasyManager {
                 avatar: avatars[price.playerName]?.avatar ?? null,
                 // Priced into the frozen market but no longer signed up. Their picks
                 // score nothing; the UI flags them rather than forcing a swap.
-                withdrawn: board.locked && !available.has(price.playerName),
+                withdrawn: Boolean(board.locked) && !available.has(price.playerName),
                 points: playerPoints[price.playerName]?.total ?? null
             }))
             .sort((a, b) => b.price - a.price || a.playerName.localeCompare(b.playerName));
@@ -825,11 +850,11 @@ export class FantasyManager {
         const readiness = this.#marketReadiness(board);
 
         return {
-            date: this.date,
+            date: this.#requireDate(),
             squadSize: board.squadSize,
             budget: board.budget,
             asOf: board.asOf,
-            locked: board.locked,
+            locked: Boolean(board.locked),
             squadsRevealed,
             // The rules the session is judged by, for the screen that explains them: both
             // are league-tunable, and the regime decides which stats are paid for at all.

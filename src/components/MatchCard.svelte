@@ -8,13 +8,13 @@
     /**
      * @typedef {'horizontal' | 'vertical'} Orientation
      * @typedef {Object} MatchCardProps
-     * @property {Object} match - Match object with home, away, homeScore, awayScore, homeScorers, awayScorers
+     * @property {KnockoutMatch} match - Match object with home, away, scores and stat maps (KnockoutMatch is the wider of the two)
      * @property {string} matchId - Unique identifier for this match (used for input IDs)
-     * @property {Object} [teams] - Teams object mapping team names to player arrays
+     * @property {TeamsData} [teams] - Teams object mapping team names to player arrays
      * @property {Orientation} [orientation] - Layout orientation
      * @property {boolean} [disabled] - Whether inputs are disabled
-     * @property {Function} [onUpdate] - Callback when match is updated
-     * @property {Function} [onTeamClick] - Callback when team badge is clicked
+     * @property {((match: KnockoutMatch) => void) | null} [onUpdate] - Callback when match is updated
+     * @property {((teamName: string) => void) | null} [onTeamClick] - Callback when team badge is clicked
      * @property {string} [className] - Additional CSS classes
      */
 
@@ -33,6 +33,10 @@
     // Generate unique IDs for score inputs
     const homeScoreId = $derived(`home-score-${matchId}`);
     const awayScoreId = $derived(`away-score-${matchId}`);
+
+    // A match card is never rendered for a bye, so both sides always name a team.
+    const homeTeam = $derived(match.home ?? '');
+    const awayTeam = $derived(match.away ?? '');
 
     // Derived scorer arrays
     const homeScorers = $derived(formatScorers(match.homeScorers));
@@ -137,7 +141,7 @@
 
     /**
      * Format scorers for display (e.g., ["J. Doe (2)", "J. Smith"])
-     * @param {Object | null} scorers - Scorers object with player names as keys
+     * @param {StatMap | undefined} scorers - Scorers object with player names as keys
      * @returns {string[]}
      */
     function formatScorers(scorers) {
@@ -236,8 +240,8 @@
                 <!-- Home team badge -->
                 <TeamBadge
                     className="w-2/5"
-                    teamName={match.home}
-                    onclick={() => onTeamClick?.(match.home)} />
+                    teamName={homeTeam}
+                    onclick={() => onTeamClick?.(homeTeam)} />
 
                 <!-- Home score input with scorer popover -->
                 <div class="relative flex flex-col items-center">
@@ -252,12 +256,12 @@
                         {disabled}
                         min="0"
                         max="99"
-                        aria-label={`${match.home} score`} />
+                        aria-label={`${homeTeam} score`} />
                     {#if !disabled}
                         <ScorerPopover
                             triggerId={homeScoreId}
-                            teamName={match.home}
-                            players={teams[match.home] || []}
+                            teamName={homeTeam}
+                            players={teams[homeTeam] || []}
                             scorers={match.homeScorers || {}}
                             bind:isOpen={homePopoverOpen}
                             onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
@@ -281,12 +285,12 @@
                         {disabled}
                         min="0"
                         max="99"
-                        aria-label={`${match.away} score`} />
+                        aria-label={`${awayTeam} score`} />
                     {#if !disabled}
                         <ScorerPopover
                             triggerId={awayScoreId}
-                            teamName={match.away}
-                            players={teams[match.away] || []}
+                            teamName={awayTeam}
+                            players={teams[awayTeam] || []}
                             scorers={match.awayScorers || {}}
                             bind:isOpen={awayPopoverOpen}
                             onUpdate={(/** @type {{ player: string, delta: number }} */ change) =>
@@ -300,8 +304,8 @@
                 <!-- Away team badge -->
                 <TeamBadge
                     className="w-2/5"
-                    teamName={match.away}
-                    onclick={() => onTeamClick?.(match.away)} />
+                    teamName={awayTeam}
+                    onclick={() => onTeamClick?.(awayTeam)} />
             </div>
 
             <!-- Row 2: Scorers (if any) -->
@@ -351,8 +355,8 @@
                 <div class="flex justify-between gap-2">
                     <div class="flex w-full overflow-hidden">
                         <TeamBadge
-                            teamName={match.home}
-                            onclick={() => onTeamClick?.(match.home)}
+                            teamName={homeTeam}
+                            onclick={() => onTeamClick?.(homeTeam)}
                             className="w-full text-sm" />
                     </div>
                     <div class="flex items-center gap-1">
@@ -369,12 +373,12 @@
                                 onchange={handleHomeScoreChange}
                                 onfocus={(e) =>
                                     /** @type {HTMLInputElement} */ (e.target)?.select()}
-                                aria-label={`${match.home} score`} />
+                                aria-label={`${homeTeam} score`} />
                             {#if !disabled}
                                 <ScorerPopover
                                     triggerId={homeScoreId}
-                                    teamName={match.home}
-                                    players={teams[match.home] || []}
+                                    teamName={homeTeam}
+                                    players={teams[homeTeam] || []}
                                     scorers={match.homeScorers || {}}
                                     bind:isOpen={homePopoverOpen}
                                     onUpdate={(
@@ -409,8 +413,8 @@
                 <div class="flex justify-between gap-2">
                     <div class="flex w-full overflow-hidden">
                         <TeamBadge
-                            teamName={match.away}
-                            onclick={() => onTeamClick?.(match.away)}
+                            teamName={awayTeam}
+                            onclick={() => onTeamClick?.(awayTeam)}
                             className="w-full text-sm" />
                     </div>
                     <div class="flex items-center gap-1">
@@ -427,12 +431,12 @@
                                 onchange={handleAwayScoreChange}
                                 onfocus={(e) =>
                                     /** @type {HTMLInputElement} */ (e.target)?.select()}
-                                aria-label={`${match.away} score`} />
+                                aria-label={`${awayTeam} score`} />
                             {#if !disabled}
                                 <ScorerPopover
                                     triggerId={awayScoreId}
-                                    teamName={match.away}
-                                    players={teams[match.away] || []}
+                                    teamName={awayTeam}
+                                    players={teams[awayTeam] || []}
                                     scorers={match.awayScorers || {}}
                                     bind:isOpen={awayPopoverOpen}
                                     onUpdate={(

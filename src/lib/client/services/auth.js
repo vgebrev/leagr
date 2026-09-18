@@ -9,7 +9,7 @@ import {
 
 /**
  * Get the stored access code for a league from localStorage
- * @param {string} leagueId - The league identifier
+ * @param {string|null} leagueId - The league identifier
  * @returns {string|null} The stored access code or null if not found
  */
 export function getStoredAccessCode(leagueId) {
@@ -25,7 +25,7 @@ export function getStoredAccessCode(leagueId) {
 
 /**
  * Store an access code for a league in localStorage
- * @param {string} leagueId - The league identifier
+ * @param {string|null} leagueId - The league identifier
  * @param {string} accessCode - The access code to store
  */
 export function storeAccessCode(leagueId, accessCode) {
@@ -40,7 +40,7 @@ export function storeAccessCode(leagueId, accessCode) {
 
 /**
  * Remove the stored access code for a league
- * @param {string} leagueId - The league identifier
+ * @param {string|null} leagueId - The league identifier
  */
 export function removeStoredAccessCode(leagueId) {
     if (typeof window === 'undefined') return;
@@ -79,7 +79,7 @@ export async function validateAdminCode() {
 
 /**
  * Check if a user is authenticated for a league by checking localStorage
- * @param {string} leagueId - The league identifier
+ * @param {string|null} leagueId - The league identifier
  * @returns {boolean} True if authenticated (has stored code), false otherwise
  */
 export function isAuthenticated(leagueId) {
@@ -91,6 +91,10 @@ export function isAuthenticated(leagueId) {
 }
 
 // Admin code helpers (stored per league)
+/**
+ * @param {string|null} leagueId
+ * @returns {string|null}
+ */
 export function getStoredAdminCode(leagueId) {
     if (typeof window === 'undefined') return null;
     try {
@@ -101,6 +105,10 @@ export function getStoredAdminCode(leagueId) {
     }
 }
 
+/**
+ * @param {string|null} leagueId
+ * @param {string} code
+ */
 export function storeAdminCode(leagueId, code) {
     if (typeof window === 'undefined') return;
     try {
@@ -111,6 +119,7 @@ export function storeAdminCode(leagueId, code) {
     }
 }
 
+/** @param {string|null} leagueId */
 export function removeStoredAdminCode(leagueId) {
     if (typeof window === 'undefined') return;
     try {

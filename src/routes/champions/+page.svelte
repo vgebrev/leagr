@@ -15,6 +15,7 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyPopover from '$components/TrophyPopover.svelte';
@@ -29,7 +30,7 @@
     import { resolve } from '$app/paths';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let champions = $state([]);
+    let champions = $state(/** @type {ChampionEntry[]} */ ([]));
     /** @type {Array<any>|null} */
     let momentum = $state(null);
     let error = $state(false);
@@ -61,7 +62,7 @@
             (err) => {
                 console.error('Error loading champions:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load champions data', 'error');
+                setNotification(errorMessage(err) || 'Failed to load champions data', 'error');
             }
         );
     }
@@ -76,7 +77,7 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}?${query}`, {});
+        const href = resolve(`/champions?${query}`);
 
         // Navigate and reload data
         await goto(href, { replaceState: true });

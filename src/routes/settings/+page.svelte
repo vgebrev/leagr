@@ -7,7 +7,7 @@
     import { withLoading } from '$lib/client/stores/loading.js';
     import { settings, defaultSettings } from '$lib/client/stores/settings.js';
     import { getDaySettingsDefaults } from '$lib/shared/defaults.js';
-    import { formatDisplayDate } from '$lib/shared/helpers.js';
+    import { formatDisplayDate, errorMessage } from '$lib/shared/helpers.js';
     import DaySettings from './components/DaySettings.svelte';
     import PlayerLimitSettings from './components/PlayerLimitSettings.svelte';
     import CompetitionDaysSettings from './components/CompetitionDaysSettings.svelte';
@@ -29,7 +29,7 @@
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
     let leagueSettings = $state({ ...defaultSettings });
     let daySettings = $state(getDaySettingsDefaults(defaultSettings));
     let hasAdmin = $state(false);
@@ -92,7 +92,7 @@
             (err) => {
                 console.error('Error saving league settings:', err);
                 setNotification(
-                    err.message || 'Failed to save league settings. Please try again.',
+                    errorMessage(err) || 'Failed to save league settings. Please try again.',
                     'error'
                 );
             }
@@ -122,7 +122,7 @@
             (err) => {
                 console.error('Error saving day settings:', err);
                 setNotification(
-                    err.message || 'Failed to save day settings. Please try again.',
+                    errorMessage(err) || 'Failed to save day settings. Please try again.',
                     'error'
                 );
             }
@@ -144,10 +144,21 @@
         }
     }
 
-    onMount(async () => {
+    onMount(() => {
         // Prevent body scroll on settings page to avoid double scrollbar
         document.body.style.overflow = 'hidden';
 
+        // Svelte only honours a cleanup function returned synchronously, so the loading
+        // work runs alongside rather than inside this callback - otherwise the overflow
+        // lock above would never be lifted on navigating away.
+        void loadSettings();
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    });
+
+    async function loadSettings() {
         await withLoading(
             async () => {
                 const hierarchicalSettings = await api.get('settings', date);
@@ -162,7 +173,7 @@
             (err) => {
                 console.error('Error fetching settings:', err);
                 setNotification(
-                    err.message || 'Failed to load settings. Please try again.',
+                    errorMessage(err) || 'Failed to load settings. Please try again.',
                     'error'
                 );
             }
@@ -183,10 +194,7 @@
         }
 
         // Cleanup: restore body scroll when leaving page
-        return () => {
-            document.body.style.overflow = '';
-        };
-    });
+    }
 
     $effect(() => {
         titleParts.set(['Settings']);

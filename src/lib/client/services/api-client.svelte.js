@@ -4,6 +4,11 @@ import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
 
 class HttpError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} status
+     * @param {unknown} body
+     */
     constructor(message, status, body) {
         super(message);
         this.name = 'HttpError';
@@ -19,18 +24,21 @@ let adminCode = $state('');
 let isRedirectingToAuth = false;
 let fetchFn = typeof window !== 'undefined' ? window.fetch.bind(window) : fetch;
 
+/** @param {typeof fetch} fn */
 export function setFetch(fn) {
     fetchFn = fn;
 }
 
+/** @param {string | null} id */
 export function setLeagueId(id) {
-    leagueId = id;
+    leagueId = id ?? '';
 }
 
 export function getLeagueId() {
     return leagueId;
 }
 
+/** @param {string | null | undefined} code */
 export function setAdminCode(code) {
     adminCode = code || '';
 }
@@ -49,6 +57,7 @@ export function hasAdminCode() {
     return Boolean(adminCode);
 }
 
+/** @param {string} id */
 export function setClientId(id) {
     clientId = id;
 }
@@ -83,6 +92,7 @@ function getAuthHeaders() {
     // Be defensive: ensure client ID is initialized before building headers
     ensureClientIdInitialized();
 
+    /** @type {Record<string, string>} */
     const headers = {
         'Content-Type': 'application/json'
     };
@@ -112,6 +122,7 @@ function getAuthHeaders() {
     return headers;
 }
 
+/** @param {Response} response */
 function handleAuthError(response) {
     if (response.status === 403) {
         // Prevent multiple simultaneous redirects from parallel API calls
@@ -133,6 +144,11 @@ function handleAuthError(response) {
     }
 }
 
+/**
+ * @param {string} key - API path after /api/, e.g. 'players'
+ * @param {string | null} [date] - YYYY-MM-DD, appended as ?date=
+ * @returns {Promise<any>}
+ */
 async function get(key, date) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const headers = getAuthHeaders();
@@ -154,6 +170,12 @@ async function get(key, date) {
     return await response.json();
 }
 
+/**
+ * @param {string} key
+ * @param {string | null | undefined} date
+ * @param {unknown} value
+ * @returns {Promise<any>}
+ */
 async function post(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const response = await fetchFn(url, {
@@ -178,6 +200,11 @@ async function post(key, date, value) {
     return await response.json();
 }
 
+/**
+ * @param {string} endpoint
+ * @param {unknown} value
+ * @returns {Promise<any>}
+ */
 async function postDirect(endpoint, value) {
     const url = `${baseUrl}/${endpoint}`;
     const response = await fetchFn(url, {
@@ -202,6 +229,11 @@ async function postDirect(endpoint, value) {
     return await response.json();
 }
 
+/**
+ * @param {string} endpoint
+ * @param {FormData} formData
+ * @returns {Promise<any>}
+ */
 async function postFormData(endpoint, formData) {
     const url = `${baseUrl}/${endpoint}`;
     const headers = getAuthHeaders();
@@ -230,6 +262,12 @@ async function postFormData(endpoint, formData) {
     return await response.json();
 }
 
+/**
+ * @param {string} key
+ * @param {string | null | undefined} date
+ * @param {unknown} value
+ * @returns {Promise<any>}
+ */
 async function remove(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const response = await fetchFn(url, {
@@ -253,6 +291,12 @@ async function remove(key, date, value) {
     return await response.json();
 }
 
+/**
+ * @param {string} key
+ * @param {string | null | undefined} date
+ * @param {unknown} value
+ * @returns {Promise<any>}
+ */
 async function patch(key, date, value) {
     const url = `${baseUrl}/${key}${date ? `?date=${date}` : ''}`;
     const response = await fetchFn(url, {
@@ -276,6 +320,11 @@ async function patch(key, date, value) {
     return await response.json();
 }
 
+/**
+ * @param {string} endpoint
+ * @param {unknown} value
+ * @returns {Promise<any>}
+ */
 async function patchDirect(endpoint, value) {
     const url = `${baseUrl}/${endpoint}`;
     const response = await fetchFn(url, {

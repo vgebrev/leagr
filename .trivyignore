@@ -1,0 +1,25 @@
+# Accepted findings for the container image scan (see .github/workflows/ci.yml).
+#
+# Each entry must record why it is safe to ignore and when to re-check. Remove an
+# entry as soon as the base image ships the fix - this file is not a place to park
+# findings that are merely inconvenient.
+#
+# ---------------------------------------------------------------------------
+# libssl3 3.0.18-1~deb12u2 in gcr.io/distroless/nodejs24-debian12:nonroot
+# Added 2026-09-18. Fixes exist upstream (3.0.19 / 3.0.20) but distroless has not
+# rebuilt, so these cannot be resolved by re-pinning the digest - the pinned
+# digest is already the current :nonroot build.
+#
+# Not reachable by this application: Node bundles its own OpenSSL (3.5.5), and
+# nothing in the image links the Debian libssl3 - verified by scanning every .so,
+# .node and the node binary for a libssl.so.3 reference, which matched only
+# libssl.so.3 itself. All outbound TLS (Mailgun, OpenAI) uses Node's OpenSSL.
+#
+# Re-check: whenever the distroless digest is refreshed. Drop these lines once
+# the base ships >= 3.0.20 and confirm the scan still passes.
+CVE-2026-31789
+CVE-2026-28387
+CVE-2026-28388
+CVE-2026-28389
+CVE-2026-28390
+CVE-2026-45447

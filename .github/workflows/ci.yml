@@ -11,7 +11,8 @@ on:
       - develop
 
 jobs:
-  lint-and-test:
+  verify:
+    name: Lint, test, build & scan
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +31,9 @@ jobs:
       - name: Run linting
         run: npm run lint
 
+      - name: Run type checking
+        run: npm run check:ci
+
       - name: Run backend tests
         run: npm run test:backend
 
@@ -38,3 +42,22 @@ jobs:
 
       - name: Test build
         run: npm run build
+
+      # Plain docker build rather than build-push-action: nothing is being pushed,
+      # so the action would only add a third-party dependency and a buildx setup step.
+      - name: Build container image
+        run: docker build -t leagr:ci .
+
+      # Pinned to a commit SHA, not a tag: tags are mutable and an action runs with
+      # access to the workflow token. The comment records the version it corresponds to.
+      # ignore-unfixed matters: distroless ships CVEs with no upstream fix
+      # available, and without it CI blocks on things nothing can action.
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: leagr:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          trivyignores: .trivyignore
+          exit-code: 1

@@ -1,5 +1,6 @@
 <script>
     import { Modal, Spinner, Button } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
     import PlayerHeader from './PlayerHeader.svelte';
     import PlayerSummaryCard from '../routes/rankings/[player]/components/PlayerSummaryCard.svelte';
@@ -22,7 +23,7 @@
 
     const year = $derived(date ? date.substring(0, 4) : null);
 
-    let playerData = $state(null);
+    let playerData = $state(/** @type {PlayerRankingData | null} */ (null));
     let playerDisplayData = $derived.by(() => {
         if (!playerData) return null;
         const detail = playerData.detailForDate;
@@ -77,7 +78,7 @@
                 console.error('Error loading player profile:', err);
                 loadingError = true;
                 setNotification(
-                    err.message || 'Failed to load player profile. Please try again.',
+                    errorMessage(err) || 'Failed to load player profile. Please try again.',
                     'info'
                 );
             }
@@ -111,7 +112,7 @@
             <div class="w-full">
                 <PlayerHeader
                     playerData={playerDisplayData}
-                    {playerName}
+                    playerName={playerName ?? ''}
                     asOfDate={playerDisplayData?.asOfDate ?? date}
                     showStatus={false} />
             </div>

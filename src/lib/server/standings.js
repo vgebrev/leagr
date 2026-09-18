@@ -1,9 +1,14 @@
 import { data } from './data.js';
+import { errorMessage } from '$lib/shared/helpers.js';
 
 /**
  * Table of standings calculation error class
  */
 export class StandingsError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'StandingsError';
@@ -22,7 +27,7 @@ export class StandingsManager {
 
     /**
      * Set settings for standings calculation
-     * @param {Object} settings - Standings settings (optional)
+     * @param {LeagueSettings|null} settings - Standings settings (optional)
      * @returns {StandingsManager} - Fluent interface
      */
     setSettings(settings) {
@@ -32,14 +37,15 @@ export class StandingsManager {
 
     /**
      * Calculate league standings from match results
-     * @param {Array} matchups - Array of match objects with home, away, homeScore, awayScore
-     * @returns {Array} Sorted array of team standings
+     * @param {Match[]} matchups - Array of match objects with home, away, homeScore, awayScore
+     * @returns {StandingsRow[]} Sorted array of team standings
      */
     calculateStandings(matchups) {
         if (!Array.isArray(matchups)) {
             throw new StandingsError('Matchups must be an array', 400);
         }
 
+        /** @type {Record<string, StandingsRow>} */
         const table = {};
 
         for (const matchup of matchups) {
@@ -123,7 +129,7 @@ export class StandingsManager {
      * Get calculated standings for a specific date
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Array>} Promise resolving to a Standings array
+     * @returns {Promise<StandingsRow[]>} Promise resolving to a Standings array
      */
     async getStandingsForDate(date, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -145,7 +151,7 @@ export class StandingsManager {
             }
 
             console.error('Error calculating standings for date:', date, error);
-            throw new StandingsError(`Failed to calculate standings: ${error.message}`, 500);
+            throw new StandingsError(`Failed to calculate standings: ${errorMessage(error)}`, 500);
         }
     }
 
@@ -153,7 +159,7 @@ export class StandingsManager {
      * Get team seeding order for knockout tournaments
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Array>} Promise resolving to teams in seeding order
+     * @returns {Promise<string[]>} Promise resolving to teams in seeding order
      */
     async getKnockoutSeeding(date, leagueId = null) {
         try {
@@ -164,14 +170,14 @@ export class StandingsManager {
                 throw error;
             }
 
-            throw new StandingsError(`Failed to get knockout seeding: ${error.message}`, 500);
+            throw new StandingsError(`Failed to get knockout seeding: ${errorMessage(error)}`, 500);
         }
     }
 
     /**
      * Generate knockout tournament bracket from seeded teams
      * @param {Array<string>} teams - Teams in seeding order (1st, 2nd, 3rd, etc.)
-     * @returns {Object} Bracket structure with teams and matches
+     * @returns {KnockoutBracketData} Bracket structure with teams and matches
      */
     generateKnockoutBracket(teams) {
         if (!Array.isArray(teams)) {
@@ -185,13 +191,16 @@ export class StandingsManager {
         // Determine whether to round up (with byes) or round down (eliminate teams)
         const tournamentTeams = this.#adjustTeamsForBracket(teams);
 
+        /** @type {KnockoutMatch[]} */
         const bracket = [];
 
         // Generate matches by round
+        /** @type {Array<string | null>} */
         let currentRound = tournamentTeams.slice();
         let roundName = this._getRoundName(currentRound.length);
 
         while (currentRound.length > 1) {
+            /** @type {KnockoutMatch[]} */
             const matches = [];
             const pairings = [];
 
@@ -205,6 +214,7 @@ export class StandingsManager {
             // Create matches in reverse order (top seeds play later)
             for (let i = pairings.length - 1; i >= 0; i--) {
                 const [home, away] = pairings[i];
+                /** @type {KnockoutMatch} */
                 const match = {
                     round: roundName,
                     match: pairings.length - i,
@@ -225,13 +235,14 @@ export class StandingsManager {
             bracket.push(...matches);
 
             // Prepare next round, automatically advancing teams with byes
+            /** @type {Array<string | null>} */
             const nextRound = [];
             for (let i = 0; i < matches.length; i++) {
                 const match = matches[i];
                 if (match.bye) {
                     // Automatically advance the non-bye team
                     const advancingTeam = match.home === 'BYE' ? match.away : match.home;
-                    nextRound.push(advancingTeam);
+                    nextRound.push(advancingTeam ?? null);
                 } else {
                     // Regular match - winner TBD
                     nextRound.push(null);
@@ -252,7 +263,6 @@ export class StandingsManager {
      * Adjust team count for tournament bracket (round up with byes or round down by elimination)
      * @param {Array<string>} teams - Original teams array
      * @returns {Array<string>} Adjusted teams array with byes if needed
-     * @private
      */
     #adjustTeamsForBracket(teams) {
         const teamCount = teams.length;
@@ -308,7 +318,7 @@ export class StandingsManager {
      * Generate knockout bracket for a specific date
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object>} Promise resolving to bracket structure
+     * @returns {Promise<KnockoutBracketData>} Promise resolving to bracket structure
      */
     async getKnockoutBracketForDate(date, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -323,7 +333,10 @@ export class StandingsManager {
                 throw error;
             }
 
-            throw new StandingsError(`Failed to generate knockout bracket: ${error.message}`, 500);
+            throw new StandingsError(
+                `Failed to generate knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 }

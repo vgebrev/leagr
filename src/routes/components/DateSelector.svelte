@@ -38,7 +38,8 @@
      * @param {import('flowbite-svelte').DateOrRange} newDate - The newly selected date.
      */
     function dateChanged(newDate) {
-        const date = dateString(newDate);
+        // The picker is single-date, so a range never reaches here.
+        const date = dateString(/** @type {Date} */ (newDate));
         window.location.href = `${page.url.pathname}?date=${date}`;
     }
 </script>

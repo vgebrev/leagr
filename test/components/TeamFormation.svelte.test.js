@@ -224,6 +224,16 @@ describe('TeamFormation captain', () => {
         expect(getByLabelText('Alice is captain').tagName).toBe('BUTTON');
     });
 
+    it('fades the armbands that are only on offer, so one badge reads as live', () => {
+        const { getByLabelText } = render(TeamFormation, {
+            props: { players, captain: 'Alice', oncaptain: () => {} }
+        });
+
+        // Players read two lit armbands as two captains, so the offer is dimmed.
+        expect(getByLabelText('Make Bob captain').className).toContain('opacity-75');
+        expect(getByLabelText('Alice is captain').className).not.toContain('opacity-75');
+    });
+
     it('never offers the armband on an empty slot', () => {
         const { getAllByRole } = render(TeamFormation, {
             props: { players: withSlot, oncaptain: () => {} }

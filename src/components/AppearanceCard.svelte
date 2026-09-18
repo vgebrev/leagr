@@ -27,7 +27,7 @@
      * @param {string} date - Date in YYYY-MM-DD format
      */
     function goToTableDate(date) {
-        goto(resolve(`/table?date=${date}`, {}));
+        goto(resolve(`/table?date=${date}`));
     }
 </script>
 

@@ -3,14 +3,12 @@
     import AnimatedIn from './AnimatedIn.svelte';
     import Avatar from '$components/avatars/Avatar.svelte';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapDreamTeamEntry} YearRecapDreamTeamEntry */
-
     /** @type {{ data: YearRecapDreamTeamEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Calculate delays
     const itemStagger = 150; // Delay increment per item
-    const summaryDelay = initialDelay + (data?.length || 6) * itemStagger + 200; // After last item + buffer
+    const summaryDelay = $derived(initialDelay + (data?.length || 6) * itemStagger + 200); // After last item + buffer
     const summaryDuration = 600; // Longer duration for summary fade
 </script>
 

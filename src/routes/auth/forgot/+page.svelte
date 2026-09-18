@@ -1,5 +1,6 @@
 <script>
     import { Button, Input, Label, Alert } from 'flowbite-svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import { LockSolid, EnvelopeSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
@@ -11,7 +12,7 @@
 
     let { data } = $props();
     let email = $state('');
-    let hasOwnerEmail = $state(data.leagueInfo?.hasOwnerEmail || false);
+    let hasOwnerEmail = $derived(data.leagueInfo?.hasOwnerEmail || false);
 
     onMount(() => {
         if (!data.leagueInfo) {
@@ -46,7 +47,7 @@
             },
             (error) => {
                 console.error('Error requesting reset code:', error);
-                setNotification(error.message || 'Failed to send reset email', 'error');
+                setNotification(errorMessage(error) || 'Failed to send reset email', 'error');
             }
         );
     }
@@ -100,7 +101,7 @@
                     bind:value={email}
                     placeholder="your.email@example.com"
                     required
-                    classes={{ wrapper: 'w-full' }}
+                    classes={{ div: 'w-full' }}
                     class="dark:bg-gray-800" />
                 <p class="mt-1 text-xs text-gray-500 dark:text-gray-300">
                     Enter the email address associated with this league

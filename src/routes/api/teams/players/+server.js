@@ -63,10 +63,15 @@ export const DELETE = async ({ request, url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        if (!settings) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             dateValidation.date,
-            gameData.settings,
+            settings,
             locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
@@ -88,12 +93,12 @@ export const DELETE = async ({ request, url, locals }) => {
         }
 
         // Handle no-show discipline tracking (only if discipline system is enabled)
-        if (action === 'no-show' && gameData.settings.discipline?.enabled !== false) {
+        if (action === 'no-show' && settings.discipline?.enabled !== false) {
             const disciplineManager = createDisciplineManager().setLeague(leagueId);
             await disciplineManager.recordNoShow(nameValidation.sanitizedName, dateValidation.date);
             await disciplineManager.updateSuspensionReadinessIfNeeded(
                 nameValidation.sanitizedName,
-                gameData.settings
+                settings
             );
         }
 

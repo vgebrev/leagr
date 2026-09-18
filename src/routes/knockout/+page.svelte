@@ -15,12 +15,14 @@
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
+    /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
-    const date = data.date;
+    const date = $derived(data.date);
 
     let sessionLocked = $derived(isSessionLocked(date, $settings));
 
     let showTeamModal = $state(false);
+    /** @type {string | null} */
     let selectedTeam = $state(null);
 
     $effect(() => {
@@ -35,20 +37,21 @@
 
     /**
      * Get the winner of a knockout match, including penalty tiebreaker.
-     * @param {Object} match
+     * @param {KnockoutMatch} match
      * @returns {string|null}
      */
     function getKnockoutWinner(match) {
-        if (match.homeScore === null || match.awayScore === null) return null;
-        if (match.homeScore > match.awayScore) return match.home;
-        if (match.awayScore > match.homeScore) return match.away;
+        if (match.homeScore == null || match.awayScore == null) return null;
+        if (match.homeScore > match.awayScore) return match.home ?? null;
+        if (match.awayScore > match.homeScore) return match.away ?? null;
         if (match.homePenalties != null && match.awayPenalties != null) {
-            if (match.homePenalties > match.awayPenalties) return match.home;
-            if (match.awayPenalties > match.homePenalties) return match.away;
+            if (match.homePenalties > match.awayPenalties) return match.home ?? null;
+            if (match.awayPenalties > match.homePenalties) return match.away ?? null;
         }
         return null;
     }
 
+    /** @param {string} teamName */
     function handleTeamClick(teamName) {
         pushState('', { teamModal: { teamName } });
     }
@@ -56,7 +59,7 @@
     /**
      * @typedef {Object} WinningTeam
      * @property {string} name
-     * @property {import('$lib/shared/helpers.js').TeamColour} colour
+     * @property {TeamColour} colour
      */
 
     /** @type {WinningTeam} */
@@ -78,7 +81,7 @@
             const winner = getKnockoutWinner(finalMatch);
             if (winner && winner !== winningTeam.name) {
                 winningTeam.name = winner;
-                const firstWord = winner.split(' ')[0].toLowerCase();
+                const firstWord = /** @type {TeamColour} */ (winner.split(' ')[0].toLowerCase());
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
             }
@@ -99,7 +102,7 @@
             const winner = getKnockoutWinner(finalMatch);
             if (winner && teamName === winner) {
                 winningTeam.name = winner;
-                const firstWord = winner.split(' ')[0].toLowerCase();
+                const firstWord = /** @type {TeamColour} */ (winner.split(' ')[0].toLowerCase());
                 winningTeam.colour = teamColours.includes(firstWord) ? firstWord : 'blue';
                 celebrating = true;
             }
@@ -107,7 +110,7 @@
     }
 
     /**
-     * @param {Object} updatedMatch
+     * @param {KnockoutMatch} updatedMatch
      */
     async function handleKnockoutMatchUpdate(updatedMatch) {
         await gamesService.updateKnockoutMatch(updatedMatch);

@@ -55,7 +55,7 @@ function fallbackCopyToClipboard(text) {
  * @param {string} shareData.title - The title of the content being shared
  * @param {string} shareData.text - The text to share
  * @param {string} shareData.url - The URL to share
- * @returns {Promise<{success: boolean, method: string}>} Promise with success status and method used
+ * @returns {Promise<{success: boolean, method: string, cancelled?: boolean}>} Promise with success status and method used
  */
 export async function shareContent(shareData) {
     // Check if Web Share API is available and supported
@@ -65,7 +65,7 @@ export async function shareContent(shareData) {
             return { success: true, method: 'native' };
         } catch (error) {
             // User cancelled sharing or other error
-            if (error.name === 'AbortError') {
+            if (error instanceof Error && error.name === 'AbortError') {
                 return { success: false, method: 'native', cancelled: true };
             }
             // Fall back to clipboard if sharing fails

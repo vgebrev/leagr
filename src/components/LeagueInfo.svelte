@@ -11,7 +11,7 @@
         icon: 'soccer'
     };
 
-    const displayInfo = leagueInfo || defaultInfo;
+    const displayInfo = $derived(leagueInfo || defaultInfo);
 </script>
 
 <div class="flex min-w-0 items-center">

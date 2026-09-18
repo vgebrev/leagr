@@ -29,18 +29,6 @@
     import SnowflakeIcon from '$components/Icons/SnowflakeIcon.svelte';
 
     /**
-     * @typedef {Object} MomentumEntry
-     * @property {string} playerName
-     * @property {number} value - signed momentum, -1 (cold) to 1 (hot)
-     * @property {number} sessions
-     * @property {boolean} provisional
-     * @property {Array<{type: string, count: number}>} [badges] - ballers: per-award streaks
-     * @property {Array<{league: boolean, cup: boolean}>} [trophyStreak] - champions: per-session run
-     * @property {number} [woodenSpoonStreak] - champions: trailing last-place run
-     * @property {Array<{date: string, value: number}>} [series] - per-session momentum trace
-     */
-
-    /**
      * @type {{ entries: MomentumEntry[], variant: 'champions'|'ballers' }}
      */
     let { entries = [], variant = 'champions' } = $props();
@@ -131,7 +119,7 @@
 
     /** @param {string} playerName */
     function handlePlayerClick(playerName) {
-        goto(resolve(`/rankings/${playerName}`, {}));
+        goto(resolve(`/rankings/${encodeURIComponent(playerName)}`));
     }
 </script>
 

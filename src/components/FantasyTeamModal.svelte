@@ -7,12 +7,11 @@
      * A fantasy squad on the pitch, for the leaderboard: a row opens its squad. The pick
      * screen shows the same preview inline instead, so everything below the header lives in
      * FantasySquadPreview.
-     * @typedef {{name: string, avatar?: string | null, elo?: number | null}} SquadPlayer
      * @type {{
      *   teamName?: string | null,
      *   ownerName?: string | null,
      *   players?: SquadPlayer[],
-     *   playerStats?: Record<string, {price: number, points: number}>,
+     *   playerStats?: Record<string, {price: number, points: number | null}>,
      *   cost?: number | null,
      *   points?: number | null,
      *   withdrawnPlayers?: string[],

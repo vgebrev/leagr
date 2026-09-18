@@ -1,8 +1,9 @@
 <script>
     import { Alert, Button, Input, Label, Radio } from 'flowbite-svelte';
+    import { untrack } from 'svelte';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import { isValidSubdomain, generateAccessCode } from '$lib/shared/validation.js';
-    import { capitalize } from '$lib/shared/helpers.js';
+    import { capitalize, errorMessage } from '$lib/shared/helpers.js';
     import { leaguesService } from '$lib/client/services/leagues.svelte.js';
     import { page } from '$app/state';
     import { setNotification } from '$lib/client/stores/notification.js';
@@ -15,9 +16,10 @@
         appUrl
     } = $props();
 
-    // Form state
-    let subdomain = $state(leagueId || '');
-    let name = $state(capitalize(leagueId || ''));
+    // Form state. These are editable fields seeded from the prop, so the initial value is
+    // the point - untrack() says that rather than leaving it looking like a missed $derived.
+    let subdomain = $state(untrack(() => leagueId) || '');
+    let name = $state(capitalize(untrack(() => leagueId) || ''));
     let icon = $state('soccer');
     let accessCode = $state(generateAccessCode());
     let ownerEmail = $state('');
@@ -122,7 +124,7 @@
                 }, 2000);
             },
             (err) => {
-                setNotification(err.message, 'error');
+                setNotification(errorMessage(err), 'error');
             }
         );
     }
@@ -163,7 +165,7 @@
                 bind:value={subdomain}
                 placeholder="your-league"
                 disabled={mode === 'existing'}
-                classes={{ wrapper: 'w-full flex-1' }}
+                classes={{ div: 'w-full flex-1' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <span class="text-sm text-gray-500 dark:text-gray-300">.{urlHost}</span>
@@ -221,7 +223,7 @@
                 type="text"
                 bind:value={accessCode}
                 placeholder="XXXX-XXXX-XXXX"
-                classes={{ wrapper: 'flex-1 font-mono' }}
+                classes={{ div: 'flex-1 font-mono' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button
@@ -250,7 +252,7 @@
                 type="text"
                 bind:value={adminCode}
                 placeholder="XXXX-XXXX-XXXX"
-                classes={{ wrapper: 'flex-1 font-mono' }}
+                classes={{ div: 'flex-1 font-mono' }}
                 class="!bg-gray-50 dark:!bg-gray-800"
                 required />
             <Button

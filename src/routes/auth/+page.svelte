@@ -18,6 +18,9 @@
     let accessCode = $state('');
 
     // Get redirect URL from query params
+    // The page the user was on before being sent here. Already an app-absolute path
+    // carrying any configured base, so there is no route literal for resolve() and
+    // re-resolving would double the prefix.
     let redirectUrl = $derived(page.url.searchParams.get('redirect') || '/');
 
     // Redirect if already authenticated or no league
@@ -29,7 +32,8 @@
 
         const authenticated = isAuthenticated(data.leagueId);
         if (authenticated) {
-            goto(resolve(redirectUrl));
+            // eslint-disable-next-line svelte/no-navigation-without-resolve -- base-safe by construction
+            goto(redirectUrl);
         }
     });
 
@@ -54,7 +58,8 @@
                 // Store the code and redirect
                 storeAccessCode(data.leagueId, accessCode.trim());
                 setNotification('Authentication successful!', 'success');
-                goto(resolve(redirectUrl));
+                // eslint-disable-next-line svelte/no-navigation-without-resolve -- base-safe by construction
+                goto(redirectUrl);
             } else {
                 setNotification('Invalid access code. Please try again.', 'error');
             }
@@ -89,7 +94,7 @@
                 bind:value={accessCode}
                 placeholder="Enter access code"
                 required
-                classes={{ wrapper: 'w-full font-mono' }}
+                classes={{ div: 'w-full font-mono' }}
                 class="dark:bg-gray-800" />
         </div>
 

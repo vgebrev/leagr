@@ -11,18 +11,11 @@
     import InvisibleFaceIcon from '$components/Icons/InvisibleFaceIcon.svelte';
 
     /**
-     * @typedef {Object} PlayerAction
-     * @property {'remove'|'no-show'|'move-to-waiting'|'move-to-active'|'assign'|'rename'} type - The action type that determines the icon
-     * @property {string} label - The display text for the action
-     * @property {() => void} onclick - The function to call when the action is clicked
-     * @property {boolean} [disabled] - Whether the action is disabled (optional)
-     */
-
     /**
      * @type {{
      *   actions: PlayerAction[],
      *   canModifyList: boolean,
-     *   styleClass: string
+     *   styleClass?: string
      * }}
      */
     let {

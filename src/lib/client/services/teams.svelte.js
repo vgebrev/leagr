@@ -3,41 +3,42 @@ import { playersService } from '$lib/client/services/players.svelte.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 import { withLoading } from '$lib/client/stores/loading.js';
 import { settings } from '$lib/client/stores/settings.js';
-import { isCompetitionEnded } from '$lib/shared/helpers.js';
+import { isCompetitionEnded, errorMessage, errorStatus } from '$lib/shared/helpers.js';
 import { defaultSettings } from '$lib/shared/defaults.js';
 import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
 
 class TeamsService {
+    /** @type {ConsolidatedSettings} */
     #settings = $state(defaultSettings);
 
     // State
-    /** @type {Object} */
+    /** @type {EnhancedTeamsData} */
     teams = $state({});
 
     /** @type {string | null} */
     currentDate = $state(null);
 
-    /** @type {Object | null} */
+    /** @type {LeagueInfo | null} */
     leagueInfo = $state(null);
 
-    /** @type {Object | null} */
+    /** @type {DrawHistoryData | null} */
     drawHistory = $state(null);
 
-    /** @type {Object[]} Enhanced waiting list players with ELO data */
+    /** @type {PlayerWithElo[]} Enhanced waiting list players with ELO data */
     waitingListWithElo = $state([]);
 
-    /** @type {Object[]} Enhanced available players with ELO data */
+    /** @type {PlayerWithElo[]} Enhanced available players with ELO data */
     availablePlayersWithElo = $state([]);
 
     /** @type {boolean} */
     hasExistingTeams = $derived(Object.keys(this.teams).length > 0);
 
-    /** @type {Object} */
+    /** @type {{available: number, eligible: number, excess: number, waitingList: number}} */
     playerSummary = $derived.by(() => {
         const players = playersService.players;
         const waitingList = playersService.waitingList;
-        const playerLimit =
-            this.#settings[this.currentDate]?.playerLimit || this.#settings.playerLimit;
+        const dayOverride = this.currentDate ? this.#settings[this.currentDate] : null;
+        const playerLimit = dayOverride?.playerLimit || this.#settings.playerLimit;
 
         return {
             available: players.length,
@@ -57,7 +58,7 @@ class TeamsService {
         return this.#teamConfigurations || [];
     });
 
-    /** @type {Array} */
+    /** @type {TeamConfig[]} */
     #teamConfigurations = $state([]);
 
     /** @type {boolean} */
@@ -69,24 +70,18 @@ class TeamsService {
         );
     });
 
-    /** @type {Object[]} */
+    /** @type {PlayerWithElo[]} */
     unassignedPlayersWithElo = $derived.by(() => {
-        const assignedPlayerNames = $state(new Set());
-
-        // Collect all players currently assigned to teams
-        Object.values(this.teams).forEach((team) => {
-            team.forEach((player) => {
-                if (player) {
-                    // Handle both string players and player objects with name property
-                    const playerName = typeof player === 'string' ? player : player.name || player;
-                    assignedPlayerNames.add(playerName);
-                }
-            });
-        });
+        // A roster slot holds an enriched player object, or null for an empty slot, so
+        // the comparison against the available list has to go through the name.
+        const assignedPlayerNames = Object.values(this.teams)
+            .flat()
+            .filter((player) => player !== null)
+            .map((player) => player.name);
 
         // Return enhanced available players not assigned to any team
         return this.availablePlayersWithElo.filter(
-            (playerObj) => !assignedPlayerNames.has(playerObj.name)
+            (playerObj) => !assignedPlayerNames.includes(playerObj.name)
         );
     });
 
@@ -127,7 +122,7 @@ class TeamsService {
             (err) => {
                 console.error('Error loading team configurations:', err);
                 setNotification(
-                    err.message || 'Failed to load team configurations. Please try again.',
+                    errorMessage(err) || 'Failed to load team configurations. Please try again.',
                     'error'
                 );
                 this.#teamConfigurations = [];
@@ -137,7 +132,7 @@ class TeamsService {
 
     /**
      * Generate teams using the selected configuration
-     * @param {Object} options - Configuration object containing team options
+     * @param {{teams?: number, teamSizes?: number[]}} options - Configuration object containing team options
      */
     async generateTeams(options) {
         if (this.isLocked() || !playersService.canModifyList) {
@@ -171,7 +166,7 @@ class TeamsService {
             (err) => {
                 console.error('Error generating teams:', err);
                 setNotification(
-                    err.message || 'Failed to generate teams. Please try again.',
+                    errorMessage(err) || 'Failed to generate teams. Please try again.',
                     'error'
                 );
                 this.teams = restoreTeams;
@@ -204,7 +199,7 @@ class TeamsService {
                 if (!detectedTeamName) {
                     // Find which team the player is in
                     for (const [name, roster] of Object.entries(this.teams)) {
-                        if (roster.includes(playerName)) {
+                        if (roster.some((player) => player?.name === playerName)) {
                             detectedTeamName = name;
                             break;
                         }
@@ -224,8 +219,12 @@ class TeamsService {
                     this.availablePlayersWithElo = result.players.available;
                     this.waitingListWithElo = result.players.waitingList;
                     // Extract player names for legacy playersService
-                    playersService.players = result.players.available.map((p) => p.name);
-                    playersService.waitingList = result.players.waitingList.map((p) => p.name);
+                    playersService.players = result.players.available.map(
+                        (/** @type {PlayerWithElo} */ p) => p.name
+                    );
+                    playersService.waitingList = result.players.waitingList.map(
+                        (/** @type {PlayerWithElo} */ p) => p.name
+                    );
                     playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
 
                     // Reload team configurations to reflect player changes
@@ -235,7 +234,7 @@ class TeamsService {
             (err) => {
                 console.error('Error removing player:', err);
                 setNotification(
-                    err.message || 'Failed to remove player. Please try again.',
+                    errorMessage(err) || 'Failed to remove player. Please try again.',
                     'error'
                 );
                 this.teams = restoreTeams;
@@ -283,8 +282,12 @@ class TeamsService {
                     this.availablePlayersWithElo = result.players.available;
                     this.waitingListWithElo = result.players.waitingList;
                     // Extract player names for legacy playersService
-                    playersService.players = result.players.available.map((p) => p.name);
-                    playersService.waitingList = result.players.waitingList.map((p) => p.name);
+                    playersService.players = result.players.available.map(
+                        (/** @type {PlayerWithElo} */ p) => p.name
+                    );
+                    playersService.waitingList = result.players.waitingList.map(
+                        (/** @type {PlayerWithElo} */ p) => p.name
+                    );
                     playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
 
                     // Reload team configurations to reflect player changes
@@ -294,7 +297,7 @@ class TeamsService {
             (err) => {
                 console.error('Error assigning player to team:', err);
                 setNotification(
-                    err.message || 'Failed to assign player to team. Please try again.',
+                    errorMessage(err) || 'Failed to assign player to team. Please try again.',
                     'error'
                 );
                 this.teams = restoreTeams;
@@ -306,20 +309,20 @@ class TeamsService {
 
     /**
      * Apply an assignment API response (teams/players) to local state.
-     * @param {Object} result - API response with teams, players and ownedByMe
+     * @param {{teams?: EnhancedTeamsData, players?: {available: PlayerWithElo[], waitingList: PlayerWithElo[]}, ownedByMe?: string[]}} result - API response with teams, players and ownedByMe
      */
     #applyAssignmentResult(result) {
-        this.teams = result.teams;
-        this.availablePlayersWithElo = result.players.available;
-        this.waitingListWithElo = result.players.waitingList;
-        playersService.players = result.players.available.map((p) => p.name);
-        playersService.waitingList = result.players.waitingList.map((p) => p.name);
+        this.teams = result.teams ?? {};
+        this.availablePlayersWithElo = result.players?.available ?? [];
+        this.waitingListWithElo = result.players?.waitingList ?? [];
+        playersService.players = this.availablePlayersWithElo.map((p) => p.name);
+        playersService.waitingList = this.waitingListWithElo.map((p) => p.name);
         playersService.ownedByMe = result.ownedByMe || playersService.ownedByMe;
     }
 
     /**
      * Run a balance-aware auto-assign request and reconcile local state.
-     * @param {Object} body - Request body ({ playerName } | { teamName } | {})
+     * @param {{playerName?: string, teamName?: string}} body - Request body ({ playerName } | { teamName } | {})
      * @param {string} fallbackError - User-facing error message on failure
      */
     async #runAutoAssign(body, fallbackError) {
@@ -337,7 +340,7 @@ class TeamsService {
             },
             (err) => {
                 console.error(fallbackError, err);
-                setNotification(err.message || fallbackError, 'error');
+                setNotification(errorMessage(err) || fallbackError, 'error');
                 this.teams = restoreTeams;
                 playersService.players = restorePlayers;
                 playersService.waitingList = restoreWaitingList;
@@ -421,7 +424,7 @@ class TeamsService {
             (err) => {
                 console.error('Error fetching teams data:', err);
                 setNotification(
-                    err.message || 'Failed to load teams data. Please try again.',
+                    errorMessage(err) || 'Failed to load teams data. Please try again.',
                     'error'
                 );
             }
@@ -440,7 +443,10 @@ class TeamsService {
                     this.drawHistory = await api.get('teams/draw-history', this.currentDate);
                 } catch (err) {
                     // Draw history is optional - don't show error if not found
-                    if (err.status === 404 || err.message?.includes('No draw history found')) {
+                    if (
+                        errorStatus(err) === 404 ||
+                        errorMessage(err)?.includes('No draw history found')
+                    ) {
                         this.drawHistory = null;
                     } else {
                         throw err;
@@ -450,7 +456,7 @@ class TeamsService {
             (err) => {
                 console.error('Error loading draw history:', err);
                 setNotification(
-                    err.message || 'Failed to load draw history. Please try again.',
+                    errorMessage(err) || 'Failed to load draw history. Please try again.',
                     'error'
                 );
                 this.drawHistory = null;

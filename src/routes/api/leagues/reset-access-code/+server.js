@@ -3,8 +3,8 @@ import { validateLeagueForAPI, createLeagueService, LeagueError } from '$lib/ser
 
 /**
  * Reset access code using a valid reset code
- * @param {Object} event - SvelteKit request event
- * @returns {Response} - JSON response with success status
+ * @param {import('./$types').RequestEvent} event - SvelteKit request event
+ * @returns {Promise<Response>} - JSON response with success status
  */
 export async function POST({ request, locals }) {
     // Validate league exists
@@ -24,6 +24,9 @@ export async function POST({ request, locals }) {
 
     const { resetCode, newAccessCode } = requestData;
     const { leagueId, leagueInfo } = locals;
+    if (!leagueInfo) {
+        return error(404, 'League not found');
+    }
 
     try {
         const leagueService = createLeagueService();

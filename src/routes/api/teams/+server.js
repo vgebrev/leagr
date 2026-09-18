@@ -108,10 +108,16 @@ export const POST = async ({ request, url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        const players = gameData.players;
+        if (!settings || !players) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         // Validate if operations are allowed based on competition end state
         const operationValidation = validateCompetitionOperationsAllowed(
             dateValidation.date,
-            gameData.settings,
+            settings,
             locals.adminUnlockDate
         );
         if (!operationValidation.isValid) {
@@ -120,8 +126,8 @@ export const POST = async ({ request, url, locals }) => {
 
         const drawValidation = validateTeamDrawAllowed(
             dateValidation.date,
-            gameData.settings,
-            locals.isAdmin
+            settings,
+            locals.isAdmin ?? false
         );
         if (!drawValidation.isValid) {
             return error(401, drawValidation.error);
@@ -138,16 +144,16 @@ export const POST = async ({ request, url, locals }) => {
 
         // Get eligible players (respecting player limit)
         const effectivePlayerLimit =
-            gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit;
-        const eligiblePlayers = gameData.players.available.slice(
+            settings[dateValidation.date]?.playerLimit || settings.playerLimit;
+        const eligiblePlayers = players.available.slice(
             0,
-            Math.min(gameData.players.available.length, effectivePlayerLimit)
+            Math.min(players.available.length, effectivePlayerLimit)
         );
 
         // Generate teams with history recording enabled
         const teamGenerator = createTeamGenerator()
             .setLeague(leagueId)
-            .setSettings(gameData.settings)
+            .setSettings(settings)
             .setPlayers(eligiblePlayers)
             .setRankings(rankings)
             .setPreviousYearRankings(previousYearRankings)
@@ -173,7 +179,7 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Trigger logo generation asynchronously (fire-and-forget) if enabled
-        if (gameData.settings.teamLogos?.enabled) {
+        if (settings.teamLogos?.enabled) {
             logger.info('[teamLogos] Logo generation enabled, triggering for draw', {
                 date: dateValidation.date,
                 teams: Object.keys(result.teams)
@@ -188,7 +194,7 @@ export const POST = async ({ request, url, locals }) => {
                 );
         } else {
             logger.info('[teamLogos] Logo generation disabled, skipping', {
-                teamLogos: gameData.settings.teamLogos
+                teamLogos: settings.teamLogos
             });
         }
 

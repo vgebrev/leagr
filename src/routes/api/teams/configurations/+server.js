@@ -27,13 +27,19 @@ export const GET = async ({ url, locals }) => {
             settings: true
         });
 
+        const settings = gameData.settings;
+        const players = gameData.players;
+        if (!settings || !players) {
+            return error(500, 'Session data could not be loaded');
+        }
+
         const playerCount = Math.min(
-            gameData.players.available.length,
-            gameData.settings[dateValidation.date]?.playerLimit || gameData.settings.playerLimit
+            players.available.length,
+            settings[dateValidation.date]?.playerLimit || settings.playerLimit
         );
 
         // Calculate possible team configurations
-        const teamGenerator = createTeamGenerator().setSettings(gameData.settings);
+        const teamGenerator = createTeamGenerator().setSettings(settings);
 
         const configurations = teamGenerator.calculateConfigurations(playerCount);
 

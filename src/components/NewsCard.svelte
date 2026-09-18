@@ -12,24 +12,6 @@
     import { formatDisplayDate, titleCase } from '$lib/shared/helpers.js';
 
     /**
-     * @typedef {Object} Thread
-     * @property {string} type
-     * @property {string} [player]
-     * @property {number} [streak]
-     * @property {string} [category]
-     * @property {'extended'|'broken'|'started'|'carriedOver'} [outcome]
-     * @property {number} [position]
-     * @property {string} [team]
-     * @property {string|null} [runnerUp]
-     * @property {string|null} [finalist]
-     * @property {number|null} [points]
-     * @property {number|null} [margin]
-     * @property {{winner: number, runnerUp: number}|null} [gd]
-     * @property {boolean} [double]
-     * @property {boolean} [invincible]
-     */
-
-    /**
      * @type {{ card: { date: string, state: 'preview'|'recap', threads: Thread[] } }}
      */
     let { card } = $props();
@@ -68,6 +50,7 @@
         setTimeout(restore, 180);
     }
 
+    /** @type {Record<string, string>} */
     const awardLabels = {
         mvp: 'MVP',
         goldenBoot: 'Golden Boot',
@@ -77,6 +60,7 @@
     };
 
     // Award icons mirror the Momentum board / Stars of the Day conventions
+    /** @type {Record<string, import('svelte').Component<any>>} */
     const awardIcons = {
         mvp: StarSolid,
         goldenBoot: SoccerBootIcon,
@@ -117,7 +101,10 @@
             case 'spoonStreak':
                 return { icon: WoodenSpoonIcon, color: 'text-amber-700' };
             case 'ballerStreak':
-                return { icon: awardIcons[thread.category] ?? StarSolid, color: 'text-yellow-400' };
+                return {
+                    icon: awardIcons[thread.category ?? ''] ?? StarSolid,
+                    color: 'text-yellow-400'
+                };
             case 'redHot':
                 return { icon: FireSolid, color: 'text-orange-500' };
             case 'comeback':
@@ -151,8 +138,8 @@
      * @returns {Segment[]}
      */
     function headlineSegments(thread) {
-        const p = thread.player;
-        const n = thread.streak;
+        const p = thread.player ?? '';
+        const n = thread.streak ?? 0;
         const preview = card.state === 'preview';
         switch (thread.type) {
             case 'trophyStreak':
@@ -184,7 +171,7 @@
                         : [P(p), ` snaps a ${n}-session wooden-spoon run!`];
                 return [P(p), ` sat out — the wooden-spoon run stays at ${n}.`];
             case 'ballerStreak': {
-                const award = awardLabels[thread.category] ?? thread.category;
+                const award = awardLabels[thread.category ?? ''] ?? thread.category;
                 if (preview) return ['Can ', P(p), ` make it ${n + 1} ${award}s in a row?`];
                 if (thread.outcome === 'extended')
                     return [P(p), ` makes it ${n} straight ${award}s.`];
@@ -208,7 +195,7 @@
                 const unbeaten = thread.invincible ? ' Unbeaten all day.' : '';
                 if (thread.runnerUp == null || thread.margin == null) {
                     return [
-                        T(thread.team),
+                        T(thread.team ?? ''),
                         (pts ? ` win the league with ${pts}.` : ' win the league.') + unbeaten
                     ];
                 }
@@ -218,7 +205,7 @@
                         ? ` (goal difference ${signed(thread.gd.winner)} to ${signed(thread.gd.runnerUp)})`
                         : '';
                     return [
-                        T(thread.team),
+                        T(thread.team ?? ''),
                         ' edge ',
                         T(thread.runnerUp),
                         ` to the league on goal difference${both}${gd}.${unbeaten}`
@@ -226,7 +213,7 @@
                 }
                 const clear = `${thread.margin} point${thread.margin === 1 ? '' : 's'} clear of `;
                 return [
-                    T(thread.team),
+                    T(thread.team ?? ''),
                     pts ? ` win the league with ${pts}, ${clear}` : ` win the league, ${clear}`,
                     T(thread.runnerUp),
                     `.${unbeaten}`
@@ -238,13 +225,13 @@
                 const unbeaten = thread.invincible ? ' Unbeaten all day.' : '';
                 if (thread.finalist) {
                     return [
-                        T(thread.team),
+                        T(thread.team ?? ''),
                         `${also} win the cup, besting `,
                         T(thread.finalist),
                         ` in the final${dbl}.${unbeaten}`
                     ];
                 }
-                return [T(thread.team), `${also} win the cup${dbl}.${unbeaten}`];
+                return [T(thread.team ?? ''), `${also} win the cup${dbl}.${unbeaten}`];
             }
             default:
                 return [p ?? ''];
@@ -345,7 +332,7 @@
                             class="flex w-full items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
                             {@render lineIcon(thread)}
                             <!-- prettier-ignore -->
-                            <span>{#each headlineSegments(thread) as seg, idx (idx)}{#if typeof seg === 'string'}{seg}{:else if seg.player}{@render nameLink(seg.player, () => openPlayer(seg.player))}{:else}{@render nameLink(titleCase(seg.team), () => openTeam(seg.team))}{/if}{/each}</span>
+                            <span>{#each headlineSegments(thread) as seg, idx (idx)}{#if typeof seg === 'string'}{seg}{:else if 'player' in seg}{@render nameLink(seg.player, () => openPlayer(seg.player))}{:else}{@render nameLink(titleCase(seg.team), () => openTeam(seg.team))}{/if}{/each}</span>
                         </div>
                     {/if}
                 </li>

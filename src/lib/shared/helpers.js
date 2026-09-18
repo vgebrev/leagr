@@ -1,7 +1,3 @@
-/** @typedef {import('./types.js').LeagueSettings} LeagueSettings */
-/** @typedef {import('./types.js').TeamColour} TeamColour */
-/** @typedef {import('./types.js').TeamStyle} TeamStyle */
-
 /** @param {Date} date */
 export function dateString(date) {
     const year = date.getFullYear();
@@ -141,12 +137,7 @@ export function isTeamDrawOpen(dateString, settings) {
 export function hasSessionStarted(games) {
     /** @param {Record<string, any>|null|undefined} match */
     const isPlayed = (match) =>
-        Boolean(match) &&
-        !match.bye &&
-        match.homeScore !== null &&
-        match.homeScore !== undefined &&
-        match.awayScore !== null &&
-        match.awayScore !== undefined;
+        match != null && !match.bye && match.homeScore != null && match.awayScore != null;
 
     const rounds = Array.isArray(games?.rounds) ? games.rounds : [];
     if (rounds.some((round) => Array.isArray(round) && round.some(isPlayed))) return true;
@@ -190,6 +181,7 @@ export function rotateArray(arr, offset) {
     return arr.slice(shift).concat(arr.slice(0, shift));
 }
 
+/** @type {TeamColour[]} */
 /** @type {TeamColour[]} */
 export const teamColours = ['blue', 'white', 'orange', 'green', 'black'];
 
@@ -289,3 +281,44 @@ export const teamStyles = {
         confetti: ['#6a7282', '#e5e7eb']
     }
 };
+
+/**
+ * Message from a caught value. `catch` binds `unknown` under strict mode, and a thrown
+ * value need not be an Error, so read `.message` through this rather than asserting.
+ * @param {unknown} err
+ * @param {string} [fallback] - used when the value carries no usable message
+ * @returns {string}
+ */
+export function errorMessage(err, fallback = 'Unknown error') {
+    if (err instanceof Error) return err.message;
+    if (typeof err === 'string') return err;
+    if (err && typeof err === 'object' && 'message' in err) {
+        return String(/** @type {{message: unknown}} */ (err).message);
+    }
+    return fallback;
+}
+
+/**
+ * Node's filesystem/system errno from a caught value, e.g. 'ENOENT'.
+ * @param {unknown} err
+ * @returns {string | undefined}
+ */
+export function errorCode(err) {
+    if (err && typeof err === 'object' && 'code' in err) {
+        return String(/** @type {{code: unknown}} */ (err).code);
+    }
+    return undefined;
+}
+
+/**
+ * HTTP status carried by an API error (HttpError, SvelteKit's error()).
+ * @param {unknown} err
+ * @returns {number | undefined}
+ */
+export function errorStatus(err) {
+    if (err && typeof err === 'object' && 'status' in err) {
+        const status = Number(/** @type {{status: unknown}} */ (err).status);
+        return Number.isFinite(status) ? status : undefined;
+    }
+    return undefined;
+}

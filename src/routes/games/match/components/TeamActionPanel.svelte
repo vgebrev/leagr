@@ -22,11 +22,12 @@
     let mode = $state('goals');
 
     let teamColour = $derived.by(() => {
-        const firstWord = teamName?.split(' ')[0]?.toLowerCase() || '';
+        const firstWord = /** @type {TeamColour} */ (teamName?.split(' ')[0]?.toLowerCase() || '');
         return teamColours.includes(firstWord) ? firstWord : 'blue';
     });
     let styles = $derived(teamStyles[teamColour] || teamStyles.blue);
 
+    /** @type {Array<{id: 'goals'|'offensive'|'defensive'|'saves', label: string, Icon: any, iconProps?: Record<string, string>}>} */
     const modes = [
         { id: 'goals', label: 'Goals', Icon: LeagueIcon, iconProps: { icon: 'soccer' } },
         { id: 'offensive', label: 'Attack', Icon: BullseyeIcon },

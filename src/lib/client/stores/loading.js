@@ -1,4 +1,5 @@
 import { derived, writable } from 'svelte/store';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { setNotification } from '$lib/client/stores/notification.js';
 
 export const loadingCount = writable(0);
@@ -17,7 +18,7 @@ export function popLoading() {
 /**
  * Executes a function with loading state management
  * @param {() => Promise<any>} fn - The async function to execute
- * @param {(error: Error) => void} [err] - Optional error handler function
+ * @param {(error: unknown) => void} [err] - Optional error handler function
  * @returns {Promise<any>} The result of the function execution
  */
 export async function withLoading(fn, err) {
@@ -29,7 +30,7 @@ export async function withLoading(fn, err) {
             err(ex);
         } else {
             console.error('Error in withLoading:', ex);
-            setNotification(ex.message || 'Something went wrong, please try again.', 'error');
+            setNotification(errorMessage(ex) || 'Something went wrong, please try again.', 'error');
         }
     } finally {
         popLoading();

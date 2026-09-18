@@ -1,4 +1,5 @@
 import sharp from 'sharp';
+import { errorCode } from '$lib/shared/helpers.js';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';
@@ -40,7 +41,7 @@ export class AvatarManager {
 
     /**
      * Set the league ID for this manager instance
-     * @param {string} leagueId - League identifier
+     * @param {string|null} leagueId - League identifier
      * @returns {AvatarManager} - Fluent interface
      */
     setLeague(leagueId) {
@@ -92,14 +93,14 @@ export class AvatarManager {
 
     /**
      * Load avatars metadata without mutex protection (internal use)
-     * @returns {Promise<Object>} - Avatars metadata
+     * @returns {Promise<AvatarsData>} - Avatars metadata
      */
     async loadAvatarsUnsafe() {
         try {
             const data = await fs.readFile(this.getAvatarsMetadataPath(), 'utf-8');
             return JSON.parse(data);
         } catch (err) {
-            if (err.code === 'ENOENT') {
+            if (errorCode(err) === 'ENOENT') {
                 return {};
             }
             throw err;
@@ -108,7 +109,7 @@ export class AvatarManager {
 
     /**
      * Load avatars metadata with mutex protection
-     * @returns {Promise<Object>} - Avatars metadata
+     * @returns {Promise<AvatarsData>} - Avatars metadata
      */
     async loadAvatars() {
         const mutex = this.getAvatarsMutex();
@@ -119,7 +120,7 @@ export class AvatarManager {
 
     /**
      * Save avatars metadata without mutex protection (internal use)
-     * @param {Object} avatars - Avatars metadata to save
+     * @param {AvatarsData} avatars - Avatars metadata to save
      * @returns {Promise<void>}
      */
     async saveAvatarsUnsafe(avatars) {
@@ -221,7 +222,7 @@ export class AvatarManager {
         try {
             await fs.unlink(filePath);
         } catch (err) {
-            if (err.code !== 'ENOENT') {
+            if (errorCode(err) !== 'ENOENT') {
                 console.error('Failed to delete avatar file:', err);
             }
         }
@@ -230,7 +231,7 @@ export class AvatarManager {
     /**
      * Update player avatar metadata in avatars.json
      * @param {string} playerName
-     * @param {Object} avatarData - { avatar?: filename, pendingAvatar?: filename }
+     * @param {PlayerAvatarUpdate} avatarData - null clears a field; undefined leaves it alone
      */
     async updatePlayerAvatar(playerName, avatarData) {
         const mutex = this.getAvatarsMutex();

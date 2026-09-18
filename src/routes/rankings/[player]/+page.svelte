@@ -1,5 +1,6 @@
 <script>
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import PlayerSummaryCard from './components/PlayerSummaryCard.svelte';
     import RankProgressionChart from './components/RankProgressionChart.svelte';
     import PerformanceSection from './components/PerformanceSection.svelte';
@@ -21,8 +22,8 @@
     import PlayerBadges from '$components/PlayerBadges.svelte';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let player = $derived(page.params.player);
-    let playerData = $state(null);
+    let player = $derived(page.params.player ?? '');
+    let playerData = $state(/** @type {PlayerRankingData | null} */ (null));
     let celebrating = $state(false);
     let loadingError = $state(false);
 
@@ -109,7 +110,7 @@
                 console.error('Error loading player profile:', err);
                 loadingError = true;
                 setNotification(
-                    err.message || 'Failed to load player profile. Please try again.',
+                    errorMessage(err) || 'Failed to load player profile. Please try again.',
                     'error'
                 );
             }
@@ -127,7 +128,7 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}?${query}`, {});
+        const href = resolve(`/rankings/${encodeURIComponent(player)}?${query}`);
 
         // Navigate and reload data
         await goto(href, { replaceState: true });
@@ -137,6 +138,7 @@
     /**
      * Handle limit change by updating URL and reloading data
      */
+    /** @param {number | null} newLimit - null means "all appearances" */
     async function handleLimitChange(newLimit) {
         dropdownOpen = false; // Close dropdown
 
@@ -148,7 +150,7 @@
             params.set('limit', String(newLimit));
         }
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}${query ? `?${query}` : ''}`, {});
+        const href = resolve(`/rankings/${encodeURIComponent(player)}?${query}`);
 
         // Navigate without full reload and keep history tidy
         await goto(href, { replaceState: true });
@@ -158,6 +160,7 @@
     /**
      * Handle avatar upload
      */
+    /** @param {File} file */
     async function handleAvatarUpload(file) {
         const formData = new FormData();
         formData.append('image', file);
@@ -171,7 +174,7 @@
             (err) => {
                 console.error('Error uploading avatar:', err);
                 setNotification(
-                    err.message || 'Failed to upload avatar. Please try again.',
+                    errorMessage(err) || 'Failed to upload avatar. Please try again.',
                     'error'
                 );
             }

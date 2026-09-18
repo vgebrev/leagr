@@ -11,6 +11,11 @@ import { Mutex } from 'async-mutex';
 // each other's results.
 const transactionMutexes = new Map();
 
+/**
+ * @param {string|null} leagueId
+ * @param {string} date
+ * @returns {Mutex}
+ */
 function getTransactionMutex(leagueId, date) {
     const key = `${leagueId}:${date}`;
     if (!transactionMutexes.has(key)) {
@@ -19,26 +24,7 @@ function getTransactionMutex(leagueId, date) {
     return transactionMutexes.get(key);
 }
 
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
-
-/** @typedef {{ available: string[], waitingList: string[] }} PlayersData */
-/** @typedef {Record<string, Array<string | null>>} TeamsData */
-/** @typedef {{ players?: PlayersData, teams?: TeamsData, settings?: LeagueSettings }} GameData */
-/** @typedef {{ players?: boolean, teams?: boolean, settings?: boolean }} DataOptions */
-/** @typedef {Record<string, string>} OwnersMap */
-
-/**
- * @typedef {Object} PlayerWithElo
- * @property {string} name
- * @property {number} elo
- * @property {number} actualElo
- * @property {string | null} avatar
- * @property {number} attackingRating
- * @property {number} controlRating
- * @property {boolean} isProvisional
- * @property {number} appearances
- */
 
 /**
  * Custom error class for player operations that preserves HTTP status codes
@@ -496,7 +482,8 @@ export class PlayerManager {
     /** @returns {Promise<OwnersMap>} */
     async #loadOwners() {
         if (this.#owners === null) {
-            this.#owners = (await data.get('playerOwners', this.date, this.leagueId)) || {};
+            this.#owners =
+                (await data.get('playerOwners', this.#requireDate(), this.leagueId)) || {};
         }
         if (!this.#owners) {
             this.#owners = {};
@@ -679,15 +666,13 @@ export class PlayerManager {
         const loadPromises = [];
         const loadKeys = [];
 
-        const sessionDate = options.players || options.teams ? this.#requireDate() : null;
-
         if (options.players) {
-            loadPromises.push(data.get('players', sessionDate, this.leagueId));
+            loadPromises.push(data.get('players', this.#requireDate(), this.leagueId));
             loadKeys.push('players');
         }
 
         if (options.teams) {
-            loadPromises.push(data.get('teams', sessionDate, this.leagueId));
+            loadPromises.push(data.get('teams', this.#requireDate(), this.leagueId));
             loadKeys.push('teams');
         }
 

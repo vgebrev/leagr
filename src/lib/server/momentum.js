@@ -36,26 +36,6 @@ const MOMENTUM_GAIN = 1.5;
 const PLACEMENT_FALLBACK_K = 0.25;
 const CONTRIBUTION_FALLBACK_K = 1;
 
-/** @typedef {import('../shared/types.js').MomentumSettings} MomentumSettings */
-/** @typedef {import('../shared/types.js').LeagueSettings} LeagueSettings */
-
-/**
- * @typedef {Object} SessionStats
- * @property {number|null} [goals]
- * @property {number|null} [offActions]
- * @property {number|null} [defActions]
- * @property {number|null} [saveActions]
- */
-
-/**
- * @typedef {Object} HistoryEntry
- * @property {string} [team]
- * @property {{leaguePosition?: number|null, cupProgress?: string|null, leagueWinner?: boolean, cupWinner?: boolean}} [performance]
- * @property {SessionStats} [stats]
- */
-
-/** @typedef {Record<string, {history?: Record<string, HistoryEntry>}>} PlayersWithHistory */
-
 /**
  * Resolve effective momentum config by deep-merging league settings over defaults.
  * @param {Partial<LeagueSettings>|null|undefined} leagueSettings - Effective league settings object
@@ -214,9 +194,8 @@ export function trackedStatRegime(players) {
     }
 
     const latestTrackedDate = [...signatures.keys()].sort().pop();
-    const types = latestTrackedDate
-        ? STAT_TYPES.filter((type) => signatures.get(latestTrackedDate).has(type))
-        : [];
+    const latestSignature = latestTrackedDate ? signatures.get(latestTrackedDate) : undefined;
+    const types = latestSignature ? STAT_TYPES.filter((type) => latestSignature.has(type)) : [];
 
     return {
         types,
@@ -321,7 +300,7 @@ export function currentStreak(items, predicate) {
  * chronological. Sessions with no competition observed are skipped (a missed
  * week doesn't break the run); the run breaks on an observed no-win session.
  * A double-winning session yields both flags so it can be drawn stacked.
- * @param {Array<{date: string, entry: HistoryEntry}>} sessions - ascending date order
+ * @param {Array<{date: string, entry: RankingHistoryEntry}>} sessions - ascending date order
  * @returns {Array<{league: boolean, cup: boolean}>}
  */
 export function championsTrophyStreak(sessions) {
@@ -340,7 +319,7 @@ export function championsTrophyStreak(sessions) {
 
 /**
  * A player's history as [{date, entry}] in ascending date order.
- * @param {Record<string, HistoryEntry>|undefined} history
+ * @param {Record<string, RankingHistoryEntry>|undefined} history
  */
 function sortedHistory(history) {
     return Object.entries(history ?? {})
@@ -385,8 +364,9 @@ function round4(value) {
 /**
  * @param {NonNullable<ReturnType<typeof computeMomentum>>} momentum
  * @param {string} playerName
- * @param {object} components
- * @param {object} streak - board-specific streak fields merged into the entry
+ * @param {Record<string, number>} components
+ * @param {Partial<MomentumEntry>} streak - board-specific streak fields merged into the entry
+ * @returns {MomentumEntry}
  */
 function boardEntry(momentum, playerName, components, streak) {
     return {
@@ -404,9 +384,9 @@ function boardEntry(momentum, playerName, components, streak) {
 /**
  * Build the Champions Hall (placement) momentum board.
  * @param {PlayersWithHistory} players - rankings players with history
- * @param {import('../shared/types.js').MomentumBoardConfig} config - champions momentum config
+ * @param {MomentumBoardConfig} config - champions momentum config
  * @param {string|Date} now - render time
- * @returns {Array<object>} board entries sorted hottest first
+ * @returns {MomentumEntry[]} board entries sorted hottest first
  */
 export function buildChampionsMomentum(players, config, now) {
     const teamCounts = deriveTeamCounts(players);
@@ -446,7 +426,7 @@ export function buildChampionsMomentum(players, config, now) {
         // Painted bar split: the games-derived league:cup weight of the player's
         // latest observed session. Presentational only.
         // observations is non-empty, so a qualifying session always exists
-        const last = /** @type {{date: string, entry: HistoryEntry}} */ (
+        const last = /** @type {{date: string, entry: RankingHistoryEntry}} */ (
             sessions.findLast(
                 ({ date, entry }) =>
                     sessionPlacement(entry.performance, teamCounts.get(date)) != null
@@ -525,9 +505,9 @@ export function deriveBallerTops(players) {
 /**
  * Build the Ballers Board (contribution) momentum board.
  * @param {PlayersWithHistory} players - rankings players with history
- * @param {import('../shared/types.js').MomentumBoardConfig} config - ballers momentum config
+ * @param {MomentumBoardConfig} config - ballers momentum config
  * @param {string|Date} now - render time
- * @returns {Array<object>} board entries sorted hottest first
+ * @returns {MomentumEntry[]} board entries sorted hottest first
  */
 export function buildBallersMomentum(players, config, now) {
     const { types: currentTypes, isInRegime } = trackedStatRegime(players);

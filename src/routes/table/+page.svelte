@@ -10,14 +10,19 @@
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import TeamModal from '$components/TeamModal.svelte';
     import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
-    import { isCompetitionEnded, teamColours } from '$lib/shared/helpers.js';
+    import {
+        isCompetitionEnded,
+        teamColours,
+        errorStatus,
+        errorMessage
+    } from '$lib/shared/helpers.js';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
 
     let showTeamModal = $state(false);
-    let selectedTeam = $state(null);
+    let selectedTeam = $state(/** @type {string | null} */ (null));
 
     $effect(() => {
         const state = page.state.teamModal;
@@ -25,6 +30,7 @@
         if (state?.teamName) selectedTeam = state.teamName;
     });
 
+    /** @param {string} teamName */
     function handleTeamClick(teamName) {
         pushState('', { teamModal: { teamName } });
     }
@@ -33,15 +39,15 @@
         if (page.state.teamModal) history.back();
     }
 
-    let standings = $state([]);
-    let leagueGames = $state([]);
-    let knockoutGames = $state([]);
-    let teams = $state({});
+    let standings = $state(/** @type {StandingsRow[]} */ ([]));
+    let leagueGames = $state(/** @type {Round[]} */ ([]));
+    let knockoutGames = $state(/** @type {KnockoutMatch[]} */ ([]));
+    let teams = $state(/** @type {TeamsData} */ ({}));
 
     /**
      * @typedef {Object} WinningTeam
      * @property {string} name
-     * @property {import('$lib/shared/helpers.js').TeamColour} colour
+     * @property {TeamColour} colour
      */
 
     /** @type {WinningTeam} */
@@ -59,9 +65,9 @@
     function celebrate(index) {
         if (index !== 0 || !isCompetitionEnded(date, $settings)) return;
         winningTeam.name = standings[index].team;
+        const firstWord = /** @type {TeamColour} */ (winningTeam.name.split(' ')[0]);
         winningTeam.colour =
-            teamColours[teamColours.indexOf(winningTeam.name.split(' ')[0]) % teamColours.length] ||
-            'default';
+            teamColours[teamColours.indexOf(firstWord) % teamColours.length] || 'default';
         celebrating = true;
     }
 
@@ -85,7 +91,7 @@
                     knockoutGames = knockoutData?.knockoutGames?.bracket || [];
                 } catch (err) {
                     // Knockout games might not exist, that's okay
-                    if (err.status !== 404) {
+                    if (errorStatus(err) !== 404) {
                         console.warn('Error loading knockout games:', err);
                     }
                     knockoutGames = [];
@@ -98,7 +104,7 @@
             (err) => {
                 console.error('Error loading table:', err);
                 setNotification(
-                    err.message || 'Failed to load standings data. Please try again.',
+                    errorMessage(err) || 'Failed to load standings data. Please try again.',
                     'error'
                 );
             }

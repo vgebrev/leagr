@@ -1,4 +1,5 @@
 import { json, error } from '@sveltejs/kit';
+import { errorMessage, errorStatus } from '$lib/shared/helpers.js';
 import { validateLeagueForAPI } from '$lib/server/league.js';
 import {
     createAvatarManager,
@@ -74,9 +75,9 @@ export async function POST({ request, params, locals }) {
         }
         logger.error('Avatar upload error (unexpected):', {
             player,
-            message: err.message,
-            name: err.name,
-            stack: err.stack
+            message: errorMessage(err),
+            name: err instanceof Error ? err.name : typeof err,
+            stack: err instanceof Error ? err.stack : undefined
         });
         throw error(500, `Failed to upload avatar. ${requirementsText}`);
     }
@@ -129,7 +130,7 @@ export async function GET({ params, locals, url }) {
             throw error(404, 'Avatar file not found');
         }
     } catch (err) {
-        if (err.status) {
+        if (errorStatus(err)) {
             throw err;
         }
         console.error('Avatar retrieval error:', err);
@@ -204,7 +205,7 @@ export async function PATCH({ request, params, locals }) {
             message: 'Avatar approved'
         });
     } catch (err) {
-        if (err.status) {
+        if (errorStatus(err)) {
             throw err;
         }
         console.error('Avatar approval error:', err);

@@ -2,6 +2,16 @@ import sharp from 'sharp';
 
 const DEFAULT_TOLERANCE = 40;
 
+/**
+ * Euclidean distance between two RGB triples.
+ * @param {number} r1
+ * @param {number} g1
+ * @param {number} b1
+ * @param {number} r2
+ * @param {number} g2
+ * @param {number} b2
+ * @returns {number}
+ */
 function colorDistance(r1, g1, b1, r2, g2, b2) {
     return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
 }

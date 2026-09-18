@@ -1,10 +1,15 @@
 import { data } from './data.js';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { createStandingsManager } from './standings.js';
 
 /**
  * Knockout tournament management error class
  */
 export class KnockoutError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'KnockoutError';
@@ -25,7 +30,7 @@ export class KnockoutManager {
      * Generate knockout tournament bracket from current standings
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object>} Generated bracket structure
+     * @returns {Promise<KnockoutBracketData>} Generated bracket structure
      */
     async generateBracket(date, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -48,16 +53,19 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to generate knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to generate knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
     /**
      * Save knockout tournament to storage
      * @param {string} date - Date in YYYY-MM-DD format
-     * @param {Object} bracket - Bracket structure to save
+     * @param {KnockoutBracketData} bracket - Bracket structure to save
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object>} Saved bracket data
+     * @returns {Promise<KnockoutBracketData>} Saved bracket data
      */
     async saveBracket(date, bracket, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -88,7 +96,7 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to save knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(`Failed to save knockout bracket: ${errorMessage(error)}`, 500);
         }
     }
 
@@ -96,7 +104,7 @@ export class KnockoutManager {
      * Get existing knockout tournament for a date
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object|null>} Knockout tournament data or null
+     * @returns {Promise<KnockoutBracketData|null>} Knockout tournament data or null
      */
     async getBracket(date, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -107,16 +115,19 @@ export class KnockoutManager {
             const games = (await data.get('games', date, leagueId)) || {};
             return games['knockout-games'] || null;
         } catch (error) {
-            throw new KnockoutError(`Failed to fetch knockout bracket: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to fetch knockout bracket: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
     /**
      * Update knockout match scores and advance winners
      * @param {string} date - Date in YYYY-MM-DD format
-     * @param {Array} updatedBracket - Updated bracket with scores
+     * @param {KnockoutMatch[]} updatedBracket - Updated bracket with scores
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object>} Updated bracket data
+     * @returns {Promise<KnockoutBracketData>} Updated bracket data
      */
     async updateScores(date, updatedBracket, leagueId = null) {
         if (!date || typeof date !== 'string') {
@@ -138,6 +149,7 @@ export class KnockoutManager {
             const processedBracket = this.advanceWinners(updatedBracket);
 
             // Validate and update bracket
+            /** @type {KnockoutBracketData} */
             const updatedKnockout = {
                 ...existingBracket,
                 bracket: processedBracket
@@ -149,23 +161,29 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to update knockout scores: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to update knockout scores: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 
     /**
      * Advance winners to next round based on completed matches
-     * @param {Array} bracket - Current bracket state
-     * @returns {Array} Updated bracket with winners advanced
+     * @param {KnockoutMatch[]} bracket - Current bracket state
+     * @returns {KnockoutMatch[]} Updated bracket with winners advanced
      */
     advanceWinners(bracket) {
         const processedBracket = [...bracket];
 
         // Group matches by round
         const roundOrder = ['quarter', 'semi', 'final'];
+        /** @type {Record<string, KnockoutMatch[]>} */
         const matchesByRound = {};
 
         processedBracket.forEach((match) => {
+            // A match with no round cannot feed another, so it is not grouped.
+            if (!match.round) return;
             if (!matchesByRound[match.round]) {
                 matchesByRound[match.round] = [];
             }
@@ -215,17 +233,17 @@ export class KnockoutManager {
 
     /**
      * Get the winner of a match
-     * @param {Object} match - Match object with scores
+     * @param {KnockoutMatch} match - Match object with scores
      * @returns {string|null} Winner team name or 'Draw' or null
      */
     getMatchWinner(match) {
-        if (match.homeScore === null || match.awayScore === null) return null;
-        if (match.homeScore > match.awayScore) return match.home;
-        if (match.awayScore > match.homeScore) return match.away;
+        if (match.homeScore == null || match.awayScore == null) return null;
+        if (match.homeScore > match.awayScore) return match.home ?? null;
+        if (match.awayScore > match.homeScore) return match.away ?? null;
         // Draw — check penalty shootout
         if (match.homePenalties != null && match.awayPenalties != null) {
-            if (match.homePenalties > match.awayPenalties) return match.home;
-            if (match.awayPenalties > match.homePenalties) return match.away;
+            if (match.homePenalties > match.awayPenalties) return match.home ?? null;
+            if (match.awayPenalties > match.homePenalties) return match.away ?? null;
         }
         return 'Draw'; // still unresolved
     }
@@ -234,7 +252,7 @@ export class KnockoutManager {
      * Create and save a new knockout tournament
      * @param {string} date - Date in YYYY-MM-DD format
      * @param {string|null} leagueId - League identifier
-     * @returns {Promise<Object>} Created tournament data
+     * @returns {Promise<KnockoutBracketData>} Created tournament data
      */
     async createTournament(date, leagueId = null) {
         try {
@@ -245,7 +263,10 @@ export class KnockoutManager {
                 throw error;
             }
 
-            throw new KnockoutError(`Failed to create knockout tournament: ${error.message}`, 500);
+            throw new KnockoutError(
+                `Failed to create knockout tournament: ${errorMessage(error)}`,
+                500
+            );
         }
     }
 

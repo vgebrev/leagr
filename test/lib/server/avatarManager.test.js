@@ -10,17 +10,19 @@ const __dirname = path.dirname(__filename);
 const TEST_DATA_DIR = path.join(__dirname, '../../test-data/avatar-test');
 const TEST_LEAGUE_ID = 'test-league';
 
+// Point the manager at our test directory. vi.mock is hoisted to the top of the
+// module regardless of where it is written, so it belongs here - Vitest 5 rejects
+// it anywhere else. The factory is lazy, so referencing TEST_DATA_DIR is fine.
+vi.mock('../../../src/lib/server/league.js', () => ({
+    getLeagueDataPath: () => TEST_DATA_DIR
+}));
+
 describe('AvatarManager - Pending Avatar Workflow', () => {
     let avatarManager;
 
     beforeEach(async () => {
         // Create test data directory
         await fs.mkdir(TEST_DATA_DIR, { recursive: true });
-
-        // Mock getLeagueDataPath to return our test directory
-        vi.mock('../../../src/lib/server/league.js', () => ({
-            getLeagueDataPath: () => TEST_DATA_DIR
-        }));
 
         // Re-import to get mocked version
         const { createAvatarManager: createMockedManager } =

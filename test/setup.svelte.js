@@ -3,10 +3,12 @@ import { vi } from 'vitest';
 
 // Global setup for Svelte frontend tests
 
-// Ensure we're in browser mode for Svelte 5
+// Ensure we're in browser mode for Svelte 5. Only create these when they are genuinely
+// absent: under `environment: 'jsdom'` both already exist, and from Vitest 5 `document` is a
+// getter-only accessor on the Window, so re-assigning it its own value throws.
 if (typeof global !== 'undefined') {
-    global.window = global.window || {};
-    global.document = global.document || {};
+    if (!global.window) global.window = {};
+    if (!global.document) global.document = {};
 }
 
 // Mock browser APIs that might not be available in jsdom

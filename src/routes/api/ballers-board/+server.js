@@ -1,4 +1,5 @@
 import { json } from '@sveltejs/kit';
+import { errorMessage } from '$lib/shared/helpers.js';
 import { createRankingsManager } from '$lib/server/rankings.js';
 import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
 import { validateLeagueForAPI, getLeagueInfo } from '$lib/server/league.js';
@@ -26,7 +27,7 @@ export async function GET({ locals, url }) {
         /**
          * Merge a player's stats from a rankings entry into totals
          * @param {string} playerName
-         * @param {object} playerData
+         * @param {PlayerRankingData} playerData
          */
         function mergePlayer(playerName, playerData) {
             if (!totals[playerName]) {
@@ -97,7 +98,7 @@ export async function GET({ locals, url }) {
     } catch (error) {
         console.error('Error loading ballers board data:', error);
         return json(
-            { error: 'Failed to load ballers board data', details: error.message },
+            { error: 'Failed to load ballers board data', details: errorMessage(error) },
             { status: 500 }
         );
     }

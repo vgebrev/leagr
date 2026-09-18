@@ -2,20 +2,8 @@
     import { Input, Toggle } from 'flowbite-svelte';
 
     /**
-     * @typedef {Object} RegistrationWindow
-     * @property {boolean} enabled - Whether the registration window is enabled
-     * @property {number} startDayOffset - The number of days before competition start (negative value)
-     * @property {string} startTime - The time when registration opens (HH:MM format)
-     * @property {number} [teamDrawDayOffset] - The number of days before the team draw (negative value)
-     * @property {string} [teamDrawTime] - The time when the team draw opens (HH:MM format)
-     * @property {number} endDayOffset - The number of days before the competition end (negative value)
-     * @property {string} endTime - The time when competition ends (HH:MM format)
-     */
-
-    /**
      * @typedef {Object} CompetitionTimeControlsProps
-     * @property {Object} leagueSettings - The league-wide settings object
-     * @property {RegistrationWindow} leagueSettings.registrationWindow - The registration window configuration
+     * @property {LeagueSettings} leagueSettings - The league-wide settings object
      * @property {function(Event): Promise<void>} onSave - The callback function to save the league settings
      * @property {function(string): void} onUpdateStartDayOffset - The callback to update the start day offset
      * @property {function(string): void} onUpdateTeamDrawDayOffset - The callback to update the team draw day offset

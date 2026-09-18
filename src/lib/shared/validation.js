@@ -277,7 +277,7 @@ export function validatePlayerNameForUI(playerName) {
 /**
  * Validates that a date parameter is present in URL search params
  * @param {URLSearchParams} searchParams - URL search parameters
- * @returns {{isValid: boolean, date: string | null, error: string}}
+ * @returns {{isValid: true, date: string, error: string} | {isValid: false, date: null, error: string}}
  */
 export function validateDateParameter(searchParams) {
     const date = searchParams.get('date');
@@ -430,7 +430,7 @@ const GAME_SCORE_CONFIG = {
 
 /**
  * Validates an individual game score
- * @param {string|number|null} score - The score to validate
+ * @param {string|number|null|undefined} score - The score to validate
  * @param {string} scoreType - Type of score for error messages (e.g., 'home', 'away')
  * @returns {{isValid: boolean, errors: string[]}}
  */
@@ -483,12 +483,13 @@ export function validateGameScore(score, scoreType = 'score') {
 
 /**
  * Validates a complete match with home and away scores
- * @param {Object} match - Match object with homeScore and awayScore
- * @returns {{isValid: boolean, errors: string[], sanitizedMatch: Object}}
+ * @param {RawMatch} match - Unvalidated match object with homeScore and awayScore
+ * @returns {{isValid: true, errors: string[], sanitizedMatch: Match} | {isValid: false, errors: string[], sanitizedMatch: Match | null}}
  */
 export function validateMatchScores(match) {
     const errors = [];
-    let sanitizedMatch = { ...match };
+    /** @type {Match} */
+    const sanitizedMatch = { ...match, homeScore: null, awayScore: null };
 
     if (!match || typeof match !== 'object') {
         return {
@@ -504,7 +505,7 @@ export function validateMatchScores(match) {
         errors.push(...homeResult.errors);
     } else if (match.homeScore !== null && match.homeScore !== undefined) {
         // Sanitise by converting to integer if valid
-        sanitizedMatch.homeScore = parseInt(match.homeScore, 10);
+        sanitizedMatch.homeScore = parseInt(String(match.homeScore), 10);
     }
 
     // Validate away score
@@ -513,7 +514,7 @@ export function validateMatchScores(match) {
         errors.push(...awayResult.errors);
     } else if (match.awayScore !== null && match.awayScore !== undefined) {
         // Sanitise by converting to integer if valid
-        sanitizedMatch.awayScore = parseInt(match.awayScore, 10);
+        sanitizedMatch.awayScore = parseInt(String(match.awayScore), 10);
     }
 
     // Check logical consistency - both scores should be null, or both should be numbers
@@ -532,10 +533,20 @@ export function validateMatchScores(match) {
 }
 
 /**
+ * A validated score as a number. Scores arrive from JSON as either, and reach this only
+ * after validateGameScore has accepted them.
+ * @param {number|string|null|undefined} score
+ * @returns {number|null}
+ */
+function toScore(score) {
+    return score == null || score === '' ? null : Number(score);
+}
+
+/**
  * Validates a round of matches
- * @param {Array} round - Array of match objects
+ * @param {RawRound} round - Array of unvalidated match objects
  * @param {number} roundIndex - Round number for error context
- * @returns {{isValid: boolean, errors: string[], sanitizedRound: Array}}
+ * @returns {{isValid: boolean, errors: string[], sanitizedRound: Round}}
  */
 export function validateRound(round, roundIndex = 0) {
     const errors = [];
@@ -595,11 +606,12 @@ export function validateRound(round, roundIndex = 0) {
             );
         }
 
+        /** @type {Match} */
         const sanitizedMatch = {
             home: match.home.trim(),
             away: match.away.trim(),
-            homeScore: scoreResult.sanitizedMatch?.homeScore ?? match.homeScore,
-            awayScore: scoreResult.sanitizedMatch?.awayScore ?? match.awayScore
+            homeScore: scoreResult.sanitizedMatch?.homeScore ?? toScore(match.homeScore),
+            awayScore: scoreResult.sanitizedMatch?.awayScore ?? toScore(match.awayScore)
         };
 
         // Include scorer data if present
@@ -642,12 +654,13 @@ export function validateRound(round, roundIndex = 0) {
 
 /**
  * Validates complete schedule data structure
- * @param {Object} scheduleData - Schedule data with rounds and anchorIndex
- * @returns {{isValid: boolean, errors: string[], sanitizedData: Object}}
+ * @param {RawScheduleData} scheduleData - Unvalidated schedule data with rounds and anchorIndex
+ * @returns {{isValid: true, errors: string[], sanitizedData: ScheduleData} | {isValid: false, errors: string[], sanitizedData: ScheduleData | null}}
  */
 export function validateScheduleData(scheduleData) {
     const errors = [];
-    let sanitizedData = {
+    /** @type {ScheduleData} */
+    const sanitizedData = {
         rounds: [],
         anchorIndex: 0
     };
@@ -710,8 +723,8 @@ export function validateScheduleData(scheduleData) {
 
 /**
  * Validates a games API request body
- * @param {Object} requestBody - Request body from games API
- * @returns {{isValid: boolean, errors: string[], sanitizedData: Object}}
+ * @param {unknown} requestBody - Request body from games API
+ * @returns {{isValid: true, errors: string[], sanitizedData: ScheduleData} | {isValid: false, errors: string[], sanitizedData: ScheduleData | null}}
  */
 export function validateGameRequest(requestBody) {
     if (!requestBody || typeof requestBody !== 'object') {
@@ -723,13 +736,7 @@ export function validateGameRequest(requestBody) {
     }
 
     // Use existing schedule validation
-    const scheduleResult = validateScheduleData(requestBody);
-
-    return {
-        isValid: scheduleResult.isValid,
-        errors: scheduleResult.errors,
-        sanitizedData: scheduleResult.sanitizedData
-    };
+    return validateScheduleData(requestBody);
 }
 
 /**
@@ -751,9 +758,9 @@ const SCORER_CONFIG = {
 
 /**
  * Validates scorer data for a game
- * @param {Object|null|undefined} scorers - Scorers object mapping player names to goal counts
+ * @param {StatMap|undefined} scorers - Scorers object mapping player names to goal counts
  * @param {number|null} score - Total score for the team
- * @param {Array<string>} teamPlayers - Array of player names on this team
+ * @param {Array<string|null>} teamPlayers - Team slots; a slot may be null
  * @returns {{isValid: boolean, errors: string[]}}
  */
 export function validateScorers(scorers, score, teamPlayers) {
@@ -851,8 +858,8 @@ export function validateScorers(scorers, score, teamPlayers) {
 
 /**
  * Validates scorers for both home and away teams in a match
- * @param {Object} match - Match object with teams, scores, and optional scorers
- * @param {Object} teams - Teams object mapping team names to player arrays
+ * @param {RawMatch} match - Match object with teams, scores, and optional scorers
+ * @param {TeamsData} teams - Teams object mapping team names to player arrays
  * @returns {{isValid: boolean, errors: string[]}}
  */
 export function validateMatchScorers(match, teams) {
@@ -872,8 +879,12 @@ export function validateMatchScorers(match, teams) {
 
     // Validate home scorers
     if (match.homeScorers !== undefined && match.homeScorers !== null) {
-        const homeTeamPlayers = teams?.[match.home] || [];
-        const homeResult = validateScorers(match.homeScorers, match.homeScore, homeTeamPlayers);
+        const homeTeamPlayers = (match.home ? teams?.[match.home] : null) || [];
+        const homeResult = validateScorers(
+            match.homeScorers,
+            toScore(match.homeScore),
+            homeTeamPlayers
+        );
 
         if (!homeResult.isValid) {
             errors.push(...homeResult.errors.map((err) => `Home team (${match.home}): ${err}`));
@@ -882,8 +893,12 @@ export function validateMatchScorers(match, teams) {
 
     // Validate away scorers
     if (match.awayScorers !== undefined && match.awayScorers !== null) {
-        const awayTeamPlayers = teams?.[match.away] || [];
-        const awayResult = validateScorers(match.awayScorers, match.awayScore, awayTeamPlayers);
+        const awayTeamPlayers = (match.away ? teams?.[match.away] : null) || [];
+        const awayResult = validateScorers(
+            match.awayScorers,
+            toScore(match.awayScore),
+            awayTeamPlayers
+        );
 
         if (!awayResult.isValid) {
             errors.push(...awayResult.errors.map((err) => `Away team (${match.away}): ${err}`));
@@ -899,7 +914,7 @@ export function validateMatchScorers(match, teams) {
 /**
  * Validate if competition modification operations are allowed based on timing
  * @param {string} dateString - Date in YYYY-MM-DD format
- * @param {Object} settings - Settings object with registration window configuration
+ * @param {LeagueSettings | undefined} settings - Settings object with registration window configuration
  * @param {string|null} [adminUnlockDate] - Session date an admin has explicitly unlocked for
  *   post-session fixes. Bypasses the competition-end gate for that date only.
  * @returns {{isValid: boolean, error?: string}}
@@ -928,7 +943,7 @@ export function validateCompetitionOperationsAllowed(dateString, settings, admin
 /**
  * Validate if a team draw is allowed based on the draw window and admin requirement
  * @param {string} dateString - Date in YYYY-MM-DD format
- * @param {Object} settings - Settings object
+ * @param {LeagueSettings | undefined} settings - Settings object
  * @param {boolean} isAdmin - Whether the requester has admin privileges
  * @returns {{isValid: boolean, error?: string}}
  */

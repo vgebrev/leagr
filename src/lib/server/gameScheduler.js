@@ -5,6 +5,10 @@ import { rotateArray } from '$lib/shared/helpers.js';
  * Game scheduling error class
  */
 export class GameSchedulerError extends Error {
+    /**
+     * @param {string} message
+     * @param {number} [statusCode]
+     */
     constructor(message, statusCode = 500) {
         super(message);
         this.name = 'GameSchedulerError';
@@ -18,7 +22,9 @@ export class GameSchedulerError extends Error {
  */
 export class GameScheduler {
     constructor() {
+        /** @type {string[]} */
         this.teams = [];
+        /** @type {LeagueSettings | null} */
         this.settings = null;
     }
 
@@ -37,7 +43,7 @@ export class GameScheduler {
 
     /**
      * Set the settings for game scheduling
-     * @param {Object} settings - Game scheduling settings (optional)
+     * @param {LeagueSettings | null} settings - Game scheduling settings (optional)
      * @returns {GameScheduler} - Fluent interface
      */
     setSettings(settings) {
@@ -52,7 +58,7 @@ export class GameScheduler {
      * The first team in each round is fixed, and the rest are rotated to create the schedule.
      * @param {Array<string>} teams - Array of team names
      * @param {number} anchorIndex - Starting index for team rotation
-     * @returns {Array<Array<Object>>} Array of rounds containing matches
+     * @returns {Round[]} Array of rounds containing matches
      */
     generateRoundRobinRounds(teams, anchorIndex = 0) {
         if (!Array.isArray(teams) || teams.length === 0) {
@@ -67,6 +73,7 @@ export class GameScheduler {
             throw new GameSchedulerError('Anchor index must be a non-negative number', 400);
         }
 
+        /** @type {Array<string | null>} */
         const totalTeams = [...teams];
 
         // Add bye team if odd number of teams
@@ -75,11 +82,13 @@ export class GameScheduler {
         }
 
         const n = totalTeams.length;
+        /** @type {Round[]} */
         const rounds = [];
 
         const rotatedTeams = rotateArray(totalTeams, anchorIndex % totalTeams.length);
 
         for (let round = 0; round < n - 1; round++) {
+            /** @type {Round} */
             let matches = [];
 
             for (let i = 0; i < n / 2; i++) {
@@ -92,9 +101,11 @@ export class GameScheduler {
                             ? { home, away, homeScore: null, awayScore: null }
                             : { home: away, away: home, homeScore: null, awayScore: null };
                     matches.push(match);
-                } else {
-                    const byeTeam = home ?? away;
-                    matches.push({ bye: byeTeam });
+                } else if (home !== null) {
+                    // Only one side is ever the null padding, so the other sits out.
+                    matches.push({ bye: home });
+                } else if (away !== null) {
+                    matches.push({ bye: away });
                 }
             }
 
@@ -121,7 +132,7 @@ export class GameScheduler {
      * The first leg is generated normally, and the second leg is the reverse of the first leg.
      * @param {Array<string>} teams - Array of team names
      * @param {number} anchorIndex - Starting index for team rotation
-     * @returns {Array<Array<Object>>} Array of rounds containing matches for both legs
+     * @returns {Round[]} Array of rounds containing matches for both legs
      */
     generateFullRoundRobinSchedule(teams, anchorIndex = 0) {
         const firstLeg = this.generateRoundRobinRounds(teams, anchorIndex);
@@ -136,8 +147,8 @@ export class GameScheduler {
 
     /**
      * Generate a new schedule using the set teams
-     * @param {number} anchorIndex - Starting index for team rotation (optional, will be random if not provided)
-     * @returns {{rounds: Array<Array<Object>>, anchorIndex: number}} Schedule data with rounds and anchor index
+     * @param {number | null} anchorIndex - Starting index for team rotation (optional, will be random if not provided)
+     * @returns {ScheduleData} Schedule data with rounds and anchor index
      */
     generateSchedule(anchorIndex = null) {
         if (this.teams.length === 0) {
@@ -165,9 +176,9 @@ export class GameScheduler {
 
     /**
      * Add more rounds to an existing schedule
-     * @param {Array<Array<Object>>} existingRounds - Existing schedule rounds
+     * @param {Round[]} existingRounds - Existing schedule rounds
      * @param {number} anchorIndex - Anchor index used for the existing schedule
-     * @returns {{rounds: Array<Array<Object>>, anchorIndex: number}} Extended schedule data
+     * @returns {ScheduleData} Extended schedule data
      */
     addMoreRounds(existingRounds, anchorIndex) {
         if (!Array.isArray(existingRounds)) {
@@ -188,8 +199,8 @@ export class GameScheduler {
 
     /**
      * Validate and sanitize schedule data
-     * @param {Object} scheduleData - Schedule data to validate
-     * @returns {Object} Validated and sanitized schedule data
+     * @param {RawScheduleData} scheduleData - Schedule data to validate
+     * @returns {ScheduleData} Validated and sanitized schedule data
      */
     validateSchedule(scheduleData) {
         const validation = validateScheduleData(scheduleData);
@@ -206,8 +217,8 @@ export class GameScheduler {
 
     /**
      * Validate a games API request
-     * @param {Object} requestBody - Request body to validate
-     * @returns {Object} Validated and sanitized request data
+     * @param {unknown} requestBody - Request body to validate
+     * @returns {ScheduleData} Validated and sanitized request data
      */
     validateGameRequest(requestBody) {
         const validation = validateGameRequest(requestBody);
@@ -224,7 +235,7 @@ export class GameScheduler {
 
     /**
      * Check if a schedule is complete (all games have scores)
-     * @param {Array<Array<Object>>} rounds - Schedule rounds to check
+     * @param {Round[]} rounds - Schedule rounds to check
      * @returns {{isComplete: boolean, playedGames: number, totalGames: number}} Completion status
      */
     getScheduleStatus(rounds) {
@@ -259,8 +270,8 @@ export class GameScheduler {
 
     /**
      * Get match results from completed games in rounds
-     * @param {Array<Array<Object>>} rounds - Schedule rounds
-     * @returns {Array<Object>} Array of completed match results
+     * @param {Round[]} rounds - Schedule rounds
+     * @returns {MatchResult[]} Array of completed match results
      */
     getMatchResults(rounds) {
         if (!Array.isArray(rounds)) {
@@ -279,6 +290,8 @@ export class GameScheduler {
 
                 // Only include completed games
                 if (
+                    home !== undefined &&
+                    away !== undefined &&
                     homeScore !== null &&
                     awayScore !== null &&
                     typeof homeScore === 'number' &&
@@ -294,12 +307,12 @@ export class GameScheduler {
 
     /**
      * Process a complete schedule operation (generate, validate, and return)
-     * @param {Object} options - Options for schedule generation
-     * @param {Array<string>} options.teams - Array of team names
+     * @param {object} options - Options for schedule generation
+     * @param {string[]} [options.teams] - Array of team names
      * @param {number} [options.anchorIndex] - Starting index for team rotation
-     * @param {Array<Array<Object>>} [options.existingRounds] - Existing rounds to extend
+     * @param {Round[]} [options.existingRounds] - Existing rounds to extend
      * @param {boolean} [options.addMore] - Whether to add more rounds to existing schedule
-     * @returns {Object} Complete schedule data
+     * @returns {SessionGames} Complete schedule data, including its computed status
      */
     processScheduleRequest(options = {}) {
         const { teams, anchorIndex, existingRounds, addMore = false } = options;
@@ -317,10 +330,10 @@ export class GameScheduler {
 
         if (addMore && existingRounds) {
             // Add more rounds to existing schedule
-            scheduleData = this.addMoreRounds(existingRounds, anchorIndex);
+            scheduleData = this.addMoreRounds(existingRounds, anchorIndex ?? 0);
         } else {
             // Generate new schedule
-            scheduleData = this.generateSchedule(anchorIndex);
+            scheduleData = this.generateSchedule(anchorIndex ?? null);
         }
 
         // Validate the generated schedule

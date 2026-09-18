@@ -10,9 +10,8 @@ export const GET = async ({ locals, url }) => {
     }
 
     // Get year from query parameter, default to current year
-    const year = url.searchParams.get('year')
-        ? parseInt(url.searchParams.get('year'), 10)
-        : new Date().getFullYear();
+    const yearParam = url.searchParams.get('year');
+    const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
 
     const rankingsData = await createRankingsManager()
         .setLeague(leagueId)
@@ -46,9 +45,8 @@ export const POST = async ({ locals, url }) => {
     }
 
     // Get year from query parameter, default to current year
-    const year = url.searchParams.get('year')
-        ? parseInt(url.searchParams.get('year'), 10)
-        : new Date().getFullYear();
+    const yearParam = url.searchParams.get('year');
+    const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
 
     const rankingsData = await createRankingsManager().setLeague(leagueId).updateRankings(year);
     const avatarsData = await createAvatarManager().setLeague(leagueId).loadAvatars();

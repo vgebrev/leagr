@@ -2,10 +2,6 @@
  * Centralised default values for the application
  */
 
-/** @typedef {import('./types.js').DaySettings} DaySettings */
-/** @typedef {import('./types.js').LeagueInfo} LeagueInfo */
-/** @typedef {import('./types.js').LeagueSettings} LeagueSettings */
-
 /**
  * Settings that can be overridden at the day level
  */
@@ -120,12 +116,10 @@ export function getEffectiveLeagueSettings(leagueInfo) {
  * (the top-level settings merge is shallow, so a partial momentum object would
  * otherwise lose nested defaults).
  * @param {Partial<LeagueSettings>|null|undefined} leagueSettings - Effective league settings
- * @returns {import('./types.js').MomentumSettings}
+ * @returns {MomentumSettings}
  */
 export function getEffectiveMomentumSettings(leagueSettings) {
-    const defaults = /** @type {import('./types.js').MomentumSettings} */ (
-        defaultSettings.momentum
-    );
+    const defaults = /** @type {MomentumSettings} */ (defaultSettings.momentum);
     const overrides = leagueSettings?.momentum;
     return {
         enabled: overrides?.enabled ?? defaults.enabled,

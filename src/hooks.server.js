@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { getLeagueInfo } from '$lib/server/league.js';
+import { getLeagueInfo, extractLeagueId } from '$lib/server/league.js';
+import { stripPort } from '$lib/server/requestIp.js';
 import { initializeEmailService } from '$lib/server/email.js';
 import { logger, initializeLogger } from '$lib/server/logger.js';
 import {
@@ -11,6 +12,18 @@ import {
 
 const rateLimitMap = new Map();
 // Rule-based rate limiting configuration (first match wins)
+/**
+ * @typedef {Object} RateRule
+ * @property {string} verb - HTTP method, or '*' for any
+ * @property {RegExp} routePattern
+ * @property {number} maxRequests
+ * @property {number} duration - Window length in ms
+ * @property {string} message
+ * @property {(url: URL) => string} [keyExtractor] - Extra key component, e.g. the session date
+ * @property {boolean} [ipOnly] - Key on IP alone rather than ip+clientId
+ */
+
+/** @type {RateRule[]} */
 const RATE_RULES = [
     {
         verb: 'POST',
@@ -19,7 +32,7 @@ const RATE_RULES = [
         duration: 60 * 60 * 1000, // 1 hour
         message:
             "You've already added a player recently. Please use the share link to invite other players.",
-        keyExtractor: (url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
+        keyExtractor: (/** @type {URL} */ url) => url.searchParams.get('date') || 'no-date' // Include date in rate limit key
         // Uses ip+clientId key so different people on the same network get separate quotas
     },
     {
@@ -46,53 +59,26 @@ initializeEmailService(MAILGUN_API_KEY, MAILGUN_DOMAIN, APP_URL);
 initializeLogger(LOG_LEVEL);
 
 /**
- * Extract league identifier from subdomain
- * @param {string} host - The host header (e.g., "pirates.leagr.local:5173")
- * @returns {string|null} - The league name or null if no subdomain
- */
-function extractLeagueId(host) {
-    if (!host || !APP_URL) return null;
-
-    // Remove port if present
-    const hostname = host.split(':')[0];
-
-    // Extract the base domain from APP_URL
-    const appUrl = new URL(APP_URL);
-    const baseDomain = appUrl.hostname;
-
-    // Check for root domain (no league)
-    if (hostname === baseDomain || hostname === 'localhost') {
-        return null;
-    }
-
-    // Split by dots and check if it's a subdomain
-    const parts = hostname.split('.');
-
-    // Check if it's a subdomain of our base domain
-    if (parts.length >= 2) {
-        const domain = parts.slice(1).join('.');
-        if (domain === baseDomain) {
-            return parts[0]; // Return the subdomain as league ID
-        }
-    }
-
-    // If it's not a recognised domain format, return null
-    return null;
-}
-
-/**
  * @param {import('@sveltejs/kit').RequestEvent} event
  */
 const getIp = (event) => {
     const { request } = event;
-    return (
+    const address =
         request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
         request.headers.get('x-real-ip') ||
         event.getClientAddress?.() ||
-        'unknown'
-    );
+        'unknown';
+    // The proxy appends the client's ephemeral source port, which would otherwise
+    // rotate the rate-limit key on every new TCP connection.
+    return stripPort(address);
 };
 
+/**
+ * The first rate rule matching this request, or null when none applies.
+ * @param {string} method
+ * @param {string} path
+ * @returns {RateRule | null}
+ */
 function pickRateRule(method, path) {
     const m = method.toUpperCase();
     for (const rule of RATE_RULES) {
@@ -103,6 +89,12 @@ function pickRateRule(method, path) {
     return null;
 }
 
+/**
+ * @param {RateRule} rule
+ * @param {string} key - ip, or ip+clientId for per-person quotas
+ * @param {string} [extraKey]
+ * @returns {boolean}
+ */
 function isRateLimitedFor(rule, key, extraKey = '') {
     const now = Date.now();
     const mapKey = `${rule.verb}:${rule.routePattern}:${key}${extraKey ? `:${extraKey}` : ''}`;
@@ -119,6 +111,10 @@ function isRateLimitedFor(rule, key, extraKey = '') {
     return data.count > rule.maxRequests;
 }
 
+/**
+ * @param {Request} request
+ * @returns {{allowed: boolean, origin: string | null}}
+ */
 function isOriginAllowed(request) {
     if (!allowedOrigin) return { allowed: true, origin: null };
     const origin = request.headers.get('origin');
@@ -218,13 +214,35 @@ export function sanitizeBodyForLog(rawBody) {
     }
 }
 
-function logApiRequest(method, url, leagueId, ip, status, durationMs, body = null) {
+/**
+ * @param {string} method
+ * @param {URL} url
+ * @param {string | null} leagueId
+ * @param {string} ip
+ * @param {number} status
+ * @param {number} durationMs
+ * @param {string | null} [body]
+ * @param {string | null} [failureDetail] - Response body of a 5xx, so the reason is logged
+ */
+function logApiRequest(
+    method,
+    url,
+    leagueId,
+    ip,
+    status,
+    durationMs,
+    body = null,
+    failureDetail = null
+) {
     const path = url.pathname + (url.search ? url.search : '');
     // Tag failures so a status line is greppable alongside its [ERROR] entry.
     const marker = status >= 500 ? ' FAILED' : status >= 400 ? ' REJECTED' : '';
     logger.info(
         `${method} ${path} ${status}${marker} ${durationMs}ms league=${leagueId ?? 'none'} ip=${ip}`
     );
+    if (failureDetail) {
+        logger.error(`${method} ${path} ${status} reason:`, failureDetail);
+    }
     if (body) {
         logger.debug(`${method} ${path} body:`, sanitizeBodyForLog(body));
     }
@@ -269,7 +287,7 @@ export const handle = async ({ event, resolve }) => {
 
     // Extract league ID from host and load league info
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-    const leagueId = extractLeagueId(host);
+    const leagueId = extractLeagueId(host, APP_URL);
     // Add league info to event locals for use in routes
     event.locals.leagueId = leagueId;
     event.locals.leagueInfo = getLeagueInfo(leagueId);
@@ -384,6 +402,17 @@ export const handle = async ({ event, resolve }) => {
     }
 
     if (url.pathname.startsWith('/api/')) {
+        // A 5xx that comes back as a Response was declared by a route - error(500, ...) is an
+        // intended response, so SvelteKit never routes it through handleError and nothing else
+        // records why. Carry the reason into the log; a thrown error still logs its stack there.
+        let failureDetail = null;
+        if (response.status >= 500) {
+            try {
+                failureDetail = await response.clone().text();
+            } catch {
+                // ignore - reading the body must never affect the response we return
+            }
+        }
         logApiRequest(
             request.method,
             url,
@@ -391,7 +420,8 @@ export const handle = async ({ event, resolve }) => {
             ip,
             response.status,
             Date.now() - start,
-            requestBody
+            requestBody,
+            failureDetail
         );
     }
 

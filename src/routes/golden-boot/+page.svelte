@@ -13,6 +13,7 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
     import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
     import { api } from '$lib/client/services/api-client.svelte.js';
@@ -25,7 +26,9 @@
     import { resolve } from '$app/paths';
     import { titleParts } from '$lib/client/stores/pageTitle.js';
 
-    let scorers = $state([]);
+    let scorers = $state(
+        /** @type {Array<{playerName: string, totalGoals: number, leagueGoals: number, cupGoals: number}>} */ ([])
+    );
     let error = $state(false);
     let celebrating = $state(false);
     let yearDropdownOpen = $state(false);
@@ -56,7 +59,7 @@
             (err) => {
                 console.error('Error loading golden boot data:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load golden boot data', 'error');
+                setNotification(errorMessage(err) || 'Failed to load golden boot data', 'error');
             }
         );
     }
@@ -71,7 +74,7 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`${page.url.pathname}?${query}`, {});
+        const href = resolve(`/golden-boot?${query}`);
 
         // Navigate and reload data
         await goto(href, { replaceState: true });

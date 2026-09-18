@@ -1,6 +1,18 @@
 <script>
     import PlayersList from './PlayersList.svelte';
     import { settings } from '$lib/client/stores/settings.js';
+    /**
+     * @type {{
+     *   availablePlayers: string[],
+     *   waitingList: string[],
+     *   canModifyList?: boolean,
+     *   onremove: (playerName: string, list?: string) => Promise<void> | void,
+     *   onmove?: (playerName: string, from: string, to: string) => Promise<void> | void,
+     *   onrename?: (oldName: string, newName: string) => Promise<void> | void,
+     *   onPlayerClick?: (playerName: string) => void,
+     *   date?: string | null
+     * }}
+     */
     let {
         availablePlayers,
         waitingList,
@@ -9,7 +21,6 @@
         onmove,
         onrename,
         onPlayerClick,
-        /** type { string } */
         date
     } = $props();
 
@@ -25,13 +36,16 @@
      */
     function canMoveToOtherList(sourceList, destinationList) {
         if (sourceList === 'waitingList' && destinationList === 'available') {
-            const effectivePlayerLimit = $settings[date]?.playerLimit || $settings.playerLimit;
+            const effectivePlayerLimit =
+                (date ? $settings[date]?.playerLimit : null) || $settings.playerLimit;
             return availablePlayers.length < effectivePlayerLimit;
         }
         return true;
     }
 
-    const effectivePlayerLimit = $derived($settings[date]?.playerLimit || $settings.playerLimit);
+    const effectivePlayerLimit = $derived(
+        (date ? $settings[date]?.playerLimit : null) || $settings.playerLimit
+    );
 </script>
 
 <div class="grid grid-cols-2 gap-2">
@@ -41,7 +55,7 @@
             players={availablePlayers}
             {allPlayers}
             {canModifyList}
-            onremove={async (name) => await onremove(name, 'available')}
+            onremove={async (/** @type {string} */ name) => await onremove(name, 'available')}
             {onmove}
             {onrename}
             {onPlayerClick}
@@ -57,7 +71,7 @@
             players={waitingList}
             {allPlayers}
             {canModifyList}
-            onremove={async (name) => await onremove(name, 'waitingList')}
+            onremove={async (/** @type {string} */ name) => await onremove(name, 'waitingList')}
             {onmove}
             {onrename}
             {onPlayerClick}

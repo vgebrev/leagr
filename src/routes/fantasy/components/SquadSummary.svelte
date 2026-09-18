@@ -8,7 +8,6 @@
      * also the controls: `slots` keeps an empty place on it for every pick still to make,
      * `onselect` opens the market from one, `onremove` takes a pick back, and `oncaptain`
      * moves the armband.
-     * @typedef {{name: string, avatar?: string | null, elo?: number | null}} SquadPlayer
      * @type {{
      *   budget?: number,
      *   cost?: number,

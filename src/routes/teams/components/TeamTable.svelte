@@ -5,6 +5,27 @@
     import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
     import { settings } from '$lib/client/stores/settings.js';
 
+    /**
+     * @type {{
+     *   team: Array<string | null | {name: string, elo?: number | null, attackingRating?: number | null, controlRating?: number | null, avatar?: string | null, isProvisional?: boolean, actualElo?: number | null}>,
+     *   color?: TeamColour,
+     *   teamName: string,
+     *   canModifyList?: boolean,
+     *   onremove?: ((playerName: string, action: string, teamName?: string) => void) | null,
+     *   onassign?: ((playerName: string, teamName: string) => void) | null,
+     *   onAutoAssign?: ((playerName: string) => void) | null,
+     *   onAutoAssignToTeam?: ((teamName: string) => void) | null,
+     *   onrename?: ((oldName: string, newName: string) => void) | null,
+     *   onPlayerClick?: ((playerName: string) => void) | null,
+     *   onTeamClick?: ((teamName: string) => void) | null,
+     *   assignablePlayers?: Array<string | PlayerWithElo>,
+     *   allTeams?: EnhancedTeamsData,
+     *   size?: 'sm' | 'md',
+     *   showPlayerRankings?: boolean,
+     *   showTeamRatings?: boolean,
+     *   date?: string | null
+     * }}
+     */
     let {
         team,
         color = 'default',
@@ -69,8 +90,8 @@
         team.forEach((player) => {
             if (player && typeof player === 'object') {
                 // Use ELO if available, fallback to rankingPoints for legacy data
-                const playerElo = player.elo ?? player.rankingPoints ?? null;
-                if (playerElo !== null && playerElo !== undefined) {
+                const playerElo = player.elo ?? null;
+                if (playerElo !== null) {
                     total += playerElo;
                     assignedPlayerCount++;
                 }
@@ -93,7 +114,7 @@
         let count = 0;
 
         team.forEach((player) => {
-            if (player && typeof player === 'object' && player.attackingRating !== null) {
+            if (player && typeof player === 'object' && player.attackingRating != null) {
                 total += player.attackingRating;
                 count++;
             }
@@ -110,7 +131,7 @@
         let count = 0;
 
         team.forEach((player) => {
-            if (player && typeof player === 'object' && player.controlRating !== null) {
+            if (player && typeof player === 'object' && player.controlRating != null) {
                 total += player.controlRating;
                 count++;
             }
@@ -139,30 +160,41 @@
         });
     });
 
+    /**
+     * @param {string} player
+     * @param {string} action
+     */
     function handleRemovePlayer(player, action) {
         if (onremove) {
             onremove(player, action, teamName);
         }
     }
 
+    /**
+     * @param {string} playerName
+     * @param {string} targetTeamName
+     */
     function handleAssignPlayer(playerName, targetTeamName) {
         if (onassign) {
             onassign(playerName, targetTeamName);
         }
     }
 
+    /** @param {string} playerName */
     function handleAutoAssignPlayer(playerName) {
         if (onAutoAssign) {
             onAutoAssign(playerName);
         }
     }
 
+    /** @param {string} targetTeamName */
     function handleAutoAssignToTeam(targetTeamName) {
         if (onAutoAssignToTeam) {
             onAutoAssignToTeam(targetTeamName);
         }
     }
 
+    /** @param {string} player */
     function handleRemoveFromList(player) {
         // For player list tables - use unified remove operation
         if (onremove) {
@@ -181,18 +213,15 @@
 
     // Get all players for duplicate checking in the modal
     const allPlayers = $derived.by(() => {
+        /** @type {string[]} */
         const players = [];
 
         // Add all players from all teams
         if (allTeams) {
             Object.values(allTeams).forEach((teamRoster) => {
                 teamRoster.forEach((player) => {
-                    if (player) {
-                        const playerName =
-                            typeof player === 'string' ? player : player.name || player;
-                        if (!players.includes(playerName)) {
-                            players.push(playerName);
-                        }
+                    if (player && !players.includes(player.name)) {
+                        players.push(player.name);
                     }
                 });
             });
@@ -200,7 +229,7 @@
 
         // Add assignable players (unassigned/waiting)
         assignablePlayers.forEach((player) => {
-            const playerName = typeof player === 'string' ? player : player.name || player;
+            const playerName = typeof player === 'string' ? player : player.name;
             if (!players.includes(playerName)) {
                 players.push(playerName);
             }
@@ -209,6 +238,20 @@
         return players;
     });
 
+    /**
+     * Build one dropdown action. A bare object literal widens `type` to string, so the
+     * actions are built through here instead of being asserted after the fact.
+     * @param {PlayerAction['type']} type
+     * @param {string} label
+     * @param {() => void} onclick
+     * @returns {PlayerAction}
+     */
+    const action = (type, label, onclick) => ({ type, label, onclick });
+
+    /**
+     * @param {string} oldName
+     * @param {string} newName
+     */
     function handleRename(oldName, newName) {
         if (onrename) {
             onrename(oldName, newName);
@@ -267,13 +310,13 @@
                                         class="h-2 flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 w-full rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {displayPercent(
-                                                teamAverageAttacking
+                                            style="width: {(
+                                                displayPercent(teamAverageAttacking) ?? 0
                                             ).toFixed(1)}%">
                                         </div>
                                     </div>
                                     <span class={`text-right text-xs ${headerTextClass}`}>
-                                        {displayPercent(teamAverageAttacking).toFixed(0)}
+                                        {(displayPercent(teamAverageAttacking) ?? 0).toFixed(0)}
                                     </span>
                                 </div>
                             {/if}
@@ -284,13 +327,13 @@
                                         class="h-2 w-full flex-1 rounded-full bg-gray-200/60 shadow-xs shadow-gray-800 dark:bg-gray-700/60">
                                         <div
                                             class={`h-2 rounded-full transition-all ${headerBgClass}`}
-                                            style="width: {displayPercent(
-                                                teamAverageControl
+                                            style="width: {(
+                                                displayPercent(teamAverageControl) ?? 0
                                             ).toFixed(1)}%">
                                         </div>
                                     </div>
                                     <span class={`text-right text-xs ${headerTextClass}`}>
-                                        {displayPercent(teamAverageControl).toFixed(0)}
+                                        {(displayPercent(teamAverageControl) ?? 0).toFixed(0)}
                                     </span>
                                 </div>
                             {/if}
@@ -307,7 +350,7 @@
                             <div class="min-w-0 flex-1">
                                 {#if player}
                                     {@const playerName =
-                                        typeof player === 'string' ? player : player.name || player}
+                                        typeof player === 'string' ? player : player.name}
                                     <button
                                         onclick={() => onPlayerClick?.(playerName)}
                                         class="cursor-pointer truncate hover:underline">
@@ -319,8 +362,8 @@
                             </div>
                             <div class="ml-2 flex shrink-0 items-center gap-2">
                                 {#if player && showPlayerRankings && typeof player === 'object'}
-                                    {@const playerElo = player.elo ?? player.rankingPoints}
-                                    {#if playerElo !== null && playerElo !== undefined}
+                                    {@const playerElo = player.elo}
+                                    {#if playerElo != null}
                                         <span
                                             class="text-xs whitespace-nowrap opacity-50"
                                             class:italic={player.isProvisional}
@@ -334,36 +377,27 @@
                                 {#if isPlayerList && player}
                                     <!-- Dropdown for unassigned/waiting list players -->
                                     {@const playerName =
-                                        typeof player === 'string' ? player : player.name || player}
+                                        typeof player === 'string' ? player : player.name}
                                     {@const actions = [
                                         ...(onAutoAssign && teamsWithEmptySlots.length > 0
                                             ? [
-                                                  {
-                                                      type: 'assign',
-                                                      label: 'Auto-assign',
-                                                      onclick: () =>
-                                                          handleAutoAssignPlayer(playerName)
-                                                  }
+                                                  action('assign', 'Auto-assign', () =>
+                                                      handleAutoAssignPlayer(playerName)
+                                                  )
                                               ]
                                             : []),
-                                        ...teamsWithEmptySlots.map((teamName) => ({
-                                            type: 'assign',
-                                            label: capitalize(teamName),
-                                            onclick: () => handleAssignPlayer(playerName, teamName)
-                                        })),
-                                        {
-                                            type: 'rename',
-                                            label: 'Rename',
-                                            onclick: () => {
-                                                playerToRename = playerName;
-                                                showRenameModal = true;
-                                            }
-                                        },
-                                        {
-                                            type: 'remove',
-                                            label: 'Remove',
-                                            onclick: () => handleRemoveFromList(playerName)
-                                        }
+                                        ...teamsWithEmptySlots.map((teamName) =>
+                                            action('assign', capitalize(teamName), () =>
+                                                handleAssignPlayer(playerName, teamName)
+                                            )
+                                        ),
+                                        action('rename', 'Rename', () => {
+                                            playerToRename = playerName;
+                                            showRenameModal = true;
+                                        }),
+                                        action('remove', 'Remove', () =>
+                                            handleRemoveFromList(playerName)
+                                        )
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
@@ -373,35 +407,23 @@
                                         styleClass={styles.buttonClass} />
                                 {:else if onremove && player}
                                     {@const playerName =
-                                        typeof player === 'string' ? player : player.name || player}
+                                        typeof player === 'string' ? player : player.name}
                                     {@const actions = [
-                                        {
-                                            type: 'move-to-waiting',
-                                            label: 'Move to waiting list',
-                                            onclick: () =>
-                                                handleRemovePlayer(playerName, 'waitingList')
-                                        },
-                                        {
-                                            type: 'rename',
-                                            label: 'Rename',
-                                            onclick: () => {
-                                                playerToRename = playerName;
-                                                showRenameModal = true;
-                                            }
-                                        },
-                                        {
-                                            type: 'remove',
-                                            label: 'Remove',
-                                            onclick: () => handleRemovePlayer(playerName, 'remove')
-                                        },
+                                        action('move-to-waiting', 'Move to waiting list', () =>
+                                            handleRemovePlayer(playerName, 'waitingList')
+                                        ),
+                                        action('rename', 'Rename', () => {
+                                            playerToRename = playerName;
+                                            showRenameModal = true;
+                                        }),
+                                        action('remove', 'Remove', () =>
+                                            handleRemovePlayer(playerName, 'remove')
+                                        ),
                                         ...(isDisciplineEnabled
                                             ? [
-                                                  {
-                                                      type: 'no-show',
-                                                      label: 'No-show',
-                                                      onclick: () =>
-                                                          handleRemovePlayer(playerName, 'no-show')
-                                                  }
+                                                  action('no-show', 'No-show', () =>
+                                                      handleRemovePlayer(playerName, 'no-show')
+                                                  )
                                               ]
                                             : [])
                                     ]}
@@ -415,22 +437,17 @@
                                 {#if onassign && !player}
                                     {#if assignablePlayers.length > 0}
                                         {@const actions = [
-                                            {
-                                                type: 'assign',
-                                                label: 'Auto-assign',
-                                                onclick: () => handleAutoAssignToTeam(teamName)
-                                            },
+                                            action('assign', 'Auto-assign', () =>
+                                                handleAutoAssignToTeam(teamName)
+                                            ),
                                             ...assignablePlayers.map((waitingPlayer) => {
                                                 const playerName =
                                                     typeof waitingPlayer === 'string'
                                                         ? waitingPlayer
-                                                        : waitingPlayer.name || waitingPlayer;
-                                                return {
-                                                    type: 'assign',
-                                                    label: playerName,
-                                                    onclick: () =>
-                                                        handleAssignPlayer(playerName, teamName)
-                                                };
+                                                        : waitingPlayer.name;
+                                                return action('assign', playerName, () =>
+                                                    handleAssignPlayer(playerName, teamName)
+                                                );
                                             })
                                         ]}
                                         <PlayerActionsDropdown

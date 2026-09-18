@@ -22,7 +22,7 @@
         fly
     };
 
-    const transitionFn = transitions[type] || fade;
+    const transitionFn = $derived(transitions[type] || fade);
 </script>
 
 {#if show}

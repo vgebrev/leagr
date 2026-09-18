@@ -7,20 +7,20 @@
     import CrownIcon from '$components/Icons/CrownIcon.svelte';
     import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
 
-    /** @typedef {import('$lib/shared/types.js').YearRecapTeamHighlight} YearRecapTeamHighlight */
-
     /** @type {{ data: YearRecapTeamHighlight | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();
 
     // Extract team color from team name (first word)
-    const teamColor = $derived(data?.teamName?.split(' ')[0]?.toLowerCase() || 'default');
+    const teamColor = $derived(
+        /** @type {TeamColour} */ (data?.teamName?.split(' ')[0]?.toLowerCase() || 'default')
+    );
 
     // Calculate delays
-    const badgeDelay = initialDelay;
-    const playersStartDelay = initialDelay + 200;
+    const badgeDelay = $derived(initialDelay);
+    const playersStartDelay = $derived(initialDelay + 200);
     const playerStagger = 100;
-    const leagueDelay = initialDelay + 800;
-    const cupDelay = initialDelay + 900;
+    const leagueDelay = $derived(initialDelay + 800);
+    const cupDelay = $derived(initialDelay + 900);
 </script>
 
 <SlideCard

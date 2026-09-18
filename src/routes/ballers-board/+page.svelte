@@ -15,6 +15,7 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid, StarSolid } from 'flowbite-svelte-icons';
+    import { errorMessage } from '$lib/shared/helpers.js';
     import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
     import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
     import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
@@ -65,6 +66,27 @@
         return top[stat] > 0 ? top.playerName : null;
     }
 
+    /** @type {Partial<Record<BallerStatKey, string | null>>} */
+    /** @type {Array<{key: BallerStatKey, label: string, width: string}>} */
+    const cols = [
+        { key: 'appearances', label: 'Apps', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+        { key: 'saves', label: 'Saves', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+        { key: 'defence', label: 'DEF', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+        { key: 'attack', label: 'ATT', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
+        { key: 'goals', label: 'Goals', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' },
+        { key: 'total', label: 'Total', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' }
+    ];
+
+    /** @type {Partial<Record<BallerStatKey, import('svelte').Component<any>>>} */
+    const statIcons = {
+        saves: GloveIcon,
+        defence: ShieldIcon,
+        attack: BullseyeIcon,
+        goals: LeagueIcon,
+        total: StarSolid
+    };
+
+    /** @type {Partial<Record<BallerStatKey, string | null>>} */
     let leaders = $derived({
         total: leader('total'),
         goals: leader('goals'),
@@ -84,7 +106,7 @@
             (err) => {
                 console.error('Error loading ballers board:', err);
                 error = true;
-                setNotification(err.message || 'Failed to load ballers board', 'error');
+                setNotification(errorMessage(err) || 'Failed to load ballers board', 'error');
             }
         );
     }
@@ -94,7 +116,7 @@
         yearDropdownOpen = false;
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
-        const href = resolve(`${page.url.pathname}?${params.toString()}`, {});
+        const href = resolve(`/ballers-board?${params.toString()}`);
         await goto(href, { replaceState: true });
     }
 
@@ -228,21 +250,6 @@
             <p class="text-gray-500">No individual stats recorded yet.</p>
         </div>
     {:else}
-        {@const cols = [
-            { key: 'appearances', label: 'Apps', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
-            { key: 'saves', label: 'Saves', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
-            { key: 'defence', label: 'DEF', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
-            { key: 'attack', label: 'ATT', width: 'w-px sm:w-10 lg:w-14 2xl:w-16' },
-            { key: 'goals', label: 'Goals', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' },
-            { key: 'total', label: 'Total', width: 'w-px sm:w-12 lg:w-14 2xl:w-16' }
-        ]}
-        {@const statIcons = {
-            saves: GloveIcon,
-            defence: ShieldIcon,
-            attack: BullseyeIcon,
-            goals: LeagueIcon,
-            total: StarSolid
-        }}
         <Table
             classes={{ div: 'w-full overflow-hidden text-xs' }}
             class="w-full table-auto sm:table-fixed dark:text-gray-300"
