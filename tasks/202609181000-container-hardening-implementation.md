@@ -238,3 +238,41 @@ build. The alternative, `exit-code: 0`, would have made the scan permanently adv
 carry a re-check note and should be dropped when the base ships >= 3.0.20.
 
 Verified locally with the exact CI settings: **exit 0**, with every npm package scanning clean.
+
+## CI typecheck divergence (2026-09-18)
+
+The next CI run failed `npm run check:ci` on a file this work never touched:
+
+```
+src/lib/server/teamLogoManager.js:208:25
+Argument of type 'string | undefined' is not assignable to parameter of type 'string'.
+```
+
+It passes locally and fails in CI because `svelte-kit sync` generates `.svelte-kit/ambient.d.ts`
+from the environment variables present _at sync time_, and `.env.local` is gitignored. Locally that
+file declares `export const OPENAI_API_KEY: string;`. In CI the variable is not declared at all, so
+`env.OPENAI_API_KEY` falls through to the `[key: string]: string | undefined` index signature of
+`$env/dynamic/private` - and `generateTeamLogo` takes `@param {string} apiKey`.
+
+**The local typecheck is therefore systematically weaker than the gate.** Reproduced without
+touching the working tree by checking out `git archive HEAD` into a temp directory (tracked files
+only, so no `.env.local`), symlinking `node_modules`, and running `check:ci` there - same error,
+same line.
+
+Fixed by narrowing at the point of use rather than casting or loosening the callee signature, with
+an early return in `generateLogosForDraw`:
+
+```js
+const apiKey = env.OPENAI_API_KEY;
+if (!apiKey) {
+    logger.info('[teamLogos] Skipping logo generation - OPENAI_API_KEY is not set', { date });
+    return;
+}
+```
+
+This also implements behaviour that `deploy.sh` and the README already claimed but which was never
+actually there: `OPENAI_API_KEY` was read at exactly one site with no guard, so an unset key meant
+one failed OpenAI request per team, each throwing into the per-team catch. It now skips once.
+
+Verified with the fix applied in the CI-like tree: 2282 files, 0 errors, 0 warnings. Full suite
+(1372 + 323) and lint pass locally.
