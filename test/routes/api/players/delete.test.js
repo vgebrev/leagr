@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { isHttpError } from '@sveltejs/kit';
 
 const getData = vi.fn();
@@ -52,10 +52,19 @@ function del(body = { playerName: 'Velislav', list: 'available' }) {
 describe('DELETE /api/players', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        // DATE is fixed, so without pinning the clock these tests start failing
+        // the competition-ended gate the moment that date falls into the past.
+        // Only Date is faked - timer-driven async is left alone.
+        vi.useFakeTimers({ toFake: ['Date'] });
+        vi.setSystemTime(new Date(`${DATE}T08:00:00`));
         // What the route actually asks for: settings only, no players.
         getData.mockResolvedValue({ settings: { [DATE]: {}, competitionDays: [6] } });
         removePlayer.mockResolvedValue({ players: { available: [], waitingList: [] } });
         getOwnedPlayersForCurrentClient.mockResolvedValue([]);
+    });
+
+    afterEach(() => {
+        vi.useRealTimers();
     });
 
     // The route loads settings with `players: false`, so a guard that also required

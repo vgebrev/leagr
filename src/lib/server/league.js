@@ -74,6 +74,48 @@ export function updateLeagueInfo(leagueId, leagueInfo) {
 }
 
 /**
+ * Extract the league identifier from a request host.
+ *
+ * The host reaches the app through X-Forwarded-Host, so it is client-influenced
+ * and the result is fed to getLeagueDataPath, which joins it into a filesystem
+ * path. Everything returned here is therefore validated with the same
+ * isValidSubdomain guard that league creation applies; anything else is treated
+ * as the root domain.
+ *
+ * @param {string|null} host - The host header, e.g. "pirates.leagr.co.za:5173"
+ * @param {string|undefined} appUrl - The configured base application URL
+ * @returns {string|null} - The league id, or null when there is no valid league subdomain
+ */
+export function extractLeagueId(host, appUrl) {
+    if (!host || !appUrl) return null;
+
+    // Remove port if present
+    const hostname = host.split(':')[0];
+
+    // Extract the base domain from the app URL
+    const baseDomain = new URL(appUrl).hostname;
+
+    // Check for root domain (no league)
+    if (hostname === baseDomain || hostname === 'localhost') {
+        return null;
+    }
+
+    // Split by dots and check if it's a subdomain
+    const parts = hostname.split('.');
+
+    // Check if it's a subdomain of our base domain
+    if (parts.length >= 2) {
+        const domain = parts.slice(1).join('.');
+        if (domain === baseDomain) {
+            return isValidSubdomain(parts[0]) ? parts[0] : null;
+        }
+    }
+
+    // If it's not a recognised domain format, return null
+    return null;
+}
+
+/**
  * Get the data directory path for a league
  * @param {string|null} leagueId - The league name (null for the default league)
  * @returns {string} - The data directory path

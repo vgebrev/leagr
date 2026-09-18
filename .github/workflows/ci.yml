@@ -41,3 +41,22 @@ jobs:
 
       - name: Test build
         run: npm run build
+
+      - name: Build container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: leagr:ci
+
+      # ignore-unfixed matters: distroless ships CVEs with no upstream fix
+      # available, and without it CI blocks on things nothing can action.
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: leagr:ci
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 1

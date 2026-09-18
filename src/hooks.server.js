@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import { getLeagueInfo } from '$lib/server/league.js';
+import { getLeagueInfo, extractLeagueId } from '$lib/server/league.js';
+import { stripPort } from '$lib/server/requestIp.js';
 import { initializeEmailService } from '$lib/server/email.js';
 import { logger, initializeLogger } from '$lib/server/logger.js';
 import {
@@ -58,51 +59,18 @@ initializeEmailService(MAILGUN_API_KEY, MAILGUN_DOMAIN, APP_URL);
 initializeLogger(LOG_LEVEL);
 
 /**
- * Extract league identifier from subdomain
- * @param {string|null} host - The host header (e.g., "pirates.leagr.local:5173")
- * @returns {string|null} - The league name or null if no subdomain
- */
-function extractLeagueId(host) {
-    if (!host || !APP_URL) return null;
-
-    // Remove port if present
-    const hostname = host.split(':')[0];
-
-    // Extract the base domain from APP_URL
-    const appUrl = new URL(APP_URL);
-    const baseDomain = appUrl.hostname;
-
-    // Check for root domain (no league)
-    if (hostname === baseDomain || hostname === 'localhost') {
-        return null;
-    }
-
-    // Split by dots and check if it's a subdomain
-    const parts = hostname.split('.');
-
-    // Check if it's a subdomain of our base domain
-    if (parts.length >= 2) {
-        const domain = parts.slice(1).join('.');
-        if (domain === baseDomain) {
-            return parts[0]; // Return the subdomain as league ID
-        }
-    }
-
-    // If it's not a recognised domain format, return null
-    return null;
-}
-
-/**
  * @param {import('@sveltejs/kit').RequestEvent} event
  */
 const getIp = (event) => {
     const { request } = event;
-    return (
+    const address =
         request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
         request.headers.get('x-real-ip') ||
         event.getClientAddress?.() ||
-        'unknown'
-    );
+        'unknown';
+    // The proxy appends the client's ephemeral source port, which would otherwise
+    // rotate the rate-limit key on every new TCP connection.
+    return stripPort(address);
 };
 
 /**
@@ -319,7 +287,7 @@ export const handle = async ({ event, resolve }) => {
 
     // Extract league ID from host and load league info
     const host = request.headers.get('x-forwarded-host') || request.headers.get('host');
-    const leagueId = extractLeagueId(host);
+    const leagueId = extractLeagueId(host, APP_URL);
     // Add league info to event locals for use in routes
     event.locals.leagueId = leagueId;
     event.locals.leagueInfo = getLeagueInfo(leagueId);

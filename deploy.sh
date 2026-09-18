@@ -67,25 +67,56 @@ require_var APP_NAME REMOTE_HOST REMOTE_DEPLOY_DIR REMOTE_DATA_DIR REMOTE_LOGS_D
     ALLOWED_ORIGIN APP_URL SESSION_SECRET BODY_SIZE_LIMIT LOG_LEVEL \
     MAILGUN_SENDING_KEY MAILGUN_DOMAIN
 
-# Container runtime environment. Optional values are appended only when set, so
-# the app's own fallbacks still apply when they are left empty.
-DOCKER_ENV_ARGS="-e ALLOWED_ORIGIN=${ALLOWED_ORIGIN}"
-DOCKER_ENV_ARGS+=" -e SESSION_SECRET=${SESSION_SECRET}"
-DOCKER_ENV_ARGS+=" -e APP_URL=${APP_URL}"
-# The app reads MAILGUN_API_KEY (see src/hooks.server.js), not MAILGUN_SENDING_KEY.
-DOCKER_ENV_ARGS+=" -e MAILGUN_API_KEY=${MAILGUN_SENDING_KEY}"
-DOCKER_ENV_ARGS+=" -e MAILGUN_DOMAIN=${MAILGUN_DOMAIN}"
-DOCKER_ENV_ARGS+=" -e BODY_SIZE_LIMIT=${BODY_SIZE_LIMIT}"
-DOCKER_ENV_ARGS+=" -e LOG_LEVEL=${LOG_LEVEL}"
-if [[ -n "$PLAYER_OWNER_SALT" ]]; then
-    DOCKER_ENV_ARGS+=" -e PLAYER_OWNER_SALT=${PLAYER_OWNER_SALT}"
-fi
-if [[ -n "$OPENAI_API_KEY" ]]; then
-    DOCKER_ENV_ARGS+=" -e OPENAI_API_KEY=${OPENAI_API_KEY}"
-    DOCKER_ENV_ARGS+=" -e OPENAI_MODEL=${OPENAI_MODEL}"
-else
+# Container runtime environment. Secrets are written to a file rather than passed
+# as -e flags so they never appear on the ssh command line, in either machine's
+# process list, or in shell history. (Docker still records them in the container
+# config, so `docker inspect` shows them either way - hiding them from that would
+# need Docker secrets, which is overkill for a single-host deploy.)
+# Optional values are omitted entirely when unset, so the app's own fallbacks still apply.
+ENV_FILE_NAME="${APP_NAME}.env"
+LOCAL_ENV_FILE="$(mktemp "${TMPDIR:-/tmp}/${APP_NAME}-env.XXXXXX")"
+chmod 600 "$LOCAL_ENV_FILE"
+REMOTE_ENV_FILE="${REMOTE_DEPLOY_DIR}/${ENV_FILE_NAME}"
+ENV_FILE_COPIED=false
+
+# Always clear the local copy, whatever exit path we take.
+cleanup_local_env_file() {
+    [[ -n "$LOCAL_ENV_FILE" ]] && rm -f "$LOCAL_ENV_FILE"
+}
+trap cleanup_local_env_file EXIT
+
+{
+    echo "ALLOWED_ORIGIN=${ALLOWED_ORIGIN}"
+    echo "SESSION_SECRET=${SESSION_SECRET}"
+    echo "APP_URL=${APP_URL}"
+    # The app reads MAILGUN_API_KEY (see src/hooks.server.js), not MAILGUN_SENDING_KEY.
+    echo "MAILGUN_API_KEY=${MAILGUN_SENDING_KEY}"
+    echo "MAILGUN_DOMAIN=${MAILGUN_DOMAIN}"
+    echo "BODY_SIZE_LIMIT=${BODY_SIZE_LIMIT}"
+    echo "LOG_LEVEL=${LOG_LEVEL}"
+    [[ -n "$PLAYER_OWNER_SALT" ]] && echo "PLAYER_OWNER_SALT=${PLAYER_OWNER_SALT}"
+    if [[ -n "$OPENAI_API_KEY" ]]; then
+        echo "OPENAI_API_KEY=${OPENAI_API_KEY}"
+        echo "OPENAI_MODEL=${OPENAI_MODEL}"
+    fi
+} > "$LOCAL_ENV_FILE"
+
+if [[ -z "$OPENAI_API_KEY" ]]; then
     print_warning "OPENAI_API_KEY not set - AI team-logo generation will be disabled"
 fi
+
+# Container hardening. A compromise inside the container gets no writable rootfs,
+# no capabilities, no path to more privilege, and a hard ceiling on what it can
+# consume. Published on loopback only: IIS is the front door, and binding wider
+# would let anything on the network bypass it and forge X-Forwarded-* headers.
+DOCKER_RUN_FLAGS="--read-only"
+DOCKER_RUN_FLAGS+=" --tmpfs /tmp:rw,noexec,nosuid,size=64m"
+DOCKER_RUN_FLAGS+=" --cap-drop=ALL"
+DOCKER_RUN_FLAGS+=" --security-opt=no-new-privileges:true"
+DOCKER_RUN_FLAGS+=" --memory=1g --memory-swap=1g"
+DOCKER_RUN_FLAGS+=" --cpus=1.5"
+DOCKER_RUN_FLAGS+=" --pids-limit=256"
+DOCKER_RUN_FLAGS+=" --log-opt max-size=10m --log-opt max-file=3"
 
 # Rollback state variables
 PREVIOUS_VERSION=""
@@ -125,6 +156,12 @@ rollback() {
         ssh "$REMOTE_HOST" "docker rmi ${APP_NAME}:${VERSION} 2>nul" || true
     fi
     
+    if [[ "$ENV_FILE_COPIED" == true ]]; then
+        print_step "Removing environment file from remote server..."
+        WINDOWS_ENV_FILE=$(echo "$REMOTE_ENV_FILE" | sed 's/\//\\/g')
+        ssh "$REMOTE_HOST" "del /Q \"${WINDOWS_ENV_FILE}\" 2>nul" || true
+    fi
+
     if [[ "$TAR_FILE_COPIED" == true ]]; then
         print_step "Removing tar file from remote server..."
         WINDOWS_DEPLOY_DIR=$(echo "$REMOTE_DEPLOY_DIR" | sed 's/\//\\/g')
@@ -370,8 +407,22 @@ else
     print_step "No existing container found"
 fi
 
+print_step "Copying environment file to production server..."
+if ! scp "$LOCAL_ENV_FILE" "${REMOTE_HOST}:${REMOTE_ENV_FILE}"; then
+    rollback "Failed to copy environment file to remote server"
+fi
+ENV_FILE_COPIED=true
+
+# Strip inherited ACLs so only the deploying account can read the secrets while
+# the file is briefly on disk.
+WINDOWS_ENV_FILE=$(echo "$REMOTE_ENV_FILE" | sed 's/\//\\/g')
+if ! ssh "$REMOTE_HOST" "icacls \"${WINDOWS_ENV_FILE}\" /inheritance:r /grant:r \"%USERNAME%:F\" >nul"; then
+    print_warning "Failed to restrict permissions on the remote environment file"
+fi
+
 print_step "Starting new container..."
-if ssh "$REMOTE_HOST" "docker run -d --name ${APP_NAME} --restart unless-stopped -p ${PORT}:3000 -v ${REMOTE_DATA_DIR}:/app/data -v ${REMOTE_LOGS_DIR}:/app/logs ${DOCKER_ENV_ARGS} ${APP_NAME}:${VERSION}"; then
+# Single line: the remote is cmd.exe, so backslash continuations would break it.
+if ssh "$REMOTE_HOST" "docker run -d --name ${APP_NAME} --restart unless-stopped ${DOCKER_RUN_FLAGS} -p 127.0.0.1:${PORT}:3000 -v ${REMOTE_DATA_DIR}:/app/data -v ${REMOTE_LOGS_DIR}:/app/logs --env-file ${REMOTE_ENV_FILE} ${APP_NAME}:${VERSION}"; then
     print_step "New container started successfully"
 else
     rollback "Failed to start new container"
@@ -389,6 +440,16 @@ fi
 
 # Disable error trap for cleanup phase - deployment succeeded, cleanup failures shouldn't rollback
 trap - ERR
+
+# Remove the remote secrets file now the container holds its own copy of the
+# environment. Docker reads --env-file only at create time, so restarts and host
+# reboots do not need it to still be there.
+print_step "Removing environment file from production server..."
+if ssh "$REMOTE_HOST" "del /Q \"${WINDOWS_ENV_FILE}\" 2>nul"; then
+    ENV_FILE_COPIED=false
+else
+    print_warning "Failed to remove remote environment file - delete ${REMOTE_ENV_FILE} by hand"
+fi
 
 # Step 7: Clean up old images and containers
 print_step "Cleaning up old Docker images and containers..."
