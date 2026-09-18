@@ -190,6 +190,18 @@ export class TeamLogoManager {
      * @param {Record<string, string[]>} teams - { teamName: playerNames[] }
      */
     async generateLogosForDraw(date, teams) {
+        // Without a key there is nothing to call, so bail before spawning a request
+        // per team that would each throw. Narrowing here also gives generateTeamLogo
+        // the plain string it requires - env.OPENAI_API_KEY is string|undefined
+        // whenever the variable is absent at svelte-kit sync time, as it is in CI.
+        const apiKey = env.OPENAI_API_KEY;
+        if (!apiKey) {
+            logger.info('[teamLogos] Skipping logo generation - OPENAI_API_KEY is not set', {
+                date
+            });
+            return;
+        }
+
         const teamNames = Object.keys(teams);
         const shapes = pickBadgeShapes(teamNames.length);
 
@@ -205,7 +217,7 @@ export class TeamLogoManager {
                     const rawBuffer = await generateTeamLogo(
                         teamName,
                         shapes[i],
-                        env.OPENAI_API_KEY,
+                        apiKey,
                         env.OPENAI_MODEL
                     );
                     await this.saveRawLogo(date, teamName, rawBuffer);
