@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractLeagueId } from '$lib/server/league.js';
+import { extractLeagueId } from '#lib/server/league.js';
 
 const APP_URL = 'https://leagr.co.za';
 

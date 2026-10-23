@@ -1,9 +1,9 @@
 <script>
     import { Input } from 'flowbite-svelte';
-    import TeamBadge from '$components/TeamBadge.svelte';
-    import { validateGameScore, RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
-    import ScorerPopover from '$components/ScorerPopover.svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
+    import { validateGameScore, RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
+    import ScorerPopover from '#components/ScorerPopover.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
 
     /**
      * @typedef {'horizontal' | 'vertical'} Orientation

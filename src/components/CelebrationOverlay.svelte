@@ -1,7 +1,7 @@
 <script>
-    import ConfettiEffect from '$components/ConfettiEffect.svelte';
-    import TeamLogo from '$components/TeamLogo.svelte';
-    import { teamStyles } from '$lib/shared/helpers.js';
+    import ConfettiEffect from '#components/ConfettiEffect.svelte';
+    import TeamLogo from '#components/TeamLogo.svelte';
+    import { teamStyles } from '#lib/shared/helpers.js';
     import { fade } from 'svelte/transition';
 
     /**

@@ -1,16 +1,16 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createPlayerManager } from '$lib/server/playerManager.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { createDisciplineManager } from '$lib/server/discipline.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { createDisciplineManager } from '#lib/server/discipline.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 import {
     validateDateParameter,
     parseRequestBody,
     validateRequestBody,
     validateAndSanitizePlayerName,
     validateCompetitionOperationsAllowed
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 export const DELETE = async ({ request, url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

@@ -1,8 +1,8 @@
-import { api } from '$lib/client/services/api-client.svelte.js';
-import { errorStatus, errorMessage } from '$lib/shared/helpers.js';
-import { setNotification } from '$lib/client/stores/notification.js';
-import { withLoading } from '$lib/client/stores/loading.js';
-import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '$lib/shared/matchUtils.js';
+import { api } from '#lib/client/services/api-client.svelte.js';
+import { errorStatus, errorMessage } from '#lib/shared/helpers.js';
+import { setNotification } from '#lib/client/stores/notification.js';
+import { withLoading } from '#lib/client/stores/loading.js';
+import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '#lib/shared/matchUtils.js';
 
 export { findLeagueMatch, findKnockoutMatch, updateActionCount };
 

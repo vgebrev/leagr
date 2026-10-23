@@ -1,7 +1,7 @@
 <script>
     import { Listgroup, ListgroupItem } from 'flowbite-svelte';
-    import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
-    import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
+    import PlayerActionsDropdown from '#components/PlayerActionsDropdown.svelte';
+    import RenamePlayerModal from '#components/RenamePlayerModal.svelte';
 
     /**
      * @type {{
@@ -53,9 +53,9 @@
         date = null
     } = $props();
 
-    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
-    import { getStoredAdminCode } from '$lib/client/services/auth.js';
-    import { playersService } from '$lib/client/services/players.svelte.js';
+    import { getLeagueId } from '#lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '#lib/client/services/auth.js';
+    import { playersService } from '#lib/client/services/players.svelte.js';
     const leagueId = $derived(getLeagueId());
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 

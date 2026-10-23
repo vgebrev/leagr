@@ -4,14 +4,14 @@
     import { onMount } from 'svelte';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { page } from '$app/state';
-    import NewsCard from '$components/NewsCard.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import TeamModal from '$components/TeamModal.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import NewsCard from '#components/NewsCard.svelte';
+    import PlayerModal from '#components/PlayerModal.svelte';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import TeamModal from '#components/TeamModal.svelte';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     const PAGE_SIZE = 5;
 

@@ -2,14 +2,14 @@
     import { onMount } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { gamesService } from '$lib/client/services/games.svelte.js';
+    import { settings } from '#lib/client/stores/settings.js';
+    import { isSessionLocked } from '#lib/client/services/sessionUnlock.svelte.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { gamesService } from '#lib/client/services/games.svelte.js';
     import ScheduleDisplay from './components/ScheduleDisplay.svelte';
     import GameActions from './components/GameActions.svelte';
-    import TeamModal from '$components/TeamModal.svelte';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import TeamModal from '#components/TeamModal.svelte';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
 

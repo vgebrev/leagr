@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
-import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { validateDateParameter } from '$lib/shared/validation.js';
+import { createTeamLogoManager } from '#lib/server/teamLogoManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { validateDateParameter } from '#lib/shared/validation.js';
 
 /**
  * GET /api/teams/logos?date=YYYY-MM-DD

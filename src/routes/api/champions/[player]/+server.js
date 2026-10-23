@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
 
 /**
  * GET /api/champions/[player] - Get trophy session details for a specific champion

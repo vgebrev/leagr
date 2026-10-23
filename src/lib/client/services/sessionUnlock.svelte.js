@@ -10,7 +10,7 @@
  * `unlockedDate` into the `x-admin-unlock` request header, so a session that was
  * never explicitly unlocked in this tab cannot be modified even by an admin.
  */
-import { isCompetitionEnded } from '$lib/shared/helpers.js';
+import { isCompetitionEnded } from '#lib/shared/helpers.js';
 
 class SessionUnlockService {
     /** @type {string|null} YYYY-MM-DD an admin has explicitly unlocked for editing */

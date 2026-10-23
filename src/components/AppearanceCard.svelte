@@ -1,8 +1,8 @@
 <script>
     import { Badge } from 'flowbite-svelte';
-    import TeamBadge from '$components/TeamBadge.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
 
@@ -27,7 +27,7 @@
      * @param {string} date - Date in YYYY-MM-DD format
      */
     function goToTableDate(date) {
-        goto(resolve(`/table?date=${date}`));
+        goto(resolve(`table?date=${date}`));
     }
 </script>
 

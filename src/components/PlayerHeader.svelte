@@ -1,9 +1,9 @@
 <script>
-    import Avatar from '$components/avatars/Avatar.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
     import { Badge } from 'flowbite-svelte';
     import { ExclamationCircleOutline, HourglassOutline } from 'flowbite-svelte-icons';
-    import PlayerRatings from '$components/PlayerRatings.svelte';
-    import PlayerBadges from '$components/PlayerBadges.svelte';
+    import PlayerRatings from '#components/PlayerRatings.svelte';
+    import PlayerBadges from '#components/PlayerBadges.svelte';
 
     /**
      * @type {{ playerData: any, playerName: string, showStatus?: boolean, asOfDate?: string | null }}

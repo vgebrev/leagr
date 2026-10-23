@@ -2,7 +2,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 vi.mock('$app/environment', () => ({ browser: true }));
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
-vi.mock('$app/paths', () => ({ resolve: (/** @type {string} */ p) => p }));
+vi.mock('$app/paths', () => ({
+    resolve: (/** @type {string} */ p) => (p.startsWith('/') ? p : `/${p}`)
+}));
 
 const { load } = await import('../../src/routes/+layout.js');
 const { api, getLeagueId } = await import('../../src/lib/client/services/api-client.svelte.js');

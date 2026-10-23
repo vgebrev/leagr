@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { stripPort } from '$lib/server/requestIp.js';
+import { stripPort } from '#lib/server/requestIp.js';
 
 /**
  * IIS ARR appends the client's ephemeral source port to X-Forwarded-For

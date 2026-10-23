@@ -1,10 +1,10 @@
 <script>
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import { teamStyles } from '$lib/shared/helpers.js';
+    import Avatar from '#components/avatars/Avatar.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import { teamStyles } from '#lib/shared/helpers.js';
 
     /** @type {{ data: YearRecapTrueColoursEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();

@@ -1,14 +1,14 @@
 import { json, error } from '@sveltejs/kit';
-import { errorMessage, errorStatus } from '$lib/shared/helpers.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { errorMessage, errorStatus } from '#lib/shared/helpers.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 import {
     createAvatarManager,
     AvatarError,
     MAX_FILE_SIZE,
     ALLOWED_MIME_TYPES,
     MAX_DIMENSIONS
-} from '$lib/server/avatarManager.js';
-import { logger } from '$lib/server/logger.js';
+} from '#lib/server/avatarManager.js';
+import { logger } from '#lib/server/logger.js';
 import fs from 'fs/promises';
 
 /** @type {import('./$types').RequestHandler} */

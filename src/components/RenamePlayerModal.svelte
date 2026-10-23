@@ -1,8 +1,8 @@
 <script>
     import { Modal, Label, Input, Button } from 'flowbite-svelte';
     import { fade } from 'svelte/transition';
-    import { validatePlayerNameForUI } from '$lib/shared/validation.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { validatePlayerNameForUI } from '#lib/shared/validation.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
 
     let { currentName, allPlayers = [], open = $bindable(false), onrename } = $props();
 

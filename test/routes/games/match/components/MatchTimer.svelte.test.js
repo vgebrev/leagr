@@ -9,12 +9,12 @@ const whistle = vi.hoisted(() => ({
     vibrate: vi.fn()
 }));
 
-vi.mock('$lib/client/services/whistle.js', () => whistle);
+vi.mock('#lib/client/services/whistle.js', () => whistle);
 
 const MatchTimer = (
     await import('../../../../../src/routes/games/match/components/MatchTimer.svelte')
 ).default;
-const { matchTimer } = await import('$lib/client/services/matchTimer.svelte.js');
+const { matchTimer } = await import('#lib/client/services/matchTimer.svelte.js');
 
 const MINUTE = 60_000;
 const WITH_LAST_PLAY = { durationMinutes: 8, lastPlaySeconds: 60 };

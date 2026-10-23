@@ -1,6 +1,6 @@
-import { teamColours } from '$lib/shared/helpers.js';
+import { teamColours } from '#lib/shared/helpers.js';
 import { getNextNouns } from './nounPool.js';
-import { logger } from '$lib/server/logger.js';
+import { logger } from '#lib/server/logger.js';
 
 /** @param {any[]} arr */
 function shuffle(arr) {

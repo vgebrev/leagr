@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PlayerState, PlayerError } from '$lib/server/playerManager.js';
+import { PlayerState, PlayerError } from '#lib/server/playerManager.js';
 
 describe('PlayerState', () => {
     let mockPlayers, mockTeams, mockSettings, playerState;

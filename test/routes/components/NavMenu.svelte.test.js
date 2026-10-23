@@ -7,19 +7,19 @@ vi.mock('$app/state', () => ({
 }));
 
 vi.mock('$app/paths', () => ({
-    resolve: (/** @type {string} */ path) => path
+    resolve: (/** @type {string} */ path) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
-vi.mock('$lib/client/services/auth.js', () => ({
+vi.mock('#lib/client/services/auth.js', () => ({
     getStoredAccessCode: vi.fn(() => 'ABCD-EFGH-IJKL')
 }));
 
-vi.mock('$lib/client/services/clipboard.js', () => ({
+vi.mock('#lib/client/services/clipboard.js', () => ({
     shareContent: vi.fn(async () => ({ success: true, method: 'clipboard' }))
 }));
 
 const NavMenu = (await import('../../../src/routes/components/NavMenu.svelte')).default;
-const { theme } = await import('$lib/client/stores/theme.js');
+const { theme } = await import('#lib/client/stores/theme.js');
 
 const leagueInfo = { id: 'pirates', name: 'Pirates' };
 const date = '2026-08-01';

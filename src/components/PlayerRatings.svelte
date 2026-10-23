@@ -1,7 +1,7 @@
 <script>
     import { Tooltip } from 'flowbite-svelte';
     import { scale } from 'svelte/transition';
-    import { displayOverall, displayRatingRounded } from '$lib/shared/ratingDisplay.js';
+    import { displayOverall, displayRatingRounded } from '#lib/shared/ratingDisplay.js';
 
     const uid = Math.random().toString(36).slice(2, 8);
 

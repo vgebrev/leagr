@@ -1,15 +1,15 @@
-import { api } from '$lib/client/services/api-client.svelte.js';
-import { setNotification } from '$lib/client/stores/notification.js';
-import { withLoading } from '$lib/client/stores/loading.js';
-import { settings } from '$lib/client/stores/settings.js';
-import { defaultSettings } from '$lib/shared/defaults.js';
-import { validatePlayerNameForUI } from '$lib/shared/validation.js';
+import { api } from '#lib/client/services/api-client.svelte.js';
+import { setNotification } from '#lib/client/stores/notification.js';
+import { withLoading } from '#lib/client/stores/loading.js';
+import { settings } from '#lib/client/stores/settings.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
+import { validatePlayerNameForUI } from '#lib/shared/validation.js';
 import {
     isDateInPast,
     isRegistrationOpen as registrationOpenFor,
     errorMessage
-} from '$lib/shared/helpers.js';
-import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
+} from '#lib/shared/helpers.js';
+import { sessionUnlock } from '#lib/client/services/sessionUnlock.svelte.js';
 
 class PlayersService {
     /** @type {ConsolidatedSettings} */

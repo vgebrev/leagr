@@ -7,7 +7,7 @@
         CloseCircleSolid
     } from 'flowbite-svelte-icons';
     import { fade } from 'svelte/transition';
-    import { notification } from '$lib/client/stores/notification.js';
+    import { notification } from '#lib/client/stores/notification.js';
 
     // Map notification types to colours and icons
     const typeConfig = {

@@ -1,13 +1,13 @@
 <script>
     import { Popover } from 'flowbite-svelte';
-    import BadgeChip from '$components/BadgeChip.svelte';
+    import BadgeChip from '#components/BadgeChip.svelte';
     import {
         normaliseTraitTiers,
         displayBadges,
         explainBadge,
         gradeLabel,
         TRAIT_DEFS
-    } from '$lib/shared/badges.js';
+    } from '#lib/shared/badges.js';
 
     /** @type {{ traits?: Partial<PlayerTraits>, traitTiers?: Partial<TraitTiers>, idPrefix?: string }} */
     let { traits = {}, traitTiers = {}, idPrefix = 'badge' } = $props();

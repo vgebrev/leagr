@@ -1,13 +1,13 @@
 import { goto } from '$app/navigation';
 import { resolve } from '$app/paths';
-import { browser } from '$app/environment';
+import { browser } from '$app/env';
 import {
     extractAccessCodeFromQuery,
     storeAccessCode,
     validateAccessCode,
     removeStoredAccessCode
-} from '$lib/client/services/auth.js';
-import { setFetch, setLeagueId } from '$lib/client/services/api-client.svelte.js';
+} from '#lib/client/services/auth.js';
+import { setFetch, setLeagueId } from '#lib/client/services/api-client.svelte.js';
 
 export const load = async ({ data, url, fetch }) => {
     // Set SvelteKit's fetch for API client to avoid warnings
@@ -37,7 +37,7 @@ export const load = async ({ data, url, fetch }) => {
                 const newUrl = new URL(url);
                 newUrl.searchParams.delete('code');
                 // eslint-disable-next-line svelte/no-navigation-without-resolve -- base-safe by construction
-                goto(newUrl, { replaceState: true });
+                goto(newUrl, { replace: true });
             } else {
                 // Invalid code - remove any stored code and redirect to auth
                 removeStoredAccessCode(data.leagueId);
@@ -49,7 +49,7 @@ export const load = async ({ data, url, fetch }) => {
                 const fullUrl = url.pathname + (queryString ? `?${queryString}` : '');
                 const redirectUrl = encodeURIComponent(fullUrl);
 
-                goto(resolve(`/auth?redirect=${redirectUrl}`), { replaceState: true });
+                goto(resolve(`auth?redirect=${redirectUrl}`), { replace: true });
             }
         }
     }

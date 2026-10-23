@@ -13,18 +13,18 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import SoccerBootIcon from '#components/Icons/SoccerBootIcon.svelte';
+    import CelebrationOverlay from '#components/CelebrationOverlay.svelte';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
-    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let scorers = $state(
         /** @type {Array<{playerName: string, totalGoals: number, leagueGoals: number, cupGoals: number}>} */ ([])
@@ -74,10 +74,10 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`/golden-boot?${query}`);
+        const href = resolve(`golden-boot?${query}`);
 
         // Navigate and reload data
-        await goto(href, { replaceState: true });
+        await goto(href, { replace: true });
     }
 
     // Load golden boot when selectedYear changes (including on mount)

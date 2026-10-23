@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('$lib/client/services/api-client.svelte.js', () => ({
+vi.mock('#lib/client/services/api-client.svelte.js', () => ({
     api: {
         get: vi.fn(),
         post: vi.fn(),
@@ -8,11 +8,11 @@ vi.mock('$lib/client/services/api-client.svelte.js', () => ({
     }
 }));
 
-vi.mock('$lib/client/stores/notification.js', () => ({
+vi.mock('#lib/client/stores/notification.js', () => ({
     setNotification: vi.fn()
 }));
 
-vi.mock('$lib/client/stores/loading.js', () => ({
+vi.mock('#lib/client/stores/loading.js', () => ({
     withLoading: vi.fn(async (fn, onError) => {
         try {
             return await fn();
@@ -47,8 +47,8 @@ describe('GamesService scoreline seeding', () => {
         vi.resetModules();
         vi.clearAllMocks();
 
-        ({ gamesService } = await import('$lib/client/services/games.svelte.js'));
-        ({ api } = await import('$lib/client/services/api-client.svelte.js'));
+        ({ gamesService } = await import('#lib/client/services/games.svelte.js'));
+        ({ api } = await import('#lib/client/services/api-client.svelte.js'));
 
         // Echo the request back, which is shaped like the real response.
         api.post.mockImplementation(async (/** @type {any} */ _r, /** @type {any} */ _d, body) => ({

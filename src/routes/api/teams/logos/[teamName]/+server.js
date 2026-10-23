@@ -1,10 +1,10 @@
 import { error } from '@sveltejs/kit';
 import sharp from 'sharp';
 import fs from 'fs/promises';
-import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { validateDateParameter } from '$lib/shared/validation.js';
-import { teamColours } from '$lib/shared/helpers.js';
+import { createTeamLogoManager } from '#lib/server/teamLogoManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { validateDateParameter } from '#lib/shared/validation.js';
+import { teamColours } from '#lib/shared/helpers.js';
 
 const MAX_SIZE = 1024;
 const MIN_SIZE = 16;

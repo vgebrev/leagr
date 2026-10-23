@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { existsSync, readFileSync } from 'fs';
-import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
-import { createTeamGenerator } from '$lib/server/teamGenerator.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
+import { createTeammateHistoryTracker } from '#lib/server/teammateHistory.js';
+import { createTeamGenerator } from '#lib/server/teamGenerator.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
 
 /**
  * Smoke test for the reunion norm against real league data.

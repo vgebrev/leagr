@@ -1,9 +1,9 @@
 <script>
-    import { capitalize, teamStyles } from '$lib/shared/helpers.js';
-    import { displayRatingPercent } from '$lib/shared/ratingDisplay.js';
-    import PlayerActionsDropdown from '$components/PlayerActionsDropdown.svelte';
-    import RenamePlayerModal from '$components/RenamePlayerModal.svelte';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { capitalize, teamStyles } from '#lib/shared/helpers.js';
+    import { displayRatingPercent } from '#lib/shared/ratingDisplay.js';
+    import PlayerActionsDropdown from '#components/PlayerActionsDropdown.svelte';
+    import RenamePlayerModal from '#components/RenamePlayerModal.svelte';
+    import { settings } from '#lib/client/stores/settings.js';
 
     /**
      * @type {{
@@ -202,9 +202,9 @@
         }
     }
 
-    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
-    import { getStoredAdminCode } from '$lib/client/services/auth.js';
-    import { playersService } from '$lib/client/services/players.svelte.js';
+    import { getLeagueId } from '#lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '#lib/client/services/auth.js';
+    import { playersService } from '#lib/client/services/players.svelte.js';
     const leagueId = $derived(getLeagueId());
     const isAdmin = $derived(Boolean(getStoredAdminCode(leagueId)));
 

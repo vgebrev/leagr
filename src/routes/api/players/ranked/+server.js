@@ -1,7 +1,7 @@
-import { createRankingsManager } from '$lib/server/rankings.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
 import { json, error } from '@sveltejs/kit';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { MIN_YEAR, MAX_YEAR } from '#lib/shared/yearConfig.js';
 import { SvelteSet } from 'svelte/reactivity';
 
 export async function GET({ locals }) {

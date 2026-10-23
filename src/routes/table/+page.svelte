@@ -2,21 +2,21 @@
     import { onMount } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { settings } from '#lib/client/stores/settings.js';
     import StandingsTable from './components/StandingsTable.svelte';
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
-    import TeamModal from '$components/TeamModal.svelte';
-    import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
+    import CelebrationOverlay from '#components/CelebrationOverlay.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
+    import StarsOfTheDay from '#components/StarsOfTheDay.svelte';
     import {
         isCompetitionEnded,
         teamColours,
         errorStatus,
         errorMessage
-    } from '$lib/shared/helpers.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    } from '#lib/shared/helpers.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);

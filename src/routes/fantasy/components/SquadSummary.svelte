@@ -1,6 +1,6 @@
 <script>
     import { Progressbar } from 'flowbite-svelte';
-    import FantasySquadPreview from '$components/FantasySquadPreview.svelte';
+    import FantasySquadPreview from '#components/FantasySquadPreview.svelte';
 
     /**
      * The budget meter, and under it the squad itself — the same pitch view the leaderboard

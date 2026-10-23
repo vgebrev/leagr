@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
-import { isValidSubdomain } from '$lib/shared/validation.js';
+import { isValidSubdomain } from '#lib/shared/validation.js';
 
 /**
  * Custom error class that preserves HTTP status codes
@@ -219,7 +219,7 @@ export class LeagueService {
         }
 
         // Generate reset code and set expiry (1 hour from now)
-        const { generateAccessCode } = await import('$lib/shared/validation.js');
+        const { generateAccessCode } = await import('#lib/shared/validation.js');
         const resetCode = generateAccessCode();
         const resetCodeExpiry = new Date(Date.now() + 60 * 60 * 1000).toISOString();
 
@@ -236,7 +236,7 @@ export class LeagueService {
         }
 
         // Send the reset email
-        const { sendAccessCodeResetEmail } = await import('$lib/server/email.js');
+        const { sendAccessCodeResetEmail } = await import('#lib/server/email.js');
         const emailSent = await sendAccessCodeResetEmail(
             email,
             leagueId ?? '',

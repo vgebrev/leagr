@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { RankingsManager } from '$lib/server/rankings.js';
+import { RankingsManager } from '#lib/server/rankings.js';
 
 describe('RankingsManager - Championships', () => {
     let rankingsManager;

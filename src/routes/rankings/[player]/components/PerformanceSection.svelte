@@ -1,11 +1,11 @@
 <script>
     import { Toggle } from 'flowbite-svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
 
     /** @type {{ playerData: PlayerRankingData }} */
     let { playerData } = $props();

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { error, isHttpError } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
+import { toApiError } from '#lib/server/apiError.js';
 
-vi.mock('$lib/server/logger.js', () => ({
+vi.mock('#lib/server/logger.js', () => ({
     logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }
 }));
 

@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import { teamStyles } from '$lib/shared/helpers.js';
+import { teamStyles } from '#lib/shared/helpers.js';
 import { logger } from './logger.js';
 
 /**

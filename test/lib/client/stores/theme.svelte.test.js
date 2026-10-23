@@ -43,7 +43,7 @@ describe('Theme Store', () => {
         mockLocalStorage.getItem.mockReturnValue(null);
         mockWindow.matchMedia.mockReturnValue({ matches: false });
 
-        const themeModule = await import('$lib/client/stores/theme.js');
+        const themeModule = await import('#lib/client/stores/theme.js');
         theme = themeModule.theme;
         isDarkMode = themeModule.isDarkMode;
         toggleTheme = themeModule.toggleTheme;
@@ -59,7 +59,7 @@ describe('Theme Store', () => {
 
             // Re-import to trigger initialization
             vi.resetModules();
-            const themeModule = await import('$lib/client/stores/theme.js');
+            const themeModule = await import('#lib/client/stores/theme.js');
             expect(get(themeModule.theme)).toBe('system');
             expect(mockLocalStorage.getItem).toHaveBeenCalledWith('theme');
         });
@@ -69,7 +69,7 @@ describe('Theme Store', () => {
 
             // Re-import to trigger initialization
             vi.resetModules();
-            const themeModule = await import('$lib/client/stores/theme.js');
+            const themeModule = await import('#lib/client/stores/theme.js');
             expect(get(themeModule.theme)).toBe('dark');
         });
 
@@ -78,7 +78,7 @@ describe('Theme Store', () => {
 
             // Re-import to trigger initialization
             vi.resetModules();
-            const themeModule = await import('$lib/client/stores/theme.js');
+            const themeModule = await import('#lib/client/stores/theme.js');
             expect(get(themeModule.theme)).toBe('system');
         });
 
@@ -88,7 +88,7 @@ describe('Theme Store', () => {
 
             // Re-import to trigger initialization
             vi.resetModules();
-            const themeModule = await import('$lib/client/stores/theme.js');
+            const themeModule = await import('#lib/client/stores/theme.js');
             expect(get(themeModule.theme)).toBe('system');
 
             // Restore mocks

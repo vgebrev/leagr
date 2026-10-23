@@ -5,7 +5,7 @@ import {
     validateRound,
     validateScheduleData,
     validateGameRequest
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 describe('Game Score Validation', () => {
     describe('validateGameScore', () => {

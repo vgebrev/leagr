@@ -1,5 +1,5 @@
 <script>
-    import AppearanceCard from '$components/AppearanceCard.svelte';
+    import AppearanceCard from '#components/AppearanceCard.svelte';
 
     /** @type {{ playerData: PlayerRankingData, limit?: number | null }} */
     let { playerData, limit = null } = $props();

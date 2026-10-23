@@ -1,21 +1,21 @@
 <script>
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
     import { Button, Toggle, Tooltip, Dropdown, DropdownItem } from 'flowbite-svelte';
     import { QuestionCircleOutline, ChevronDownOutline } from 'flowbite-svelte-icons';
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
     import { StarSolid } from 'flowbite-svelte-icons';
     import RankingInfoPanel from './components/RankingInfoPanel.svelte';
     import RankingsTable from './components/RankingsTable.svelte';
     import RankingActions from './components/RankingActions.svelte';
-    import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
+    import { MAX_YEAR, getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let rankings = $state(
         /** @type {Partial<RankingsData>} */ ({ players: {}, rankingMetadata: {} })
@@ -184,10 +184,10 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`/rankings?${query}`);
+        const href = resolve(`rankings?${query}`);
 
         // Navigate and reload data
-        await goto(href, { replaceState: true });
+        await goto(href, { replace: true });
     }
 
     /** Handle sort change event

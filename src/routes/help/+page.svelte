@@ -1,7 +1,7 @@
 <script>
     import { AngleRightOutline } from 'flowbite-svelte-icons';
     import { resolve } from '$app/paths';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     // The index of everything under /help. A topic is declared here rather than discovered
     // from the filesystem, because a help page needs a name and a sentence a router cannot

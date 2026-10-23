@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
-import { data } from '$lib/server/data.js';
+import { data } from '#lib/server/data.js';
 
 describe('Data Service', () => {
     const testDataDir = path.join(process.cwd(), 'test', 'data');
@@ -19,7 +19,7 @@ describe('Data Service', () => {
         await fs.mkdir(path.join(testDataDir, 'premier-league'), { recursive: true });
 
         // Mock the league data path function to return different paths for different leagues
-        vi.spyOn(await import('$lib/server/league.js'), 'getLeagueDataPath').mockImplementation(
+        vi.spyOn(await import('#lib/server/league.js'), 'getLeagueDataPath').mockImplementation(
             (leagueId) => {
                 return leagueId ? path.join(testDataDir, leagueId) : testDataDir;
             }

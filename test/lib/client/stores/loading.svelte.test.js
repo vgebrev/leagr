@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { get } from 'svelte/store';
 
 // Mock the notification store
-vi.mock('$lib/client/stores/notification.js', () => ({
+vi.mock('#lib/client/stores/notification.js', () => ({
     setNotification: vi.fn()
 }));
 
@@ -13,7 +13,7 @@ describe('Loading Store', () => {
         // Clear the module cache to get fresh instances
         vi.resetModules();
 
-        const loadingModule = await import('$lib/client/stores/loading.js');
+        const loadingModule = await import('#lib/client/stores/loading.js');
 
         loadingCount = loadingModule.loadingCount;
         isLoading = loadingModule.isLoading;

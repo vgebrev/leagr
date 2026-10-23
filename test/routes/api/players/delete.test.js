@@ -18,13 +18,13 @@ function managerStub() {
     return stub;
 }
 
-vi.mock('$lib/server/playerManager.js', () => ({ createPlayerManager: () => managerStub() }));
-vi.mock('$lib/server/playerAccessControl.js', () => ({
+vi.mock('#lib/server/playerManager.js', () => ({ createPlayerManager: () => managerStub() }));
+vi.mock('#lib/server/playerAccessControl.js', () => ({
     createPlayerAccessControl: () => ({ setContext: () => ({}) })
 }));
-vi.mock('$lib/server/discipline.js', () => ({ createDisciplineManager: vi.fn() }));
-vi.mock('$lib/server/rankings.js', () => ({ createRankingsManager: vi.fn() }));
-vi.mock('$lib/server/logger.js', () => ({
+vi.mock('#lib/server/discipline.js', () => ({ createDisciplineManager: vi.fn() }));
+vi.mock('#lib/server/rankings.js', () => ({ createRankingsManager: vi.fn() }));
+vi.mock('#lib/server/logger.js', () => ({
     logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }
 }));
 

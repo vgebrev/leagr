@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
 import fs from 'fs/promises';
 import path from 'path';
 

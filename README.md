@@ -1,6 +1,6 @@
 # Leagr
 
-A little [SvelteKit 5](https://svelte.dev/) web app to help organise social 5-a-side [football] leagues.
+A little [SvelteKit](https://svelte.dev/) web app to help organise social 5-a-side [football] leagues.
 
 Features include:
 

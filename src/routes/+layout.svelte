@@ -1,20 +1,20 @@
 <script>
     import '../app.css';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { dateString } from '$lib/shared/helpers.js';
-    import { setAdminCode as setAdminHeader } from '$lib/client/services/api-client.svelte.js';
+    import { settings } from '#lib/client/stores/settings.js';
+    import { dateString } from '#lib/shared/helpers.js';
+    import { setAdminCode as setAdminHeader } from '#lib/client/services/api-client.svelte.js';
     import { page } from '$app/state';
-    import { generateFaviconDataUrl } from '$lib/shared/favicon.js';
+    import { generateFaviconDataUrl } from '#lib/shared/favicon.js';
     import { onMount } from 'svelte';
     import { goto, afterNavigate } from '$app/navigation';
     import { resolve } from '$app/paths';
     import TopNavBar from './components/TopNavBar.svelte';
     import BottomNavBar from './components/BottomNavBar.svelte';
     import DateSelector from './components/DateSelector.svelte';
-    import SessionUnlockBanner from '$components/SessionUnlockBanner.svelte';
-    import Notification from '$components/Notification.svelte';
-    import { isAuthenticated } from '$lib/client/services/auth.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import SessionUnlockBanner from '#components/SessionUnlockBanner.svelte';
+    import Notification from '#components/Notification.svelte';
+    import { isAuthenticated } from '#lib/client/services/auth.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data, children } = $props();
     // The league id is set in +layout.js, not here - see the note there.
@@ -38,7 +38,7 @@
     onMount(() => {
         // Initialize admin header from stored code (if any)
         if (typeof window !== 'undefined' && data.leagueId) {
-            import('$lib/client/services/auth.js').then((m) => {
+            import('#lib/client/services/auth.js').then((m) => {
                 const stored = m.getStoredAdminCode(data.leagueId);
                 if (stored) setAdminHeader(stored);
             });
@@ -120,7 +120,7 @@
         if (!authenticated) {
             const redirectUrl = encodeURIComponent(page.url.pathname + page.url.search);
             isRedirecting = true;
-            goto(resolve(`/auth?redirect=${redirectUrl}`));
+            goto(resolve(`auth?redirect=${redirectUrl}`));
         }
     });
 </script>

@@ -1,6 +1,6 @@
 import { derived, writable } from 'svelte/store';
-import { errorMessage } from '$lib/shared/helpers.js';
-import { setNotification } from '$lib/client/stores/notification.js';
+import { errorMessage } from '#lib/shared/helpers.js';
+import { setNotification } from '#lib/client/stores/notification.js';
 
 export const loadingCount = writable(0);
 export const isLoading = derived(loadingCount, ($loadingCount) => $loadingCount > 0);

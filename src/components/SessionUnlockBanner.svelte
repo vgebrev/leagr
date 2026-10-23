@@ -8,10 +8,10 @@
      */
     import { Alert, Button } from 'flowbite-svelte';
     import { LockSolid, LockOpenSolid } from 'flowbite-svelte-icons';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { isCompetitionEnded } from '$lib/shared/helpers.js';
-    import { hasAdminCode } from '$lib/client/services/api-client.svelte.js';
-    import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
+    import { settings } from '#lib/client/stores/settings.js';
+    import { isCompetitionEnded } from '#lib/shared/helpers.js';
+    import { hasAdminCode } from '#lib/client/services/api-client.svelte.js';
+    import { sessionUnlock } from '#lib/client/services/sessionUnlock.svelte.js';
 
     let { date } = $props();
 

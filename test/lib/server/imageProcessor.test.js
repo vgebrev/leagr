@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import sharp from 'sharp';
-import { removeCornerBackground } from '$lib/server/imageProcessor.js';
+import { removeCornerBackground } from '#lib/server/imageProcessor.js';
 
 const TEST_DATA_DIR = join(process.cwd(), 'test/test-data');
 

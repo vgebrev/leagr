@@ -1,15 +1,15 @@
 <script>
     import { pushState } from '$app/navigation';
     import { FireSolid, StarSolid } from 'flowbite-svelte-icons';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import SnowflakeIcon from '$components/Icons/SnowflakeIcon.svelte';
-    import { formatDisplayDate, titleCase } from '$lib/shared/helpers.js';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import WoodenSpoonIcon from '#components/Icons/WoodenSpoonIcon.svelte';
+    import SoccerBootIcon from '#components/Icons/SoccerBootIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import SnowflakeIcon from '#components/Icons/SnowflakeIcon.svelte';
+    import { formatDisplayDate, titleCase } from '#lib/shared/helpers.js';
 
     /**
      * @type {{ card: { date: string, state: 'preview'|'recap', threads: Thread[] } }}

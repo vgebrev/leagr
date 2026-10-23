@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
+import { createTeammateHistoryTracker } from '#lib/server/teammateHistory.js';
 
 /**
  * Build a session record (array of teams) where the given pairs of teams repeat.

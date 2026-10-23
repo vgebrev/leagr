@@ -1,12 +1,12 @@
 <script>
     import { Modal, Spinner, Button } from 'flowbite-svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import { ArrowUpRightFromSquareOutline } from 'flowbite-svelte-icons';
     import PlayerHeader from './PlayerHeader.svelte';
     import PlayerSummaryCard from '../routes/rankings/[player]/components/PlayerSummaryCard.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { resolve } from '$app/paths';
     import { scale } from 'svelte/transition';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
@@ -138,7 +138,7 @@
 
     {#snippet footer()}
         <Button
-            href={resolve(`/rankings/${encodeURIComponent(playerName ?? '')}`)}
+            href={resolve(`rankings/${encodeURIComponent(playerName ?? '')}`)}
             outline
             color="alternative"
             size="xs"

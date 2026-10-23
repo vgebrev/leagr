@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
-import { errorMessage } from '$lib/shared/helpers.js';
+import { errorMessage } from '#lib/shared/helpers.js';
 import { readdir, readFile } from 'fs/promises';
 import { join } from 'path';
-import { getLeagueDataPath } from '$lib/server/league.js';
-import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
+import { getLeagueDataPath } from '#lib/server/league.js';
+import { MIN_YEAR, MAX_YEAR } from '#lib/shared/yearConfig.js';
 
 /**
  * Extract goals from a scorers object

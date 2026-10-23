@@ -1,3 +1,4 @@
+import adapter from '@sveltejs/adapter-node';
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
@@ -7,7 +8,13 @@ import { defineConfig } from 'vite';
 const usePolling = process.env.USE_POLLING === 'true';
 
 export default defineConfig({
-    plugins: [tailwindcss(), sveltekit()],
+    plugins: [
+        tailwindcss(),
+        sveltekit({
+            adapter: adapter(),
+            csrf: { trustedOrigins: ['*'] }
+        })
+    ],
     server: {
         host: '0.0.0.0',
         port: 5173,

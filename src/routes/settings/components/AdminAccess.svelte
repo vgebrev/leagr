@@ -1,13 +1,13 @@
 <script>
     import { Button, Input, Label } from 'flowbite-svelte';
     import { ShieldCheckOutline } from 'flowbite-svelte-icons';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import {
         storeAdminCode,
         removeStoredAdminCode,
         validateAdminCode
-    } from '$lib/client/services/auth.js';
+    } from '#lib/client/services/auth.js';
 
     let { leagueId, leagueName, onGranted } = $props();
 

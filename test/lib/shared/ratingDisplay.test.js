@@ -5,7 +5,7 @@ import {
     displayOverall,
     displayRatingPercent,
     displayRatingRounded
-} from '$lib/shared/ratingDisplay.js';
+} from '#lib/shared/ratingDisplay.js';
 
 describe('ratingDisplay', () => {
     it('maps the full 0-1 range onto floor..100', () => {

@@ -1,6 +1,6 @@
 <script>
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
     import { Dropdown, DropdownItem, Button } from 'flowbite-svelte';
     import {
         ChevronDownOutline,
@@ -14,7 +14,7 @@
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { page } from '$app/state';
-    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { fly, fade } from 'svelte/transition';
 
     import YearOverview from './components/YearOverview.svelte';
@@ -31,8 +31,8 @@
     import TrueColours from './components/TrueColours.svelte';
     import FunFacts from './components/FunFacts.svelte';
     import ThankYou from './components/ThankYou.svelte';
-    import ConfettiEffect from '$components/ConfettiEffect.svelte';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import ConfettiEffect from '#components/ConfettiEffect.svelte';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();

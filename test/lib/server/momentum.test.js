@@ -11,7 +11,7 @@ import {
     resolveMomentumConfig,
     buildChampionsMomentum,
     buildBallersMomentum
-} from '$lib/server/momentum.js';
+} from '#lib/server/momentum.js';
 
 const champConfig = {
     fastHalfLifeWeeks: 3,

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { fireEvent, render } from '@testing-library/svelte';
 import { StarSolid } from 'flowbite-svelte-icons';
-import TeamFormation from '$components/TeamFormation.svelte';
+import TeamFormation from '#components/TeamFormation.svelte';
 
 /**
  * Locate a player's stats panel in the rendered formation.

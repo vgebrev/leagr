@@ -8,7 +8,7 @@
         ArrowLeftOutline,
         EditOutline
     } from 'flowbite-svelte-icons';
-    import InvisibleFaceIcon from '$components/Icons/InvisibleFaceIcon.svelte';
+    import InvisibleFaceIcon from '#components/Icons/InvisibleFaceIcon.svelte';
 
     /**
     /**

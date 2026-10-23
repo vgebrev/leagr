@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { KnockoutManager, createKnockoutManager } from '$lib/server/knockoutManager.js';
+import { KnockoutManager, createKnockoutManager } from '#lib/server/knockoutManager.js';
 
 // Mock the data service
-vi.mock('$lib/server/data.js', () => ({
+vi.mock('#lib/server/data.js', () => ({
     data: {
         get: vi.fn(),
         set: vi.fn()
@@ -10,7 +10,7 @@ vi.mock('$lib/server/data.js', () => ({
 }));
 
 // Mock the standings manager
-vi.mock('$lib/server/standings.js', () => ({
+vi.mock('#lib/server/standings.js', () => ({
     createStandingsManager: vi.fn(() => ({
         getKnockoutBracketForDate: vi.fn()
     }))

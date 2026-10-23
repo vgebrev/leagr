@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { PlayerManager, PlayerError } from '#lib/server/playerManager.js';
 
 // Mock the data module
-vi.mock('$lib/server/data.js', () => ({
+vi.mock('#lib/server/data.js', () => ({
     data: {
         get: vi.fn(),
         set: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('$lib/server/data.js', () => ({
 }));
 
 // Mock the settings module
-vi.mock('$lib/server/settings.js', () => ({
+vi.mock('#lib/server/settings.js', () => ({
     getConsolidatedSettings: vi.fn()
 }));
 
@@ -24,8 +24,8 @@ describe('PlayerManager', () => {
         playerManager = new PlayerManager();
 
         // Get the mocked modules
-        const { data } = await import('$lib/server/data.js');
-        const { getConsolidatedSettings } = await import('$lib/server/settings.js');
+        const { data } = await import('#lib/server/data.js');
+        const { getConsolidatedSettings } = await import('#lib/server/settings.js');
 
         mockData = data;
         mockGetConsolidatedSettings = getConsolidatedSettings;

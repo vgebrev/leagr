@@ -1,8 +1,8 @@
 <script>
     import { Tooltip } from 'flowbite-svelte';
     import { AngleUpOutline, AngleDownOutline, MinusOutline } from 'flowbite-svelte-icons';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
     import { scale } from 'svelte/transition';
 
     let { playerData, showAverages = true } = $props();

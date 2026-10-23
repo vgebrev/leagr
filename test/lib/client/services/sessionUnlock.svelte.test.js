@@ -15,14 +15,14 @@ const SETTINGS = {
 };
 
 describe('sessionUnlock service', () => {
-    /** @type {import('$lib/client/services/sessionUnlock.svelte.js').sessionUnlock} */
+    /** @type {import('#lib/client/services/sessionUnlock.svelte.js').sessionUnlock} */
     let sessionUnlock;
-    /** @type {typeof import('$lib/client/services/sessionUnlock.svelte.js').isSessionLocked} */
+    /** @type {typeof import('#lib/client/services/sessionUnlock.svelte.js').isSessionLocked} */
     let isSessionLocked;
 
     beforeEach(async () => {
         vi.resetModules();
-        const module = await import('$lib/client/services/sessionUnlock.svelte.js');
+        const module = await import('#lib/client/services/sessionUnlock.svelte.js');
         sessionUnlock = module.sessionUnlock;
         isSessionLocked = module.isSessionLocked;
     });

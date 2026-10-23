@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { globalSettingsCache, invalidateSettingsCache } from '$lib/server/settingsCache.js';
+import { globalSettingsCache, invalidateSettingsCache } from '#lib/server/settingsCache.js';
 
 describe('Settings Cache', () => {
     beforeEach(() => {

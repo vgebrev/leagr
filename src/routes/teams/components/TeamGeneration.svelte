@@ -7,7 +7,7 @@
         UserSolid,
         ClapperboardPlaySolid
     } from 'flowbite-svelte-icons';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { settings } from '#lib/client/stores/settings.js';
 
     let {
         teamConfig,

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PlayerManager, PlayerError } from '$lib/server/playerManager.js';
+import { PlayerManager, PlayerError } from '#lib/server/playerManager.js';
 
 // Mock the data module
-vi.mock('$lib/server/data.js', () => ({
+vi.mock('#lib/server/data.js', () => ({
     data: {
         get: vi.fn(),
         set: vi.fn(),
@@ -11,7 +11,7 @@ vi.mock('$lib/server/data.js', () => ({
 }));
 
 // Mock the settings module
-vi.mock('$lib/server/settings.js', () => ({
+vi.mock('#lib/server/settings.js', () => ({
     getConsolidatedSettings: vi.fn()
 }));
 
@@ -22,7 +22,7 @@ describe('PlayerManager Integration Tests', () => {
     beforeEach(async () => {
         playerManager = new PlayerManager().setDate('2025-01-25').setLeague('test-league');
 
-        const { data } = await import('$lib/server/data.js');
+        const { data } = await import('#lib/server/data.js');
 
         mockData = data;
 

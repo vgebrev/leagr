@@ -1,7 +1,7 @@
 <script>
     import { Avatar, Indicator } from 'flowbite-svelte';
     import { CameraPhotoOutline, ClockOutline } from 'flowbite-svelte-icons';
-    import { teamStyles } from '$lib/shared/helpers.js';
+    import { teamStyles } from '#lib/shared/helpers.js';
 
     /**
      * @type {{ avatarUrl?: string | null, hasPendingAvatar?: boolean, canUpload?: boolean, showPendingOnly?: boolean, size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl', color?: TeamColour, shadow?: 'sm' | 'lg', onclick?: () => void }}

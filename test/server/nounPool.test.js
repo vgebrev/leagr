@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getNextNouns, getNounPoolStatus, resetNounPool } from '$lib/server/nounPool.js';
-import { nouns } from '$lib/shared/nouns.js';
+import { getNextNouns, getNounPoolStatus, resetNounPool } from '#lib/server/nounPool.js';
+import { nouns } from '#lib/shared/nouns.js';
 import { existsSync, rmSync, mkdirSync } from 'fs';
 import { join } from 'path';
 

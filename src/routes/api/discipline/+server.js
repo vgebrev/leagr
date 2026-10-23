@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createDisciplineManager } from '$lib/server/discipline.js';
-import { createPlayerManager } from '$lib/server/playerManager.js';
-import { validateDateParameter, validateAndSanitizePlayerName } from '$lib/shared/validation.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createDisciplineManager } from '#lib/server/discipline.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
+import { validateDateParameter, validateAndSanitizePlayerName } from '#lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const dateValidation = validateDateParameter(url.searchParams);

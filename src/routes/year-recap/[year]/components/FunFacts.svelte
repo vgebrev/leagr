@@ -1,7 +1,7 @@
 <script>
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
-    import TeamBadge from '$components/TeamBadge.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
     import { resolve } from '$app/paths';
 
     /** @type {{ data: YearRecapFunFacts | null, initialDelay?: number, duration?: number }} */
@@ -30,7 +30,7 @@
                     {duration}>
                     <a
                         href={resolve(
-                            /** @type {any} */ (`/table?date=${data.highestScoringMatch.date}`)
+                            /** @type {any} */ (`table?date=${data.highestScoringMatch.date}`)
                         )}
                         data-sveltekit-preload-data="hover"
                         class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
@@ -68,7 +68,7 @@
                     {duration}>
                     <a
                         href={resolve(
-                            /** @type {any} */ (`/table?date=${data.biggestMarginWin.date}`)
+                            /** @type {any} */ (`table?date=${data.biggestMarginWin.date}`)
                         )}
                         data-sveltekit-preload-data="hover"
                         class="glass block rounded-lg border border-gray-200 px-2 py-3 transition-opacity hover:opacity-80 md:px-3 md:py-4 dark:border-gray-700">
@@ -107,7 +107,7 @@
                         {duration}>
                         <a
                             href={resolve(
-                                /** @type {any} */ (`/table?date=${data.mostGoalsSession.date}`)
+                                /** @type {any} */ (`table?date=${data.mostGoalsSession.date}`)
                             )}
                             data-sveltekit-preload-data="hover"
                             class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">
@@ -134,7 +134,7 @@
                         {duration}>
                         <a
                             href={resolve(
-                                /** @type {any} */ (`/table?date=${data.fewestGoalsSession.date}`)
+                                /** @type {any} */ (`table?date=${data.fewestGoalsSession.date}`)
                             )}
                             data-sveltekit-preload-data="hover"
                             class="glass block rounded-lg border border-gray-200 p-3 transition-opacity hover:opacity-80 dark:border-gray-700">

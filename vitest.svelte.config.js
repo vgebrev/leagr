@@ -15,7 +15,6 @@ export default defineConfig({
     },
     resolve: {
         alias: {
-            $lib: './src/lib',
             $src: './src',
             $test: './test'
         },

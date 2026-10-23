@@ -1,14 +1,14 @@
 <script>
     import { Alert, Button, Drawer, Input, Label, Spinner } from 'flowbite-svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import { ArrowLeftOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { resolve } from '$app/paths';
     import PlayerMarket from '../components/PlayerMarket.svelte';
     import SquadSummary from '../components/SquadSummary.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     let date = $derived(data.date);
@@ -201,7 +201,7 @@
         {/if}
     </div>
     <Button
-        href={resolve(`/fantasy?date=${date}`)}
+        href={resolve(`fantasy?date=${date}`)}
         color="light"
         size="sm"
         class="flex shrink-0 items-center gap-2">

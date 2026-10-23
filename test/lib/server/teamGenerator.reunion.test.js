@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTeamGenerator } from '$lib/server/teamGenerator.js';
+import { createTeamGenerator } from '#lib/server/teamGenerator.js';
 
 describe('TeamGenerator reunion norm (overdue pairs)', () => {
     let tg;

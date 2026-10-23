@@ -1,11 +1,11 @@
 <script>
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import CelebrationOverlay from '#components/CelebrationOverlay.svelte';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import PlayerSummaryCard from './components/PlayerSummaryCard.svelte';
     import RankProgressionChart from './components/RankProgressionChart.svelte';
     import PerformanceSection from './components/PerformanceSection.svelte';
     import AppearanceHistorySection from './components/AppearanceHistorySection.svelte';
-    import AvatarUploadButton from '$components/avatars/AvatarUploadButton.svelte';
+    import AvatarUploadButton from '#components/avatars/AvatarUploadButton.svelte';
     import { Alert, Spinner, Dropdown, DropdownItem, Button } from 'flowbite-svelte';
     import { ChevronDownOutline } from 'flowbite-svelte-icons';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
@@ -13,14 +13,14 @@
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
-    import { MAX_YEAR, getYearOptions } from '$lib/shared/yearConfig.js';
-    import PlayerRatings from '$components/PlayerRatings.svelte';
-    import PlayerBadges from '$components/PlayerBadges.svelte';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { MAX_YEAR, getYearOptions } from '#lib/shared/yearConfig.js';
+    import PlayerRatings from '#components/PlayerRatings.svelte';
+    import PlayerBadges from '#components/PlayerBadges.svelte';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let player = $derived(page.params.player ?? '');
     let playerData = $state(/** @type {PlayerRankingData | null} */ (null));
@@ -128,10 +128,10 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`/rankings/${encodeURIComponent(player)}?${query}`);
+        const href = resolve(`rankings/${encodeURIComponent(player)}?${query}`);
 
         // Navigate and reload data
-        await goto(href, { replaceState: true });
+        await goto(href, { replace: true });
         await loadPlayerData();
     }
 
@@ -150,10 +150,10 @@
             params.set('limit', String(newLimit));
         }
         const query = params.toString();
-        const href = resolve(`/rankings/${encodeURIComponent(player)}?${query}`);
+        const href = resolve(`rankings/${encodeURIComponent(player)}?${query}`);
 
         // Navigate without full reload and keep history tidy
-        await goto(href, { replaceState: true });
+        await goto(href, { replace: true });
         await loadPlayerData();
     }
 

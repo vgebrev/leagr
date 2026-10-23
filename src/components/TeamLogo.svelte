@@ -1,5 +1,5 @@
 <script>
-    import { teamStyles, teamColours } from '$lib/shared/helpers.js';
+    import { teamStyles, teamColours } from '#lib/shared/helpers.js';
 
     /** @type {{ teamName: string, date: string, size?: number, className?: string, shadow?: boolean }} */
     let { teamName, date, size = 192, className = '', shadow = true } = $props();

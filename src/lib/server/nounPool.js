@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 import { Mutex } from 'async-mutex';
-import { nouns } from '$lib/shared/nouns.js';
+import { nouns } from '#lib/shared/nouns.js';
 
 const DATA_DIR = process.env.DATA_DIR || 'data';
 const mutex = new Mutex();

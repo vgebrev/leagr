@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createFantasyManager, FantasyError } from '$lib/server/fantasyManager.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { validateDateParameter, parseRequestBody } from '$lib/shared/validation.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { createFantasyManager, FantasyError } from '#lib/server/fantasyManager.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { validateDateParameter, parseRequestBody } from '#lib/shared/validation.js';
 
 /**
  * Build a manager bound to the request's league, date and client identity.

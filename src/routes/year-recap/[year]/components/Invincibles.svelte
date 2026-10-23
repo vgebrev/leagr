@@ -1,10 +1,10 @@
 <script>
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
-    import TeamBadge from '$components/TeamBadge.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
     import { resolve } from '$app/paths';
 
     /** @type {{ data: YearRecapTeamHighlight | null, initialDelay?: number, duration?: number }} */
@@ -35,7 +35,7 @@
                 type="fade"
                 {duration}>
                 <a
-                    href={resolve(/** @type {any} */ (`/table?date=${data.sessionDate}`))}
+                    href={resolve(/** @type {any} */ (`table?date=${data.sessionDate}`))}
                     data-sveltekit-preload-data="hover"
                     class="flex flex-col items-center justify-center gap-1 transition-opacity hover:opacity-80 md:gap-2">
                     <TeamBadge teamName={data.teamName} />

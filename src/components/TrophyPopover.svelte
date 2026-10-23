@@ -1,7 +1,7 @@
 <script>
     import { Popover, Spinner } from 'flowbite-svelte';
     import AppearanceCard from './AppearanceCard.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
     import { onMount } from 'svelte';
 
     /**

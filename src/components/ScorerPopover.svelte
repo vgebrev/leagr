@@ -1,8 +1,8 @@
 <script>
     import { Button, Popover } from 'flowbite-svelte';
     import { PlusOutline, MinusOutline } from 'flowbite-svelte-icons';
-    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
-    import { teamStyles, teamColours } from '$lib/shared/helpers.js';
+    import { RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
+    import { teamStyles, teamColours } from '#lib/shared/helpers.js';
 
     /** @type {{ triggerId: string, teamName: string, players: Array<string | null | { name: string }>, scorers?: Record<string, number>, isOpen?: boolean, onUpdate: (change: { player: string, delta: number }) => void }} */
     let {

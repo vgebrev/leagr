@@ -4,17 +4,17 @@
     import { page } from '$app/state';
     import { Button, Toggle } from 'flowbite-svelte';
     import { UsersGroupOutline } from 'flowbite-svelte-icons';
-    import { teamsService } from '$lib/client/services/teams.svelte.js';
-    import { playersService } from '$lib/client/services/players.svelte.js';
-    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
-    import { getStoredAdminCode } from '$lib/client/services/auth.js';
+    import { teamsService } from '#lib/client/services/teams.svelte.js';
+    import { playersService } from '#lib/client/services/players.svelte.js';
+    import { getLeagueId } from '#lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '#lib/client/services/auth.js';
     import PlayerSummary from './components/PlayerSummary.svelte';
     import TeamGeneration from './components/TeamGeneration.svelte';
     import TeamsGrid from './components/TeamsGrid.svelte';
     import DrawReplay from './components/DrawReplay.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
-    import TeamModal from '$components/TeamModal.svelte';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import PlayerModal from '#components/PlayerModal.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
+    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);

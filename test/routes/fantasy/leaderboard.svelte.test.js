@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, waitFor } from '@testing-library/svelte';
 
 vi.mock('$app/paths', () => ({
-    resolve: (/** @type {string} */ path) => path
+    resolve: (/** @type {string} */ path) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
 const ctx = vi.hoisted(() => ({
@@ -14,7 +14,7 @@ vi.mock('$app/navigation', () => ({
     pushState: (/** @type {string} */ _url, /** @type {any} */ state) => ctx.pushed.push(state)
 }));
 vi.mock('$app/state', () => ({ page: { state: {} } }));
-vi.mock('$lib/client/services/api-client.svelte.js', () => ({
+vi.mock('#lib/client/services/api-client.svelte.js', () => ({
     api: { get: async () => ctx.payload }
 }));
 
