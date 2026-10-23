@@ -77,6 +77,24 @@ describe('NavMenu', () => {
         expect(screen.getByText('Help').closest('a')).toHaveAttribute('href', '/help');
     });
 
+    // The link preview carries the page's title and description, so the message adds no text
+    // of its own - WhatsApp would otherwise prepend it to the URL.
+    it('shares the page title and link with no message text', async () => {
+        const { shareContent } = await import('#lib/client/services/clipboard.js');
+        document.title = 'Players > Pirates > Leagr';
+        render(NavMenu, { date, leagueInfo });
+        await openMenu();
+
+        await fireEvent.click(screen.getByText('Share link'));
+
+        await waitFor(() => expect(shareContent).toHaveBeenCalled());
+        const shareData = vi.mocked(shareContent).mock.lastCall?.[0];
+        expect(shareData).toEqual({
+            title: 'Players > Pirates > Leagr',
+            url: expect.stringContaining('code=ABCD-EFGH-IJKL')
+        });
+    });
+
     it('offers only the theme item without a league (root domain)', async () => {
         render(NavMenu, { date, leagueInfo: null });
         await fireEvent.mouseDown(screen.getByRole('button', { name: 'Menu' }));

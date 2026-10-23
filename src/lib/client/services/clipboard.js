@@ -51,10 +51,7 @@ function fallbackCopyToClipboard(text) {
 
 /**
  * Share content using the native Web Share API or fallback to clipboard
- * @param {Object} shareData - The data to share
- * @param {string} shareData.title - The title of the content being shared
- * @param {string} shareData.text - The text to share
- * @param {string} shareData.url - The URL to share
+ * @param {{title: string, url: string}} shareData - The data to share
  * @returns {Promise<{success: boolean, method: string, cancelled?: boolean}>} Promise with success status and method used
  */
 export async function shareContent(shareData) {
@@ -74,7 +71,6 @@ export async function shareContent(shareData) {
     }
 
     // Fallback to clipboard copying
-    const text = shareData.url || shareData.text;
-    const success = await copyToClipboard(text);
+    const success = await copyToClipboard(shareData.url);
     return { success, method: 'clipboard' };
 }

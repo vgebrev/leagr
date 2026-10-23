@@ -46,10 +46,10 @@
             }
         }
 
-        // Prepare a share data object
+        // No message text: the link preview already carries the page's title and description,
+        // and share targets like WhatsApp would prepend any text to the URL.
         const shareData = {
-            title: leagueInfo?.name ? `Leagr - ${leagueInfo.name}` : 'Leagr',
-            text: `Join ${leagueInfo?.name || 'our league'} on Leagr`,
+            title: document.title,
             url: url.toString()
         };
 
