@@ -15,7 +15,6 @@
     import RankingActions from './components/RankingActions.svelte';
     import { MAX_YEAR, getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let rankings = $state(
         /** @type {Partial<RankingsData>} */ ({ players: {}, rankingMetadata: {} })
@@ -211,11 +210,6 @@
             // Enable filter when we have enough data (5+ sessions), disable otherwise
             showActiveOnly = dates.length >= 5;
         }
-    });
-
-    $effect(() => {
-        titleParts.set(['Rankings']);
-        return () => titleParts.set([]);
     });
 </script>
 

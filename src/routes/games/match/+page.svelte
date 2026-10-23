@@ -24,7 +24,6 @@
         findKnockoutMatch
     } from '#lib/client/services/games.svelte.js';
     import { RESERVED_SCORER_KEYS, validateGameScore } from '#lib/shared/validation.js';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -553,11 +552,6 @@
                 url: `/rankings?date=${date}`
             };
         }
-    });
-
-    $effect(() => {
-        titleParts.set(['Match Centre', 'Games']);
-        return () => titleParts.set([]);
     });
 </script>
 

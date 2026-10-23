@@ -29,7 +29,6 @@
     import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     /** @type {Array<{playerName: string, appearances: number, saves: number, defence: number, attack: number, goals: number, total: number}>} */
     let ballers = $state([]);
@@ -161,11 +160,6 @@
     function selectBallersTab() {
         if (page.state.formTab) history.back();
     }
-
-    $effect(() => {
-        titleParts.set(['Ballers Board']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

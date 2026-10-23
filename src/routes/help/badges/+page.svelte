@@ -15,7 +15,6 @@
         TRAIT_SEASON_GAMES_THRESHOLD,
         TRAIT_MIN_TRACKED_SESSIONS
     } from '#lib/shared/badges.js';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     // The page is a rendering of the lattice, not a second copy of it: every badge, its
     // requirement, its grade and its supersessions come from badges.js, so a catalogue
@@ -82,11 +81,6 @@
     /** @param {{ supersedes?: string|string[] }} badge */
     const supersededBy = (badge) =>
         (badge.supersedes ? [badge.supersedes].flat() : []).map((id) => BADGES_BY_ID[id].label);
-
-    $effect(() => {
-        titleParts.set(['Badges', 'Help']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

@@ -11,7 +11,6 @@
     import { api } from '#lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '#lib/client/stores/loading.js';
     import { setNotification } from '#lib/client/stores/notification.js';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     const PAGE_SIZE = 5;
 
@@ -116,11 +115,6 @@
     // so an effect would re-run (and reset the feed to page 1) when the admin
     // code lands after mount. The page has no reactive inputs.
     onMount(loadNews);
-
-    $effect(() => {
-        titleParts.set(['News']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

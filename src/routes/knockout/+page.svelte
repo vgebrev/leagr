@@ -13,7 +13,6 @@
     import { teamColours } from '#lib/shared/helpers.js';
     import { isSessionLocked } from '#lib/client/services/sessionUnlock.svelte.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
@@ -133,11 +132,6 @@
     onMount(async () => {
         await gamesService.loadKnockout(date);
         checkForWinner();
-    });
-
-    $effect(() => {
-        titleParts.set(['Cup']);
-        return () => titleParts.set([]);
     });
 </script>
 

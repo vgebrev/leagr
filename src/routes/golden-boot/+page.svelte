@@ -24,7 +24,6 @@
     import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let scorers = $state(
         /** @type {Array<{playerName: string, totalGoals: number, leagueGoals: number, cupGoals: number}>} */ ([])
@@ -96,11 +95,6 @@
             celebrating = true;
         }
     }
-
-    $effect(() => {
-        titleParts.set(['Golden Boot']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

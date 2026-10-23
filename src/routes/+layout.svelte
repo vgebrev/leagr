@@ -14,7 +14,7 @@
     import SessionUnlockBanner from '#components/SessionUnlockBanner.svelte';
     import Notification from '#components/Notification.svelte';
     import { isAuthenticated } from '#lib/client/services/auth.js';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
+    import { pageMeta } from '#lib/shared/pageMeta.js';
 
     let { data, children } = $props();
     // The league id is set in +layout.js, not here - see the note there.
@@ -25,12 +25,16 @@
         $settings = data.settings;
     });
 
-    // Construct page title from parts and league name
-    let pageTitle = $derived.by(() => {
-        const leagueName = data.leagueInfo?.name || 'Social League Organiser';
-        const parts = [...$titleParts, leagueName, 'Leagr'];
-        return parts.join(' > ');
-    });
+    // Title and share text come from the route, so SSR renders them for link previews
+    let meta = $derived(
+        pageMeta({
+            routeId: page.route.id,
+            params: page.params,
+            leagueName: data.leagueInfo?.name ?? null,
+            date: page.url.searchParams.get('date')
+        })
+    );
+    let ogImageUrl = $derived(data.appUrl ? `${data.appUrl}/og-image.png` : '/og-image.png');
 
     // Track system theme changes
     let systemThemeIsDark = $state(false);
@@ -126,35 +130,50 @@
 </script>
 
 <svelte:head>
-    <title>{pageTitle}</title>
+    <title>{meta.title}</title>
     <meta
         name="description"
-        content="Join {data.leagueInfo?.name ||
-            'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+        content={meta.description} />
 
     <!-- Open Graph / Facebook -->
     <meta
         property="og:type"
         content="website" />
     <meta
+        property="og:site_name"
+        content="Leagr" />
+    <meta
         property="og:title"
-        content={pageTitle} />
+        content={meta.title} />
     <meta
         property="og:description"
-        content="Join {data.leagueInfo?.name ||
-            'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+        content={meta.description} />
+    <meta
+        property="og:image"
+        content={ogImageUrl} />
+    <meta
+        property="og:image:width"
+        content="1200" />
+    <meta
+        property="og:image:height"
+        content="630" />
+    <meta
+        property="og:image:alt"
+        content="Leagr - Your social 5-a-side league, sorted." />
 
     <!-- Twitter -->
     <meta
-        property="twitter:card"
-        content="summary" />
+        name="twitter:card"
+        content="summary_large_image" />
     <meta
-        property="twitter:title"
-        content={pageTitle} />
+        name="twitter:title"
+        content={meta.title} />
     <meta
-        property="twitter:description"
-        content="Join {data.leagueInfo?.name ||
-            'social leagues'} on Leagr. Easy player registration, team generation, and match scheduling." />
+        name="twitter:description"
+        content={meta.description} />
+    <meta
+        name="twitter:image"
+        content={ogImageUrl} />
 
     <link
         rel="icon"

@@ -21,7 +21,6 @@
     import { api } from '#lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '#lib/client/stores/loading.js';
     import { setNotification } from '#lib/client/stores/notification.js';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     let date = $derived(data.date);
@@ -88,11 +87,6 @@
 
     $effect(() => {
         if (date) loadFantasy();
-    });
-
-    $effect(() => {
-        titleParts.set(['Fantasy']);
-        return () => titleParts.set([]);
     });
 </script>
 

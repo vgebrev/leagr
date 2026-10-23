@@ -1,7 +1,6 @@
 <script>
     import { AngleRightOutline } from 'flowbite-svelte-icons';
     import { resolve } from '$app/paths';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     // The index of everything under /help. A topic is declared here rather than discovered
     // from the filesystem, because a help page needs a name and a sentence a router cannot
@@ -19,11 +18,6 @@
             blurb: 'Every badge in the game, the four traits behind them, and what it takes to earn one.'
         }
     ]);
-
-    $effect(() => {
-        titleParts.set(['Help']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

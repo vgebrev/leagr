@@ -28,7 +28,6 @@
     import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let champions = $state(/** @type {ChampionEntry[]} */ ([]));
     /** @type {Array<any>|null} */
@@ -114,11 +113,6 @@
     function selectChampionsTab() {
         if (page.state.formTab) history.back();
     }
-
-    $effect(() => {
-        titleParts.set(['Champions']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

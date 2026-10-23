@@ -9,7 +9,6 @@
     import ScheduleDisplay from './components/ScheduleDisplay.svelte';
     import GameActions from './components/GameActions.svelte';
     import TeamModal from '#components/TeamModal.svelte';
-    import { titleParts } from '#lib/client/stores/pageTitle.js';
 
     let { data } = $props();
 
@@ -58,11 +57,6 @@
 
     onMount(async () => {
         await gamesService.load(date);
-    });
-
-    $effect(() => {
-        titleParts.set(['Games']);
-        return () => titleParts.set([]);
     });
 </script>
 
