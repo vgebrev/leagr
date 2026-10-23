@@ -7,3 +7,6 @@ bun.lockb
 
 # Ad-hoc scripts
 scripts/
+
+# Scratchpad work area
+scratchpad/
