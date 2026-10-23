@@ -14,7 +14,7 @@ import {
     dampPrice,
     percentileOf,
     buildPrices
-} from '$lib/server/fantasyPricing.js';
+} from '#lib/server/fantasyPricing.js';
 
 const W = DEFAULT_FANTASY_CONFIG.scoring;
 const ALL_TYPES = ['goals', 'offActions', 'defActions', 'saveActions'];

@@ -2,29 +2,28 @@
     import { onMount, onDestroy } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
+    import { settings } from '#lib/client/stores/settings.js';
+    import { isSessionLocked } from '#lib/client/services/sessionUnlock.svelte.js';
     import { Button, Input } from 'flowbite-svelte';
     import { AngleLeftOutline, AngleRightOutline } from 'flowbite-svelte-icons';
-    import TeamBadge from '$components/TeamBadge.svelte';
-    import TeamLogo from '$components/TeamLogo.svelte';
-    import TeamModal from '$components/TeamModal.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
+    import TeamLogo from '#components/TeamLogo.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
+    import PlayerModal from '#components/PlayerModal.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
     import TeamActionPanel from './components/TeamActionPanel.svelte';
     import StatsGuide from './components/StatsGuide.svelte';
     import MatchTimer from './components/MatchTimer.svelte';
-    import { matchTimer } from '$lib/client/services/matchTimer.svelte.js';
+    import { matchTimer } from '#lib/client/services/matchTimer.svelte.js';
     import {
         gamesService,
         findLeagueMatch,
         findKnockoutMatch
-    } from '$lib/client/services/games.svelte.js';
-    import { RESERVED_SCORER_KEYS, validateGameScore } from '$lib/shared/validation.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    } from '#lib/client/services/games.svelte.js';
+    import { RESERVED_SCORER_KEYS, validateGameScore } from '#lib/shared/validation.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -553,11 +552,6 @@
                 url: `/rankings?date=${date}`
             };
         }
-    });
-
-    $effect(() => {
-        titleParts.set(['Match Centre', 'Games']);
-        return () => titleParts.set([]);
     });
 </script>
 

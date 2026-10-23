@@ -4,15 +4,15 @@ import { isHttpError } from '@sveltejs/kit';
 const dataGet = vi.fn();
 const updateScores = vi.fn();
 
-vi.mock('$lib/server/data.js', () => ({ data: { get: (...a) => dataGet(...a) } }));
-vi.mock('$lib/server/settings.js', () => ({ getConsolidatedSettings: vi.fn(async () => ({})) }));
-vi.mock('$lib/server/league.js', () => ({
+vi.mock('#lib/server/data.js', () => ({ data: { get: (...a) => dataGet(...a) } }));
+vi.mock('#lib/server/settings.js', () => ({ getConsolidatedSettings: vi.fn(async () => ({})) }));
+vi.mock('#lib/server/league.js', () => ({
     validateLeagueForAPI: vi.fn(() => ({ leagueId: 'pirates', isValid: true }))
 }));
-vi.mock('$lib/server/knockoutManager.js', () => ({
+vi.mock('#lib/server/knockoutManager.js', () => ({
     createKnockoutManager: vi.fn(() => ({ updateScores: (...a) => updateScores(...a) }))
 }));
-vi.mock('$lib/server/logger.js', () => ({
+vi.mock('#lib/server/logger.js', () => ({
     logger: { warn: vi.fn(), error: vi.fn(), info: vi.fn(), debug: vi.fn() }
 }));
 

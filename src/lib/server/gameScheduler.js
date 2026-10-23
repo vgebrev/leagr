@@ -1,5 +1,5 @@
-import { validateScheduleData, validateGameRequest } from '$lib/shared/validation.js';
-import { rotateArray } from '$lib/shared/helpers.js';
+import { validateScheduleData, validateGameRequest } from '#lib/shared/validation.js';
+import { rotateArray } from '#lib/shared/helpers.js';
 
 /**
  * Game scheduling error class

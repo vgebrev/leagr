@@ -8,7 +8,7 @@ const whistle = vi.hoisted(() => ({
     vibrate: vi.fn()
 }));
 
-vi.mock('$lib/client/services/whistle.js', () => whistle);
+vi.mock('#lib/client/services/whistle.js', () => whistle);
 
 const MINUTE = 60_000;
 const KEY = '2026-07-25:league:1:1';
@@ -21,7 +21,7 @@ const DEFAULTS = { durationMinutes: 8, lastPlaySeconds: 0 };
 const WITH_LAST_PLAY = { durationMinutes: 8, lastPlaySeconds: 60 };
 
 describe('matchTimer service', () => {
-    /** @type {import('$lib/client/services/matchTimer.svelte.js').matchTimer} */
+    /** @type {import('#lib/client/services/matchTimer.svelte.js').matchTimer} */
     let timer;
 
     beforeEach(async () => {
@@ -31,7 +31,7 @@ describe('matchTimer service', () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-07-25T10:00:00Z'));
 
-        const module = await import('$lib/client/services/matchTimer.svelte.js');
+        const module = await import('#lib/client/services/matchTimer.svelte.js');
         timer = module.matchTimer;
     });
 
@@ -520,7 +520,7 @@ describe('matchTimer service', () => {
             // Reload: fresh module instance, same localStorage, 30s later.
             vi.resetModules();
             freezeFor(30_000);
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
             reloaded.attach(KEY, DEFAULTS);
 
             expect(reloaded.status).toBe('running');
@@ -534,7 +534,7 @@ describe('matchTimer service', () => {
             vi.advanceTimersByTime(2 * MINUTE);
 
             vi.resetModules();
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
             reloaded.attach(OTHER_KEY, DEFAULTS);
 
             expect(reloaded.status).toBe('idle');
@@ -611,7 +611,7 @@ describe('matchTimer service', () => {
 
             vi.resetModules();
             whistle.playWhistle.mockClear();
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
             reloaded.attach(KEY, WITH_LAST_PLAY);
             vi.advanceTimersByTime(250);
 
@@ -671,7 +671,7 @@ describe('matchTimer service', () => {
             timer.setMuted(true);
 
             vi.resetModules();
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
 
             expect(reloaded.muted).toBe(true);
             reloaded.destroy();
@@ -695,7 +695,7 @@ describe('matchTimer service', () => {
             timer.setExpanded(true);
 
             vi.resetModules();
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
 
             expect(reloaded.expanded).toBe(true);
             reloaded.destroy();
@@ -706,7 +706,7 @@ describe('matchTimer service', () => {
             timer.setMuted(false);
 
             vi.resetModules();
-            const reloaded = (await import('$lib/client/services/matchTimer.svelte.js')).matchTimer;
+            const reloaded = (await import('#lib/client/services/matchTimer.svelte.js')).matchTimer;
 
             expect(reloaded.expanded).toBe(true);
             expect(reloaded.muted).toBe(false);

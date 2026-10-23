@@ -1,5 +1,5 @@
 import sharp from 'sharp';
-import { errorCode } from '$lib/shared/helpers.js';
+import { errorCode } from '#lib/shared/helpers.js';
 import { randomUUID } from 'crypto';
 import path from 'path';
 import fs from 'fs/promises';

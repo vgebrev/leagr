@@ -1,5 +1,5 @@
 import { error, json } from '@sveltejs/kit';
-import { createLeagueService, LeagueError } from '$lib/server/league.js';
+import { createLeagueService, LeagueError } from '#lib/server/league.js';
 
 export const POST = async ({ request }) => {
     try {

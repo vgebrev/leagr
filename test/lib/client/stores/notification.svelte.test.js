@@ -8,7 +8,7 @@ describe('Notification Store', () => {
         // Clear the module cache to get fresh instances
         vi.resetModules();
 
-        const notificationModule = await import('$lib/client/stores/notification.js');
+        const notificationModule = await import('#lib/client/stores/notification.js');
         notification = notificationModule.notification;
         setNotification = notificationModule.setNotification;
 

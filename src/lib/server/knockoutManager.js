@@ -1,5 +1,5 @@
 import { data } from './data.js';
-import { errorMessage } from '$lib/shared/helpers.js';
+import { errorMessage } from '#lib/shared/helpers.js';
 import { createStandingsManager } from './standings.js';
 
 /**

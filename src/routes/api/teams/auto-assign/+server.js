@@ -1,16 +1,16 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createPlayerManager } from '$lib/server/playerManager.js';
-import { createTeamGenerator } from '$lib/server/teamGenerator.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { buildTeamGenerationContext } from '$lib/server/teamGenerationContext.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
+import { createTeamGenerator } from '#lib/server/teamGenerator.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { buildTeamGenerationContext } from '#lib/server/teamGenerationContext.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 import {
     validateDateParameter,
     parseRequestBody,
     validateAndSanitizePlayerName,
     validateCompetitionOperationsAllowed
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 /**
  * Balance-aware auto-assignment.

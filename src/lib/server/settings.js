@@ -4,7 +4,7 @@ import {
     getEffectiveLeagueSettings,
     DAY_LEVEL_SETTINGS,
     LEAGUE_ONLY_SETTINGS
-} from '$lib/shared/defaults.js';
+} from '#lib/shared/defaults.js';
 import { globalSettingsCache, invalidateSettingsCache } from './settingsCache.js';
 
 /**

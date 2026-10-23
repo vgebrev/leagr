@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { createYearRecapManager } from '$lib/server/yearRecapManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { createYearRecapManager } from '#lib/server/yearRecapManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 
 /** @type {import('@sveltejs/kit').RequestHandler} */
 export const GET = async ({ locals, params }) => {

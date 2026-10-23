@@ -1,8 +1,8 @@
 <script>
     import { Alert, Datepicker } from 'flowbite-svelte';
     import { ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { dateString, isCompetitionDay } from '$lib/shared/helpers.js';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { dateString, isCompetitionDay } from '#lib/shared/helpers.js';
+    import { settings } from '#lib/client/stores/settings.js';
     import { page } from '$app/state';
 
     let { selectedDate } = $props();

@@ -4,14 +4,13 @@
     import { onMount } from 'svelte';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { page } from '$app/state';
-    import NewsCard from '$components/NewsCard.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import TeamModal from '$components/TeamModal.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import NewsCard from '#components/NewsCard.svelte';
+    import PlayerModal from '#components/PlayerModal.svelte';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import TeamModal from '#components/TeamModal.svelte';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
 
     const PAGE_SIZE = 5;
 
@@ -116,11 +115,6 @@
     // so an effect would re-run (and reset the feed to page 1) when the admin
     // code lands after mount. The page has no reactive inputs.
     onMount(loadNews);
-
-    $effect(() => {
-        titleParts.set(['News']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

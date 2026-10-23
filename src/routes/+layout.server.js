@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
-import { defaultSettings } from '$lib/shared/defaults.js';
-import { getConsolidatedSettings } from '$lib/server/settings.js';
-import { dateString } from '$lib/shared/helpers.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
+import { getConsolidatedSettings } from '#lib/server/settings.js';
+import { dateString } from '#lib/shared/helpers.js';
 
 const APP_URL = process.env.APP_URL || import.meta.env.VITE_APP_URL;
 

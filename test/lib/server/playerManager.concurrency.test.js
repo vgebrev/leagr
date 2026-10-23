@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
-import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
 
 // Mock settings to avoid needing real league info files on disk.
 // The real data.js is intentionally NOT mocked — the race condition lives in
 // the interaction between executeTransaction and the file-level mutex.
-vi.mock('$lib/server/settings.js', () => ({
+vi.mock('#lib/server/settings.js', () => ({
     getConsolidatedSettings: vi.fn()
 }));
 
@@ -27,11 +27,11 @@ describe('PlayerManager concurrency', () => {
     beforeEach(async () => {
         await fs.mkdir(path.join(testDataDir, testLeagueId), { recursive: true });
 
-        vi.spyOn(await import('$lib/server/league.js'), 'getLeagueDataPath').mockImplementation(
+        vi.spyOn(await import('#lib/server/league.js'), 'getLeagueDataPath').mockImplementation(
             (leagueId) => (leagueId ? path.join(testDataDir, leagueId) : testDataDir)
         );
 
-        const { getConsolidatedSettings } = await import('$lib/server/settings.js');
+        const { getConsolidatedSettings } = await import('#lib/server/settings.js');
         getConsolidatedSettings.mockResolvedValue({
             ...minimalSettings,
             [testDate]: { playerLimit: 24 }

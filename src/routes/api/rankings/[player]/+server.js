@@ -1,8 +1,8 @@
 import { json, error } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { createAvatarManager } from '#lib/server/avatarManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 
 /**
  * Create unified details array with all necessary data for frontend

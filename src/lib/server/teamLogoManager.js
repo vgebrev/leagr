@@ -1,12 +1,12 @@
 import path from 'path';
-import { errorMessage, errorCode } from '$lib/shared/helpers.js';
+import { errorMessage, errorCode } from '#lib/shared/helpers.js';
 import fs from 'fs/promises';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 import { generateTeamLogo, pickBadgeShapes } from './openaiImageClient.js';
 import { removeCornerBackground } from './imageProcessor.js';
 import { logger } from './logger.js';
-import { env } from '$env/dynamic/private';
+import { OPENAI_API_KEY, OPENAI_MODEL } from '$app/env/private';
 
 const logosMutexes = new Map();
 
@@ -192,9 +192,8 @@ export class TeamLogoManager {
     async generateLogosForDraw(date, teams) {
         // Without a key there is nothing to call, so bail before spawning a request
         // per team that would each throw. Narrowing here also gives generateTeamLogo
-        // the plain string it requires - env.OPENAI_API_KEY is string|undefined
-        // whenever the variable is absent at svelte-kit sync time, as it is in CI.
-        const apiKey = env.OPENAI_API_KEY;
+        // the plain string it requires - OPENAI_API_KEY is optional in src/env.js.
+        const apiKey = OPENAI_API_KEY;
         if (!apiKey) {
             logger.info('[teamLogos] Skipping logo generation - OPENAI_API_KEY is not set', {
                 date
@@ -218,7 +217,7 @@ export class TeamLogoManager {
                         teamName,
                         shapes[i],
                         apiKey,
-                        env.OPENAI_MODEL
+                        OPENAI_MODEL
                     );
                     await this.saveRawLogo(date, teamName, rawBuffer);
                     const processedBuffer = await removeCornerBackground(rawBuffer);

@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
-import { errorMessage } from '$lib/shared/helpers.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { MIN_YEAR, MAX_YEAR } from '$lib/shared/yearConfig.js';
-import { getLeagueInfo } from '$lib/server/league.js';
-import { getEffectiveLeagueSettings } from '$lib/shared/defaults.js';
-import { buildChampionsMomentum, resolveMomentumConfig } from '$lib/server/momentum.js';
+import { errorMessage } from '#lib/shared/helpers.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { MIN_YEAR, MAX_YEAR } from '#lib/shared/yearConfig.js';
+import { getLeagueInfo } from '#lib/server/league.js';
+import { getEffectiveLeagueSettings } from '#lib/shared/defaults.js';
+import { buildChampionsMomentum, resolveMomentumConfig } from '#lib/server/momentum.js';
 
 /**
  * GET /api/champions - Get champions data for the hall of fame

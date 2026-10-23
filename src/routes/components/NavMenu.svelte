@@ -9,14 +9,14 @@
         SunOutline
     } from 'flowbite-svelte-icons';
     import { Dropdown, DropdownItem } from 'flowbite-svelte';
-    import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
+    import WizardHatIcon from '#components/Icons/WizardHatIcon.svelte';
     import { get } from 'svelte/store';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { getStoredAccessCode } from '$lib/client/services/auth.js';
-    import { shareContent } from '$lib/client/services/clipboard.js';
-    import { isDarkMode, toggleTheme } from '$lib/client/stores/theme.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { getStoredAccessCode } from '#lib/client/services/auth.js';
+    import { shareContent } from '#lib/client/services/clipboard.js';
+    import { isDarkMode, toggleTheme } from '#lib/client/stores/theme.js';
 
     let { date, leagueInfo } = $props();
 
@@ -103,7 +103,7 @@
         </DropdownItem>
         <DropdownItem
             class={itemClass}
-            href={resolve(`/news?date=${date}`)}
+            href={resolve(`news?date=${date}`)}
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <NewspaperOutline class="me-2 h-4 w-4" />News
@@ -111,7 +111,7 @@
         </DropdownItem>
         <DropdownItem
             class={itemClass}
-            href={resolve(`/fantasy?date=${date}`)}
+            href={resolve(`fantasy?date=${date}`)}
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <WizardHatIcon class="me-2 h-4 w-4" />Fantasy
@@ -119,7 +119,7 @@
         </DropdownItem>
         <DropdownItem
             class={itemClass}
-            href={resolve(`/settings?date=${date}`)}
+            href={resolve(`settings?date=${date}`)}
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <AdjustmentsHorizontalSolid class="me-2 h-4 w-4" />Settings
@@ -129,7 +129,7 @@
              the league block anyway, since the pages it links to are behind league auth. -->
         <DropdownItem
             class={itemClass}
-            href={resolve('/help')}
+            href={resolve('help')}
             onclick={() => (isOpen = false)}>
             <span class="flex items-center">
                 <QuestionCircleOutline class="me-2 h-4 w-4" />Help

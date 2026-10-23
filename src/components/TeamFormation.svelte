@@ -1,16 +1,16 @@
 <script>
-    import Avatar from '$components/avatars/Avatar.svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
     import {
         CloseOutline,
         ExclamationCircleSolid,
         PlusOutline,
         StarSolid
     } from 'flowbite-svelte-icons';
-    import { teamStyles } from '$lib/shared/helpers.js';
+    import { teamStyles } from '#lib/shared/helpers.js';
     import { resolve } from '$app/paths';
 
     /**
@@ -329,7 +329,7 @@
                                 {@render tile(player, avatarUrl, isEmpty, isWithdrawn)}
                             {:else}
                                 <a
-                                    href={resolve(`/rankings/${encodeURIComponent(player?.name)}`)}
+                                    href={resolve(`rankings/${encodeURIComponent(player?.name)}`)}
                                     class="flex flex-col items-center gap-1">
                                     {@render tile(player, avatarUrl, isEmpty, isWithdrawn)}
                                 </a>

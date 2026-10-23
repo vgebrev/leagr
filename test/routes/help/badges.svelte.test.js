@@ -2,12 +2,12 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 
 vi.mock('$app/paths', () => ({
-    resolve: (/** @type {string} */ path) => path
+    resolve: (/** @type {string} */ path) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
 const BadgesHelpPage = (await import('../../../src/routes/help/badges/+page.svelte')).default;
 const { BADGE_DEFS, BADGES_BY_ID, TRAIT_DEFS, BASE_PERCENTILE, ELITE_PERCENTILE } =
-    await import('$lib/shared/badges.js');
+    await import('#lib/shared/badges.js');
 
 /** Badge chips are the only element carrying a shape class. */
 const chips = (/** @type {HTMLElement} */ container) => [

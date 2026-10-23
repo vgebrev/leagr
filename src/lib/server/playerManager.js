@@ -1,5 +1,5 @@
 import { data } from './data.js';
-import { defaultPlayers } from '$lib/shared/defaults.js';
+import { defaultPlayers } from '#lib/shared/defaults.js';
 import { getConsolidatedSettings } from './settings.js';
 import { createRankingsManager } from './rankings.js';
 import { createAvatarManager } from './avatarManager.js';

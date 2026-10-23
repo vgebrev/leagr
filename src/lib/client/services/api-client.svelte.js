@@ -140,7 +140,7 @@ function handleAuthError(response) {
         const currentUrl =
             typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
         const redirectUrl = encodeURIComponent(currentUrl);
-        goto(resolve(`/auth?redirect=${redirectUrl}`));
+        goto(resolve(`auth?redirect=${redirectUrl}`));
     }
 }
 

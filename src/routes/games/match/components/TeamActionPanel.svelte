@@ -1,12 +1,12 @@
 <script>
     import { Button } from 'flowbite-svelte';
     import { PlusOutline, MinusOutline } from 'flowbite-svelte-icons';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import { teamColours, teamStyles } from '$lib/shared/helpers.js';
-    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import { teamColours, teamStyles } from '#lib/shared/helpers.js';
+    import { RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
 
     let {
         teamName = '',

@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 
 vi.mock('$app/paths', () => ({
-    resolve: (/** @type {string} */ path) => path
+    resolve: (/** @type {string} */ path) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
 const HelpIndexPage = (await import('../../../src/routes/help/+page.svelte')).default;

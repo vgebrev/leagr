@@ -1,14 +1,14 @@
 import { randomUUID } from 'node:crypto';
-import { getLeagueInfo, extractLeagueId } from '$lib/server/league.js';
-import { stripPort } from '$lib/server/requestIp.js';
-import { initializeEmailService } from '$lib/server/email.js';
-import { logger, initializeLogger } from '$lib/server/logger.js';
+import { getLeagueInfo, extractLeagueId } from '#lib/server/league.js';
+import { stripPort } from '#lib/server/requestIp.js';
+import { initializeEmailService } from '#lib/server/email.js';
+import { logger, initializeLogger } from '#lib/server/logger.js';
 import {
     SESSION_COOKIE,
     SESSION_MAX_AGE,
     createSessionToken,
     isValidSessionToken
-} from '$lib/server/session.js';
+} from '#lib/server/session.js';
 
 const rateLimitMap = new Map();
 // Rule-based rate limiting configuration (first match wins)
@@ -403,8 +403,8 @@ export const handle = async ({ event, resolve }) => {
 
     if (url.pathname.startsWith('/api/')) {
         // A 5xx that comes back as a Response was declared by a route - error(500, ...) is an
-        // intended response, so SvelteKit never routes it through handleError and nothing else
-        // records why. Carry the reason into the log; a thrown error still logs its stack there.
+        // intended response, so handleError deliberately ignores it and nothing else records
+        // why. Carry the reason into the log; a thrown error still logs its stack there.
         let failureDetail = null;
         if (response.status >= 500) {
             try {
@@ -432,19 +432,25 @@ export const handle = async ({ event, resolve }) => {
 /**
  * Catch-all handler for unexpected server errors.
  *
- * SvelteKit calls this only for genuine failures — errors raised with `error()` are
- * an intended response and bypass it. This is the single place a stack reaches the
- * log file; routes no longer need their own console.error.
+ * SvelteKit routes every error through here, but only `unknown` ones are failures:
+ * `app` errors come from our own `error()` calls and `framework` errors are 404s and
+ * bad requests - both intended responses, left to SvelteKit's defaults. This is the
+ * single place a stack reaches the log file; routes no longer need their own console.error.
  *
- * @type {import('@sveltejs/kit').HandleServerError}
+ * @type {import('@sveltejs/kit/hooks').HandleServerError}
  */
-export const handleError = ({ error: err, event, status, message }) => {
+export const handleError = ({ kind, error: err, event }) => {
+    if (kind !== 'unknown') return;
+
     const errorId = randomUUID();
     const path = event.url.pathname + (event.url.search ? event.url.search : '');
-    const cause = /** @type {any} */ (err);
+    const cause =
+        /** @type {{ name?: string, message?: string, apiFallbackMessage?: string, apiContext?: Record<string, unknown> } | null | undefined} */ (
+            err
+        );
 
     logger.error(
-        `Unhandled ${status} ${event.request.method} ${path} errorId=${errorId}`,
+        `Unhandled 500 ${event.request.method} ${path} errorId=${errorId}`,
         {
             errorId,
             league: event.locals?.leagueId ?? 'none',
@@ -458,8 +464,6 @@ export const handleError = ({ error: err, event, status, message }) => {
 
     // apiFallbackMessage is attached by toApiError so the client still gets a
     // route-specific message instead of SvelteKit's bare "Internal Error".
-    return {
-        message: cause?.apiFallbackMessage || message,
-        errorId
-    };
+    // Omit message otherwise: an explicit undefined would replace SvelteKit's default.
+    return cause?.apiFallbackMessage ? { message: cause.apiFallbackMessage, errorId } : { errorId };
 };

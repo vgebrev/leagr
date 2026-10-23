@@ -1,9 +1,9 @@
 <script>
     import { Listgroup, ListgroupItem, Button } from 'flowbite-svelte';
     import { CheckOutline, CloseOutline, TrashBinOutline } from 'flowbite-svelte-icons';
-    import { getLeagueId } from '$lib/client/services/api-client.svelte.js';
-    import { getStoredAdminCode } from '$lib/client/services/auth.js';
-    import { playersService } from '$lib/client/services/players.svelte.js';
+    import { getLeagueId } from '#lib/client/services/api-client.svelte.js';
+    import { getStoredAdminCode } from '#lib/client/services/auth.js';
+    import { playersService } from '#lib/client/services/players.svelte.js';
 
     let { suspendedPlayers = [] } = $props();
 

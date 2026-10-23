@@ -1,5 +1,5 @@
 import { json, error } from '@sveltejs/kit';
-import { validateLeagueForAPI, createLeagueService, LeagueError } from '$lib/server/league.js';
+import { validateLeagueForAPI, createLeagueService, LeagueError } from '#lib/server/league.js';
 
 /**
  * Reset access code using a valid reset code

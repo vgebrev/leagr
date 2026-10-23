@@ -11,17 +11,16 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { ExclamationCircleSolid, UsersGroupOutline } from 'flowbite-svelte-icons';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import WizardHatIcon from '$components/Icons/WizardHatIcon.svelte';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import WizardHatIcon from '#components/Icons/WizardHatIcon.svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { resolve } from '$app/paths';
-    import FantasyTeamModal from '$components/FantasyTeamModal.svelte';
+    import FantasyTeamModal from '#components/FantasyTeamModal.svelte';
     import FantasyInfoPanel from './components/FantasyInfoPanel.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
 
     let { data } = $props();
     let date = $derived(data.date);
@@ -89,11 +88,6 @@
     $effect(() => {
         if (date) loadFantasy();
     });
-
-    $effect(() => {
-        titleParts.set(['Fantasy']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <div class="mb-2">
@@ -106,7 +100,7 @@
 </div>
 
 <Button
-    href={resolve(`/fantasy/team?date=${date}`)}
+    href={resolve(`fantasy/team?date=${date}`)}
     color="primary"
     size="sm"
     class="mb-3 w-full">

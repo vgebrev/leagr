@@ -1,16 +1,16 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createKnockoutManager } from '$lib/server/knockoutManager.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { createKnockoutManager } from '#lib/server/knockoutManager.js';
 import {
     validateDateParameter,
     parseRequestBody,
     validateCompetitionOperationsAllowed,
     validateMatchScorers,
     validateGameScore
-} from '$lib/shared/validation.js';
-import { getConsolidatedSettings } from '$lib/server/settings.js';
-import { data } from '$lib/server/data.js';
+} from '#lib/shared/validation.js';
+import { getConsolidatedSettings } from '#lib/server/settings.js';
+import { data } from '#lib/server/data.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

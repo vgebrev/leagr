@@ -2,7 +2,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
-import { defaultSettings } from '$lib/shared/defaults.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
 import * as fuzzball from 'fuzzball';
 
 const disciplineMutexes = new Map();

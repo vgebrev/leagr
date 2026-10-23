@@ -15,21 +15,20 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid, StarSolid } from 'flowbite-svelte-icons';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import MomentumBoard from '$components/MomentumBoard.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import MomentumBoard from '#components/MomentumBoard.svelte';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { page } from '$app/state';
     import { goto, pushState } from '$app/navigation';
-    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     /** @type {Array<{playerName: string, appearances: number, saves: number, defence: number, attack: number, goals: number, total: number}>} */
     let ballers = $state([]);
@@ -116,13 +115,13 @@
         yearDropdownOpen = false;
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
-        const href = resolve(`/ballers-board?${params.toString()}`);
-        await goto(href, { replaceState: true });
+        const href = resolve(`ballers-board?${params.toString()}`);
+        await goto(href, { replace: true });
     }
 
     /** @param {string} playerName */
     function handlePlayerClick(playerName) {
-        goto(resolve(`/rankings/${playerName}`));
+        goto(resolve(`rankings/${playerName}`));
     }
 
     /**
@@ -161,11 +160,6 @@
     function selectBallersTab() {
         if (page.state.formTab) history.back();
     }
-
-    $effect(() => {
-        titleParts.set(['Ballers Board']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

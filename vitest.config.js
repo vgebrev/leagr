@@ -9,10 +9,5 @@ export default defineConfig({
         include: ['test/**/*.{test,spec}.{js,ts}'],
         exclude: ['node_modules', '.svelte-kit', 'test/**/*.svelte.{test,spec}.{js,ts}'],
         globalTeardown: './test/setup/globalTeardown.js'
-    },
-    resolve: {
-        alias: {
-            $lib: './src/lib'
-        }
     }
 });

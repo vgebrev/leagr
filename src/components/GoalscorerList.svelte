@@ -1,11 +1,11 @@
 <script>
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
-    import { teamColours, teamStyles } from '$lib/shared/helpers.js';
-    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
+    import { teamColours, teamStyles } from '#lib/shared/helpers.js';
+    import { RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
+    import SoccerBootIcon from '#components/Icons/SoccerBootIcon.svelte';
     import { SvelteMap } from 'svelte/reactivity';
 
     /**

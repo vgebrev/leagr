@@ -7,8 +7,8 @@
         RectangleListSolid,
         AwardSolid
     } from 'flowbite-svelte-icons';
-    import { settings } from '$lib/client/stores/settings.js';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import { settings } from '#lib/client/stores/settings.js';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
 
     let { data } = $props();
 

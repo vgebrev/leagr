@@ -2,17 +2,16 @@
     import { onMount } from 'svelte';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import { playersService } from '$lib/client/services/players.svelte.js';
-    import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
+    import { playersService } from '#lib/client/services/players.svelte.js';
+    import { sessionUnlock } from '#lib/client/services/sessionUnlock.svelte.js';
     import PlayerRegistrationForm from './components/PlayerRegistrationForm.svelte';
     import RegistrationAlerts from './components/RegistrationAlerts.svelte';
     import PlayersGrid from './components/PlayersGrid.svelte';
     import SuspensionsModal from './components/SuspensionsModal.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
+    import PlayerModal from '#components/PlayerModal.svelte';
     import { Button } from 'flowbite-svelte';
     import { BanOutline } from 'flowbite-svelte-icons';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { settings } from '#lib/client/stores/settings.js';
 
     let { data } = $props();
     let playerName = $state('');
@@ -83,11 +82,6 @@
     async function renamePlayer(oldName, newName) {
         await playersService.renamePlayer(oldName, newName);
     }
-
-    $effect(() => {
-        titleParts.set(['Players']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <div class="flex flex-col gap-2">

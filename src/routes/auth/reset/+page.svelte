@@ -1,16 +1,15 @@
 <script>
     import { Button, Input, Label, Alert, Spinner } from 'flowbite-svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import { LockOpenSolid, LockSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
     import { page } from '$app/state';
-    import { generateAccessCode } from '$lib/shared/validation.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { leaguesService } from '$lib/client/services/leagues.svelte.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { generateAccessCode } from '#lib/shared/validation.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { leaguesService } from '#lib/client/services/leagues.svelte.js';
 
     let { data } = $props();
     let newAccessCode = $state('');
@@ -81,7 +80,7 @@
             async () => {
                 await leaguesService.resetAccessCode(resetCode.trim(), newAccessCode.trim());
                 setNotification('Access code updated successfully!', 'success');
-                goto(resolve(`/auth?code=${newAccessCode.trim()}`));
+                goto(resolve(`auth?code=${newAccessCode.trim()}`));
             },
             (error) => {
                 console.error('Error updating access code:', error);
@@ -93,11 +92,6 @@
     function generateNewCode() {
         newAccessCode = generateAccessCode();
     }
-
-    $effect(() => {
-        titleParts.set(['Reset Code']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <div class="flex min-h-full w-full flex-col items-center justify-center gap-2">
@@ -118,7 +112,7 @@
         <Alert class="glass flex items-center border">
             <ExclamationCircleSolid /><span>
                 This reset link is invalid or has expired. Please <a
-                    href={resolve('/auth/forgot')}
+                    href={resolve('auth/forgot')}
                     class="text-primary-600 hover:underline">request a new reset link</a
                 >.
             </span>
@@ -126,7 +120,7 @@
 
         <Button
             color="primary"
-            href={resolve('/auth')}
+            href={resolve('auth')}
             class="w-full">
             Return to Login
         </Button>

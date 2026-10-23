@@ -7,11 +7,11 @@
         BackwardStepSolid
     } from 'flowbite-svelte-icons';
     import TeamTable from './TeamTable.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
     import { onMount } from 'svelte';
     import { scale, fade } from 'svelte/transition';
-    import ArrowRotateIcon from '$components/Icons/ArrowRotateIcon.svelte';
-    import { teamStyles } from '$lib/shared/helpers.js';
+    import ArrowRotateIcon from '#components/Icons/ArrowRotateIcon.svelte';
+    import { teamStyles } from '#lib/shared/helpers.js';
     import { SvelteSet } from 'svelte/reactivity';
     import confetti from 'canvas-confetti';
 

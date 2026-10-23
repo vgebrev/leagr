@@ -2,12 +2,12 @@
     import { onMount } from 'svelte';
     import { Accordion, AccordionItem } from 'flowbite-svelte';
     import { ShieldCheckOutline } from 'flowbite-svelte-icons';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { settings, defaultSettings } from '$lib/client/stores/settings.js';
-    import { getDaySettingsDefaults } from '$lib/shared/defaults.js';
-    import { formatDisplayDate, errorMessage } from '$lib/shared/helpers.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { settings, defaultSettings } from '#lib/client/stores/settings.js';
+    import { getDaySettingsDefaults } from '#lib/shared/defaults.js';
+    import { formatDisplayDate, errorMessage } from '#lib/shared/helpers.js';
     import DaySettings from './components/DaySettings.svelte';
     import PlayerLimitSettings from './components/PlayerLimitSettings.svelte';
     import CompetitionDaysSettings from './components/CompetitionDaysSettings.svelte';
@@ -17,16 +17,15 @@
     import DisciplineSettings from './components/DisciplineSettings.svelte';
     import MomentumSettings from './components/MomentumSettings.svelte';
     import BehaviorToggles from './components/BehaviorToggles.svelte';
-    import AvatarApprovalQueue from '$components/avatars/AvatarApprovalQueue.svelte';
+    import AvatarApprovalQueue from '#components/avatars/AvatarApprovalQueue.svelte';
     import {
         getStoredAdminCode,
         removeStoredAdminCode,
         validateAdminCode
-    } from '$lib/client/services/auth.js';
-    import { setAdminCode } from '$lib/client/services/api-client.svelte.js';
+    } from '#lib/client/services/auth.js';
+    import { setAdminCode } from '#lib/client/services/api-client.svelte.js';
     import { Button, Badge } from 'flowbite-svelte';
     import AdminAccess from './components/AdminAccess.svelte';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let { data } = $props();
     const date = $derived(data.date);
@@ -195,11 +194,6 @@
 
         // Cleanup: restore body scroll when leaving page
     }
-
-    $effect(() => {
-        titleParts.set(['Settings']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 {#if hasAdmin}

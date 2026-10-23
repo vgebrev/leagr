@@ -1,6 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { createAvatarManager } from '#lib/server/avatarManager.js';
 
 /** @type {import('./$types').RequestHandler} */
 export async function GET({ locals }) {

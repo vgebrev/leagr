@@ -1,7 +1,7 @@
 import { json, error } from '@sveltejs/kit';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { createAvatarManager } from '#lib/server/avatarManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 
 export const GET = async ({ locals, url }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

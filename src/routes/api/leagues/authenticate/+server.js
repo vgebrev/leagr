@@ -1,5 +1,5 @@
 import { json, error } from '@sveltejs/kit';
-import { validateLeagueForAPI } from '$lib/server/league.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
 
 export async function POST({ request, locals }) {
     // Validate league exists

@@ -33,8 +33,8 @@
         const queryString = params.toString();
         goto(
             queryString
-                ? resolve(`/rankings/${player}?${queryString}`)
-                : resolve(`/rankings/${player}`)
+                ? resolve(`rankings/${player}?${queryString}`)
+                : resolve(`rankings/${player}`)
         );
     }
 

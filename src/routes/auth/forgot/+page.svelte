@@ -1,14 +1,13 @@
 <script>
     import { Button, Input, Label, Alert } from 'flowbite-svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import { LockSolid, EnvelopeSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { goto } from '$app/navigation';
     import { resolve } from '$app/paths';
     import { onMount } from 'svelte';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { leaguesService } from '$lib/client/services/leagues.svelte.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
+    import { leaguesService } from '#lib/client/services/leagues.svelte.js';
 
     let { data } = $props();
     let email = $state('');
@@ -51,11 +50,6 @@
             }
         );
     }
-
-    $effect(() => {
-        titleParts.set(['Forgot Code']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <div class="flex min-h-full w-full flex-col items-center justify-center gap-2">
@@ -77,7 +71,7 @@
 
         <Button
             color="primary"
-            href={resolve('/auth')}
+            href={resolve('auth')}
             class="w-full">
             Return to Login
         </Button>
@@ -120,7 +114,7 @@
         <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
             <p>
                 <a
-                    href={resolve('/auth')}
+                    href={resolve('auth')}
                     class="text-primary-600 hover:underline">
                     Remember your code? Back to login
                 </a>

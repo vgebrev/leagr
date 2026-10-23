@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import fs from 'fs/promises';
 import path from 'path';
-import { createFantasyManager, FantasyError } from '$lib/server/fantasyManager.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { invalidateSettingsCache } from '$lib/server/settingsCache.js';
+import { createFantasyManager, FantasyError } from '#lib/server/fantasyManager.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { invalidateSettingsCache } from '#lib/server/settingsCache.js';
 
 const LEAGUE_ID = 'test-fantasy-league';
 const DATA_PATH = path.join(process.cwd(), 'data', LEAGUE_ID);

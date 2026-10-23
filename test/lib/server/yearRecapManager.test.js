@@ -1,15 +1,15 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { YearRecapManager, createYearRecapManager } from '$lib/server/yearRecapManager.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
+import { YearRecapManager, createYearRecapManager } from '#lib/server/yearRecapManager.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { createAvatarManager } from '#lib/server/avatarManager.js';
 import fs from 'fs/promises';
 
 // Mock dependencies
 vi.mock('fs/promises');
-vi.mock('$lib/server/rankings.js', () => ({
+vi.mock('#lib/server/rankings.js', () => ({
     createRankingsManager: vi.fn()
 }));
-vi.mock('$lib/server/avatarManager.js', () => ({
+vi.mock('#lib/server/avatarManager.js', () => ({
     createAvatarManager: vi.fn()
 }));
 

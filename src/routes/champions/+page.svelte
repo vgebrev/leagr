@@ -15,20 +15,19 @@
         Tabs
     } from 'flowbite-svelte';
     import { ChevronDownOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { errorMessage } from '$lib/shared/helpers.js';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyPopover from '$components/TrophyPopover.svelte';
-    import MomentumBoard from '$components/MomentumBoard.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { isLoading, withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyPopover from '#components/TrophyPopover.svelte';
+    import MomentumBoard from '#components/MomentumBoard.svelte';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { isLoading, withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { page } from '$app/state';
     import { goto, pushState } from '$app/navigation';
-    import { getYearOptions } from '$lib/shared/yearConfig.js';
+    import { getYearOptions } from '#lib/shared/yearConfig.js';
     import { SvelteURLSearchParams } from 'svelte/reactivity';
     import { resolve } from '$app/paths';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     let champions = $state(/** @type {ChampionEntry[]} */ ([]));
     /** @type {Array<any>|null} */
@@ -77,10 +76,10 @@
         const params = new SvelteURLSearchParams(page.url.search);
         params.set('year', String(newYear));
         const query = params.toString();
-        const href = resolve(`/champions?${query}`);
+        const href = resolve(`champions?${query}`);
 
         // Navigate and reload data
-        await goto(href, { replaceState: true });
+        await goto(href, { replace: true });
     }
 
     // Load champions when selectedYear changes (including on mount)
@@ -93,7 +92,7 @@
 
     /** @param {string} playerName */
     function handlePlayerClick(playerName) {
-        goto(resolve(`/rankings/${playerName}`));
+        goto(resolve(`rankings/${playerName}`));
     }
 
     // Tab selection lives in history state (shallow routing), so switching to
@@ -114,11 +113,6 @@
     function selectChampionsTab() {
         if (page.state.formTab) history.back();
     }
-
-    $effect(() => {
-        titleParts.set(['Champions']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <!-- Header -->

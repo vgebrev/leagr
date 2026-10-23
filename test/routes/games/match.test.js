@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '$lib/shared/matchUtils.js';
+import { findLeagueMatch, findKnockoutMatch, updateActionCount } from '#lib/shared/matchUtils.js';
 
 describe('findLeagueMatch', () => {
     const rounds = [

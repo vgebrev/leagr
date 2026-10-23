@@ -1,7 +1,7 @@
 import { error, json } from '@sveltejs/kit';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { validateDateParameter } from '$lib/shared/validation.js';
-import { data } from '$lib/server/data.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { validateDateParameter } from '#lib/shared/validation.js';
+import { data } from '#lib/server/data.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

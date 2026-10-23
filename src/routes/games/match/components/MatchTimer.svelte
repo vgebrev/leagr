@@ -12,7 +12,7 @@
         ChevronRightOutline
     } from 'flowbite-svelte-icons';
     import { slide } from 'svelte/transition';
-    import { matchTimer, formatClock } from '$lib/client/services/matchTimer.svelte.js';
+    import { matchTimer, formatClock } from '#lib/client/services/matchTimer.svelte.js';
 
     /**
      * @typedef {Object} MatchTimerProps

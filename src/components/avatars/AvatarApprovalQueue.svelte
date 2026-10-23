@@ -1,12 +1,12 @@
 <script>
     import Avatar from './Avatar.svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import { Alert, Button, ButtonGroup } from 'flowbite-svelte';
     import { CheckOutline, CloseOutline, ExclamationCircleSolid } from 'flowbite-svelte-icons';
     import { onMount } from 'svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
 
     /** @type {{ onCountChange?: (count: number) => void }} */
     let { onCountChange = () => {} } = $props();

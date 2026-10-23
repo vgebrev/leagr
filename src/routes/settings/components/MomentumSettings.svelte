@@ -1,6 +1,6 @@
 <script>
     import { Input, Label, Toggle } from 'flowbite-svelte';
-    import { getEffectiveMomentumSettings } from '$lib/shared/defaults.js';
+    import { getEffectiveMomentumSettings } from '#lib/shared/defaults.js';
 
     /**
      * @typedef {Object} MomentumSettingsProps

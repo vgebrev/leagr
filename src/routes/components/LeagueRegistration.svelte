@@ -1,14 +1,14 @@
 <script>
     import { Alert, Button, Input, Label, Radio } from 'flowbite-svelte';
     import { untrack } from 'svelte';
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import { isValidSubdomain, generateAccessCode } from '$lib/shared/validation.js';
-    import { capitalize, errorMessage } from '$lib/shared/helpers.js';
-    import { leaguesService } from '$lib/client/services/leagues.svelte.js';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import { isValidSubdomain, generateAccessCode } from '#lib/shared/validation.js';
+    import { capitalize, errorMessage } from '#lib/shared/helpers.js';
+    import { leaguesService } from '#lib/client/services/leagues.svelte.js';
     import { page } from '$app/state';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import { CirclePlusSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { withLoading } from '$lib/client/stores/loading.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
 
     let {
         leagueId = null, // null for new league, string for existing subdomain

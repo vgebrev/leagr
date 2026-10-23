@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Leagr is a SvelteKit 5 web application for managing Saturday social 5-a-side football sessions. It handles player registration, team generation, match scheduling, and player rankings using a file-based JSON storage system.
+Leagr is a SvelteKit web application for managing Saturday social 5-a-side football sessions. It handles player registration, team generation, match scheduling, and player rankings using a file-based JSON storage system.
 
 The application supports **multiple independent leagues** via subdomain-based routing (e.g., `pirates.leagr.co.za`), each with isolated data storage, settings, and access controls.
 
@@ -54,17 +54,21 @@ APP_URL             # Base application URL
 MAILGUN_API_KEY     # Email service API key
 MAILGUN_DOMAIN      # Email service domain
 OPENAI_API_KEY      # OpenAI key for AI team-logo generation (optional)
+OPENAI_MODEL        # Overrides the default OpenAI image model (optional)
 BODY_SIZE_LIMIT     # Max request size (default: 6MB for avatar uploads)
 DATA_DIR            # Data storage directory path (defaults to ./data)
 LOGS_DIR            # Log directory path
 LOG_LEVEL           # Logger verbosity (e.g., info, debug)
 ```
 
+`OPENAI_*` are declared in `src/env.js` (SvelteKit 3 `defineEnvVars`) and read through `$app/env/private`;
+every other variable is read from `process.env`. A variable read through `$app/env/*` must be declared there.
+
 ## Architecture
 
 ### Technology Stack
 
-- **SvelteKit 5** with Svelte 5 (runes syntax)
+- **SvelteKit 3** with Svelte 5 (runes syntax)
 - **Tailwind CSS 4.0** + Flowbite Svelte for UI
 - **Node.js** with file-based JSON storage
 - **TypeScript** via JSDoc annotations
@@ -176,7 +180,7 @@ Multi-layer authentication system:
 - POST `/api/players`: 100 requests per hour (keyed per IP + clientId + date)
 - General API: 60 requests per minute (keyed per IP)
 
-**Input Validation**: All inputs validated with XSS protection via `$lib/shared/validation.js`
+**Input Validation**: All inputs validated with XSS protection via `#lib/shared/validation.js`
 
 ### Key Server Modules
 
@@ -249,7 +253,7 @@ Core business logic modules in `src/lib/server/`:
 - **Test structure** mirrors `src/` directory in `test/`
 - **Backend tests** use Node environment (`test/**/*.{test,spec}.{js,ts}`)
 - **Frontend tests** use jsdom environment (`test/**/*.svelte.{test,spec}.{js,ts}`)
-- **Path aliases** (`$lib`) available in test files
+- **Subpath imports** (`#lib/*`, `#components/*`, declared in `package.json` `imports`) work in test files
 - **Automated testing** integrated into deployment pipeline
 
 ## Core Features
@@ -305,7 +309,7 @@ Core business logic modules in `src/lib/server/`:
 Example:
 
 ```javascript
-import { createPlayerManager } from '$lib/server/playerManager.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
 
 const manager = createPlayerManager();
 manager.setLeague('pirates');
@@ -322,7 +326,7 @@ await manager.addPlayer('John Doe', date);
 
 - Service classes with fluent interfaces (method chaining)
 - Immutable state management (e.g., PlayerState uses `structuredClone`)
-- Shared validation logic in `$lib/shared/validation.js`
+- Shared validation logic in `#lib/shared/validation.js`
 
 **Naming Conventions:**
 
@@ -348,7 +352,7 @@ await manager.addPlayer('John Doe', date);
 - **Unit tests**: PlayerManager, data layer, rankings, team generator, API endpoints
 - **Integration tests**: Player-team relationships, multi-operation workflows
 - **Race condition tests**: Verify atomic operations with concurrent access
-- **Path aliases**: Use `$lib` imports in test files (configured in vitest configs)
+- **Subpath imports**: Use `#lib/...` imports in test files (resolved natively from `package.json` `imports`; module extensions are required)
 - **Data isolation**: Use `structuredClone` for test data to prevent mutation
 - **Mock external dependencies**: Email service, file system (when needed)
 - **Test both happy path and error cases** for comprehensive coverage
@@ -418,7 +422,7 @@ The project is JavaScript with JSDoc types, checked by `svelte-check` under `str
 - **Always use Svelte 5 runes syntax** when editing .svelte components and svelte.js files (`$state`, `$derived`, `$effect`)
 - **Use factory functions** for server managers and call `.setLeague(leagueId)` before operations
 - **Use `setMany()` for atomic multi-key updates** to prevent race conditions
-- **Validate all inputs** using `$lib/shared/validation.js` helpers
+- **Validate all inputs** using `#lib/shared/validation.js` helpers
 - **Authentication**: a signed `_ls` HttpOnly session cookie is required on all non-public API calls (issued automatically on page load); send `Authorization` (league access code) and `X-CLIENT-ID` headers, plus `X-ADMIN-CODE` for admin ops
 - **Invalidate settings cache** after modifying league or day-level settings
 - **Use TodoWrite tool** for in-session progress tracking

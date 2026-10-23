@@ -5,7 +5,7 @@ import {
     pageRecapDates,
     playedSessionDates,
     previewSessionDate
-} from '$lib/server/newsFeed.js';
+} from '#lib/server/newsFeed.js';
 
 const config = {
     champions: {

@@ -1,6 +1,6 @@
 <script>
     import PlayersList from './PlayersList.svelte';
-    import { settings } from '$lib/client/stores/settings.js';
+    import { settings } from '#lib/client/stores/settings.js';
     /**
      * @type {{
      *   availablePlayers: string[],

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store';
-import { defaultSettings } from '$lib/shared/defaults.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
 
 export { defaultSettings };
 /**

@@ -1,11 +1,11 @@
-import { api } from '$lib/client/services/api-client.svelte.js';
-import { playersService } from '$lib/client/services/players.svelte.js';
-import { setNotification } from '$lib/client/stores/notification.js';
-import { withLoading } from '$lib/client/stores/loading.js';
-import { settings } from '$lib/client/stores/settings.js';
-import { isCompetitionEnded, errorMessage, errorStatus } from '$lib/shared/helpers.js';
-import { defaultSettings } from '$lib/shared/defaults.js';
-import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
+import { api } from '#lib/client/services/api-client.svelte.js';
+import { playersService } from '#lib/client/services/players.svelte.js';
+import { setNotification } from '#lib/client/stores/notification.js';
+import { withLoading } from '#lib/client/stores/loading.js';
+import { settings } from '#lib/client/stores/settings.js';
+import { isCompetitionEnded, errorMessage, errorStatus } from '#lib/shared/helpers.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
+import { sessionUnlock } from '#lib/client/services/sessionUnlock.svelte.js';
 
 class TeamsService {
     /** @type {ConsolidatedSettings} */

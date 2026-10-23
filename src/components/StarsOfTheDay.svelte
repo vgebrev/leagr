@@ -4,14 +4,14 @@
     import { slide } from 'svelte/transition';
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
-    import PlayerModal from '$components/PlayerModal.svelte';
-    import { teamColours, teamStyles } from '$lib/shared/helpers.js';
-    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
+    import SoccerBootIcon from '#components/Icons/SoccerBootIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
+    import PlayerModal from '#components/PlayerModal.svelte';
+    import { teamColours, teamStyles } from '#lib/shared/helpers.js';
+    import { RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
 
     /** @type {{ leagueGames: any[], knockoutGames: any[], teams: Record<string, any>, date?: string | null }} */
     let { leagueGames = [], knockoutGames = [], teams = {}, date = null } = $props();

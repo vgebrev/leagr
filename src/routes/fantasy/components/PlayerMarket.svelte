@@ -8,7 +8,7 @@
         TableHeadCell
     } from 'flowbite-svelte';
     import { CheckOutline, PlusOutline } from 'flowbite-svelte-icons';
-    import Avatar from '$components/avatars/Avatar.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
 
     /**
      * The week's priced pool. Rows are the only way into a squad, so each one carries its

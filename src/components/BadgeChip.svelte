@@ -1,18 +1,18 @@
 <script>
-    import LeagueIcon from '$components/Icons/LeagueIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import DangerManIcon from '$components/Icons/DangerManIcon.svelte';
-    import CrosshairIcon from '$components/Icons/CrosshairIcon.svelte';
-    import EngineIcon from '$components/Icons/EngineIcon.svelte';
-    import TowerIcon from '$components/Icons/TowerIcon.svelte';
-    import UtilityHeroIcon from '$components/Icons/UtilityHeroIcon.svelte';
-    import DumbbellIcon from '$components/Icons/DumbbellIcon.svelte';
-    import SpartanHelmetIcon from '$components/Icons/SpartanHelmetIcon.svelte';
-    import CowboyHatIcon from '$components/Icons/CowboyHatIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
+    import LeagueIcon from '#components/Icons/LeagueIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import DangerManIcon from '#components/Icons/DangerManIcon.svelte';
+    import CrosshairIcon from '#components/Icons/CrosshairIcon.svelte';
+    import EngineIcon from '#components/Icons/EngineIcon.svelte';
+    import TowerIcon from '#components/Icons/TowerIcon.svelte';
+    import UtilityHeroIcon from '#components/Icons/UtilityHeroIcon.svelte';
+    import DumbbellIcon from '#components/Icons/DumbbellIcon.svelte';
+    import SpartanHelmetIcon from '#components/Icons/SpartanHelmetIcon.svelte';
+    import CowboyHatIcon from '#components/Icons/CowboyHatIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
 
     /**
      * One badge, rendered. This is the whole visual grammar of the lattice and the only
@@ -24,7 +24,7 @@
      * help page lists badges as content rather than as controls, so it leaves it off.
      *
      * @type {{
-     *   badge: import('$lib/shared/badges.js').BadgeDef,
+     *   badge: import('#lib/shared/badges.js').BadgeDef,
      *   id?: string,
      *   interactive?: boolean
      * }}

@@ -19,14 +19,14 @@
         QuestionCircleOutline,
         StarSolid
     } from 'flowbite-svelte-icons';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import WoodenSpoonIcon from '$components/Icons/WoodenSpoonIcon.svelte';
-    import SoccerBootIcon from '$components/Icons/SoccerBootIcon.svelte';
-    import BullseyeIcon from '$components/Icons/BullseyeIcon.svelte';
-    import ShieldIcon from '$components/Icons/ShieldIcon.svelte';
-    import GloveIcon from '$components/Icons/GloveIcon.svelte';
-    import SnowflakeIcon from '$components/Icons/SnowflakeIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import WoodenSpoonIcon from '#components/Icons/WoodenSpoonIcon.svelte';
+    import SoccerBootIcon from '#components/Icons/SoccerBootIcon.svelte';
+    import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
+    import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
+    import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import SnowflakeIcon from '#components/Icons/SnowflakeIcon.svelte';
 
     /**
      * @type {{ entries: MomentumEntry[], variant: 'champions'|'ballers' }}
@@ -119,7 +119,7 @@
 
     /** @param {string} playerName */
     function handlePlayerClick(playerName) {
-        goto(resolve(`/rankings/${encodeURIComponent(playerName)}`));
+        goto(resolve(`rankings/${encodeURIComponent(playerName)}`));
     }
 </script>
 

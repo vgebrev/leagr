@@ -1,5 +1,5 @@
 <script>
-    import { teamStyles, teamColours, titleCase } from '$lib/shared/helpers.js';
+    import { teamStyles, teamColours, titleCase } from '#lib/shared/helpers.js';
 
     let { teamName, className = null, onclick = null } = $props();
 

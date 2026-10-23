@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createTeamGenerator } from '$lib/server/teamGenerator.js';
+import { createTeamGenerator } from '#lib/server/teamGenerator.js';
 
 /**
  * Build a rankings object where every player is "established" (70 ELO games, so the

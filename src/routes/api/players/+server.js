@@ -1,9 +1,9 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createPlayerManager } from '$lib/server/playerManager.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { createDisciplineManager } from '$lib/server/discipline.js';
-import { createRankingsManager } from '$lib/server/rankings.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createPlayerManager } from '#lib/server/playerManager.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { createDisciplineManager } from '#lib/server/discipline.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
 import {
     validateAndSanitizePlayerName,
     validateDateParameter,
@@ -11,7 +11,7 @@ import {
     validateRequestBody,
     validateList,
     validateCompetitionOperationsAllowed
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const dateValidation = validateDateParameter(url.searchParams);

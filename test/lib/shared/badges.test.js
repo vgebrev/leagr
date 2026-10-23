@@ -21,7 +21,7 @@ import {
     requiresEliteTraits,
     gradeLabel,
     BREADTH_NOUNS
-} from '$lib/shared/badges.js';
+} from '#lib/shared/badges.js';
 
 /** Build a tier map from a 4-tuple in TRAIT_DEFS order. */
 const tiers = ([f, a, d, s]) => ({

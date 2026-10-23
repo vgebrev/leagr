@@ -1,7 +1,7 @@
 <script>
     import { CheckCircleSolid } from 'flowbite-svelte-icons';
     import { Button, Input, Label } from 'flowbite-svelte';
-    import { formatDisplayDate } from '$lib/shared/helpers.js';
+    import { formatDisplayDate } from '#lib/shared/helpers.js';
 
     /**
      * @typedef {Object} DaySettingsProps

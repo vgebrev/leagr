@@ -4,7 +4,7 @@ import {
     isCompetitionEnded,
     isRegistrationOpen,
     hasSessionStarted
-} from '$lib/shared/helpers.js';
+} from '#lib/shared/helpers.js';
 
 describe('isRegistrationOpen', () => {
     beforeEach(() => {

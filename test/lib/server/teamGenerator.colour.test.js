@@ -2,12 +2,12 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 // The noun pool is file-backed and irrelevant to colour assignment; stub it so the
 // test stays in-memory and deterministic.
-vi.mock('$lib/server/nounPool.js', () => ({
+vi.mock('#lib/server/nounPool.js', () => ({
     getNextNouns: vi.fn(async (count) => Array.from({ length: count }, (_, i) => `noun${i}`))
 }));
 
-const { createTeamGenerator } = await import('$lib/server/teamGenerator.js');
-const { teamColours } = await import('$lib/shared/helpers.js');
+const { createTeamGenerator } = await import('#lib/server/teamGenerator.js');
+const { teamColours } = await import('#lib/shared/helpers.js');
 
 /**
  * Deterministic PRNG (mulberry32) so the statistics below are fixed, not flaky.

@@ -47,3 +47,9 @@ RELEASE-NOTES-v*.md
 
 # Ad-hoc reports
 /reports/
+
+# Brag skill outputs
+/brag-output*/
+
+# Scratchpad work area
+/scratchpad/

@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { playersService } from '$lib/client/services/players.svelte.js';
-import { sessionUnlock } from '$lib/client/services/sessionUnlock.svelte.js';
-import { defaultSettings } from '$lib/shared/defaults.js';
+import { playersService } from '#lib/client/services/players.svelte.js';
+import { sessionUnlock } from '#lib/client/services/sessionUnlock.svelte.js';
+import { defaultSettings } from '#lib/shared/defaults.js';
 
 // Mock the API client
-vi.mock('$lib/client/services/api-client.svelte.js', () => ({
+vi.mock('#lib/client/services/api-client.svelte.js', () => ({
     api: {
         get: vi.fn(),
         post: vi.fn(),
@@ -14,17 +14,17 @@ vi.mock('$lib/client/services/api-client.svelte.js', () => ({
 }));
 
 // Mock the notification store
-vi.mock('$lib/client/stores/notification.js', () => ({
+vi.mock('#lib/client/stores/notification.js', () => ({
     setNotification: vi.fn()
 }));
 
 // Mock the loading store
-vi.mock('$lib/client/stores/loading.js', () => ({
+vi.mock('#lib/client/stores/loading.js', () => ({
     withLoading: vi.fn((fn) => fn())
 }));
 
 // Mock the settings store
-vi.mock('$lib/client/stores/settings.js', () => ({
+vi.mock('#lib/client/stores/settings.js', () => ({
     settings: {
         subscribe: vi.fn()
     }
@@ -36,9 +36,9 @@ describe('PlayersService', () => {
     let mockWithLoading;
 
     beforeEach(async () => {
-        const { api } = await import('$lib/client/services/api-client.svelte.js');
-        const { setNotification } = await import('$lib/client/stores/notification.js');
-        const { withLoading } = await import('$lib/client/stores/loading.js');
+        const { api } = await import('#lib/client/services/api-client.svelte.js');
+        const { setNotification } = await import('#lib/client/stores/notification.js');
+        const { withLoading } = await import('#lib/client/stores/loading.js');
 
         mockApi = api;
         mockSetNotification = setNotification;

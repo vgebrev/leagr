@@ -1,13 +1,13 @@
 <script>
     import { Modal, Spinner } from 'flowbite-svelte';
-    import { errorMessage } from '$lib/shared/helpers.js';
+    import { errorMessage } from '#lib/shared/helpers.js';
     import TeamFormation from './TeamFormation.svelte';
     import TeamBadge from './TeamBadge.svelte';
-    import { api } from '$lib/client/services/api-client.svelte.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
+    import { api } from '#lib/client/services/api-client.svelte.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
     import TeamLogo from './TeamLogo.svelte';
-    import { RESERVED_SCORER_KEYS } from '$lib/shared/validation.js';
+    import { RESERVED_SCORER_KEYS } from '#lib/shared/validation.js';
     import { scale } from 'svelte/transition';
 
     /**

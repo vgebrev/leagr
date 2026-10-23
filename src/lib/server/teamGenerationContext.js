@@ -1,8 +1,8 @@
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { errorMessage } from '$lib/shared/helpers.js';
-import { createTeammateHistoryTracker } from '$lib/server/teammateHistory.js';
-import { createAvatarManager } from '$lib/server/avatarManager.js';
-import { logger } from '$lib/server/logger.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { errorMessage } from '#lib/shared/helpers.js';
+import { createTeammateHistoryTracker } from '#lib/server/teammateHistory.js';
+import { createAvatarManager } from '#lib/server/avatarManager.js';
+import { logger } from '#lib/server/logger.js';
 
 /**
  * Merge avatar metadata into a rankings players map (in place).

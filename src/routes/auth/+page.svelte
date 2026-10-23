@@ -9,10 +9,9 @@
         storeAccessCode,
         isAuthenticated,
         validateAccessCode
-    } from '$lib/client/services/auth.js';
-    import { withLoading } from '$lib/client/stores/loading.js';
-    import { setNotification } from '$lib/client/stores/notification.js';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
+    } from '#lib/client/services/auth.js';
+    import { withLoading } from '#lib/client/stores/loading.js';
+    import { setNotification } from '#lib/client/stores/notification.js';
 
     let { data } = $props();
     let accessCode = $state('');
@@ -65,11 +64,6 @@
             }
         });
     }
-
-    $effect(() => {
-        titleParts.set(['Sign In']);
-        return () => titleParts.set([]);
-    });
 </script>
 
 <div class="flex min-h-full w-full flex-col items-center justify-center">
@@ -110,7 +104,7 @@
     <div class="mt-6 text-center text-sm text-gray-500 dark:text-gray-300">
         <p>
             <a
-                href={resolve('/auth/forgot')}
+                href={resolve('auth/forgot')}
                 class="text-primary-600 hover:underline">
                 Forgotten access code?
             </a>

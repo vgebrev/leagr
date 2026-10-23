@@ -1,8 +1,8 @@
 import { error, json } from '@sveltejs/kit';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
-import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { validateDateParameter } from '$lib/shared/validation.js';
+import { createPlayerManager, PlayerError } from '#lib/server/playerManager.js';
+import { createTeamGenerator, TeamError } from '#lib/server/teamGenerator.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { validateDateParameter } from '#lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

@@ -1,18 +1,18 @@
 import fs from 'node:fs/promises';
 import { json } from '@sveltejs/kit';
-import { createRankingsManager } from '$lib/server/rankings.js';
-import { getLeagueInfo, getLeagueDataPath } from '$lib/server/league.js';
-import { getEffectiveLeagueSettings } from '$lib/shared/defaults.js';
-import { resolveMomentumConfig } from '$lib/server/momentum.js';
+import { createRankingsManager } from '#lib/server/rankings.js';
+import { getLeagueInfo, getLeagueDataPath } from '#lib/server/league.js';
+import { getEffectiveLeagueSettings } from '#lib/shared/defaults.js';
+import { resolveMomentumConfig } from '#lib/server/momentum.js';
 import {
     buildNewsFeed,
     pageRecapDates,
     playedSessionDates,
     previewSessionDate
-} from '$lib/server/newsFeed.js';
-import { createStandingsManager } from '$lib/server/standings.js';
-import { data } from '$lib/server/data.js';
-import { dateString, errorMessage } from '$lib/shared/helpers.js';
+} from '#lib/server/newsFeed.js';
+import { createStandingsManager } from '#lib/server/standings.js';
+import { data } from '#lib/server/data.js';
+import { dateString, errorMessage } from '#lib/shared/helpers.js';
 
 // The feed is paged over recap cards; the preview card rides along on page 1.
 const DEFAULT_LIMIT = 5;

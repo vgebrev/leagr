@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, waitFor } from '@testing-library/svelte';
 
 vi.mock('$app/paths', () => ({
-    resolve: (/** @type {string} */ path) => path
+    resolve: (/** @type {string} */ path) => (path.startsWith('/') ? path : `/${path}`)
 }));
 
 // The page is the only thing under test; the endpoint is replaced by a payload the test sets.
@@ -10,7 +10,7 @@ const ctx = vi.hoisted(() => ({
     /** @type {any} */ payload: null,
     /** @type {any} */ saved: null
 }));
-vi.mock('$lib/client/services/api-client.svelte.js', () => ({
+vi.mock('#lib/client/services/api-client.svelte.js', () => ({
     api: {
         get: async () => ctx.payload,
         post: async (/** @type {string} */ _key, /** @type {string} */ _date, body) => {

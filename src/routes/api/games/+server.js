@@ -1,17 +1,17 @@
 import { error, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { data } from '$lib/server/data.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { createGameScheduler } from '$lib/server/gameScheduler.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { data } from '#lib/server/data.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { createGameScheduler } from '#lib/server/gameScheduler.js';
 import {
     validateDateParameter,
     parseRequestBody,
     validateCompetitionOperationsAllowed,
     validateMatchScorers
-} from '$lib/shared/validation.js';
-import { getConsolidatedSettings } from '$lib/server/settings.js';
-import { createFantasyManager } from '$lib/server/fantasyManager.js';
-import { hasSessionStarted } from '$lib/shared/helpers.js';
+} from '#lib/shared/validation.js';
+import { getConsolidatedSettings } from '#lib/server/settings.js';
+import { createFantasyManager } from '#lib/server/fantasyManager.js';
+import { hasSessionStarted } from '#lib/shared/helpers.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);

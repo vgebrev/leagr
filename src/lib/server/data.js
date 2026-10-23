@@ -1,6 +1,6 @@
 import path from 'path';
 import fs from 'fs/promises';
-import { isObject } from '$lib/shared/helpers.js';
+import { isObject } from '#lib/shared/helpers.js';
 import { Mutex } from 'async-mutex';
 import { getLeagueDataPath } from './league.js';
 

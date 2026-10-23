@@ -3,17 +3,16 @@
     import { pushState } from '$app/navigation';
     import { page } from '$app/state';
     import { Alert, Button } from 'flowbite-svelte';
-    import { settings } from '$lib/client/stores/settings.js';
-    import { gamesService } from '$lib/client/services/games.svelte.js';
+    import { settings } from '#lib/client/stores/settings.js';
+    import { gamesService } from '#lib/client/services/games.svelte.js';
     import KnockoutBracket from './components/KnockoutBracket.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CelebrationOverlay from '$components/CelebrationOverlay.svelte';
-    import TeamModal from '$components/TeamModal.svelte';
-    import StarsOfTheDay from '$components/StarsOfTheDay.svelte';
-    import { teamColours } from '$lib/shared/helpers.js';
-    import { isSessionLocked } from '$lib/client/services/sessionUnlock.svelte.js';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CelebrationOverlay from '#components/CelebrationOverlay.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
+    import StarsOfTheDay from '#components/StarsOfTheDay.svelte';
+    import { teamColours } from '#lib/shared/helpers.js';
+    import { isSessionLocked } from '#lib/client/services/sessionUnlock.svelte.js';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import { titleParts } from '$lib/client/stores/pageTitle.js';
 
     /** @type {{ data: import('./$types').PageData }} */
     let { data } = $props();
@@ -133,11 +132,6 @@
     onMount(async () => {
         await gamesService.loadKnockout(date);
         checkForWinner();
-    });
-
-    $effect(() => {
-        titleParts.set(['Cup']);
-        return () => titleParts.set([]);
     });
 </script>
 

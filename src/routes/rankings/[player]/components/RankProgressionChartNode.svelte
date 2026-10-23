@@ -1,8 +1,8 @@
 <script>
     import { Popover } from 'flowbite-svelte';
-    import AppearanceCard from '$components/AppearanceCard.svelte';
-    import TrophyIcon from '$components/Icons/TrophyIcon.svelte';
-    import CrownIcon from '$components/Icons/CrownIcon.svelte';
+    import AppearanceCard from '#components/AppearanceCard.svelte';
+    import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
+    import CrownIcon from '#components/Icons/CrownIcon.svelte';
     import { scale } from 'svelte/transition';
 
     let { point, x, y } = $props();

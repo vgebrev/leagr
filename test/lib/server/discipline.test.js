@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { createDisciplineManager, DisciplineError } from '$lib/server/discipline.js';
+import { createDisciplineManager, DisciplineError } from '#lib/server/discipline.js';
 import fs from 'fs/promises';
 import path from 'path';
 

@@ -17,8 +17,8 @@ import {
     isCompetitionEnded,
     isRegistrationOpen,
     errorCode
-} from '$lib/shared/helpers.js';
-import { validateFantasyTeamName } from '$lib/shared/validation.js';
+} from '#lib/shared/helpers.js';
+import { validateFantasyTeamName } from '#lib/shared/validation.js';
 
 /** Shown for an entry whose owner has no registered player in the session. */
 export const ANONYMOUS_OWNER = 'Anonymous';

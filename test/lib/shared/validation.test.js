@@ -14,7 +14,7 @@ import {
     validateScorers,
     validateMatchScorers,
     RESERVED_SCORER_KEYS
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 describe('Player Name Validation', () => {
     describe('validateAndSanitizePlayerName', () => {

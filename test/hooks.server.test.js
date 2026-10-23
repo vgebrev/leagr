@@ -155,9 +155,9 @@ describe('Request logging', () => {
     beforeEach(async () => {
         vi.resetModules();
         logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
-        vi.doMock('$lib/server/logger.js', () => ({ logger, initializeLogger: vi.fn() }));
-        vi.doMock('$lib/server/email.js', () => ({ initializeEmailService: vi.fn() }));
-        vi.doMock('$lib/server/league.js', () => ({ getLeagueInfo: vi.fn(() => null) }));
+        vi.doMock('#lib/server/logger.js', () => ({ logger, initializeLogger: vi.fn() }));
+        vi.doMock('#lib/server/email.js', () => ({ initializeEmailService: vi.fn() }));
+        vi.doMock('#lib/server/league.js', () => ({ getLeagueInfo: vi.fn(() => null) }));
         hooks = await import('../src/hooks.server.js');
     });
 
@@ -222,10 +222,9 @@ describe('Request logging', () => {
 
         it('returns a correlation id the client can quote back', () => {
             const result = hooks.handleError({
+                kind: 'unknown',
                 error: new Error('boom'),
-                event,
-                status: 500,
-                message: 'Internal Error'
+                event
             });
 
             expect(result.errorId).toMatch(/^[0-9a-f-]{36}$/);
@@ -235,10 +234,9 @@ describe('Request logging', () => {
             const err = new Error('boom');
 
             const result = hooks.handleError({
+                kind: 'unknown',
                 error: err,
-                event,
-                status: 500,
-                message: 'Internal Error'
+                event
             });
 
             expect(logger.error).toHaveBeenCalledTimes(1);
@@ -255,24 +253,34 @@ describe('Request logging', () => {
             });
 
             const result = hooks.handleError({
+                kind: 'unknown',
                 error: err,
-                event,
-                status: 500,
-                message: 'Internal Error'
+                event
             });
 
             expect(result.message).toBe('Failed to update knockout scores');
         });
 
-        it('falls back to SvelteKit’s message when no route message was attached', () => {
+        it('leaves the message to SvelteKit when no route message was attached', () => {
             const result = hooks.handleError({
+                kind: 'unknown',
                 error: new Error('boom'),
-                event,
-                status: 500,
-                message: 'Internal Error'
+                event
             });
 
-            expect(result.message).toBe('Internal Error');
+            expect(result).not.toHaveProperty('message');
+        });
+
+        // SvelteKit 3 routes every error through this hook. Errors raised with error() and
+        // framework errors (404s from bot scans) are intended responses, not failures.
+        it.each([
+            ['app', { status: 401, message: 'Invalid access code' }],
+            ['framework', { status: 404, message: 'Not Found' }]
+        ])('does not log or rewrite %s errors', (kind, err) => {
+            const result = hooks.handleError({ kind, error: err, event });
+
+            expect(logger.error).not.toHaveBeenCalled();
+            expect(result).toBeUndefined();
         });
     });
 });

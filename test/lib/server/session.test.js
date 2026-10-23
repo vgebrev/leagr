@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import crypto from 'crypto';
-import { createSessionToken, isValidSessionToken, SESSION_MAX_AGE } from '$lib/server/session.js';
+import { createSessionToken, isValidSessionToken, SESSION_MAX_AGE } from '#lib/server/session.js';
 
 const SECRET = 'test-secret-key';
 

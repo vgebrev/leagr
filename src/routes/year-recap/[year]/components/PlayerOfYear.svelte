@@ -1,7 +1,7 @@
 <script>
     import SlideCard from './SlideCard.svelte';
     import AnimatedIn from './AnimatedIn.svelte';
-    import Avatar from '$components/avatars/Avatar.svelte';
+    import Avatar from '#components/avatars/Avatar.svelte';
 
     /** @type {{ data: YearRecapPlayerOfYearEntry[] | null, initialDelay?: number, duration?: number }} */
     let { data, initialDelay = 400, duration = 400 } = $props();

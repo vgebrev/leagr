@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/svelte';
-import PlayerBadges from '$components/PlayerBadges.svelte';
+import PlayerBadges from '#components/PlayerBadges.svelte';
 
 /** Build a traitTiers map from a 4-tuple: [finisher, attacker, defender, shotStopper]. */
 const tiers = ([f, a, d, s]) => ({

@@ -3,7 +3,7 @@ import {
     createGameScheduler,
     GameScheduler,
     GameSchedulerError
-} from '$lib/server/gameScheduler.js';
+} from '#lib/server/gameScheduler.js';
 
 describe('GameScheduler', () => {
     let gameScheduler;

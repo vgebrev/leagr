@@ -10,7 +10,7 @@
         Button
     } from 'flowbite-svelte';
     import { CalendarMonthSolid, ExclamationCircleSolid } from 'flowbite-svelte-icons';
-    import TeamBadge from '$components/TeamBadge.svelte';
+    import TeamBadge from '#components/TeamBadge.svelte';
 
     let { standings = [], date, onCelebrate = null, onTeamClick = null } = $props();
 

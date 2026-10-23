@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StandingsManager, StandingsError, createStandingsManager } from '$lib/server/standings.js';
-import { data } from '$lib/server/data.js';
+import { StandingsManager, StandingsError, createStandingsManager } from '#lib/server/standings.js';
+import { data } from '#lib/server/data.js';
 
 // Mock the data service
-vi.mock('$lib/server/data.js', () => ({
+vi.mock('#lib/server/data.js', () => ({
     data: {
         get: vi.fn()
     }

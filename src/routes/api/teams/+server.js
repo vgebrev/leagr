@@ -1,20 +1,20 @@
 import { error, isHttpError, json } from '@sveltejs/kit';
-import { toApiError } from '$lib/server/apiError.js';
-import { createPlayerManager, PlayerError } from '$lib/server/playerManager.js';
-import { createTeamGenerator, TeamError } from '$lib/server/teamGenerator.js';
-import { createPlayerAccessControl } from '$lib/server/playerAccessControl.js';
-import { buildTeamGenerationContext } from '$lib/server/teamGenerationContext.js';
-import { createTeamLogoManager } from '$lib/server/teamLogoManager.js';
-import { validateLeagueForAPI } from '$lib/server/league.js';
-import { logger } from '$lib/server/logger.js';
-import { data } from '$lib/server/data.js';
+import { toApiError } from '#lib/server/apiError.js';
+import { createPlayerManager, PlayerError } from '#lib/server/playerManager.js';
+import { createTeamGenerator, TeamError } from '#lib/server/teamGenerator.js';
+import { createPlayerAccessControl } from '#lib/server/playerAccessControl.js';
+import { buildTeamGenerationContext } from '#lib/server/teamGenerationContext.js';
+import { createTeamLogoManager } from '#lib/server/teamLogoManager.js';
+import { validateLeagueForAPI } from '#lib/server/league.js';
+import { logger } from '#lib/server/logger.js';
+import { data } from '#lib/server/data.js';
 import {
     validateDateParameter,
     parseRequestBody,
     validateRequestBody,
     validateCompetitionOperationsAllowed,
     validateTeamDrawAllowed
-} from '$lib/shared/validation.js';
+} from '#lib/shared/validation.js';
 
 export const GET = async ({ url, locals }) => {
     const { leagueId, isValid } = validateLeagueForAPI(locals);
