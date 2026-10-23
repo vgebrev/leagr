@@ -260,7 +260,7 @@
 </script>
 
 <div
-    class={`relative self-start overflow-hidden rounded-md glass ${styles.border}`}
+    class={`glass relative self-start overflow-hidden rounded-md ${styles.border}`}
     style={!isPlayerList && logoSrc
         ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}`
         : ''}>
