@@ -260,12 +260,12 @@
 </script>
 
 <div
-    class="relative overflow-hidden rounded-md"
+    class={`glass relative self-start overflow-hidden rounded-md ${styles.border}`}
     style={!isPlayerList && logoSrc
         ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}`
         : ''}>
     <table
-        class={`w-full text-left text-sm ${styles.text} glass border-collapse overflow-hidden rounded-md backdrop-blur-lg`}
+        class={`w-full text-left text-sm ${styles.text} border-collapse overflow-hidden rounded-md backdrop-blur-lg`}
         style={!isPlayerList && logoSrc
             ? `background-color: transparent; --logo-url: url('${logoSrc}')`
             : ''}>
@@ -483,9 +483,13 @@
     tbody.logo-tbody::after {
         content: '';
         position: absolute;
-        inset: 0;
+        /* 85% of both dimensions, so a wide/short tbody can't crop the logo */
+        inset: 7.5%;
+        max-width: 420px;
+        max-height: 420px;
+        margin: auto;
         background-image: var(--logo-url);
-        background-size: min(85%, 420px);
+        background-size: contain;
         background-position: center;
         background-repeat: no-repeat;
         opacity: 0.15;
