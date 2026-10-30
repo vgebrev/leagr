@@ -26,7 +26,17 @@ describe('PlayerState', () => {
 
             // State should remain unchanged
             expect(state.players.available).toEqual(['John']);
-            expect(state.teams['Team A']).toEqual(['John', null]);
+            expect(state.teams['Team A']).toEqual(['John']);
+        });
+
+        it('should drop empty (null) slots left in stored teams', () => {
+            const state = new PlayerState(
+                { available: ['John', 'Jane'], waitingList: [] },
+                { 'Team A': [null, 'John', null], 'Team B': ['Jane'], 'Team C': [null] },
+                mockSettings
+            );
+
+            expect(state.teams).toEqual({ 'Team A': ['John'], 'Team B': ['Jane'], 'Team C': [] });
         });
     });
 
@@ -73,7 +83,7 @@ describe('PlayerState', () => {
         it('should pass validation for consistent state', () => {
             playerState.players.available = ['John', 'Jane'];
             playerState.players.waitingList = ['Bob'];
-            playerState.teams['Team A'] = ['John', null];
+            playerState.teams['Team A'] = ['John'];
 
             expect(() => playerState.validateState()).not.toThrow();
         });
@@ -195,8 +205,8 @@ describe('PlayerState', () => {
             const newState = playerState.removePlayer('John');
 
             expect(newState.players.available).toEqual(['Jane']);
-            expect(newState.teams['Team A']).toEqual([null, 'Jane']);
-            expect(newState.teams['Team B']).toEqual([null, null]);
+            expect(newState.teams['Team A']).toEqual(['Jane']);
+            expect(newState.teams['Team B']).toEqual([]);
         });
 
         it('should throw error for unregistered player', () => {
@@ -299,7 +309,7 @@ describe('PlayerState', () => {
 
             const newState = playerState.movePlayerToWaiting('John');
 
-            expect(newState.teams['Team A']).toEqual([null, null]);
+            expect(newState.teams['Team A']).toEqual([]);
             expect(newState.players.available).not.toContain('John');
             expect(newState.players.waitingList).toContain('John');
         });
@@ -346,7 +356,7 @@ describe('PlayerState', () => {
 
             const newState = playerState.movePlayerBetweenLists('John', 'available', 'waitingList');
 
-            expect(newState.teams['Team A']).toEqual([null, null]);
+            expect(newState.teams['Team A']).toEqual([]);
             expect(newState.players.waitingList).toContain('John');
         });
 
@@ -425,14 +435,15 @@ describe('PlayerState', () => {
             expect(() => emptyTeamsState.addPlayer('John')).not.toThrow();
         });
 
-        it('should handle null values in team rosters', () => {
-            playerState.teams['Team A'] = [null, null, null];
-            playerState.players.available = ['John'];
+        it('should assign into a stored team that only had empty slots', () => {
+            const state = new PlayerState(
+                { available: ['John'], waitingList: [] },
+                { 'Team A': [null, null, null] },
+                mockSettings
+            );
 
-            expect(() => playerState.validateState()).not.toThrow();
-
-            const newState = playerState.movePlayerToTeam('John', 'Team A');
-            expect(newState.teams['Team A'][0]).toBe('John');
+            expect(() => state.validateState()).not.toThrow();
+            expect(state.movePlayerToTeam('John', 'Team A').teams['Team A']).toEqual(['John']);
         });
 
         it('should handle player limit of 0', () => {

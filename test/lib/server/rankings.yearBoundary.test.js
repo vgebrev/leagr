@@ -310,6 +310,9 @@ describe('Rankings Year Boundary Scenarios', () => {
 
             const teamsData = await playerManager.getTeamsWithElo();
 
+            // A stored empty slot never reaches the client
+            expect(teamsData.White.map((p) => p.name)).toEqual(['Bob']);
+
             // Verify Dan's data comes from 2025
             const blueTeam = teamsData.Blue;
             const danData = blueTeam.find((p) => p && p.name === 'Dan');

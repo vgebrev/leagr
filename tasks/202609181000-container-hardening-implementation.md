@@ -299,6 +299,68 @@ of the ignore file itself - the one place someone will actually be looking when 
    do not trust the old statement.
 3. Only then set a fresh `expired_at`.
 
+### The reachability scan (recorded 2026-10-30)
+
+Distroless has no shell, so the scan runs on the image's own node. Save this as `elfscan.js`
+anywhere outside the repo:
+
+```js
+const fs = require('fs'),
+    p = require('path');
+const hits = [];
+let n = 0;
+function walk(d) {
+    let es;
+    try {
+        es = fs.readdirSync(d, { withFileTypes: true });
+    } catch {
+        return;
+    }
+    for (const e of es) {
+        const f = p.join(d, e.name);
+        if (e.isDirectory()) walk(f);
+        else if (e.isFile()) {
+            let b;
+            try {
+                const fd = fs.openSync(f, 'r');
+                const h = Buffer.alloc(4);
+                fs.readSync(fd, h, 0, 4, 0);
+                fs.closeSync(fd);
+                if (h.toString('latin1') !== '\x7fELF') continue;
+                b = fs.readFileSync(f);
+            } catch {
+                continue;
+            }
+            n++;
+            if (b.includes('libssl.so.3')) hits.push(f);
+        }
+    }
+}
+['/usr/lib', '/lib', '/nodejs', '/app/node_modules'].forEach(walk);
+console.log('openssl', process.versions.openssl, 'elf files', n);
+console.log(hits.join('\n'));
+```
+
+```bash
+docker build -t leagr:ci .
+docker run --rm --entrypoint /nodejs/bin/node -v "$PWD/elfscan.js:/s.js:ro" leagr:ci /s.js
+```
+
+The expected (safe) output lists only `/usr/lib/x86_64-linux-gnu/libssl.so.3` itself. Any other path
+means something now links the Debian OpenSSL and the ignore entries are no longer justified.
+
+To reproduce the CI scan locally without installing Trivy:
+
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  -v "$PWD/.trivyignore.yaml:/ig.yaml:ro" aquasec/trivy:latest image \
+  --severity HIGH,CRITICAL --ignore-unfixed --ignorefile /ig.yaml --exit-code 1 leagr:ci
+```
+
+On 2026-10-30, CVE-2026-84782 (libssl3 DTLS, fixed in 3.0.22) failed CI. The base digest was still
+current, and the scan above matched 287 ELF files with only `libssl.so.3` itself referencing the
+library (Node's OpenSSL: 3.5.5). It was added to the ignore list with the same expiry.
+
 The date is 2027-01-15 rather than a strict three months, to keep a surprise build failure out of
 the December holiday period.
 

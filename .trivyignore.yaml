@@ -60,3 +60,10 @@ vulnerabilities:
       See CVE-2026-31789. Same package, same unreachability argument. Fixed
       upstream in 3.0.20.
     expired_at: 2027-01-15
+  # Added 2026-10-30 after the ELF scan was re-run against the same pinned base
+  # (still the current :nonroot build): still only libssl.so.3 itself matched.
+  - id: CVE-2026-84782
+    statement: >-
+      See CVE-2026-31789. Same package, same unreachability argument - and a DTLS
+      flaw, which this application does not use at all. Fixed upstream in 3.0.22.
+    expired_at: 2027-01-15

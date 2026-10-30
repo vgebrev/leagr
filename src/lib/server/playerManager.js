@@ -27,6 +27,20 @@ function getTransactionMutex(leagueId, date) {
 /** @typedef {import('./playerAccessControl.js').PlayerAccessControl} PlayerAccessControl */
 
 /**
+ * Rosters hold players only. Removals used to leave null "empty slots" behind and stored
+ * sessions may still have them, so they are dropped wherever teams are read.
+ * @param {TeamsData} teams
+ * @returns {Record<string, string[]>}
+ */
+const withoutEmptySlots = (teams) =>
+    Object.fromEntries(
+        Object.entries(teams).map(([teamName, roster]) => [
+            teamName,
+            roster.filter((p) => p !== null)
+        ])
+    );
+
+/**
  * Custom error class for player operations that preserves HTTP status codes
  */
 export class PlayerError extends Error {
@@ -54,8 +68,9 @@ export class PlayerState {
     constructor(players, teams, settings) {
         /** @type {PlayersData} */
         this.players = structuredClone(players);
-        /** @type {TeamsData} */
-        this.teams = structuredClone(teams);
+        // Saving any transaction writes a stored roster back without its empty slots
+        /** @type {Record<string, string[]>} */
+        this.teams = withoutEmptySlots(teams);
         /** @type {LeagueSettings} */
         this.settings = settings;
     }
@@ -104,14 +119,9 @@ export class PlayerState {
         const assignedPlayers = new Set();
         for (const roster of Object.values(this.teams)) {
             for (const player of roster) {
-                if (player !== null) {
-                    assignedPlayers.add(player);
-                    if (!availableSet.has(player)) {
-                        throw new PlayerError(
-                            `Assigned player ${player} not in available list`,
-                            400
-                        );
-                    }
+                assignedPlayers.add(player);
+                if (!availableSet.has(player)) {
+                    throw new PlayerError(`Assigned player ${player} not in available list`, 400);
                 }
             }
         }
@@ -183,9 +193,7 @@ export class PlayerState {
 
         // Remove from all teams
         for (const teamName of Object.keys(newState.teams)) {
-            newState.teams[teamName] = newState.teams[teamName].map((p) =>
-                p === playerName ? null : p
-            );
+            newState.teams[teamName] = newState.teams[teamName].filter((p) => p !== playerName);
         }
 
         newState.validateState();
@@ -218,27 +226,15 @@ export class PlayerState {
             throw new PlayerError(`Team ${teamName} does not exist.`, 400);
         }
 
-        // Find an empty slot in the team
-        const emptySlotIndex = newState.teams[teamName].findIndex((p) => p === null);
-
-        if (emptySlotIndex === -1) {
-            // No null slots available, check if team is below max capacity
-            const currentPlayerCount = newState.teams[teamName].filter((p) => p !== null).length;
-            const maxPlayersPerTeam = this.settings.teamGeneration?.maxPlayersPerTeam || 7;
-
-            if (currentPlayerCount >= maxPlayersPerTeam) {
-                throw new PlayerError(
-                    `Team ${teamName} has reached maximum capacity of ${maxPlayersPerTeam} players.`,
-                    400
-                );
-            }
-
-            // Team has space, add player to the end
-            newState.teams[teamName].push(playerName);
-        } else {
-            // Assign to existing empty slot
-            newState.teams[teamName][emptySlotIndex] = playerName;
+        const maxPlayersPerTeam = this.settings.teamGeneration?.maxPlayersPerTeam || 7;
+        if (newState.teams[teamName].length >= maxPlayersPerTeam) {
+            throw new PlayerError(
+                `Team ${teamName} has reached maximum capacity of ${maxPlayersPerTeam} players.`,
+                400
+            );
         }
+
+        newState.teams[teamName].push(playerName);
 
         // Move from waiting to available if needed
         if (location.location === 'waiting') {
@@ -280,8 +276,8 @@ export class PlayerState {
         }
 
         // Remove from the team
-        newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
-            p === playerName ? null : p
+        newState.teams[location.teamName] = newState.teams[location.teamName].filter(
+            (p) => p !== playerName
         );
 
         // Move from available to waiting
@@ -339,8 +335,8 @@ export class PlayerState {
                 if (!location.teamName) {
                     throw new PlayerError(`Player ${playerName} is not assigned to a team.`, 400);
                 }
-                newState.teams[location.teamName] = newState.teams[location.teamName].map((p) =>
-                    p === playerName ? null : p
+                newState.teams[location.teamName] = newState.teams[location.teamName].filter(
+                    (p) => p !== playerName
                 );
             }
 
@@ -832,12 +828,12 @@ export class PlayerManager {
     /**
      * Helper method to enhance player list with ELO and avatar data.
      * Returns provisional ratings for players with < 35 games played.
-     * @param {Array<string | null>} players - Array of player names (can include null values for teams)
+     * @param {string[]} players - Array of player names
      * @param {Record<string, any>} rankings - Enhanced rankings data (current year)
      * @param {Record<string, any>} previousYearRankings - Rankings from previous year (for carry-over lookup)
      * @param {Record<string, any>} avatars - Avatar data from avatarManager
      * @param {{elo: number, attack: number, control: number}} anchors - Pre-calculated anchor values
-     * @returns {Array<PlayerWithElo | null>} Array of player objects with name, elo, avatar, isProvisional (preserving nulls)
+     * @returns {PlayerWithElo[]} Array of player objects with name, elo, avatar, isProvisional
      */
     #enhancePlayersWithEloAndAvatar(players, rankings, previousYearRankings, avatars, anchors) {
         const GAMES_THRESHOLD = 35; // Games played before rating is fully trusted (~5 sessions)
@@ -846,10 +842,6 @@ export class PlayerManager {
         const sessionDate = this.date || '';
 
         return players.map((playerName) => {
-            if (playerName === null) {
-                return null; // Preserve null slots for teams
-            }
-
             // Get ELO and ratings from last ranking detail BEFORE this session
             const playerRanking = rankings.players?.[playerName];
             let actualElo = DEFAULT_ELO;
@@ -941,7 +933,7 @@ export class PlayerManager {
         // Get basic teams data
         const gameData = await this.getData({ players: false, teams: true, settings: false });
 
-        const teamsData = gameData.teams || {};
+        const teamsData = withoutEmptySlots(gameData.teams || {});
 
         const rankingsManager = createRankingsManager().setLeague(leagueId);
 
@@ -965,9 +957,7 @@ export class PlayerManager {
         const sessionPlayers = new Set();
         for (const players of Object.values(teamsData)) {
             for (const player of players) {
-                if (player !== null) {
-                    sessionPlayers.add(player);
-                }
+                sessionPlayers.add(player);
             }
         }
 
@@ -980,7 +970,7 @@ export class PlayerManager {
         );
 
         // Enhance teams with ELO and avatar data using the helper method
-        /** @type {Record<string, Array<PlayerWithElo | null>>} */
+        /** @type {EnhancedTeamsData} */
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(teamsData)) {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
@@ -997,7 +987,7 @@ export class PlayerManager {
 
     /**
      * Get all data enhanced with player ELO and avatar information for team management UI
-     * @returns {Promise<{teams: Record<string, Array<PlayerWithElo | null>>, players: {available: Array<PlayerWithElo | null>, waitingList: Array<PlayerWithElo | null>}}>}
+     * @returns {Promise<{teams: EnhancedTeamsData, players: {available: PlayerWithElo[], waitingList: PlayerWithElo[]}}>}
      */
     async getAllDataWithElo() {
         const sessionDate = this.#requireDate();
@@ -1005,7 +995,7 @@ export class PlayerManager {
         // Get basic game data
         const gameData = await this.getData({ players: true, teams: true, settings: false });
 
-        const teamsData = gameData.teams || {};
+        const teamsData = withoutEmptySlots(gameData.teams || {});
         const playersData = gameData.players || structuredClone(defaultPlayers);
 
         const rankingsManager = createRankingsManager().setLeague(leagueId);
@@ -1038,7 +1028,7 @@ export class PlayerManager {
         );
 
         // Enhance teams with ELO and avatar data using the helper method
-        /** @type {Record<string, Array<PlayerWithElo | null>>} */
+        /** @type {EnhancedTeamsData} */
         const enhancedTeams = {};
         for (const [teamName, players] of Object.entries(teamsData)) {
             enhancedTeams[teamName] = this.#enhancePlayersWithEloAndAvatar(
@@ -1051,7 +1041,7 @@ export class PlayerManager {
         }
 
         // Enhance available and waiting list players with ELO and avatar data
-        /** @type {{ available: Array<PlayerWithElo | null>, waitingList: Array<PlayerWithElo | null> }} */
+        /** @type {{ available: PlayerWithElo[], waitingList: PlayerWithElo[] }} */
         const enhancedPlayers = {
             available: this.#enhancePlayersWithEloAndAvatar(
                 playersData.available,
@@ -1146,10 +1136,12 @@ export class PlayerManager {
     }
 
     /**
-     * Remove a player from a specific team and optionally move to waiting list or remove completely
+     * Remove a player from a specific team and optionally move to waiting list or remove completely.
+     * 'no-show' removes completely like 'remove', but is open to every player so those
+     * present on the day can clear out absentees without an admin.
      * @param {string} playerName
      * @param {string} teamName
-     * @param {'waitingList' | 'unassign' | 'remove'} action
+     * @param {'waitingList' | 'unassign' | 'remove' | 'no-show'} action
      */
     async removePlayerFromTeam(playerName, teamName, action = 'waitingList') {
         return await this.executeTransaction((state) => {
@@ -1166,14 +1158,14 @@ export class PlayerManager {
             }
 
             // Enforce ownership for removals from teams
-            this.#ensureOwnerOrAdminSync(playerName);
+            if (action !== 'no-show') {
+                this.#ensureOwnerOrAdminSync(playerName);
+            }
 
             const newState = new PlayerState(state.players, state.teams, state.settings);
 
             // Remove from the team
-            newState.teams[teamName] = newState.teams[teamName].map((p) =>
-                p === playerName ? null : p
-            );
+            newState.teams[teamName] = newState.teams[teamName].filter((p) => p !== playerName);
 
             // Handle the action
             if (action === 'waitingList') {
@@ -1186,7 +1178,7 @@ export class PlayerManager {
                 }
             } else if (action === 'unassign') {
                 // Keep in the available list (already there, just remove from the team)
-            } else if (action === 'remove') {
+            } else if (action === 'remove' || action === 'no-show') {
                 // Remove completely
                 newState.players.available = newState.players.available.filter(
                     (p) => p !== playerName
@@ -1203,14 +1195,33 @@ export class PlayerManager {
     }
 
     /**
-     * Fill empty team slot with specific player from the waiting list or available list
+     * Assign a specific player to a team from the waiting list, available list or another
+     * team. Not ownership-enforced: players present on the day shuffle teams.
      * @param {string} teamName
      * @param {string} playerName
      */
-    async fillEmptySlotWithPlayer(teamName, playerName) {
-        return await this.executeTransaction((state) =>
-            state.movePlayerToTeam(playerName, teamName)
-        );
+    async assignPlayerToTeam(teamName, playerName) {
+        return await this.executeTransaction((state) => {
+            const location = state.getPlayerLocation(playerName);
+            if (!location.isAssigned || !location.teamName || location.teamName === teamName) {
+                return state.movePlayerToTeam(playerName, teamName);
+            }
+
+            // Moving between teams: the old team must stay at or above the minimum size
+            const fromTeam = location.teamName;
+            const minPlayersPerTeam = state.settings.teamGeneration?.minPlayersPerTeam || 0;
+            if (state.teams[fromTeam].length - 1 < minPlayersPerTeam) {
+                throw new PlayerError(
+                    `Team ${fromTeam} cannot drop below the minimum of ${minPlayersPerTeam} players.`,
+                    400
+                );
+            }
+
+            // Take them off the old team, then place them as if unassigned
+            const newState = new PlayerState(state.players, state.teams, state.settings);
+            newState.teams[fromTeam] = newState.teams[fromTeam].filter((p) => p !== playerName);
+            return newState.movePlayerToTeam(playerName, teamName);
+        });
     }
 
     /**
@@ -1239,11 +1250,7 @@ export class PlayerManager {
             // Get all players in teams
             const playersInTeams = new Set();
             Object.values(newState.teams).forEach((roster) => {
-                roster.forEach((player) => {
-                    if (player !== null) {
-                        playersInTeams.add(player);
-                    }
-                });
+                roster.forEach((player) => playersInTeams.add(player));
             });
 
             // Check if any team players are not in the available list

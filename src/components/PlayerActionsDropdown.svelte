@@ -54,7 +54,7 @@
     {#each actions as action, i (i)}
         {@const Icon = iconMap[action.type]}
         <DropdownItem
-            class="w-full font-normal dark:bg-gray-800"
+            class="w-full font-normal disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent! disabled:hover:text-inherit! dark:bg-gray-800"
             onclick={async () => {
                 try {
                     await action.onclick();

@@ -72,11 +72,9 @@ class TeamsService {
 
     /** @type {PlayerWithElo[]} */
     unassignedPlayersWithElo = $derived.by(() => {
-        // A roster slot holds an enriched player object, or null for an empty slot, so
-        // the comparison against the available list has to go through the name.
+        // Rosters hold enriched player objects, so compare against the available list by name
         const assignedPlayerNames = Object.values(this.teams)
             .flat()
-            .filter((player) => player !== null)
             .map((player) => player.name);
 
         // Return enhanced available players not assigned to any team
@@ -358,18 +356,6 @@ class TeamsService {
             return;
         }
         await this.#runAutoAssign({ playerName }, 'Failed to auto-assign player.');
-    }
-
-    /**
-     * Auto-assign the best-balanced available/waiting player to a specific team.
-     * @param {string} teamName - Team to fill
-     */
-    async autoAssignToTeam(teamName) {
-        if (this.isLocked() || !playersService.canModifyList) {
-            setNotification('Teams cannot be changed.', 'warning');
-            return;
-        }
-        await this.#runAutoAssign({ teamName }, 'Failed to auto-assign player.');
     }
 
     /**

@@ -16,7 +16,6 @@
         onremove,
         onassign,
         onAutoAssign,
-        onAutoAssignToTeam,
         onrename,
         onPlayerClick,
         onTeamClick,
@@ -35,9 +34,9 @@
             {teamName}
             color={colourOf(teamName)}
             {canModifyList}
+            allTeams={teams}
             {onassign}
             {onAutoAssign}
-            {onAutoAssignToTeam}
             {onremove}
             {onrename}
             {onPlayerClick}
@@ -57,7 +56,6 @@
                     allTeams={teams}
                     {onassign}
                     {onAutoAssign}
-                    {onAutoAssignToTeam}
                     {onremove}
                     {onrename}
                     {onPlayerClick}
@@ -73,7 +71,6 @@
                     allTeams={teams}
                     {onassign}
                     {onAutoAssign}
-                    {onAutoAssignToTeam}
                     {onremove}
                     {onrename}
                     {onPlayerClick}
