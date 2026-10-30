@@ -305,12 +305,17 @@ Distroless has no shell, so the scan runs on the image's own node. Save this as 
 anywhere outside the repo:
 
 ```js
-const fs = require('fs'), p = require('path');
+const fs = require('fs'),
+    p = require('path');
 const hits = [];
 let n = 0;
 function walk(d) {
     let es;
-    try { es = fs.readdirSync(d, { withFileTypes: true }); } catch { return; }
+    try {
+        es = fs.readdirSync(d, { withFileTypes: true });
+    } catch {
+        return;
+    }
     for (const e of es) {
         const f = p.join(d, e.name);
         if (e.isDirectory()) walk(f);
@@ -323,7 +328,9 @@ function walk(d) {
                 fs.closeSync(fd);
                 if (h.toString('latin1') !== '\x7fELF') continue;
                 b = fs.readFileSync(f);
-            } catch { continue; }
+            } catch {
+                continue;
+            }
             n++;
             if (b.includes('libssl.so.3')) hits.push(f);
         }
