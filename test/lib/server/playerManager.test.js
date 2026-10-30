@@ -207,7 +207,7 @@ describe('PlayerManager', () => {
         it('should remove player from team when assigned', async () => {
             const mockGameData = {
                 players: { available: ['John', 'Jane'], waitingList: [] },
-                teams: { 'Team A': ['John', 'Jane'], 'Team B': [null, null] },
+                teams: { 'Team A': ['John', 'Jane'], 'Team B': [] },
                 settings: { playerLimit: 24 }
             };
 
@@ -226,7 +226,7 @@ describe('PlayerManager', () => {
                     },
                     {
                         key: 'teams',
-                        value: { 'Team A': [null, 'Jane'], 'Team B': [null, null] },
+                        value: { 'Team A': ['Jane'], 'Team B': [] },
                         defaultValue: {},
                         overwrite: true
                     }
@@ -351,7 +351,7 @@ describe('PlayerManager', () => {
                 players: { available: ['Jhon', 'Jane', 'Bob'], waitingList: [] },
                 teams: {
                     'Team A': ['Jhon', 'Jane'],
-                    'Team B': ['Bob', null]
+                    'Team B': ['Bob']
                 },
                 settings: { playerLimit: 24 }
             };
@@ -373,7 +373,7 @@ describe('PlayerManager', () => {
                         key: 'teams',
                         value: {
                             'Team A': ['John', 'Jane'],
-                            'Team B': ['Bob', null]
+                            'Team B': ['Bob']
                         },
                         defaultValue: {},
                         overwrite: true
@@ -530,6 +530,113 @@ describe('PlayerManager', () => {
                 playerManager.assignManyToTeams([{ playerName: 'Ghost', teamName: 'Blue' }])
             ).rejects.toThrow(PlayerError);
 
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+    });
+
+    // Players present on the day shuffle teams without an admin, so team moves and
+    // no-shows are open to everyone; renames and removals stay owner/admin only.
+    describe('on-the-day team management by non-owners', () => {
+        const notOwner = () => ({
+            deriveOwnerId: vi.fn().mockReturnValue('someone-else'),
+            isOwner: vi.fn().mockReturnValue(false)
+        });
+
+        beforeEach(() => {
+            playerManager.setDate('2025-01-25').setLeague('test-league');
+            vi.spyOn(playerManager, 'getData').mockResolvedValue({
+                players: { available: ['A1', 'A2', 'B1'], waitingList: ['W1'] },
+                teams: { Blue: ['A1', 'A2'], White: ['B1', null] },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 3 } }
+            });
+            mockData.get.mockResolvedValue({ A1: 'owner-a1', W1: 'owner-w1' });
+            mockData.setMany.mockResolvedValue({});
+            playerManager.setAccessControl(notOwner());
+        });
+
+        it('moves an assigned player to another team, removing their old slot', async () => {
+            const result = await playerManager.assignPlayerToTeam('White', 'A1');
+
+            expect(result.teams.Blue).toEqual(['A2']);
+            expect(result.teams.White).toEqual(['B1', 'A1']);
+            expect(result.players.available).toContain('A1');
+            expect(mockData.setMany).toHaveBeenCalledTimes(1);
+        });
+
+        it('assigns a waiting-list player it does not own to a team', async () => {
+            const result = await playerManager.assignPlayerToTeam('White', 'W1');
+
+            expect(result.teams.White).toEqual(['B1', 'W1']);
+            expect(result.players.waitingList).not.toContain('W1');
+        });
+
+        it('rejects moving a player to the team they are already on', async () => {
+            await expect(playerManager.assignPlayerToTeam('Blue', 'A1')).rejects.toThrow(
+                'Player A1 is already assigned to team Blue.'
+            );
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+
+        it('rejects moving a player into a full team without changing anything', async () => {
+            vi.spyOn(playerManager, 'getData').mockResolvedValue({
+                players: { available: ['A1', 'B1', 'B2', 'B3'], waitingList: [] },
+                teams: { Blue: ['A1', null], White: ['B1', 'B2', 'B3'] },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 3 } }
+            });
+
+            await expect(playerManager.assignPlayerToTeam('White', 'A1')).rejects.toThrow(
+                'Team White has reached maximum capacity of 3 players.'
+            );
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+
+        it('marks a player it does not own as a no-show, removing them completely', async () => {
+            await playerManager.removePlayerFromTeam('A1', 'Blue', 'no-show');
+
+            const saved = Object.fromEntries(
+                mockData.setMany.mock.calls[0][0].map((op) => [op.key, op.value])
+            );
+            expect(saved.teams.Blue).toEqual(['A2']);
+            expect(saved.players.available).not.toContain('A1');
+            expect(saved.playerOwners).toEqual({ W1: 'owner-w1' });
+        });
+
+        it('rejects a move that takes the old team below the minimum team size', async () => {
+            vi.spyOn(playerManager, 'getData').mockResolvedValue({
+                players: { available: ['A1', 'A2', 'B1'], waitingList: [] },
+                teams: { Blue: ['A1', 'A2'], White: ['B1', null] },
+                settings: {
+                    playerLimit: 24,
+                    teamGeneration: { minPlayersPerTeam: 2, maxPlayersPerTeam: 3 }
+                }
+            });
+
+            await expect(playerManager.assignPlayerToTeam('White', 'A1')).rejects.toThrow(
+                'Team Blue cannot drop below the minimum of 2 players.'
+            );
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+
+        it('rejects filling an empty slot in a team already at maximum size', async () => {
+            vi.spyOn(playerManager, 'getData').mockResolvedValue({
+                players: { available: ['A1', 'B1', 'B2'], waitingList: [] },
+                teams: { Blue: ['A1', null], White: ['B1', 'B2', null] },
+                settings: { playerLimit: 24, teamGeneration: { maxPlayersPerTeam: 2 } }
+            });
+
+            await expect(playerManager.assignPlayerToTeam('White', 'A1')).rejects.toThrow(
+                'Team White has reached maximum capacity of 2 players.'
+            );
+            expect(mockData.setMany).not.toHaveBeenCalled();
+        });
+
+        it('still refuses to remove a player it does not own', async () => {
+            await expect(
+                playerManager.removePlayerFromTeam('A1', 'Blue', 'remove')
+            ).rejects.toThrow('You are not allowed to modify this player.');
+            await expect(
+                playerManager.removePlayerFromTeam('A1', 'Blue', 'waitingList')
+            ).rejects.toThrow('You are not allowed to modify this player.');
             expect(mockData.setMany).not.toHaveBeenCalled();
         });
     });

@@ -1,4 +1,6 @@
 <script>
+    import { Button, Modal } from 'flowbite-svelte';
+    import { fade } from 'svelte/transition';
     import { capitalize, teamStyles } from '#lib/shared/helpers.js';
     import { displayRatingPercent } from '#lib/shared/ratingDisplay.js';
     import PlayerActionsDropdown from '#components/PlayerActionsDropdown.svelte';
@@ -14,7 +16,6 @@
      *   onremove?: ((playerName: string, action: string, teamName?: string) => void) | null,
      *   onassign?: ((playerName: string, teamName: string) => void) | null,
      *   onAutoAssign?: ((playerName: string) => void) | null,
-     *   onAutoAssignToTeam?: ((teamName: string) => void) | null,
      *   onrename?: ((oldName: string, newName: string) => void) | null,
      *   onPlayerClick?: ((playerName: string) => void) | null,
      *   onTeamClick?: ((teamName: string) => void) | null,
@@ -34,7 +35,6 @@
         onremove = null,
         onassign = null,
         onAutoAssign = null,
-        onAutoAssignToTeam = null,
         onrename = null,
         onPlayerClick = null,
         onTeamClick = null,
@@ -140,24 +140,22 @@
         return count > 0 ? total / count : null;
     });
 
-    // Get teams with available slots for player assignment
-    const teamsWithEmptySlots = $derived.by(() => {
-        if (!allTeams || Object.keys(allTeams).length === 0) {
-            return [];
-        }
-
+    // Teams below the maximum size, which can take another player
+    const teamsWithRoom = $derived.by(() => {
         const maxPlayersPerTeam = $settings.teamGeneration?.maxPlayersPerTeam || 7;
+        return Object.keys(allTeams ?? {}).filter(
+            (name) => (allTeams[name]?.length ?? Infinity) < maxPlayersPerTeam
+        );
+    });
 
-        return Object.keys(allTeams).filter((teamName) => {
-            const team = allTeams[teamName];
-            if (!team) return false;
-
-            // Count actual players (non-null entries)
-            const currentPlayerCount = team.filter((player) => player !== null).length;
-
-            // Team has space if it has null slots OR is below max capacity
-            return team.some((player) => player === null) || currentPlayerCount < maxPlayersPerTeam;
-        });
+    // Teams a player in this table can be moved to (never the team they're already on).
+    // Moving out of a team must not leave it below the minimum size.
+    const moveTargets = $derived.by(() => {
+        if (!isPlayerList) {
+            const minPlayersPerTeam = $settings.teamGeneration?.minPlayersPerTeam || 0;
+            if (team.length - 1 < minPlayersPerTeam) return [];
+        }
+        return teamsWithRoom.filter((name) => name !== teamName);
     });
 
     /**
@@ -187,13 +185,6 @@
         }
     }
 
-    /** @param {string} targetTeamName */
-    function handleAutoAssignToTeam(targetTeamName) {
-        if (onAutoAssignToTeam) {
-            onAutoAssignToTeam(targetTeamName);
-        }
-    }
-
     /** @param {string} player */
     function handleRemoveFromList(player) {
         // For player list tables - use unified remove operation
@@ -210,6 +201,16 @@
 
     let showRenameModal = $state(false);
     let playerToRename = $state('');
+
+    // No-shows are open to everyone and hard to undo (a suspended player needs an admin to
+    // re-register), so they are confirmed first
+    let showNoShowModal = $state(false);
+    let playerToNoShow = $state('');
+
+    function confirmNoShow() {
+        showNoShowModal = false;
+        handleRemovePlayer(playerToNoShow, 'no-show');
+    }
 
     // Get all players for duplicate checking in the modal
     const allPlayers = $derived.by(() => {
@@ -244,9 +245,42 @@
      * @param {PlayerAction['type']} type
      * @param {string} label
      * @param {() => void} onclick
+     * @param {boolean} [disabled]
      * @returns {PlayerAction}
      */
-    const action = (type, label, onclick) => ({ type, label, onclick });
+    const action = (type, label, onclick, disabled = false) => ({
+        type,
+        label,
+        onclick,
+        disabled
+    });
+
+    /**
+     * Rename, remove and move-to-waiting stay with the player's owner or an admin. Team
+     * moves and no-shows are open to all, so players present on the day can shuffle teams.
+     * @param {string} playerName
+     * @returns {boolean}
+     */
+    const canManage = (playerName) => isAdmin || playersService.ownedByMe.includes(playerName);
+
+    /**
+     * "Move to [team]" items for every other team with space.
+     * @param {string} playerName
+     * @returns {PlayerAction[]}
+     */
+    const moveActions = (playerName) =>
+        moveTargets.map((targetTeamName) =>
+            action('assign', `Move to ${capitalize(targetTeamName)}`, () =>
+                handleAssignPlayer(playerName, targetTeamName)
+            )
+        );
+
+    /**
+     * The menu is usable while at least one of its items is.
+     * @param {PlayerAction[]} actions
+     * @returns {boolean}
+     */
+    const anyEnabled = (actions) => actions.some((a) => !a.disabled);
 
     /**
      * @param {string} oldName
@@ -260,7 +294,7 @@
 </script>
 
 <div
-    class={`glass relative self-start overflow-hidden rounded-md ${styles.border}`}
+    class={`glass relative w-full self-start overflow-hidden rounded-md ${styles.border}`}
     style={!isPlayerList && logoSrc
         ? `background-color: ${styles.bgHex ?? styles.confetti?.[0] ?? ''}`
         : ''}>
@@ -357,6 +391,8 @@
                                         {playerName}
                                     </button>
                                 {:else}
+                                    <!-- Only the draw replay passes empty rows: placeholders
+                                         its animation fills in as players are drawn -->
                                     <span class="italic opacity-50">Empty</span>
                                 {/if}
                             </div>
@@ -378,88 +414,76 @@
                                     <!-- Dropdown for unassigned/waiting list players -->
                                     {@const playerName =
                                         typeof player === 'string' ? player : player.name}
+                                    {@const restricted = !canManage(playerName)}
                                     {@const actions = [
-                                        ...(onAutoAssign && teamsWithEmptySlots.length > 0
+                                        ...(onAutoAssign && moveTargets.length > 0
                                             ? [
                                                   action('assign', 'Auto-assign', () =>
                                                       handleAutoAssignPlayer(playerName)
                                                   )
                                               ]
                                             : []),
-                                        ...teamsWithEmptySlots.map((teamName) =>
-                                            action('assign', capitalize(teamName), () =>
-                                                handleAssignPlayer(playerName, teamName)
-                                            )
+                                        ...moveActions(playerName),
+                                        action(
+                                            'rename',
+                                            'Rename',
+                                            () => {
+                                                playerToRename = playerName;
+                                                showRenameModal = true;
+                                            },
+                                            restricted
                                         ),
-                                        action('rename', 'Rename', () => {
-                                            playerToRename = playerName;
-                                            showRenameModal = true;
-                                        }),
-                                        action('remove', 'Remove', () =>
-                                            handleRemoveFromList(playerName)
+                                        action(
+                                            'remove',
+                                            'Remove',
+                                            () => handleRemoveFromList(playerName),
+                                            restricted
                                         )
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList &&
-                                            (isAdmin ||
-                                                playersService.ownedByMe.includes(playerName))}
+                                        canModifyList={canModifyList && anyEnabled(actions)}
                                         styleClass={styles.buttonClass} />
                                 {:else if onremove && player}
                                     {@const playerName =
                                         typeof player === 'string' ? player : player.name}
+                                    {@const restricted = !canManage(playerName)}
                                     {@const actions = [
-                                        action('move-to-waiting', 'Move to waiting list', () =>
-                                            handleRemovePlayer(playerName, 'waitingList')
+                                        ...(onassign ? moveActions(playerName) : []),
+                                        action(
+                                            'move-to-waiting',
+                                            'Move to waiting list',
+                                            () => handleRemovePlayer(playerName, 'waitingList'),
+                                            restricted
                                         ),
-                                        action('rename', 'Rename', () => {
-                                            playerToRename = playerName;
-                                            showRenameModal = true;
-                                        }),
-                                        action('remove', 'Remove', () =>
-                                            handleRemovePlayer(playerName, 'remove')
+                                        action(
+                                            'rename',
+                                            'Rename',
+                                            () => {
+                                                playerToRename = playerName;
+                                                showRenameModal = true;
+                                            },
+                                            restricted
+                                        ),
+                                        action(
+                                            'remove',
+                                            'Remove',
+                                            () => handleRemovePlayer(playerName, 'remove'),
+                                            restricted
                                         ),
                                         ...(isDisciplineEnabled
                                             ? [
-                                                  action('no-show', 'No-show', () =>
-                                                      handleRemovePlayer(playerName, 'no-show')
-                                                  )
+                                                  action('no-show', 'No-show', () => {
+                                                      playerToNoShow = playerName;
+                                                      showNoShowModal = true;
+                                                  })
                                               ]
                                             : [])
                                     ]}
                                     <PlayerActionsDropdown
                                         {actions}
-                                        canModifyList={canModifyList &&
-                                            (isAdmin ||
-                                                playersService.ownedByMe.includes(playerName))}
+                                        canModifyList={canModifyList && anyEnabled(actions)}
                                         styleClass={styles.buttonClass} />
-                                {/if}
-                                {#if onassign && !player}
-                                    {#if assignablePlayers.length > 0}
-                                        {@const actions = [
-                                            action('assign', 'Auto-assign', () =>
-                                                handleAutoAssignToTeam(teamName)
-                                            ),
-                                            ...assignablePlayers.map((waitingPlayer) => {
-                                                const playerName =
-                                                    typeof waitingPlayer === 'string'
-                                                        ? waitingPlayer
-                                                        : waitingPlayer.name;
-                                                return action('assign', playerName, () =>
-                                                    handleAssignPlayer(playerName, teamName)
-                                                );
-                                            })
-                                        ]}
-                                        <PlayerActionsDropdown
-                                            {actions}
-                                            {canModifyList}
-                                            styleClass={styles.buttonClass} />
-                                    {:else}
-                                        <PlayerActionsDropdown
-                                            actions={[]}
-                                            canModifyList={false}
-                                            styleClass={styles.buttonClass} />
-                                    {/if}
                                 {/if}
                             </div>
                         </div></td>
@@ -474,6 +498,33 @@
     {allPlayers}
     bind:open={showRenameModal}
     onrename={handleRename} />
+
+<Modal
+    transition={fade}
+    bind:open={showNoShowModal}
+    title="Mark as no-show?"
+    size="xs"
+    autoclose={false}
+    outsideclose={false}
+    classes={{ header: 'p-4 text-md font-semibold', close: 'p-0' }}>
+    <p class="text-sm">
+        <strong>{playerToNoShow}</strong> will be removed from today's session and a no-show recorded
+        against them, which can lead to a suspension. Only an admin can undo this.
+    </p>
+    <div class="flex gap-2">
+        <Button
+            class="flex-1"
+            onclick={confirmNoShow}>
+            Mark no-show
+        </Button>
+        <Button
+            color="alternative"
+            class="flex-1"
+            onclick={() => (showNoShowModal = false)}>
+            Cancel
+        </Button>
+    </div>
+</Modal>
 
 <style>
     tbody.logo-tbody {

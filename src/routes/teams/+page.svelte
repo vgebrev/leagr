@@ -162,7 +162,6 @@
         onremove={teamsService.removePlayer.bind(teamsService)}
         onassign={teamsService.assignPlayerToTeam.bind(teamsService)}
         onAutoAssign={teamsService.autoAssignPlayer.bind(teamsService)}
-        onAutoAssignToTeam={teamsService.autoAssignToTeam.bind(teamsService)}
         onrename={handleRename}
         onPlayerClick={handlePlayerClick}
         onTeamClick={handleTeamClick} />

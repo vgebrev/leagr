@@ -80,8 +80,10 @@ export const DELETE = async ({ request, url, locals }) => {
 
         if (bodyParseResult.data.teamName) {
             // Player is in a team - use removePlayerFromTeam
-            // For no-shows, use 'remove' action to completely remove player like a normal removal
-            const effectiveAction = action === 'no-show' ? 'remove' : action;
+            // 'no-show' removes completely like 'remove', but without the ownership check.
+            // Leagues without discipline have no no-shows, so it falls back to a plain remove.
+            const effectiveAction =
+                action === 'no-show' && settings.discipline?.enabled === false ? 'remove' : action;
             await playerManager.removePlayerFromTeam(
                 nameValidation.sanitizedName,
                 bodyParseResult.data.teamName,
@@ -170,7 +172,7 @@ export const POST = async ({ request, url, locals }) => {
         }
 
         // Try to assign player to team (works for both available and waiting list players)
-        await playerManager.fillEmptySlotWithPlayer(
+        await playerManager.assignPlayerToTeam(
             bodyParseResult.data.teamName,
             nameValidation.sanitizedName
         );

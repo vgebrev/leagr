@@ -118,14 +118,12 @@
                 ]);
 
                 const teams = teamResponse.teams || {};
-                const players = /** @type {Array<PlayerWithElo | null>} */ (teams[teamName] || []);
-                teamPlayers = players
-                    .filter(/** @returns {p is PlayerWithElo} */ (p) => p !== null)
-                    .map((player) => ({
-                        name: player.name,
-                        avatar: player.avatar || null,
-                        elo: player.elo || null
-                    }));
+                const players = /** @type {PlayerWithElo[]} */ (teams[teamName] || []);
+                teamPlayers = players.map((player) => ({
+                    name: player.name,
+                    avatar: player.avatar || null,
+                    elo: player.elo || null
+                }));
 
                 gamesData = {
                     rounds: gamesResponse.rounds || [],

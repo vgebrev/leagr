@@ -34,7 +34,7 @@ describe('PlayerManager Integration Tests', () => {
             // Setup initial state
             const initialGameData = {
                 players: { available: ['Alice', 'Bob'], waitingList: ['Charlie'] },
-                teams: { 'Team A': ['Alice', null], 'Team B': [null, null] },
+                teams: { 'Team A': ['Alice'], 'Team B': [] },
                 settings: { playerLimit: 4 }
             };
 
@@ -68,7 +68,7 @@ describe('PlayerManager Integration Tests', () => {
         it('should update both players and teams atomically when needed', async () => {
             const initialGameData = {
                 players: { available: ['Alice', 'Bob'], waitingList: [] },
-                teams: { 'Team A': ['Alice', 'Bob'], 'Team B': [null, null] },
+                teams: { 'Team A': ['Alice', 'Bob'], 'Team B': [] },
                 settings: { playerLimit: 4 }
             };
 
@@ -96,8 +96,8 @@ describe('PlayerManager Integration Tests', () => {
                     {
                         key: 'teams',
                         value: expect.objectContaining({
-                            'Team A': [null, 'Bob'],
-                            'Team B': [null, null]
+                            'Team A': ['Bob'],
+                            'Team B': []
                         }),
                         defaultValue: {},
                         overwrite: true
@@ -143,7 +143,7 @@ describe('PlayerManager Integration Tests', () => {
 
             // Both operations should complete successfully
             const [result1, result2] = await Promise.all([
-                manager1.fillEmptySlotWithPlayer('Team A', 'Alice'),
+                manager1.assignPlayerToTeam('Team A', 'Alice'),
                 manager2.addPlayer('David', 'available')
             ]);
 
@@ -153,6 +153,24 @@ describe('PlayerManager Integration Tests', () => {
             // Results should be consistent
             expect(result1).toBeDefined();
             expect(result2).toBeDefined();
+        });
+    });
+
+    describe('legacy empty slots', () => {
+        it('writes stored null slots back out on the next save', async () => {
+            vi.spyOn(playerManager, 'getData').mockResolvedValue({
+                players: { available: ['Alice', 'Bob'], waitingList: [] },
+                teams: { 'Team A': ['Alice', null], 'Team B': [null, 'Bob'] },
+                settings: { playerLimit: 4 }
+            });
+            mockData.setMany.mockResolvedValue({});
+
+            await playerManager.addPlayer('David', 'available');
+
+            const saved = Object.fromEntries(
+                mockData.setMany.mock.calls[0][0].map((op) => [op.key, op.value])
+            );
+            expect(saved.teams).toEqual({ 'Team A': ['Alice'], 'Team B': ['Bob'] });
         });
     });
 
@@ -179,7 +197,7 @@ describe('PlayerManager Integration Tests', () => {
         it('should maintain player-team relationship integrity', async () => {
             const gameData = {
                 players: { available: ['Alice', 'Bob'], waitingList: ['Charlie'] },
-                teams: { 'Team A': ['Alice', null], 'Team B': [null, null] },
+                teams: { 'Team A': ['Alice'], 'Team B': [] },
                 settings: { playerLimit: 4 }
             };
 
@@ -207,8 +225,8 @@ describe('PlayerManager Integration Tests', () => {
                     {
                         key: 'teams',
                         value: expect.objectContaining({
-                            'Team A': [null, null],
-                            'Team B': [null, null]
+                            'Team A': [],
+                            'Team B': []
                         }),
                         defaultValue: {},
                         overwrite: true

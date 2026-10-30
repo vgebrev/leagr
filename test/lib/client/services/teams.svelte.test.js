@@ -39,10 +39,10 @@ vi.mock('#lib/client/stores/settings.js', () => ({
 
 /**
  * Team rosters reach the client enriched by getAllDataWithElo(), so fixtures use the shape
- * the API actually returns: a player object per slot, or null for an empty slot.
- * @param {...(string|null)} names
+ * the API actually returns: a player object per roster entry.
+ * @param {...string} names
  */
-const roster = (...names) => names.map((name) => (name === null ? null : { name, elo: 1000 }));
+const roster = (...names) => names.map((name) => ({ name, elo: 1000 }));
 
 describe('TeamsService', () => {
     let mockApi;
@@ -102,7 +102,7 @@ describe('TeamsService', () => {
             const mockTeamsData = {
                 teams: {
                     'Team A': roster('Alice', 'Bob'),
-                    'Team B': roster('Charlie', null)
+                    'Team B': roster('Charlie')
                 },
                 players: {
                     available: [
@@ -295,7 +295,7 @@ describe('TeamsService', () => {
             teamsService.currentDate = '2025-01-25';
             teamsService.teams = {
                 'Team A': roster('Alice', 'Bob'),
-                'Team B': roster('Charlie', null)
+                'Team B': roster('Charlie')
             };
             mockPlayersService.players = ['Alice', 'Bob', 'Charlie'];
             mockPlayersService.waitingList = [];
@@ -304,8 +304,8 @@ describe('TeamsService', () => {
         it('should remove player and update state', async () => {
             const mockResult = {
                 teams: {
-                    'Team A': roster('Alice', null),
-                    'Team B': roster('Charlie', null)
+                    'Team A': roster('Alice'),
+                    'Team B': roster('Charlie')
                 },
                 players: {
                     available: [
@@ -333,7 +333,7 @@ describe('TeamsService', () => {
 
         it('should auto-detect team name when not provided', async () => {
             const mockResult = {
-                teams: { 'Team A': roster('Alice', null), 'Team B': roster('Charlie', null) },
+                teams: { 'Team A': roster('Alice'), 'Team B': roster('Charlie') },
                 players: {
                     available: [
                         { name: 'Alice', elo: 1000 },
@@ -377,7 +377,7 @@ describe('TeamsService', () => {
             });
             sessionUnlock.unlock('2025-01-25');
             mockApi.remove.mockResolvedValue({
-                teams: { 'Team A': roster('Alice', null) },
+                teams: { 'Team A': roster('Alice') },
                 players: { available: [{ name: 'Alice' }], waitingList: [] }
             });
 
@@ -395,8 +395,8 @@ describe('TeamsService', () => {
         beforeEach(() => {
             teamsService.currentDate = '2025-01-25';
             teamsService.teams = {
-                'Team A': roster('Alice', null),
-                'Team B': roster('Charlie', null)
+                'Team A': roster('Alice'),
+                'Team B': roster('Charlie')
             };
             mockPlayersService.players = ['Alice', 'Charlie'];
             mockPlayersService.waitingList = ['Bob'];
@@ -406,7 +406,7 @@ describe('TeamsService', () => {
             const mockResult = {
                 teams: {
                     'Team A': roster('Alice', 'Bob'),
-                    'Team B': roster('Charlie', null)
+                    'Team B': roster('Charlie')
                 },
                 players: {
                     available: [
@@ -434,7 +434,7 @@ describe('TeamsService', () => {
 
         it('should auto-select first unassigned player if none specified', async () => {
             const mockResult = {
-                teams: { 'Team A': roster('Alice', 'Bob'), 'Team B': roster('Charlie', null) },
+                teams: { 'Team A': roster('Alice', 'Bob'), 'Team B': roster('Charlie') },
                 players: {
                     available: [
                         { name: 'Alice', elo: 1000 },
@@ -480,7 +480,7 @@ describe('TeamsService', () => {
                         { name: 'Alice', elo: 1200 },
                         { name: 'Bob', elo: 1100 }
                     ],
-                    'Team B': [{ name: 'Charlie', elo: 1000 }, null]
+                    'Team B': [{ name: 'Charlie', elo: 1000 }]
                 },
                 players: {
                     available: [

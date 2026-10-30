@@ -136,7 +136,7 @@ export const POST = async ({ request, url, locals }) => {
             if (!team) {
                 return error(400, 'No team has space for this player.');
             }
-            await playerManager.fillEmptySlotWithPlayer(team, playerName ?? '');
+            await playerManager.assignPlayerToTeam(team, playerName ?? '');
         } else if (mode === 'team') {
             if (!teams[teamName]) {
                 return error(404, `Team "${teamName}" not found.`);
@@ -150,7 +150,7 @@ export const POST = async ({ request, url, locals }) => {
             if (!best) {
                 return error(400, 'No available players to assign.');
             }
-            await playerManager.fillEmptySlotWithPlayer(teamName, best);
+            await playerManager.assignPlayerToTeam(teamName, best);
         } else {
             // Auto-Assign All: waiting first, then unassigned (per product decision)
             const orderedCandidates = [...waitingList, ...unassigned];
