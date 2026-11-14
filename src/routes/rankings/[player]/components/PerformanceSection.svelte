@@ -6,40 +6,19 @@
     import BullseyeIcon from '#components/Icons/BullseyeIcon.svelte';
     import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
     import GloveIcon from '#components/Icons/GloveIcon.svelte';
+    import StarAwardIcon from '#components/StarAwardIcon.svelte';
+    import { formatCupRound } from '#lib/shared/helpers.js';
+    import {
+        STAR_AWARD_TYPES,
+        STAR_AWARD_LABELS,
+        awardTotals,
+        longestAwardStreaks
+    } from '#lib/shared/starAwards.js';
 
     /** @type {{ playerData: PlayerRankingData }} */
     let { playerData } = $props();
 
     let showMissedSessions = $state(false);
-
-    /**
-     * Format cup round name to human-readable label
-     * @param {string|null|undefined} round - Raw round name from bracket
-     * @returns {string|null} Display label, or null when there is no round
-     */
-    function formatCupRound(round) {
-        if (!round) return null;
-
-        switch (round) {
-            case 'winner':
-                return 'Cup Winner';
-            case 'final':
-                return 'Final';
-            case 'semi':
-                return 'Semi Finals';
-            case 'quarter':
-                return 'Quarter Finals';
-            case 'round-of-16':
-                return 'Round of 16';
-            default:
-                // Handle 'round-of-32', 'round-of-64', etc.
-                if (round.startsWith('round-of-')) {
-                    const num = round.replace('round-of-', '');
-                    return `Round of ${num}`;
-                }
-                return round;
-        }
-    }
 
     /**
      * Calculate league position distribution from player details
@@ -161,10 +140,29 @@
         ).length;
     });
 
+    /** Stars of the Day totals per category */
+    const starTotals = $derived(awardTotals(playerData.details || []));
+    const hasStarData = $derived(STAR_AWARD_TYPES.some((type) => starTotals[type] > 0));
+
+    /**
+     * Stars of the Day runs worth showing: back-to-back sessions or better. Every
+     * award starts as a "streak" of one, which isn't a streak.
+     */
+    const starStreaks = $derived.by(() => {
+        const longest = longestAwardStreaks(playerData.details || []);
+        return STAR_AWARD_TYPES.filter((type) => longest[type] >= 2).map((type) => ({
+            type,
+            count: longest[type]
+        }));
+    });
+
     const hasLeagueData = $derived(leagueDistribution.length > 0);
     const hasCupData = $derived(cupDistribution.length > 0);
     const hasStreakData = $derived(
-        longestLeagueStreak > 0 || longestCupStreak > 0 || doubleWinnerCount > 0
+        longestLeagueStreak > 0 ||
+            longestCupStreak > 0 ||
+            doubleWinnerCount > 0 ||
+            starStreaks.length > 0
     );
 
     /**
@@ -234,12 +232,16 @@
     {:else}
         <!-- Season Stats Panel -->
         <div class="glass rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-            <div class="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <!-- In one row the columns size to their labels instead of sharing the width
+                 equally, which cut "Defence Contributions" off while "Goals" had room to
+                 spare. Where even that is too tight (the content column narrows again on
+                 wide screens) the long labels wrap, and bottom-aligning keeps the figures
+                 on one line. -->
+            <div
+                data-testid="season-stats"
+                class="grid grid-cols-2 gap-2 md:grid-cols-[repeat(4,auto)] md:items-end md:justify-around">
                 <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
-                        Goals
-                    </div>
+                    <div class="text-sm leading-tight text-gray-600 dark:text-gray-300">Goals</div>
                     <div class="flex items-center justify-center gap-1">
                         <LeagueIcon
                             icon="soccer"
@@ -250,8 +252,7 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                    <div class="text-sm leading-tight text-gray-600 dark:text-gray-300">
                         Attack Contributions
                     </div>
                     <div class="flex items-center justify-center gap-1">
@@ -262,8 +263,7 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
+                    <div class="text-sm leading-tight text-gray-600 dark:text-gray-300">
                         Defence Contributions
                     </div>
                     <div class="flex items-center justify-center gap-1">
@@ -274,10 +274,7 @@
                     </div>
                 </div>
                 <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
-                        Saves
-                    </div>
+                    <div class="text-sm leading-tight text-gray-600 dark:text-gray-300">Saves</div>
                     <div class="flex items-center justify-center gap-1">
                         <GloveIcon class="h-5 w-5 text-gray-600 dark:text-gray-300" />
                         <div class="text-2xl font-bold dark:text-gray-200">
@@ -287,6 +284,43 @@
                 </div>
             </div>
         </div>
+
+        <!-- Stars of the Day Panel -->
+        {#if hasStarData}
+            <div
+                data-testid="star-totals"
+                class="glass mt-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
+                <h3 class="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Stars of the Day
+                </h3>
+                <!-- Two centred rows (3 + 2) on a phone, where five across would truncate
+                     "Golden Boot" and "Golden Glove"; one row from sm up -->
+                <div class="flex flex-wrap justify-center gap-y-2">
+                    {#each STAR_AWARD_TYPES as type (type)}
+                        <div
+                            class="basis-1/3 text-center sm:basis-1/5"
+                            data-award={type}>
+                            <div class="text-sm text-nowrap text-gray-600 dark:text-gray-300">
+                                {STAR_AWARD_LABELS[type]}
+                            </div>
+                            <div class="flex items-center justify-center gap-1">
+                                <StarAwardIcon
+                                    award={type}
+                                    class="h-5 w-5 shrink-0 {starTotals[type] > 0
+                                        ? 'text-yellow-400'
+                                        : 'text-gray-400 dark:text-gray-500'}" />
+                                <div
+                                    class="text-2xl font-bold {starTotals[type] > 0
+                                        ? 'dark:text-gray-200'
+                                        : 'text-gray-400 dark:text-gray-500'}">
+                                    {starTotals[type]}
+                                </div>
+                            </div>
+                        </div>
+                    {/each}
+                </div>
+            </div>
+        {/if}
 
         <!-- Distribution Charts -->
         <div class="mt-2 grid gap-2 sm:grid-cols-2">
@@ -475,14 +509,16 @@
             {/if}
         </div>
 
-        <!-- Achievements Section -->
+        <!-- Longest Streaks & Doubles -->
         <div class="glass mt-2 rounded-lg border border-gray-200 p-2 dark:border-gray-700">
-            <div class="grid grid-cols-2 gap-2 md:grid-cols-3">
-                <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
-                        Longest League Win Streak
-                    </div>
+            <h3 class="mb-2 text-center text-sm font-medium text-gray-700 dark:text-gray-300">
+                Longest Streaks & Doubles
+            </h3>
+            <!-- The title carries "longest streak", so each tile is just its name: three to
+                 a row, with a short last row centred -->
+            <div class="flex flex-wrap justify-center gap-y-2">
+                <div class="basis-1/3 text-center">
+                    <div class="text-sm text-nowrap text-gray-600 dark:text-gray-300">League</div>
                     <div class="flex items-center justify-center gap-1">
                         <CrownIcon class="h-5 w-5 text-yellow-500" />
                         <div class="text-2xl font-bold dark:text-gray-200">
@@ -490,11 +526,8 @@
                         </div>
                     </div>
                 </div>
-                <div class="text-center">
-                    <div
-                        class="shrink-0 overflow-hidden text-sm text-nowrap text-ellipsis text-gray-600 dark:text-gray-300">
-                        Longest Cup Win Streak
-                    </div>
+                <div class="basis-1/3 text-center">
+                    <div class="text-sm text-nowrap text-gray-600 dark:text-gray-300">Cup</div>
                     <div class="flex items-center justify-center gap-1">
                         <TrophyIcon class="h-5 w-5 text-amber-600" />
                         <div class="text-2xl font-bold dark:text-gray-200">
@@ -502,12 +535,29 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-span-2 text-center md:col-span-1">
-                    <div class="text-sm text-gray-600 dark:text-gray-300">Doubles</div>
+                <div class="basis-1/3 text-center">
+                    <div class="text-sm text-nowrap text-gray-600 dark:text-gray-300">Doubles</div>
                     <div class="text-2xl font-bold dark:text-gray-200">
                         {doubleWinnerCount}
                     </div>
                 </div>
+                {#each starStreaks as streak (streak.type)}
+                    <div
+                        class="basis-1/3 text-center"
+                        data-streak={streak.type}>
+                        <div class="text-sm text-nowrap text-gray-600 dark:text-gray-300">
+                            {STAR_AWARD_LABELS[streak.type]}
+                        </div>
+                        <div class="flex items-center justify-center gap-1">
+                            <StarAwardIcon
+                                award={streak.type}
+                                class="h-5 w-5 text-yellow-400" />
+                            <div class="text-2xl font-bold dark:text-gray-200">
+                                {streak.count}
+                            </div>
+                        </div>
+                    </div>
+                {/each}
             </div>
         </div>
     {/if}

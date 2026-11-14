@@ -19,6 +19,7 @@
     import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
     import CrownIcon from '#components/Icons/CrownIcon.svelte';
     import TrophyPopover from '#components/TrophyPopover.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
     import MomentumBoard from '#components/MomentumBoard.svelte';
     import { api } from '#lib/client/services/api-client.svelte.js';
     import { isLoading, withLoading } from '#lib/client/stores/loading.js';
@@ -34,6 +35,27 @@
     let momentum = $state(null);
     let error = $state(false);
     let yearDropdownOpen = $state(false);
+
+    // Trophy popover cards open the team modal via pushState; the payload carries the
+    // session date so the modal shows that day's squad.
+    let showTeamModal = $state(false);
+    /** @type {string | null} */
+    let selectedTeam = $state(null);
+    /** @type {string | null} */
+    let teamModalDate = $state(null);
+
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) {
+            selectedTeam = state.teamName;
+            teamModalDate = state.date ?? null;
+        }
+    });
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
+    }
 
     // Get selected year from URL, default to "all"
     let selectedYear = $derived.by(() => {
@@ -264,3 +286,9 @@
         </Table>
     {/if}
 {/snippet}
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    bind:open={showTeamModal}
+    date={teamModalDate}
+    onclose={handleTeamModalClose} />

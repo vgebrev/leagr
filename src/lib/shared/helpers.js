@@ -322,3 +322,40 @@ export function errorStatus(err) {
     }
     return undefined;
 }
+
+/**
+ * A number with its English ordinal suffix: 1st, 2nd, 3rd, 4th, 11th, 22nd.
+ * @param {number} n
+ * @returns {string}
+ */
+export function ordinal(n) {
+    const tens = n % 100;
+    if (tens >= 11 && tens <= 13) return `${n}th`;
+    const suffix = { 1: 'st', 2: 'nd', 3: 'rd' }[n % 10] ?? 'th';
+    return `${n}${suffix}`;
+}
+
+/**
+ * Human-readable label for a cup exit round as stored in rankings history.
+ * @param {string|null|undefined} round - 'winner', 'final', 'semi', 'quarter', 'round-of-N'
+ * @returns {string|null} Display label, or null when there is no round
+ */
+export function formatCupRound(round) {
+    if (!round) return null;
+
+    switch (round) {
+        case 'winner':
+            return 'Cup Winner';
+        case 'final':
+            return 'Final';
+        case 'semi':
+            return 'Semi Finals';
+        case 'quarter':
+            return 'Quarter Finals';
+        default:
+            if (round.startsWith('round-of-')) {
+                return `Round of ${round.replace('round-of-', '')}`;
+            }
+            return round;
+    }
+}

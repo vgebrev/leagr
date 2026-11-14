@@ -3,10 +3,22 @@
     import AppearanceCard from '#components/AppearanceCard.svelte';
     import TrophyIcon from '#components/Icons/TrophyIcon.svelte';
     import CrownIcon from '#components/Icons/CrownIcon.svelte';
+    import StarAwardIcon from '#components/StarAwardIcon.svelte';
     import { scale } from 'svelte/transition';
 
+    /** @type {{ point: PlayerSessionDetail, x: number, y: number }} */
     let { point, x, y } = $props();
     const played = $derived(point.played !== false);
+
+    // Stars of the Day row: below the trophy row, or directly under the node when the
+    // session brought no trophy. Five icons at this size still fit inside one 60px
+    // chart segment.
+    const STAR_ICON = 10;
+    const STAR_GAP = 1;
+    const awards = $derived(played ? (point.awards ?? []) : []);
+    const hasTrophy = $derived(played && (point.leagueWinner || point.cupWinner));
+    const starsY = $derived(y + (hasTrophy ? 22 : 8));
+    const starsWidth = $derived(awards.length * STAR_ICON + (awards.length - 1) * STAR_GAP);
     // For popover content, use the same point data since it includes all necessary fields
     const appearanceDetail = $derived(played ? point : null);
 
@@ -51,7 +63,7 @@
     </text>
 
     <!-- Championship trophy icons -->
-    {#if played && (point.leagueWinner || point.cupWinner)}
+    {#if hasTrophy}
         <g>
             {#if point.leagueWinner && point.cupWinner}
                 <!-- Both league and cup winner - show both icons side by side centered -->
@@ -90,6 +102,19 @@
             {/if}
         </g>
     {/if}
+
+    <!-- Stars of the Day icons -->
+    {#each awards as award, i (award)}
+        <foreignObject
+            x={x - starsWidth / 2 + i * (STAR_ICON + STAR_GAP)}
+            y={starsY}
+            width={STAR_ICON}
+            height={STAR_ICON}>
+            <StarAwardIcon
+                {award}
+                class="block h-2.5 w-2.5 text-yellow-400" />
+        </foreignObject>
+    {/each}
 </g>
 
 <!-- Popover for this node -->

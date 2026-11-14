@@ -20,6 +20,7 @@
     import { MAX_YEAR, getYearOptions } from '#lib/shared/yearConfig.js';
     import PlayerRatings from '#components/PlayerRatings.svelte';
     import PlayerBadges from '#components/PlayerBadges.svelte';
+    import TeamModal from '#components/TeamModal.svelte';
 
     let player = $derived(page.params.player ?? '');
     let playerData = $state(/** @type {PlayerRankingData | null} */ (null));
@@ -41,6 +42,27 @@
     });
     let dropdownOpen = $state(false);
     let yearDropdownOpen = $state(false);
+
+    // Appearance cards open the team modal via pushState; the payload carries the
+    // session date so the modal shows that day's squad.
+    let showTeamModal = $state(false);
+    /** @type {string | null} */
+    let selectedTeam = $state(null);
+    /** @type {string | null} */
+    let teamModalDate = $state(null);
+
+    $effect(() => {
+        const state = page.state.teamModal;
+        showTeamModal = !!state;
+        if (state?.teamName) {
+            selectedTeam = state.teamName;
+            teamModalDate = state.date ?? null;
+        }
+    });
+
+    function handleTeamModalClose() {
+        if (page.state.teamModal) history.back();
+    }
 
     // Generate year options from config
     let yearOptions = $derived(getYearOptions());
@@ -339,3 +361,9 @@
     teamColour="default"
     icon="🥇"
     confettiColours={['#efb100', '#fff085']} />
+
+<TeamModal
+    bind:teamName={selectedTeam}
+    bind:open={showTeamModal}
+    date={teamModalDate}
+    onclose={handleTeamModalClose} />
