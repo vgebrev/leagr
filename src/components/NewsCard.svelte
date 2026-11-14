@@ -9,7 +9,8 @@
     import ShieldIcon from '#components/Icons/ShieldIcon.svelte';
     import GloveIcon from '#components/Icons/GloveIcon.svelte';
     import SnowflakeIcon from '#components/Icons/SnowflakeIcon.svelte';
-    import { formatDisplayDate, titleCase } from '#lib/shared/helpers.js';
+    import { formatDisplayDate, ordinal, titleCase } from '#lib/shared/helpers.js';
+    import { preserveScroll } from '#lib/client/preserveScroll.js';
 
     /**
      * @type {{ card: { date: string, state: 'preview'|'recap', threads: Thread[] } }}
@@ -18,37 +19,6 @@
 
     /** @type {HTMLElement | undefined} */
     let cardEl = $state();
-
-    /** The nearest scrollable ancestor (the layout's content container). */
-    function scroller() {
-        let el = cardEl?.parentElement;
-        while (el) {
-            const overflowY = getComputedStyle(el).overflowY;
-            if (
-                (overflowY === 'auto' || overflowY === 'scroll') &&
-                el.scrollHeight > el.clientHeight
-            )
-                return el;
-            el = el.parentElement;
-        }
-        return null;
-    }
-
-    // Opening a modal shows a native <dialog>, which resets the scroll
-    // container to the top. Capture the position first and restore it over the
-    // next few frames once the dialog has opened (the restore then sticks).
-    function preserveScroll() {
-        const sc = scroller();
-        if (!sc) return;
-        const top = sc.scrollTop;
-        const restore = () => {
-            if (sc.scrollTop !== top) sc.scrollTop = top;
-        };
-        requestAnimationFrame(restore);
-        requestAnimationFrame(() => requestAnimationFrame(restore));
-        setTimeout(restore, 60);
-        setTimeout(restore, 180);
-    }
 
     /** @type {Record<string, string>} */
     const awardLabels = {
@@ -68,16 +38,6 @@
         brickWall: ShieldIcon,
         goldenGlove: GloveIcon
     };
-
-    /** @param {number} n */
-    function ordinal(n) {
-        const rem10 = n % 10;
-        const rem100 = n % 100;
-        if (rem10 === 1 && rem100 !== 11) return `${n}st`;
-        if (rem10 === 2 && rem100 !== 12) return `${n}nd`;
-        if (rem10 === 3 && rem100 !== 13) return `${n}rd`;
-        return `${n}th`;
-    }
 
     /** @param {number} n - a goal difference, shown with an explicit sign */
     function signed(n) {
@@ -240,13 +200,13 @@
 
     /** @param {string} name */
     function openPlayer(name) {
-        preserveScroll();
+        preserveScroll(cardEl);
         pushState('', { playerModal: { playerName: name, date: card.date } });
     }
 
     /** @param {string} name */
     function openTeam(name) {
-        preserveScroll();
+        preserveScroll(cardEl);
         pushState('', { teamModal: { teamName: name, date: card.date } });
     }
 

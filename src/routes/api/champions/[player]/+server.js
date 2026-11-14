@@ -1,6 +1,8 @@
 import { json, error } from '@sveltejs/kit';
 import { toApiError } from '#lib/server/apiError.js';
 import { createRankingsManager } from '#lib/server/rankings.js';
+import { deriveBallerTops } from '#lib/server/momentum.js';
+import { appearanceDetail } from '#lib/server/sessionDetails.js';
 
 /**
  * GET /api/champions/[player] - Get trophy session details for a specific champion
@@ -46,19 +48,31 @@ export async function GET({ params, locals, url }) {
             cupWins
         };
 
+        const ballerTops = deriveBallerTops(rankings.players);
+
+        /**
+         * Sessions matching a trophy filter, newest first, with the flattened
+         * fields the appearance card renders.
+         * @param {(entry: RankingHistoryEntry) => boolean} won
+         * @returns {ChampionSession[]}
+         */
+        const sessionsWhere = (won) =>
+            Object.entries(playerData.history)
+                .filter(([, entry]) => won(entry))
+                .map(([date, entry]) => ({
+                    date,
+                    ...entry,
+                    ...appearanceDetail(entry, ballerTops.get(date))
+                }))
+                .sort((a, b) => b.date.localeCompare(a.date));
+
         // Only include requested trophy type sessions
         if (!trophyType || trophyType === 'league') {
-            response.leagueSessions = Object.entries(playerData.history)
-                .filter(([, entry]) => entry.performance?.leagueWinner === true)
-                .map(([date, entry]) => ({ date, ...entry }))
-                .sort((a, b) => b.date.localeCompare(a.date));
+            response.leagueSessions = sessionsWhere((e) => e.performance?.leagueWinner === true);
         }
 
         if (!trophyType || trophyType === 'cup') {
-            response.cupSessions = Object.entries(playerData.history)
-                .filter(([, entry]) => entry.performance?.cupWinner === true)
-                .map(([date, entry]) => ({ date, ...entry }))
-                .sort((a, b) => b.date.localeCompare(a.date));
+            response.cupSessions = sessionsWhere((e) => e.performance?.cupWinner === true);
         }
 
         return json(response);

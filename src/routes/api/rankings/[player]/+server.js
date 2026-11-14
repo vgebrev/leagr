@@ -3,14 +3,17 @@ import { toApiError } from '#lib/server/apiError.js';
 import { createRankingsManager } from '#lib/server/rankings.js';
 import { createAvatarManager } from '#lib/server/avatarManager.js';
 import { validateLeagueForAPI } from '#lib/server/league.js';
+import { deriveBallerTops } from '#lib/server/momentum.js';
+import { appearanceDetail } from '#lib/server/sessionDetails.js';
 
 /**
  * Create unified details array with all necessary data for frontend
  * @param {PlayerRankingData} playerData - Player data with complete history
+ * @param {Map<string, Record<string, number|null>>} ballerTops - per-date award tops across all players
  * @param {number|null} limit - Optional limit for number of recent appearances
  * @returns {PlayerSessionDetail[]} Array of unified detail objects
  */
-function createUnifiedDetails(playerData, limit = null) {
+function createUnifiedDetails(playerData, ballerTops, limit = null) {
     // Get all dates and sort chronologically (oldest first)
     const allDates = Object.keys(playerData.history).sort();
 
@@ -20,7 +23,6 @@ function createUnifiedDetails(playerData, limit = null) {
     for (const date of allDates) {
         const entry = playerData.history[date];
         const points = entry.points;
-        const performance = entry.performance;
         const attended = points != null;
 
         // Update cumulative totals if this was an appearance
@@ -37,21 +39,7 @@ function createUnifiedDetails(playerData, limit = null) {
             rankingPoints: entry.ranking.rankingPoints || cumulativePoints,
             played: attended,
             // Appearance data (for cards) - only if played
-            ...(attended
-                ? {
-                      team: entry.team,
-                      appearancePoints: points.appearance || 0,
-                      matchPoints: points.match || 0,
-                      bonusPoints: points.bonus || 0,
-                      knockoutPoints: points.knockout || 0,
-                      totalPoints: points.total || 0,
-                      leagueWinner: performance?.leagueWinner || false,
-                      cupWinner: performance?.cupWinner || false,
-                      eloRating: entry.ratings.elo || 1000,
-                      leaguePosition: performance?.leaguePosition ?? null,
-                      cupProgress: performance?.cupProgress
-                  }
-                : {})
+            ...appearanceDetail(entry, ballerTops.get(date))
         });
     }
 
@@ -116,7 +104,8 @@ export async function GET({ params, locals, url }) {
         }
 
         // Create unified details array (include rating stats where present)
-        const details = createUnifiedDetails(playerData, limit).map((d) => {
+        const ballerTops = deriveBallerTops(rankings.players);
+        const details = createUnifiedDetails(playerData, ballerTops, limit).map((d) => {
             const entry = playerData.history?.[d.date];
             if (!entry) return d;
             const r = entry.ratings;

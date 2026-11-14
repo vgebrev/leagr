@@ -33,7 +33,8 @@
     {@const naturalWidth = appearanceCount * segmentWidth}
     {@const minChartWidth = appearanceCount <= 5 ? naturalWidth : 400}
     {@const chartWidth = Math.max(minChartWidth, naturalWidth)}
-    {@const padding = { top: 20, right: 30, bottom: 40, left: 30 }}
+    <!-- bottom: room for a last-ranked node's trophy and Stars of the Day rows above the dates -->
+    {@const padding = { top: 20, right: 30, bottom: 54, left: 30 }}
     <div class="mb-2">
         <div class="mb-2 flex items-center justify-between">
             <h2 class="text-lg font-semibold">Rank Progression</h2>
@@ -125,10 +126,10 @@
                         {@const x = padding.left + (index / (progression.length - 1)) * chartWidth}
                         <text
                             {x}
-                            y={chartHeight + padding.top + 20}
+                            y={chartHeight + padding.top + 34}
                             class="fill-gray-600 text-xs dark:fill-gray-300"
                             text-anchor="middle"
-                            transform="rotate(-45, {x}, {chartHeight + padding.top + 20})">
+                            transform="rotate(-45, {x}, {chartHeight + padding.top + 34})">
                             {new Date(point.date).toLocaleDateString('en-GB', {
                                 month: 'short',
                                 day: 'numeric'

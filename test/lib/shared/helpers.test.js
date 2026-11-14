@@ -3,7 +3,9 @@ import {
     isTeamDrawOpen,
     isCompetitionEnded,
     isRegistrationOpen,
-    hasSessionStarted
+    hasSessionStarted,
+    ordinal,
+    formatCupRound
 } from '#lib/shared/helpers.js';
 
 describe('isRegistrationOpen', () => {
@@ -319,5 +321,42 @@ describe('hasSessionStarted', () => {
             }
         };
         expect(hasSessionStarted(games)).toBe(true);
+    });
+});
+
+describe('ordinal', () => {
+    it('suffixes by the last digit', () => {
+        expect([1, 2, 3, 4, 21, 22, 23].map(ordinal)).toEqual([
+            '1st',
+            '2nd',
+            '3rd',
+            '4th',
+            '21st',
+            '22nd',
+            '23rd'
+        ]);
+    });
+
+    it('uses th for the teens', () => {
+        expect([11, 12, 13, 111].map(ordinal)).toEqual(['11th', '12th', '13th', '111th']);
+    });
+});
+
+describe('formatCupRound', () => {
+    it('labels the named rounds', () => {
+        expect(formatCupRound('winner')).toBe('Cup Winner');
+        expect(formatCupRound('final')).toBe('Final');
+        expect(formatCupRound('semi')).toBe('Semi Finals');
+        expect(formatCupRound('quarter')).toBe('Quarter Finals');
+    });
+
+    it('labels sized rounds', () => {
+        expect(formatCupRound('round-of-16')).toBe('Round of 16');
+        expect(formatCupRound('round-of-32')).toBe('Round of 32');
+    });
+
+    it('returns null when there is no round', () => {
+        expect(formatCupRound(null)).toBeNull();
+        expect(formatCupRound(undefined)).toBeNull();
     });
 });

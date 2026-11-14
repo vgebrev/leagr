@@ -450,6 +450,7 @@ export function buildChampionsMomentum(players, config, now) {
     return board.sort((a, b) => b.value - a.value);
 }
 
+/** @type {Array<{type: BallerAwardType, valueOf: (stats: SessionStats|undefined) => number|null}>} */
 export const BALLER_CATEGORIES = [
     {
         type: 'mvp',
@@ -500,6 +501,23 @@ export function deriveBallerTops(players) {
         }
     }
     return tops;
+}
+
+/**
+ * The baller awards a player took in one session: every category where their
+ * total equals the session top. Players level at the top all take the award -
+ * session totals can't reconstruct the live board's "first to reach it" order.
+ * A category nobody contributed to (or that wasn't tracked) awards no one.
+ * @param {SessionStats|undefined} stats - the player's stats for the session
+ * @param {Record<string, number|null>|undefined} dateTops - that date's entry from deriveBallerTops
+ * @returns {BallerAwardType[]} category types, in BALLER_CATEGORIES order
+ */
+export function ballerAwards(stats, dateTops) {
+    if (!stats || !dateTops) return [];
+    return BALLER_CATEGORIES.filter((category) => {
+        const top = dateTops[category.type];
+        return top != null && top > 0 && category.valueOf(stats) === top;
+    }).map((category) => category.type);
 }
 
 /**

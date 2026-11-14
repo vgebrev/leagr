@@ -479,6 +479,9 @@ declare global {
         lastAppearance?: string | null;
     }
 
+    /** The Stars of the Day award categories. */
+    type BallerAwardType = 'mvp' | 'goldenBoot' | 'playmaker' | 'brickWall' | 'goldenGlove';
+
     /** Per-session stat totals as stored in rankings history (short field names). */
     interface SessionStats {
         goals?: number | null;
@@ -702,6 +705,8 @@ declare global {
         eloRating?: number;
         leaguePosition?: number | null;
         cupProgress?: string | null;
+        /** Stars of the Day awards taken that session (co-winners all take the award). */
+        awards?: BallerAwardType[];
         /** Rating stats, merged in by the route where the history entry carries them. */
         attackingRating?: number | null;
         controlRating?: number | null;
@@ -735,8 +740,28 @@ declare global {
         elo: { rating: number } | null;
     }
 
-    /** One session a player won, as the champions API returns it. */
-    type ChampionSession = RankingHistoryEntry & { date: string };
+    /** The appearance-card fields of one played session, flattened from its history entry. */
+    type AppearanceDetail = Pick<
+        PlayerSessionDetail,
+        | 'team'
+        | 'appearancePoints'
+        | 'matchPoints'
+        | 'bonusPoints'
+        | 'knockoutPoints'
+        | 'totalPoints'
+        | 'leagueWinner'
+        | 'cupWinner'
+        | 'eloRating'
+        | 'leaguePosition'
+        | 'cupProgress'
+        | 'awards'
+    >;
+
+    /**
+     * One session a player won, as the champions API returns it. The per-player endpoint
+     * adds the flattened appearance-card fields; the list endpoint returns the bare entry.
+     */
+    type ChampionSession = RankingHistoryEntry & AppearanceDetail & { date: string };
 
     /** One player's honours, as the champions API returns them. */
     interface ChampionEntry {

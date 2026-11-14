@@ -10,7 +10,9 @@ import {
     championsTrophyStreak,
     resolveMomentumConfig,
     buildChampionsMomentum,
-    buildBallersMomentum
+    buildBallersMomentum,
+    deriveBallerTops,
+    ballerAwards
 } from '#lib/server/momentum.js';
 
 const champConfig = {
@@ -764,5 +766,59 @@ describe('buildBallersMomentum', () => {
             a.components.goals + a.components.attack + a.components.defence + a.components.saves;
         expect(sum).toBeCloseTo(1, 6);
         expect(a.components.goals).toBeGreaterThan(a.components.saves);
+    });
+});
+
+describe('ballerAwards', () => {
+    const date = '2026-03-07';
+    /** @param {Record<string, object|undefined>} statsByPlayer */
+    const playersWith = (statsByPlayer) =>
+        Object.fromEntries(
+            Object.entries(statsByPlayer).map(([name, stats]) => [
+                name,
+                { history: { [date]: { stats } } }
+            ])
+        );
+
+    it('awards every category the player tops', () => {
+        const players = playersWith({
+            Ann: { goals: 5, offActions: 1, defActions: 0, saveActions: 0 },
+            Bob: { goals: 1, offActions: 4, defActions: 6, saveActions: 2 }
+        });
+        const tops = deriveBallerTops(players).get(date);
+
+        expect(ballerAwards(players.Ann.history[date].stats, tops)).toEqual(['goldenBoot']);
+        expect(ballerAwards(players.Bob.history[date].stats, tops)).toEqual([
+            'mvp',
+            'playmaker',
+            'brickWall',
+            'goldenGlove'
+        ]);
+    });
+
+    it('awards all players level at the top', () => {
+        const players = playersWith({
+            Ann: { goals: 3, offActions: 0, defActions: 0, saveActions: 0 },
+            Bob: { goals: 3, offActions: 0, defActions: 0, saveActions: 0 }
+        });
+        const tops = deriveBallerTops(players).get(date);
+
+        expect(ballerAwards(players.Ann.history[date].stats, tops)).toEqual(['mvp', 'goldenBoot']);
+        expect(ballerAwards(players.Bob.history[date].stats, tops)).toEqual(['mvp', 'goldenBoot']);
+    });
+
+    it('awards nothing for a category nobody contributed to', () => {
+        const players = playersWith({
+            Ann: { goals: 2, offActions: 0, defActions: 0, saveActions: 0 },
+            Bob: { goals: 0, offActions: 0, defActions: 0, saveActions: 0 }
+        });
+        const tops = deriveBallerTops(players).get(date);
+
+        expect(ballerAwards(players.Bob.history[date].stats, tops)).toEqual([]);
+    });
+
+    it('awards nothing without stats or tops', () => {
+        expect(ballerAwards(undefined, { mvp: 3 })).toEqual([]);
+        expect(ballerAwards({ goals: 3 }, undefined)).toEqual([]);
     });
 });
